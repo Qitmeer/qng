@@ -9,6 +9,11 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 )
 
+// ID of the platform VM
+var (
+	ID = "meerdag"
+)
+
 type VM struct {
 }
 
