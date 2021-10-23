@@ -22,6 +22,7 @@ import (
 	"github.com/Qitmeer/qng/services/mining"
 	"github.com/Qitmeer/qng/services/notifymgr"
 	"github.com/Qitmeer/qng/services/tx"
+	"github.com/Qitmeer/qng/vm"
 	"reflect"
 )
 
@@ -149,6 +150,14 @@ func (qm *QitmeerFull) RegisterAccountService() error {
 	return nil
 }
 
+func (qm *QitmeerFull) RegisterVMService() error {
+	vmServer, err := vm.NewService(qm.node.Config, &qm.node.events)
+	if err != nil {
+		return err
+	}
+	return qm.Services().RegisterService(vmServer)
+}
+
 // return block manager
 func (qm *QitmeerFull) GetBlockManager() *blkmgr.BlockManager {
 	var service *blkmgr.BlockManager
@@ -266,6 +275,10 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		qm.GetRpcServer().ChainParams = bm.ChainParams()
 
 		nfManager.RpcServer = qm.GetRpcServer()
+	}
+
+	if err := qm.RegisterVMService(); err != nil {
+		return nil, err
 	}
 	return &qm, nil
 }

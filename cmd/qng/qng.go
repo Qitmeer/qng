@@ -60,7 +60,7 @@ func qitmeerdMain(nodeChan chan<- *node.Node) error {
 	defer log.Info("Shutdown complete")
 
 	// Show version and home dir at startup.
-	log.Info("System info", "Qitmeer Version", version.String(), "Go version", runtime.Version())
+	log.Info("System info", "QNG Version", version.String(), "Go version", runtime.Version())
 	log.Info("System info", "Home dir", cfg.HomeDir)
 
 	if cfg.NoFileLogging {
@@ -147,11 +147,11 @@ func showLogo(cfg *config.Config) {
 	logo := `
 
          .__  __                                                                    
-    _____|__|/  |_  _____   ____   ___________    Qitmeer %s
+    _____|__|/  |_  _____   ____   ___________    QNG %s
    / ____/  \   __\/     \_/ __ \_/ __ \_  __ \   Port: %d
   < <_|  |  ||  | |  Y Y  \  ___/\  ___/|  | \/   PID : %d
    \__   |__||__| |__|_|  /\___  >\___  >__|      Network : %s                      
-      |__|              \/     \/     \/          https://github.com/Qitmeer/qitmeer
+      |__|              \/     \/     \/          https://github.com/Qitmeer/qng
 
 
 
