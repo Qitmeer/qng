@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	log.Info("System info", "ETH VM Version", version.String(), "Go version", runtime.Version())
+	log.Info("System info", "Meer VM Version", version.String(), "Go version", runtime.Version())
 
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: chainvm.Handshake,
