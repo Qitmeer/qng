@@ -3,8 +3,12 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"github.com/Qitmeer/meerevm/cmd/evm/vm"
+	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/vm/chainvm"
+	"github.com/hashicorp/go-plugin"
+	"plugin"
+	"runtime"
 )
 
 var (
@@ -13,6 +17,14 @@ var (
 )
 
 func main() {
-	fmt.Println(Version)
-	os.Exit(0)
+	log.Info("System info", "ETH VM Version", Version, "Go version", runtime.Version())
+
+	plugin.Serve(&plugin.ServeConfig{
+		HandshakeConfig: chainvm.Handshake,
+		Plugins: map[string]plugin.Plugin{
+			"vm": chainvm.New(&vm.VM{}),
+		},
+
+		GRPCServer: plugin.DefaultGRPCServer,
+	})
 }
