@@ -1,4 +1,4 @@
-package vm
+package common
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
@@ -6,13 +6,11 @@ import (
 )
 
 type ChainVM interface {
-	Version() (string, error)
+	VM
 
 	GetBlock(*hash.Hash) (*types.Block, error)
 
 	BuildBlock() (*types.Block, error)
 
 	ParseBlock([]byte) (*types.Block, error)
-
-	Shutdown() error
 }

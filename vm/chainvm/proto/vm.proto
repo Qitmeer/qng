@@ -1,6 +1,6 @@
 syntax = "proto3";
 package vmproto;
-option go_package = "github.com/Qitmeer/qng/vm/proto";
+option go_package = "github.com/Qitmeer/qng/vm/chainvm/proto";
 import "google/protobuf/empty.proto";
 
 
@@ -12,12 +12,13 @@ message InitializeRequest {
 }
 
 message InitializeResponse {
-    uint32 status = 1;
-    uint64 height = 2;
-    bytes bytes = 3;
-    bytes timestamp = 4;
+    bytes lastAcceptedID = 1;
+    bytes lastAcceptedParentID = 2;
+    uint32 status = 3;
+    uint64 height = 4;
+    bytes bytes = 5;
+    bytes timestamp = 6;
 }
-
 message CreateHandlersResponse {
     repeated Handler handlers = 1;
 }
@@ -118,6 +119,8 @@ message AppGossipMsg {
 
 service VM {
     rpc Initialize(InitializeRequest) returns (InitializeResponse);
+    rpc Bootstrapping(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Bootstrapped(google.protobuf.Empty) returns (google.protobuf.Empty);
     rpc Shutdown(google.protobuf.Empty) returns (google.protobuf.Empty);
     rpc CreateHandlers(google.protobuf.Empty) returns (CreateHandlersResponse);
     rpc CreateStaticHandlers(google.protobuf.Empty) returns (CreateStaticHandlersResponse);

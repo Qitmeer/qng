@@ -105,3 +105,11 @@ func appDataDir(goos, appName string, roaming bool) string {
 func AppDataDir(appName string, roaming bool) string {
 	return appDataDir(runtime.GOOS, appName, roaming)
 }
+
+func AppDir() string {
+	path, err := os.Executable()
+	if err != nil {
+		return "."
+	}
+	return filepath.Dir(path)
+}

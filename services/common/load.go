@@ -61,6 +61,7 @@ var (
 	defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
 	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
 	defaultDAGType     = "phantom"
+	defaultPluginDir   = filepath.Join(util.AppDir(), "plugin")
 )
 
 // loadConfig initializes and parses the config using a config file and command
@@ -95,6 +96,7 @@ func LoadConfig() (*config.Config, []string, error) {
 		NTP:                  false,
 		MempoolExpiry:        defaultMempoolExpiry,
 		AcceptNonStd:         true,
+		PluginDir:            defaultPluginDir,
 	}
 
 	// Pre-parse the command line options to see if an alternative config
