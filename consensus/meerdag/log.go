@@ -2,7 +2,7 @@
  * Copyright (c) 2017-2020 The qitmeer developers
  */
 
-package meerdag
+package main
 
 import (
 	l "github.com/Qitmeer/qng/log"

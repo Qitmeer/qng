@@ -1,5 +1,5 @@
 // Package meerdag implements the MeerDAG consensus engine.
-package meerdag
+package main
 
 import (
 	"github.com/Qitmeer/qng/consensus/meerdag/meervm"
