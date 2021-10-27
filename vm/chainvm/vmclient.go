@@ -7,8 +7,9 @@ package chainvm
 import (
 	"context"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/vm/chainvm/proto"
-	"github.com/Qitmeer/qng/vm/common"
+
 	"github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -16,7 +17,7 @@ import (
 )
 
 type VMClient struct {
-	*common.ChainState
+	*consensus.ChainState
 	client proto.VMClient
 	broker *plugin.GRPCBroker
 	proc   *plugin.Client
@@ -45,7 +46,7 @@ func (vm *VMClient) Initialize(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	status := common.Status(resp.Status)
+	status := consensus.Status(resp.Status)
 	if err := status.Valid(); err != nil {
 		log.Error(err.Error())
 	}
@@ -65,7 +66,7 @@ func (vm *VMClient) Initialize(ctx context.Context) error {
 		time:     timestamp,
 	}
 
-	vm.ChainState = &common.ChainState{LastAcceptedBlock: lastAcceptedBlk}
+	vm.ChainState = &consensus.ChainState{LastAcceptedBlock: lastAcceptedBlk}
 
 	return nil
 }

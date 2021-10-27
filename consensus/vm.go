@@ -1,4 +1,8 @@
-package common
+/*
+ * Copyright (c) 2017-2020 The qitmeer developers
+ */
+
+package consensus
 
 import "context"
 

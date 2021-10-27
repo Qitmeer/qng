@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/vm/chainvm"
-	"github.com/Qitmeer/qng/vm/common"
+
 	"io/ioutil"
 	"path/filepath"
 )
@@ -72,7 +73,7 @@ func (s *Service) RegisterFactory(vmID string, factory Factory) error {
 		return err
 	}
 
-	commonVM, ok := vm.(common.VM)
+	commonVM, ok := vm.(consensus.VM)
 	if !ok {
 		return nil
 	}

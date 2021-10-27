@@ -3,8 +3,9 @@ package chainvm
 import (
 	"context"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/vm/chainvm/proto"
-	"github.com/Qitmeer/qng/vm/common"
+
 	"time"
 )
 
@@ -14,7 +15,7 @@ type BlockClient struct {
 	// TODO:
 	id       *hash.Hash
 	parentID *hash.Hash
-	status   common.Status
+	status   consensus.Status
 	bytes    []byte
 	height   uint64
 	time     time.Time
@@ -23,7 +24,7 @@ type BlockClient struct {
 func (b *BlockClient) ID() *hash.Hash { return b.id }
 
 func (b *BlockClient) Accept() error {
-	b.status = common.Accepted
+	b.status = consensus.Accepted
 	_, err := b.vm.client.BlockAccept(context.Background(), &proto.BlockAcceptRequest{
 		Id: b.id[:],
 	})
@@ -31,14 +32,14 @@ func (b *BlockClient) Accept() error {
 }
 
 func (b *BlockClient) Reject() error {
-	b.status = common.Rejected
+	b.status = consensus.Rejected
 	_, err := b.vm.client.BlockReject(context.Background(), &proto.BlockRejectRequest{
 		Id: b.id[:],
 	})
 	return err
 }
 
-func (b *BlockClient) Status() common.Status { return b.status }
+func (b *BlockClient) Status() consensus.Status { return b.status }
 
 func (b *BlockClient) Parent() *hash.Hash {
 	return b.parentID
