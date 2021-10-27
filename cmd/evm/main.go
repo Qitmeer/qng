@@ -7,7 +7,6 @@ import (
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/vm/chainvm"
 	"github.com/hashicorp/go-plugin"
-	"plugin"
 	"runtime"
 )
 
