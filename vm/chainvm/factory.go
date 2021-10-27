@@ -10,23 +10,27 @@ package chainvm
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 
+	qlog "github.com/Qitmeer/qng/log"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 )
 
 type Factory struct {
-	Path string
-	arg  string
+	Path          string
+	arg           string
+	LogLevel      string
+	LogIncludeLoc bool
 }
 
 func (f *Factory) New(ctx context.Context) (interface{}, error) {
 	logger := hclog.New(&hclog.LoggerOptions{
-		Name:   "VM",
-		Output: os.Stdout,
-		Level:  hclog.Debug,
+		Name:            "VM",
+		Output:          qlog.LogWrite(),
+		Level:           hclog.LevelFromString(f.LogLevel),
+		IncludeLocation: false,
+		TimeFormat:      qlog.TermTimeFormat,
 	})
 
 	config := &plugin.ClientConfig{

@@ -7,7 +7,7 @@ package meervm
 import (
 	"context"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/version"
 	"sync"
 )
@@ -57,14 +57,18 @@ func (vm *VM) Version() (string, error) {
 	return version.String(), nil
 }
 
-func (vm *VM) GetBlock(*hash.Hash) (*types.Block, error) {
+func (vm *VM) GetBlock(*hash.Hash) (consensus.Block, error) {
 	return nil, nil
 }
 
-func (vm *VM) BuildBlock() (*types.Block, error) {
+func (vm *VM) BuildBlock() (consensus.Block, error) {
 	return nil, nil
 }
 
-func (vm *VM) ParseBlock([]byte) (*types.Block, error) {
+func (vm *VM) ParseBlock([]byte) (consensus.Block, error) {
+	return nil, nil
+}
+
+func (vm *VM) LastAccepted() (*hash.Hash, error) {
 	return nil, nil
 }

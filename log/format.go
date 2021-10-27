@@ -15,7 +15,7 @@ import (
 
 const (
 	timeFormat     = "2006-01-02T15:04:05-0700"
-	termTimeFormat = "2006-01-02|15:04:05.000"
+	TermTimeFormat = "2006-01-02|15:04:05.000"
 	floatFormat    = 'f'
 	termMsgJust    = 35
 )
@@ -121,15 +121,15 @@ func TerminalFormat(usecolor bool) Format {
 
 			// Assemble and print the log heading
 			if color > 0 {
-				fmt.Fprintf(b, "%s [\x1b[%dm%s|%s\x1b[0m]%s %s", r.Time.Format(termTimeFormat), color, lvl, location, padding, r.Msg)
+				fmt.Fprintf(b, "%s [\x1b[%dm%s|%s\x1b[0m]%s %s", r.Time.Format(TermTimeFormat), color, lvl, location, padding, r.Msg)
 			} else {
-				fmt.Fprintf(b, "%s [%s|%s]%s %s ", r.Time.Format(termTimeFormat), lvl, location, padding, r.Msg)
+				fmt.Fprintf(b, "%s [%s|%s]%s %s ", r.Time.Format(TermTimeFormat), lvl, location, padding, r.Msg)
 			}
 		} else {
 			if color > 0 {
-				fmt.Fprintf(b, "%s [\x1b[%dm%s\x1b[0m] %s ", r.Time.Format(termTimeFormat), color, lvl, r.Msg)
+				fmt.Fprintf(b, "%s [\x1b[%dm%s\x1b[0m] %s ", r.Time.Format(TermTimeFormat), color, lvl, r.Msg)
 			} else {
-				fmt.Fprintf(b, "%s [%s] %s ", r.Time.Format(termTimeFormat), lvl, r.Msg)
+				fmt.Fprintf(b, "%s [%s] %s ", r.Time.Format(TermTimeFormat), lvl, r.Msg)
 			}
 		}
 		// try to justify the log output for short messages

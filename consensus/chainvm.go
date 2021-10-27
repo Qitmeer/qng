@@ -6,15 +6,16 @@ package consensus
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
 )
 
 type ChainVM interface {
 	VM
 
-	GetBlock(*hash.Hash) (*types.Block, error)
+	GetBlock(*hash.Hash) (Block, error)
 
-	BuildBlock() (*types.Block, error)
+	BuildBlock() (Block, error)
 
-	ParseBlock([]byte) (*types.Block, error)
+	ParseBlock([]byte) (Block, error)
+
+	LastAccepted() (*hash.Hash, error)
 }

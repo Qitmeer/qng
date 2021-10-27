@@ -51,10 +51,7 @@ func (vm *VMClient) Initialize(ctx context.Context) error {
 		log.Error(err.Error())
 	}
 
-	timestamp := time.Time{}
-	if err := timestamp.UnmarshalBinary(resp.Timestamp); err != nil {
-		return err
-	}
+	timestamp := time.Unix(int64(resp.Timestamp), 0)
 
 	lastAcceptedBlk := &BlockClient{
 		vm:       vm,
