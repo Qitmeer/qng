@@ -2,8 +2,9 @@ package chainvm
 
 import (
 	"context"
+	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/vm/chainvm/proto"
-	"github.com/Qitmeer/qng/vm/common"
+
 	"github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 )
@@ -20,10 +21,10 @@ var PluginMap = map[string]plugin.Plugin{
 
 type Plugin struct {
 	plugin.NetRPCUnsupportedPlugin
-	vm common.ChainVM
+	vm consensus.ChainVM
 }
 
-func New(vm common.ChainVM) *Plugin { return &Plugin{vm: vm} }
+func New(vm consensus.ChainVM) *Plugin { return &Plugin{vm: vm} }
 
 // GRPCServer registers a new GRPC server.
 func (p *Plugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {

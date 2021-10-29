@@ -2,6 +2,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/consensus/meerdag/meervm"
 	"github.com/Qitmeer/qng/version"
 	"github.com/Qitmeer/qng/vm/chainvm"
@@ -20,4 +21,5 @@ func main() {
 
 		GRPCServer: plugin.DefaultGRPCServer,
 	})
+	fmt.Println("asjdlfjw")
 }
