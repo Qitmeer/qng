@@ -374,6 +374,11 @@ function get_network_info(){
   get_result "$data"
 }
 
+function get_vms_info(){
+  local data='{"jsonrpc":"2.0","method":"getVMsInfo","params":[],"id":null}'
+  get_result "$data"
+}
+
 function get_rpc_info(){
   local data='{"jsonrpc":"2.0","method":"getRpcInfo","params":[],"id":null}'
   get_result "$data"
@@ -575,6 +580,7 @@ function usage(){
   echo "  loglevel [trace, debug, info, warn, error, critical]"
   echo "  timeinfo"
   echo "  subsidy"
+  echo "  vmsinfo"
   echo "block  :"
   echo "  block <order|hash>"
   echo "  blockid <id>"
@@ -1015,6 +1021,9 @@ elif [ "$1" == "savemempool" ]; then
 elif [ "$1" == "minerinfo" ]; then
   shift
   miner_info $@
+elif [ "$1" == "vmsinfo" ]; then
+  shift
+  get_vms_info $@
 
 elif [ "$1" == "txSign" ]; then
   shift
