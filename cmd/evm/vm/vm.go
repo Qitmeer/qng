@@ -7,22 +7,22 @@ package vm
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
+	"github.com/Qitmeer/meerevm/cmd/evm/util"
 	"github.com/Qitmeer/meerevm/eth"
 	"github.com/Qitmeer/qng/common/hash"
-	qt "github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/version"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/miner"
+	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
 	"math/big"
-	"os"
-	"os/signal"
 	"sync"
 	"time"
 )
@@ -36,6 +36,11 @@ type VM struct {
 	ctx          context.Context
 	shutdownChan chan struct{}
 	shutdownWg   sync.WaitGroup
+
+	config *ethconfig.Config
+	node   *node.Node
+	chain  *meereth.Ether
+	client *ethclient.Client
 }
 
 func (vm *VM) Initialize(ctx context.Context) error {
@@ -44,8 +49,7 @@ func (vm *VM) Initialize(ctx context.Context) error {
 	vm.shutdownChan = make(chan struct{}, 1)
 	vm.ctx = ctx
 
-	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
-
+	//
 	chainConfig := &params.ChainConfig{
 		ChainID:             big.NewInt(1),
 		HomesteadBlock:      big.NewInt(0),
@@ -96,98 +100,36 @@ func (vm *VM) Initialize(ctx context.Context) error {
 			Recommit:  time.Second,
 		},
 	}
-	stack, eth := meereth.New(&meereth.Config{EthConfig: &config})
-	stack.Start()
-	eth.Backend.StartMining(1)
+	vm.node, vm.chain = meereth.New(&meereth.Config{EthConfig: &config})
 
-	// Handle interrupts.
-	interruptCh := make(chan os.Signal, 1)
-	signal.Notify(interruptCh, os.Interrupt)
-
-	chainID := chainConfig.ChainID
-	nonce := uint64(0)
-	value := big.NewInt(1000000000000)
-	gasLimit := 21000
-
-	// LondonBlock is not nil
-	gasPrice := big.NewInt(500000000) // how the price work ?  not work
-	gasPrice = big.NewInt(510000000)  // how the price work ?  work, after 5 block (height=6)
-	gasPrice = big.NewInt(1000000000) // how the price work ?  work immediately
-	// The working price from the example: miner/stress/1559/main.go
-	// gasPrice = big.NewInt(100000000000+mrand.Int63n(65536))
-
-	// LondonBlock is nil
-	gasPrice = big.NewInt(10)
-	//genesis balance=999,990,999,998,110,000
-	//payee balance=9,000,000,000,000
-	gasPrice = big.NewInt(100)
-	//genesis balance=999,990,999,981,100,000
-	//payee balance=9,000,000,000,000
-	gasPrice = big.NewInt(1)
-	//genesis balance=999,990,999,999,811,000
-	//payee   balance=9,000,000,000,000
-	//21000*9 = 189000 => gas=189,000, price = 1 => fees = 189,000
-
-	payee, err := meereth.NewKey(rand.Reader)
-	checkError(err)
-
-	showBalance := func() {
-		state, err := eth.Backend.BlockChain().State()
-		checkError(err)
-		log.Info("miner account", "addr", etherbase, "balance", state.GetBalance(etherbase))
-		log.Info("genesis account", "addr", genKey.Address, "balance", state.GetBalance(genKey.Address))
-		log.Info("payee account", "addr", payee.Address, "balance", state.GetBalance(payee.Address))
-	}
-
-	showTxPoolStatus := func() int {
-		pending, queued := eth.Backend.TxPool().Stats()
-		log.Info("TxPool status", "pending", pending, "queued", queued)
-		return pending
-	}
-
-	sendTxs := func() {
-		// send the tx
-		for i := 0; i < 9; i++ {
-			tx := types.NewTransaction(nonce, payee.Address, value, uint64(gasLimit), gasPrice, nil)
-			signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chainID), genKey.PrivateKey)
-			checkError(err)
-			log.Info("Add signed tx to the local TxPool", "tx", signedTx.Hash())
-			if err := eth.Backend.TxPool().AddLocal(signedTx); err != nil {
-				log.Error("error when send tx", "error", err)
-				continue
-			}
-			eth.Backend.Miner().Mining()
-			nonce++
-			// Wait if we're too saturated
-			if pend := showTxPoolStatus(); pend > 4192 {
-				time.Sleep(100 * time.Millisecond)
-			}
-		}
-	}
-
-	showBalance()
-	sendTxs()
-	showBalance()
-
-	for {
-		// Stop when interrupted.
-		select {
-		case <-interruptCh:
-			log.Info("Got interrupt, shutting down...")
-			eth.Backend.StopMining()
-			stack.Close()
-			return
-		default:
-		}
-		time.Sleep(1000 * time.Millisecond)
-		showTxPoolStatus()
-		showBalance()
-	}
 	return nil
 }
 
 func (vm *VM) Bootstrapping() error {
 	log.Debug("Bootstrapping")
+	vm.node.Start()
+	//
+	rpcClient, err := vm.node.Attach()
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed to attach to self: %v", err))
+	}
+	vm.client = ethclient.NewClient(rpcClient)
+
+	blockNum, err := vm.client.BlockNumber(vm.ctx)
+	if err != nil {
+		log.Error(err.Error())
+	} else {
+		log.Info(fmt.Sprintf("Current block number:%d", blockNum))
+	}
+
+	//
+	state, err := vm.chain.Backend.BlockChain().State()
+	if err != nil {
+		return nil
+	}
+
+	log.Info(fmt.Sprintf("miner account,addr:%v balance:%v", vm.config.Miner.Etherbase, state.GetBalance(vm.config.Miner.Etherbase)))
+
 	return nil
 }
 
@@ -202,29 +144,48 @@ func (vm *VM) Shutdown() error {
 		return nil
 	}
 
+	vm.client.Close()
+	vm.node.Close()
+
 	close(vm.shutdownChan)
 	vm.shutdownWg.Wait()
 	return nil
 }
 
 func (vm *VM) Version() (string, error) {
-	return version.String(), nil
+	return util.Version, nil
 }
 
-func (vm *VM) GetBlock(*hash.Hash) (*qt.Block, error) {
+func (vm *VM) GetBlock(*hash.Hash) (consensus.Block, error) {
 	return nil, nil
 }
 
-func (vm *VM) BuildBlock() (*qt.Block, error) {
-	return nil, nil
-}
+func (vm *VM) BuildBlock() (consensus.Block, error) {
 
-func (vm *VM) ParseBlock([]byte) (*qt.Block, error) {
-	return nil, nil
-}
-
-func checkError(err error) {
-	if err != nil {
-		panic(err)
+	blocks, _ := core.GenerateChain(vm.config.Genesis.Config, vm.chain.Backend.BlockChain().CurrentBlock(), vm.chain.Backend.Engine(), vm.chain.Backend.ChainDb(), 1, func(i int, block *core.BlockGen) {
+		//block.SetCoinbase(common.Address{0x00})
+	})
+	if len(blocks) != 1 {
+		return nil, fmt.Errorf("BuildBlock error")
 	}
+	num, err := vm.chain.Backend.BlockChain().InsertChain(blocks)
+	if err != nil {
+		return nil, err
+	}
+	if num != 1 {
+		return nil, fmt.Errorf("BuildBlock error")
+	}
+
+	log.Info(fmt.Sprintf("BuildBlock:number=%d hash=%s", blocks[0].Number().Uint64(), blocks[0].Hash().String()))
+
+	h := hash.MustHexToHash(blocks[0].Hash().String())
+	return &Block{id: &h, ethBlock: *blocks[0], vm: vm, status: consensus.Accepted}, nil
+}
+
+func (vm *VM) ParseBlock([]byte) (consensus.Block, error) {
+	return nil, nil
+}
+
+func (vm *VM) LastAccepted() (*hash.Hash, error) {
+	return nil, nil
 }
