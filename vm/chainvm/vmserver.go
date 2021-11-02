@@ -93,3 +93,19 @@ func (vm *VMServer) Version(context.Context, *emptypb.Empty) (*proto.VersionResp
 	version, err := vm.vm.Version()
 	return &proto.VersionResponse{Version: version}, err
 }
+
+func (vm *VMServer) BuildBlock(ctx context.Context, req *proto.BuildBlockRequest) (*proto.BuildBlockResponse, error) {
+	blk, err := vm.vm.BuildBlock(req.Txs)
+	if err != nil {
+		return nil, err
+	}
+	blkID := blk.ID()
+	parentID := blk.Parent()
+	return &proto.BuildBlockResponse{
+		Id:        blkID[:],
+		ParentID:  parentID[:],
+		Bytes:     blk.Bytes(),
+		Height:    blk.Height(),
+		Timestamp: uint64(blk.Timestamp().Unix()),
+	}, err
+}

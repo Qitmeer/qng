@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/vm/chainvm"
@@ -46,6 +47,7 @@ func (s *Service) Start() error {
 	} else {
 		vm.GetVM().Initialize(context.WithValue(s.Context(), "datadir", s.cfg.DataDir))
 	}
+	s.subscribe()
 	return nil
 }
 
@@ -146,6 +148,50 @@ func (s *Service) registerVMs() error {
 	}
 
 	return nil
+}
+
+func (s *Service) subscribe() {
+	ch := make(chan *event.Event)
+	sub := s.events.Subscribe(ch)
+	go func() {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case ev := <-ch:
+				if ev.Data != nil {
+					switch value := ev.Data.(type) {
+					case *blockchain.Notification:
+						s.handleNotifyMsg(value)
+					}
+				}
+				if ev.Ack != nil {
+					ev.Ack <- struct{}{}
+				}
+			}
+
+			if s.IsShutdown() {
+				log.Info("Close Miner Event Subscribe")
+				return
+			}
+		}
+	}()
+}
+
+func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
+	switch notification.Type {
+	case blockchain.BlockAccepted:
+		_, ok := notification.Data.(*blockchain.BlockAcceptedNotifyData)
+		if !ok {
+			return
+		}
+		vm, err := s.GetFactory(MeerEVMID)
+		if err == nil {
+			_, err := vm.GetVM().BuildBlock([]string{"123"})
+			if err != nil {
+				log.Warn(err.Error())
+			}
+		}
+	}
 }
 
 func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
