@@ -6,9 +6,8 @@ import "google/protobuf/empty.proto";
 
 message InitializeRequest {
     uint32 networkID = 1;
-    bytes subnetID = 2;
-    bytes chainID = 3;
-    bytes nodeID = 4;
+    uint32 chainID = 2;
+    uint32 nodeID = 3;
 }
 
 message InitializeResponse {
@@ -17,7 +16,7 @@ message InitializeResponse {
     uint32 status = 3;
     uint64 height = 4;
     bytes bytes = 5;
-    bytes timestamp = 6;
+    uint64 timestamp = 6;
 }
 message CreateHandlersResponse {
     repeated Handler handlers = 1;

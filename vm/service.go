@@ -68,7 +68,7 @@ func (s *Service) RegisterFactory(vmID string, factory Factory) error {
 
 	log.Debug(fmt.Sprintf("Adding factory for vm %s", vmID))
 
-	vm, err := factory.New(nil)
+	vm, err := factory.New(s.Context())
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,6 @@ func (s *Service) RegisterFactory(vmID string, factory Factory) error {
 		return nil
 	}
 	s.versions[vmID] = version
-
 	return nil
 }
 
@@ -123,7 +122,9 @@ func (s *Service) registerVMs() error {
 		}
 
 		if err = s.RegisterFactory(name, &chainvm.Factory{
-			Path: filepath.Join(s.cfg.PluginDir, file.Name()),
+			Path:          filepath.Join(s.cfg.PluginDir, file.Name()),
+			LogLevel:      s.cfg.DebugLevel,
+			LogIncludeLoc: s.cfg.DebugPrintOrigins,
 		}); err != nil {
 			return err
 		}

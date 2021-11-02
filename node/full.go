@@ -266,6 +266,10 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	// init address api
 	qm.addressApi = address.NewAddressApi(cfg, node.Params)
 
+	if err := qm.RegisterVMService(); err != nil {
+		return nil, err
+	}
+
 	if err := qm.RegisterRpcService(); err != nil {
 		return nil, err
 	}
@@ -277,8 +281,6 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		nfManager.RpcServer = qm.GetRpcServer()
 	}
 
-	if err := qm.RegisterVMService(); err != nil {
-		return nil, err
-	}
+
 	return &qm, nil
 }
