@@ -82,7 +82,7 @@ func (vm *VM) Initialize(ctx context.Context) error {
 
 	etherbase := genAddress
 
-	config := ethconfig.Config{
+	vm.config = &ethconfig.Config{
 		Genesis:         genesis,
 		SyncMode:        downloader.FullSync,
 		DatabaseCache:   256,
@@ -98,7 +98,7 @@ func (vm *VM) Initialize(ctx context.Context) error {
 		},
 		TrieCleanCache: 256,
 	}
-	vm.node, vm.chain = meereth.New(&meereth.Config{EthConfig: &config}, datadir)
+	vm.node, vm.chain = meereth.New(&meereth.Config{EthConfig: vm.config}, datadir)
 
 	return nil
 }
@@ -160,14 +160,13 @@ func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
 }
 
 func (vm *VM) BuildBlock(txs []string) (consensus.Block, error) {
-
 	blocks, _ := core.GenerateChain(vm.config.Genesis.Config, vm.chain.Backend.BlockChain().CurrentBlock(), vm.chain.Backend.Engine(), vm.chain.Backend.ChainDb(), 1, func(i int, block *core.BlockGen) {
-		//block.SetCoinbase(common.Address{0x00})
+		block.SetCoinbase(vm.config.Miner.Etherbase)
 	})
 	if len(blocks) != 1 {
 		return nil, fmt.Errorf("BuildBlock error")
 	}
-	num, err := vm.chain.Backend.BlockChain().InsertChain(blocks)
+	num, err := vm.chain.Backend.BlockChain().InsertChainWithoutSealVerification(blocks[0])
 	if err != nil {
 		return nil, err
 	}
