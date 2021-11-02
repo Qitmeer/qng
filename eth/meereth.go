@@ -8,26 +8,24 @@ import (
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/nat"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 	"io"
-	"io/ioutil"
 	"path/filepath"
 )
-
 
 type Ether struct {
 	Backend *eth.Ethereum
 }
 
 type Key struct {
-	Address common.Address
+	Address    common.Address
 	PrivateKey *ecdsa.PrivateKey
 }
 
@@ -56,14 +54,23 @@ var clientIdentifier = "MeerEth"
 
 func New(config *Config) (*node.Node, *Ether) {
 
-	datadir,_ := ioutil.TempDir("", "")
+	datadir := "./data"
+	fpDataDir, err := filepath.Abs(datadir)
+	if err != nil {
+		return nil, nil
+	}
+
+	ecethash := ethconfig.Defaults.Ethash
+	ecethash.DatasetDir = filepath.Join(fpDataDir, "dataset")
+	ecethash.PowMode = ethash.ModeFullFake
+	config.EthConfig.Ethash = ecethash
 
 	// Create the empty networking stack
 	nodeConf := &node.Config{
-		Name:        clientIdentifier,
-		Version:     params.VersionWithMeta,
-		DataDir:     datadir,
-		KeyStoreDir: filepath.Join(datadir, "keystore"),
+		Name:                clientIdentifier,
+		Version:             params.VersionWithMeta,
+		DataDir:             datadir,
+		KeyStoreDir:         filepath.Join(datadir, "keystore"),
 		HTTPPort:            node.DefaultHTTPPort,
 		HTTPModules:         []string{"net", "web3"},
 		HTTPVirtualHosts:    []string{"localhost"},
@@ -72,9 +79,10 @@ func New(config *Config) (*node.Node, *Ether) {
 		WSModules:           []string{"net", "web3"},
 		GraphQLVirtualHosts: []string{"localhost"},
 		P2P: p2p.Config{
-			ListenAddr: ":30303",
-			MaxPeers:   5,
-			NAT:        nat.Any(),
+			MaxPeers:    0,
+			DiscoveryV5: false,
+			NoDiscovery: true,
+			NoDial:      true,
 		},
 	}
 
@@ -83,7 +91,7 @@ func New(config *Config) (*node.Node, *Ether) {
 		utils.Fatalf("Failed to create the node: %v", err)
 	}
 
-	backend, _:= eth.New(stack, config.EthConfig)
+	backend, _ := eth.New(stack, config.EthConfig)
 	if err != nil {
 		utils.Fatalf("Failed to create the eth backend: %v", err)
 	}
