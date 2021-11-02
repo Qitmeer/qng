@@ -6,30 +6,24 @@ package vm
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"github.com/Qitmeer/meerevm/cmd/evm/util"
 	"github.com/Qitmeer/meerevm/eth"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus"
-	"github.com/Qitmeer/qng/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
 	"math/big"
 	"sync"
 	"time"
-)
-
-// ID of the platform VM
-var (
-	ID = "meerevm"
 )
 
 type VM struct {
@@ -40,18 +34,21 @@ type VM struct {
 	config *ethconfig.Config
 	node   *node.Node
 	chain  *meereth.Ether
-	client *ethclient.Client
 }
 
 func (vm *VM) Initialize(ctx context.Context) error {
-	log.Debug("Initialize")
+	//log.Glogger().Verbosity(log.LvlTrace)
+
+	datadir := ctx.Value("datadir").(string)
+	log.Info(fmt.Sprintf("Initialize:%s", datadir))
 
 	vm.shutdownChan = make(chan struct{}, 1)
 	vm.ctx = ctx
 
 	//
+
 	chainConfig := &params.ChainConfig{
-		ChainID:             big.NewInt(1),
+		ChainID:             big.NewInt(520),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      true,
@@ -71,7 +68,7 @@ func (vm *VM) Initialize(ctx context.Context) error {
 	}
 
 	genBalance := big.NewInt(1000000000000000000)
-	genKey, _ := meereth.NewKey(rand.Reader)
+	genAddress := common.HexToAddress("0x71bc4403Af41634Cda7C32600A8024d54e7F6499")
 
 	genesis := &core.Genesis{
 		Config:     chainConfig,
@@ -80,10 +77,10 @@ func (vm *VM) Initialize(ctx context.Context) error {
 		ExtraData:  hexutil.MustDecode("0x00"),
 		GasLimit:   100000000,
 		Difficulty: big.NewInt(0),
-		Alloc:      core.GenesisAlloc{genKey.Address: {Balance: genBalance}},
+		Alloc:      core.GenesisAlloc{genAddress: {Balance: genBalance}},
 	}
 
-	etherbase := common.Address{1}
+	etherbase := genAddress
 
 	config := ethconfig.Config{
 		Genesis:         genesis,
@@ -99,8 +96,9 @@ func (vm *VM) Initialize(ctx context.Context) error {
 			GasPrice:  big.NewInt(1),
 			Recommit:  time.Second,
 		},
+		TrieCleanCache: 256,
 	}
-	vm.node, vm.chain = meereth.New(&meereth.Config{EthConfig: &config})
+	vm.node, vm.chain = meereth.New(&meereth.Config{EthConfig: &config}, datadir)
 
 	return nil
 }
@@ -113,9 +111,9 @@ func (vm *VM) Bootstrapping() error {
 	if err != nil {
 		log.Error(fmt.Sprintf("Failed to attach to self: %v", err))
 	}
-	vm.client = ethclient.NewClient(rpcClient)
+	client := ethclient.NewClient(rpcClient)
 
-	blockNum, err := vm.client.BlockNumber(vm.ctx)
+	blockNum, err := client.BlockNumber(vm.ctx)
 	if err != nil {
 		log.Error(err.Error())
 	} else {
@@ -144,7 +142,6 @@ func (vm *VM) Shutdown() error {
 		return nil
 	}
 
-	vm.client.Close()
 	vm.node.Close()
 
 	close(vm.shutdownChan)
@@ -153,14 +150,16 @@ func (vm *VM) Shutdown() error {
 }
 
 func (vm *VM) Version() (string, error) {
-	return util.Version, nil
+	return util.Version + fmt.Sprintf("(eth:%s)", params.VersionWithMeta), nil
 }
 
-func (vm *VM) GetBlock(*hash.Hash) (consensus.Block, error) {
-	return nil, nil
+func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
+	block := vm.chain.Backend.BlockChain().CurrentBlock()
+	h := hash.MustBytesToHash(block.Hash().Bytes())
+	return &Block{id: &h, ethBlock: block, vm: vm, status: consensus.Accepted}, nil
 }
 
-func (vm *VM) BuildBlock() (consensus.Block, error) {
+func (vm *VM) BuildBlock(txs []string) (consensus.Block, error) {
 
 	blocks, _ := core.GenerateChain(vm.config.Genesis.Config, vm.chain.Backend.BlockChain().CurrentBlock(), vm.chain.Backend.Engine(), vm.chain.Backend.ChainDb(), 1, func(i int, block *core.BlockGen) {
 		//block.SetCoinbase(common.Address{0x00})
@@ -178,8 +177,8 @@ func (vm *VM) BuildBlock() (consensus.Block, error) {
 
 	log.Info(fmt.Sprintf("BuildBlock:number=%d hash=%s", blocks[0].Number().Uint64(), blocks[0].Hash().String()))
 
-	h := hash.MustHexToHash(blocks[0].Hash().String())
-	return &Block{id: &h, ethBlock: *blocks[0], vm: vm, status: consensus.Accepted}, nil
+	h := hash.MustBytesToHash(blocks[0].Hash().Bytes())
+	return &Block{id: &h, ethBlock: blocks[0], vm: vm, status: consensus.Accepted}, nil
 }
 
 func (vm *VM) ParseBlock([]byte) (consensus.Block, error) {
@@ -187,5 +186,7 @@ func (vm *VM) ParseBlock([]byte) (consensus.Block, error) {
 }
 
 func (vm *VM) LastAccepted() (*hash.Hash, error) {
-	return nil, nil
+	block := vm.chain.Backend.BlockChain().CurrentBlock()
+	h := hash.MustBytesToHash(block.Hash().Bytes())
+	return &h, nil
 }

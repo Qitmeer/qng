@@ -12,7 +12,7 @@ import (
 
 type Block struct {
 	id       *hash.Hash
-	ethBlock types.Block
+	ethBlock *types.Block
 	vm       *VM
 	status   consensus.Status
 }

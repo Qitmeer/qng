@@ -5,13 +5,18 @@ package main
 import (
 	"github.com/Qitmeer/meerevm/cmd/evm/util"
 	"github.com/Qitmeer/meerevm/cmd/evm/vm"
-	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/vm/chainvm"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/hashicorp/go-plugin"
+	"os"
 	"runtime"
 )
 
 func main() {
+	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.LogfmtFormat()))
+	glogger.Verbosity(log.LvlTrace)
+	log.Root().SetHandler(glogger)
+
 	log.Info("System info", "ETH VM Version", util.Version, "Go version", runtime.Version())
 
 	plugin.Serve(&plugin.ServeConfig{
