@@ -61,7 +61,7 @@ func (vm *VM) GetBlock(*hash.Hash) (consensus.Block, error) {
 	return nil, nil
 }
 
-func (vm *VM) BuildBlock() (consensus.Block, error) {
+func (vm *VM) BuildBlock(txs []string) (consensus.Block, error) {
 	return nil, nil
 }
 

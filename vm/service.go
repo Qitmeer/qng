@@ -13,8 +13,14 @@ import (
 	"path/filepath"
 )
 
+// meerevm ID of the platform
+const (
+	MeerEVMID = "meerevm"
+)
+
 type Factory interface {
-	New(context.Context) (interface{}, error)
+	New(context.Context) (consensus.ChainVM, error)
+	GetVM() consensus.ChainVM
 }
 
 type Service struct {
@@ -34,7 +40,12 @@ func (s *Service) Start() error {
 	if err := s.Service.Start(); err != nil {
 		return err
 	}
-
+	vm, err := s.GetFactory(MeerEVMID)
+	if err != nil {
+		log.Debug(fmt.Sprintf("no %s", MeerEVMID))
+	} else {
+		vm.GetVM().Initialize(context.WithValue(s.Context(), "datadir", s.cfg.DataDir))
+	}
 	return nil
 }
 
@@ -42,6 +53,10 @@ func (s *Service) Stop() error {
 	log.Info("Stopping Virtual Machines Service")
 	if err := s.Service.Stop(); err != nil {
 		return err
+	}
+	vm, err := s.GetFactory(MeerEVMID)
+	if err == nil {
+		vm.GetVM().Shutdown()
 	}
 	return nil
 }

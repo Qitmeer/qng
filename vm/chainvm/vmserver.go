@@ -27,6 +27,7 @@ func NewServer(vm consensus.ChainVM, broker *plugin.GRPCBroker) *VMServer {
 	return &VMServer{
 		vm:     vm,
 		broker: broker,
+		closed: make(chan struct{}, 1),
 	}
 }
 
@@ -35,9 +36,9 @@ func (vm *VMServer) Initialize(ctx context.Context, req *proto.InitializeRequest
 	vm.chainID = req.ChainID
 	vm.nodeID = req.NodeID
 
-	log.Debug(fmt.Sprintf("network:%d chainID:%d nodeID:%d", vm.network.String(), vm.chainID, vm.nodeID))
+	log.Debug(fmt.Sprintf("network:%d chainID:%d nodeID:%d datadir:%s", vm.network.String(), vm.chainID, vm.nodeID, req.Datadir))
 
-	vm.ctx = context.Background()
+	vm.ctx = context.WithValue(context.Background(), "datadir", req.Datadir)
 
 	if err := vm.vm.Initialize(vm.ctx); err != nil {
 		close(vm.closed)
