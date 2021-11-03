@@ -27,6 +27,7 @@ func NewServer(vm consensus.ChainVM, broker *plugin.GRPCBroker) *VMServer {
 	return &VMServer{
 		vm:     vm,
 		broker: broker,
+		closed: make(chan struct{}, 1),
 	}
 }
 
@@ -35,9 +36,9 @@ func (vm *VMServer) Initialize(ctx context.Context, req *proto.InitializeRequest
 	vm.chainID = req.ChainID
 	vm.nodeID = req.NodeID
 
-	log.Debug(fmt.Sprintf("network:%d chainID:%d nodeID:%d", vm.network.String(), vm.chainID, vm.nodeID))
+	log.Debug(fmt.Sprintf("network:%d chainID:%d nodeID:%d datadir:%s", vm.network.String(), vm.chainID, vm.nodeID, req.Datadir))
 
-	vm.ctx = context.Background()
+	vm.ctx = context.WithValue(context.Background(), "datadir", req.Datadir)
 
 	if err := vm.vm.Initialize(vm.ctx); err != nil {
 		close(vm.closed)
@@ -91,4 +92,20 @@ func (vm *VMServer) Shutdown(context.Context, *emptypb.Empty) (*emptypb.Empty, e
 func (vm *VMServer) Version(context.Context, *emptypb.Empty) (*proto.VersionResponse, error) {
 	version, err := vm.vm.Version()
 	return &proto.VersionResponse{Version: version}, err
+}
+
+func (vm *VMServer) BuildBlock(ctx context.Context, req *proto.BuildBlockRequest) (*proto.BuildBlockResponse, error) {
+	blk, err := vm.vm.BuildBlock(req.Txs)
+	if err != nil {
+		return nil, err
+	}
+	blkID := blk.ID()
+	parentID := blk.Parent()
+	return &proto.BuildBlockResponse{
+		Id:        blkID[:],
+		ParentID:  parentID[:],
+		Bytes:     blk.Bytes(),
+		Height:    blk.Height(),
+		Timestamp: uint64(blk.Timestamp().Unix()),
+	}, err
 }

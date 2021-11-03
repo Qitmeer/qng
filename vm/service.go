@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/vm/chainvm"
@@ -13,8 +15,14 @@ import (
 	"path/filepath"
 )
 
+// meerevm ID of the platform
+const (
+	MeerEVMID = "meerevm"
+)
+
 type Factory interface {
-	New(context.Context) (interface{}, error)
+	New(context.Context) (consensus.ChainVM, error)
+	GetVM() consensus.ChainVM
 }
 
 type Service struct {
@@ -34,7 +42,13 @@ func (s *Service) Start() error {
 	if err := s.Service.Start(); err != nil {
 		return err
 	}
-
+	vm, err := s.GetFactory(MeerEVMID)
+	if err != nil {
+		log.Debug(fmt.Sprintf("no %s", MeerEVMID))
+	} else {
+		vm.GetVM().Initialize(context.WithValue(s.Context(), "datadir", s.cfg.DataDir))
+	}
+	s.subscribe()
 	return nil
 }
 
@@ -42,6 +56,10 @@ func (s *Service) Stop() error {
 	log.Info("Stopping Virtual Machines Service")
 	if err := s.Service.Stop(); err != nil {
 		return err
+	}
+	vm, err := s.GetFactory(MeerEVMID)
+	if err == nil {
+		vm.GetVM().Shutdown()
 	}
 	return nil
 }
@@ -131,6 +149,67 @@ func (s *Service) registerVMs() error {
 	}
 
 	return nil
+}
+
+func (s *Service) subscribe() {
+	ch := make(chan *event.Event)
+	sub := s.events.Subscribe(ch)
+	go func() {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case ev := <-ch:
+				if ev.Data != nil {
+					switch value := ev.Data.(type) {
+					case *blockchain.Notification:
+						s.handleNotifyMsg(value)
+					}
+				}
+				if ev.Ack != nil {
+					ev.Ack <- struct{}{}
+				}
+			}
+
+			if s.IsShutdown() {
+				log.Info("Close Miner Event Subscribe")
+				return
+			}
+		}
+	}()
+}
+
+func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
+	switch notification.Type {
+	case blockchain.BlockAccepted:
+		ban, ok := notification.Data.(*blockchain.BlockAcceptedNotifyData)
+		if !ok {
+			return
+		}
+		vm, err := s.GetFactory(MeerEVMID)
+		if err == nil {
+			txs := []string{}
+			for _, tx := range ban.Block.Transactions() {
+				for _, out := range tx.Tx.TxOut {
+					if !opreturn.IsMeerEVM(out.PkScript) {
+						continue
+					}
+					me, err := opreturn.NewOPReturnFrom(out.PkScript)
+					if err != nil {
+						log.Error(err.Error())
+						continue
+					}
+					txs = append(txs, me.(*opreturn.MeerEVM).GetHex())
+				}
+			}
+			if len(txs) <= 0 {
+				return
+			}
+			_, err := vm.GetVM().BuildBlock(txs)
+			if err != nil {
+				log.Warn(err.Error())
+			}
+		}
+	}
 }
 
 func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {

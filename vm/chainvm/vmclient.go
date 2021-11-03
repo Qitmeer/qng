@@ -34,7 +34,7 @@ func (vm *VMClient) SetProcess(proc *plugin.Client) {
 func (vm *VMClient) Initialize(ctx context.Context) error {
 	vm.ctx = ctx
 
-	resp, err := vm.client.Initialize(context.Background(), &proto.InitializeRequest{})
+	resp, err := vm.client.Initialize(context.Background(), &proto.InitializeRequest{Datadir: ctx.Value("datadir").(string)})
 	if err != nil {
 		return err
 	}
@@ -106,6 +106,38 @@ func (vm *VMClient) Version() (string, error) {
 		return "", err
 	}
 	return resp.Version, nil
+}
+
+func (vm *VMClient) BuildBlock(txs []string) (consensus.Block, error) {
+	resp, err := vm.client.BuildBlock(vm.ctx, &proto.BuildBlockRequest{
+		Txs: txs,
+	})
+	if err != nil {
+		return nil, err
+	}
+	id := hash.MustBytesToHash(resp.Id)
+	parentID := hash.MustBytesToHash(resp.ParentID)
+	return &BlockClient{
+		vm:       vm,
+		id:       &id,
+		parentID: &parentID,
+		status:   consensus.Accepted,
+		bytes:    resp.Bytes,
+		height:   resp.Height,
+		time:     time.Unix(int64(resp.Timestamp), 0),
+	}, nil
+}
+
+func (vm *VMClient) GetBlock(*hash.Hash) (consensus.Block, error) {
+	return nil, nil
+}
+
+func (vm *VMClient) ParseBlock([]byte) (consensus.Block, error) {
+	return nil, nil
+}
+
+func (vm *VMClient) LastAccepted() (*hash.Hash, error) {
+	return nil, nil
 }
 
 func NewVMClient(client proto.VMClient, broker *plugin.GRPCBroker) *VMClient {

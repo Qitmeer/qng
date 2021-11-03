@@ -8,6 +8,7 @@ message InitializeRequest {
     uint32 networkID = 1;
     uint32 chainID = 2;
     uint32 nodeID = 3;
+    string datadir = 4;
 }
 
 message InitializeResponse {
@@ -32,12 +33,16 @@ message Handler {
     uint32 server = 3;
 }
 
+message BuildBlockRequest {
+    repeated string txs = 1;
+}
+
 message BuildBlockResponse {
     bytes id = 1;
     bytes parentID = 2;
     bytes bytes = 3;
     uint64 height = 4;
-    bytes timestamp = 5;
+    uint64 timestamp = 5;
 }
 
 message ParseBlockRequest {
@@ -123,7 +128,7 @@ service VM {
     rpc Shutdown(google.protobuf.Empty) returns (google.protobuf.Empty);
     rpc CreateHandlers(google.protobuf.Empty) returns (CreateHandlersResponse);
     rpc CreateStaticHandlers(google.protobuf.Empty) returns (CreateStaticHandlersResponse);
-    rpc BuildBlock(google.protobuf.Empty) returns (BuildBlockResponse);
+    rpc BuildBlock(BuildBlockRequest) returns (BuildBlockResponse);
     rpc ParseBlock(ParseBlockRequest) returns (ParseBlockResponse);
     rpc GetBlock(GetBlockRequest) returns (GetBlockResponse);
     rpc Version(google.protobuf.Empty) returns (VersionResponse);
