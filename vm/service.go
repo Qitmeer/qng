@@ -6,6 +6,7 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/vm/chainvm"
@@ -180,13 +181,30 @@ func (s *Service) subscribe() {
 func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 	switch notification.Type {
 	case blockchain.BlockAccepted:
-		_, ok := notification.Data.(*blockchain.BlockAcceptedNotifyData)
+		ban, ok := notification.Data.(*blockchain.BlockAcceptedNotifyData)
 		if !ok {
 			return
 		}
 		vm, err := s.GetFactory(MeerEVMID)
 		if err == nil {
-			_, err := vm.GetVM().BuildBlock([]string{"123"})
+			txs := []string{}
+			for _, tx := range ban.Block.Transactions() {
+				for _, out := range tx.Tx.TxOut {
+					if !opreturn.IsMeerEVM(out.PkScript) {
+						continue
+					}
+					me, err := opreturn.NewOPReturnFrom(out.PkScript)
+					if err != nil {
+						log.Error(err.Error())
+						continue
+					}
+					txs = append(txs, me.(*opreturn.MeerEVM).GetHex())
+				}
+			}
+			if len(txs) <= 0 {
+				return
+			}
+			_, err := vm.GetVM().BuildBlock(txs)
 			if err != nil {
 				log.Warn(err.Error())
 			}

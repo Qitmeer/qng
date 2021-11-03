@@ -1213,6 +1213,7 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 		}
 	}
 
+	isMeerEVM := false
 	// Calculate the total output amount for this transaction.  It is safe
 	// to ignore overflow and out of range errors here because those error
 	// conditions would have already been caught by checkTransactionSanity.
@@ -1224,6 +1225,12 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 			return nil, err
 		}
 		totalAtomOut[txOut.Amount.Id] += txOut.Amount.Value
+
+		if !isMeerEVM {
+			if opreturn.IsMeerEVM(txOut.PkScript) {
+				isMeerEVM = true
+			}
+		}
 	}
 
 	// Ensure no unbalanced/unknowned coin type from input/output
@@ -1250,6 +1257,14 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 				"transaction %v is %v which is less than the amount "+
 				"spent of %v", coinId.Name(), txHash, atomin, atomout)
 			return nil, ruleError(ErrSpendTooHigh, str)
+		}
+		if isMeerEVM {
+			if atomin < atomout+opreturn.MeerEVMFee {
+				str := fmt.Sprintf("total %s value of all transaction inputs for "+
+					"transaction %v is %v which is less than the amount "+
+					"spent of %v for %d (meerevm fee)", coinId.Name(), txHash, atomin, atomout, opreturn.MeerEVMFee)
+				return nil, ruleError(ErrSpendTooHigh, str)
+			}
 		}
 		allFees[coinId] = atomin - atomout
 	}
