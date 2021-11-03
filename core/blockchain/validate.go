@@ -1262,7 +1262,7 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 			if atomin < atomout+opreturn.MeerEVMFee {
 				str := fmt.Sprintf("total %s value of all transaction inputs for "+
 					"transaction %v is %v which is less than the amount "+
-					"spent of %v for %d (meerevm fee)", coinId.Name(), txHash, atomin, atomout, opreturn.MeerEVMFee)
+					"spent of %v for %f (meerevm fee)", coinId.Name(), txHash, atomin, atomout, opreturn.MeerEVMFee)
 				return nil, ruleError(ErrSpendTooHigh, str)
 			}
 		}
