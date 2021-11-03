@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -162,6 +163,15 @@ func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
 func (vm *VM) BuildBlock(txs []string) (consensus.Block, error) {
 	blocks, _ := core.GenerateChain(vm.config.Genesis.Config, vm.chain.Backend.BlockChain().CurrentBlock(), vm.chain.Backend.Engine(), vm.chain.Backend.ChainDb(), 1, func(i int, block *core.BlockGen) {
 		block.SetCoinbase(vm.config.Miner.Etherbase)
+		for _, tx := range txs {
+			txb := common.FromHex(tx)
+			var tx = &types.Transaction{}
+			if err := tx.UnmarshalBinary(txb); err != nil {
+				log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
+				continue
+			}
+			block.AddTx(tx)
+		}
 	})
 	if len(blocks) != 1 {
 		return nil, fmt.Errorf("BuildBlock error")
@@ -174,7 +184,7 @@ func (vm *VM) BuildBlock(txs []string) (consensus.Block, error) {
 		return nil, fmt.Errorf("BuildBlock error")
 	}
 
-	log.Info(fmt.Sprintf("BuildBlock:number=%d hash=%s", blocks[0].Number().Uint64(), blocks[0].Hash().String()))
+	log.Info(fmt.Sprintf("BuildBlock:number=%d hash=%s txs=%d", blocks[0].Number().Uint64(), blocks[0].Hash().String(), len(blocks[0].Transactions())))
 
 	h := hash.MustBytesToHash(blocks[0].Hash().Bytes())
 	return &Block{id: &h, ethBlock: blocks[0], vm: vm, status: consensus.Accepted}, nil
