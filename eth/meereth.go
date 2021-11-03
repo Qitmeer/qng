@@ -8,7 +8,6 @@ import (
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
@@ -52,17 +51,16 @@ type Config struct {
 // clientIdentifier is a hard coded identifier to report into the network.
 var clientIdentifier = "MeerEth"
 
-func New(config *Config) (*node.Node, *Ether) {
+func New(config *Config, datadir string) (*node.Node, *Ether) {
 
-	datadir := "./data"
-	fpDataDir, err := filepath.Abs(datadir)
+	datadir, err := filepath.Abs(datadir)
 	if err != nil {
 		return nil, nil
 	}
+	edatadir := filepath.Join(datadir, clientIdentifier)
 
 	ecethash := ethconfig.Defaults.Ethash
-	ecethash.DatasetDir = filepath.Join(fpDataDir, "dataset")
-	ecethash.PowMode = ethash.ModeFullFake
+	ecethash.DatasetDir = filepath.Join(edatadir, "dataset")
 	config.EthConfig.Ethash = ecethash
 
 	// Create the empty networking stack
@@ -70,11 +68,13 @@ func New(config *Config) (*node.Node, *Ether) {
 		Name:                clientIdentifier,
 		Version:             params.VersionWithMeta,
 		DataDir:             datadir,
-		KeyStoreDir:         filepath.Join(datadir, "keystore"),
+		KeyStoreDir:         filepath.Join(edatadir, "keystore"),
+		HTTPHost:            node.DefaultHTTPHost,
 		HTTPPort:            node.DefaultHTTPPort,
-		HTTPModules:         []string{"net", "web3"},
+		HTTPModules:         []string{"net", "web3", "eth"},
 		HTTPVirtualHosts:    []string{"localhost"},
 		HTTPTimeouts:        rpc.DefaultHTTPTimeouts,
+		WSHost:              node.DefaultWSHost,
 		WSPort:              node.DefaultWSPort,
 		WSModules:           []string{"net", "web3"},
 		GraphQLVirtualHosts: []string{"localhost"},
