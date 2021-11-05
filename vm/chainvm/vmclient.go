@@ -24,17 +24,18 @@ type VMClient struct {
 
 	conns []*grpc.ClientConn
 
-	ctx context.Context
+	ctx *consensus.Context
 }
 
 func (vm *VMClient) SetProcess(proc *plugin.Client) {
 	vm.proc = proc
 }
 
-func (vm *VMClient) Initialize(ctx context.Context) error {
+func (vm *VMClient) Initialize(ctx *consensus.Context) error {
 	vm.ctx = ctx
 
-	resp, err := vm.client.Initialize(context.Background(), &proto.InitializeRequest{Datadir: ctx.Value("datadir").(string)})
+	resp, err := vm.client.Initialize(ctx, &proto.InitializeRequest{
+		NetworkID: uint32(ctx.NetworkID), ChainID: ctx.ChainID, NodeID: ctx.NodeID, Datadir: ctx.Datadir, LogLevel: ctx.LogLevel, LogLocate: ctx.LogLocate})
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"context"
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
@@ -9,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/node/service"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/vm/chainvm"
 
 	"io/ioutil"
@@ -21,8 +21,9 @@ const (
 )
 
 type Factory interface {
-	New(context.Context) (consensus.ChainVM, error)
+	New() (consensus.ChainVM, error)
 	GetVM() consensus.ChainVM
+	Context() *consensus.Context
 }
 
 type Service struct {
@@ -46,7 +47,20 @@ func (s *Service) Start() error {
 	if err != nil {
 		log.Debug(fmt.Sprintf("no %s", MeerEVMID))
 	} else {
-		vm.GetVM().Initialize(context.WithValue(s.Context(), "datadir", s.cfg.DataDir))
+		err := vm.GetVM().Initialize(vm.Context())
+		if err != nil {
+			log.Warn(err.Error())
+		} else {
+			err := vm.GetVM().Bootstrapping()
+			if err != nil {
+				log.Warn(err.Error())
+			} else {
+				err := vm.GetVM().Bootstrapped()
+				if err != nil {
+					log.Warn(err.Error())
+				}
+			}
+		}
 	}
 	s.subscribe()
 	return nil
@@ -86,7 +100,7 @@ func (s *Service) RegisterFactory(vmID string, factory Factory) error {
 
 	log.Debug(fmt.Sprintf("Adding factory for vm %s", vmID))
 
-	vm, err := factory.New(s.Context())
+	vm, err := factory.New()
 	if err != nil {
 		return err
 	}
@@ -140,9 +154,9 @@ func (s *Service) registerVMs() error {
 		}
 
 		if err = s.RegisterFactory(name, &chainvm.Factory{
-			Path:          filepath.Join(s.cfg.PluginDir, file.Name()),
-			LogLevel:      s.cfg.DebugLevel,
-			LogIncludeLoc: s.cfg.DebugPrintOrigins,
+			Path: filepath.Join(s.cfg.PluginDir, file.Name()),
+			Ctx: &consensus.Context{Context: s.Context(),
+				Datadir: s.cfg.DataDir, LogLevel: s.cfg.DebugLevel, NetworkID: params.ActiveNetParams.Net, LogLocate: s.cfg.DebugPrintOrigins},
 		}); err != nil {
 			return err
 		}
@@ -219,6 +233,7 @@ func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
 		versions:  make(map[string]string),
 		cfg:       cfg,
 	}
+	ser.InitContext()
 
 	if err := ser.registerVMs(); err != nil {
 		log.Error(err.Error())

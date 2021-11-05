@@ -9,6 +9,8 @@ message InitializeRequest {
     uint32 chainID = 2;
     uint32 nodeID = 3;
     string datadir = 4;
+    string LogLevel = 5;
+    bool LogLocate = 6;
 }
 
 message InitializeResponse {

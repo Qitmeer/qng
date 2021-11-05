@@ -4,10 +4,8 @@
 
 package consensus
 
-import "context"
-
 type VM interface {
-	Initialize(ctx context.Context) error
+	Initialize(ctx *Context) error
 	Bootstrapping() error
 	Bootstrapped() error
 	Shutdown() error
