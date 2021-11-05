@@ -47,7 +47,8 @@ func (s *Service) Start() error {
 	if err != nil {
 		log.Debug(fmt.Sprintf("no %s", MeerEVMID))
 	} else {
-		vm.GetVM().Initialize(&consensus.Context{Context: s.Context(), Datadir: s.cfg.DataDir, LogLevel: s.cfg.DebugLevel, NetworkID: params.ActiveNetParams.Net})
+		vm.GetVM().Initialize(&consensus.Context{Context: s.Context(),
+			Datadir: s.cfg.DataDir, LogLevel: s.cfg.DebugLevel, NetworkID: params.ActiveNetParams.Net, LogLocate: s.cfg.DebugPrintOrigins})
 	}
 	s.subscribe()
 	return nil

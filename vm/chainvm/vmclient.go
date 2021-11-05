@@ -35,7 +35,7 @@ func (vm *VMClient) Initialize(ctx *consensus.Context) error {
 	vm.ctx = ctx
 
 	resp, err := vm.client.Initialize(ctx, &proto.InitializeRequest{
-		NetworkID: uint32(ctx.NetworkID), ChainID: ctx.ChainID, NodeID: ctx.NodeID, Datadir: ctx.Datadir, LogLevel: ctx.LogLevel})
+		NetworkID: uint32(ctx.NetworkID), ChainID: ctx.ChainID, NodeID: ctx.NodeID, Datadir: ctx.Datadir, LogLevel: ctx.LogLevel, LogLocate: ctx.LogLocate})
 	if err != nil {
 		return err
 	}

@@ -13,4 +13,5 @@ type Context struct {
 	NodeID    uint32
 	Datadir   string
 	LogLevel  string
+	LogLocate bool
 }
