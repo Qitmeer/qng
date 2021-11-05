@@ -9,6 +9,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/node/service"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/vm/chainvm"
 
 	"io/ioutil"
@@ -46,7 +47,7 @@ func (s *Service) Start() error {
 	if err != nil {
 		log.Debug(fmt.Sprintf("no %s", MeerEVMID))
 	} else {
-		vm.GetVM().Initialize(context.WithValue(s.Context(), "datadir", s.cfg.DataDir))
+		vm.GetVM().Initialize(&consensus.Context{Context: s.Context(), Datadir: s.cfg.DataDir, LogLevel: s.cfg.DebugLevel, NetworkID: params.ActiveNetParams.Net})
 	}
 	s.subscribe()
 	return nil

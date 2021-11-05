@@ -15,7 +15,7 @@ type VMServer struct {
 	vm     consensus.ChainVM
 	broker *plugin.GRPCBroker
 
-	ctx    context.Context
+	ctx    *consensus.Context
 	closed chan struct{}
 
 	network protocol.Network
@@ -38,7 +38,7 @@ func (vm *VMServer) Initialize(ctx context.Context, req *proto.InitializeRequest
 
 	log.Debug(fmt.Sprintf("network:%d chainID:%d nodeID:%d datadir:%s", vm.network.String(), vm.chainID, vm.nodeID, req.Datadir))
 
-	vm.ctx = context.WithValue(context.Background(), "datadir", req.Datadir)
+	vm.ctx = &consensus.Context{Context: ctx, NetworkID: protocol.Network(req.NetworkID), ChainID: req.ChainID, NodeID: req.NodeID, Datadir: req.Datadir, LogLevel: req.LogLevel}
 
 	if err := vm.vm.Initialize(vm.ctx); err != nil {
 		close(vm.closed)

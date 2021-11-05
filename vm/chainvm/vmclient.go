@@ -31,10 +31,11 @@ func (vm *VMClient) SetProcess(proc *plugin.Client) {
 	vm.proc = proc
 }
 
-func (vm *VMClient) Initialize(ctx context.Context) error {
+func (vm *VMClient) Initialize(ctx *consensus.Context) error {
 	vm.ctx = ctx
 
-	resp, err := vm.client.Initialize(context.Background(), &proto.InitializeRequest{Datadir: ctx.Value("datadir").(string)})
+	resp, err := vm.client.Initialize(ctx, &proto.InitializeRequest{
+		NetworkID: uint32(ctx.NetworkID), ChainID: ctx.ChainID, NodeID: ctx.NodeID, Datadir: ctx.Datadir, LogLevel: ctx.LogLevel})
 	if err != nil {
 		return err
 	}
