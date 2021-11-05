@@ -47,7 +47,20 @@ func (s *Service) Start() error {
 	if err != nil {
 		log.Debug(fmt.Sprintf("no %s", MeerEVMID))
 	} else {
-		vm.GetVM().Initialize(vm.Context())
+		err := vm.GetVM().Initialize(vm.Context())
+		if err != nil {
+			log.Warn(err.Error())
+		} else {
+			err := vm.GetVM().Bootstrapping()
+			if err != nil {
+				log.Warn(err.Error())
+			} else {
+				err := vm.GetVM().Bootstrapped()
+				if err != nil {
+					log.Warn(err.Error())
+				}
+			}
+		}
 	}
 	s.subscribe()
 	return nil
