@@ -8,7 +8,6 @@
 package chainvm
 
 import (
-	"context"
 	"fmt"
 	"github.com/Qitmeer/qng/consensus"
 	"os/exec"
@@ -19,19 +18,18 @@ import (
 )
 
 type Factory struct {
-	Path          string
-	arg           string
-	LogLevel      string
-	LogIncludeLoc bool
-	vm            *VMClient
+	Path string
+	arg  string
+	Ctx  *consensus.Context
+	vm   *VMClient
 }
 
-func (f *Factory) New(ctx context.Context) (consensus.ChainVM, error) {
+func (f *Factory) New() (consensus.ChainVM, error) {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:            "VM",
 		Output:          qlog.LogWrite(),
-		Level:           hclog.LevelFromString(f.LogLevel),
-		IncludeLocation: false,
+		Level:           hclog.LevelFromString(f.Ctx.LogLevel),
+		IncludeLocation: f.Ctx.LogLocate,
 		TimeFormat:      qlog.TermTimeFormat,
 	})
 
@@ -68,11 +66,15 @@ func (f *Factory) New(ctx context.Context) (consensus.ChainVM, error) {
 	}
 
 	vm.SetProcess(client)
-	vm.ctx = ctx
+	vm.ctx = f.Ctx
 	f.vm = vm
 	return vm, nil
 }
 
 func (f *Factory) GetVM() consensus.ChainVM {
 	return f.vm
+}
+
+func (f *Factory) Context() *consensus.Context {
+	return f.Ctx
 }

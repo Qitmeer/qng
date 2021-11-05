@@ -24,7 +24,7 @@ type VMClient struct {
 
 	conns []*grpc.ClientConn
 
-	ctx context.Context
+	ctx *consensus.Context
 }
 
 func (vm *VMClient) SetProcess(proc *plugin.Client) {
