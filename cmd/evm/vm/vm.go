@@ -70,7 +70,7 @@ func (vm *VM) Initialize(ctx *consensus.Context) error {
 		BerlinBlock:         big.NewInt(0),
 		//		LondonBlock:         big.NewInt(0),
 		LondonBlock: nil,
-		Ethash:      nil,
+		Ethash:      new(params.EthashConfig),
 	}
 
 	genBalance := big.NewInt(1000000000000000000)
