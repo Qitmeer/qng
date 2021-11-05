@@ -5,7 +5,6 @@
 package vm
 
 import (
-	"context"
 	"fmt"
 	"github.com/Qitmeer/meerevm/cmd/evm/util"
 	"github.com/Qitmeer/meerevm/eth"
@@ -28,20 +27,25 @@ import (
 )
 
 type VM struct {
-	ctx          context.Context
+	ctx          *consensus.Context
 	shutdownChan chan struct{}
 	shutdownWg   sync.WaitGroup
 
 	config *ethconfig.Config
 	node   *node.Node
 	chain  *meereth.Ether
+
+	glog *log.GlogHandler
 }
 
-func (vm *VM) Initialize(ctx context.Context) error {
+func (vm *VM) Initialize(ctx *consensus.Context) error {
 	//log.Glogger().Verbosity(log.LvlTrace)
+	lvl, err := log.LvlFromString(ctx.LogLevel)
+	if err == nil {
+		vm.glog.Verbosity(lvl)
+	}
 
-	datadir := ctx.Value("datadir").(string)
-	log.Info(fmt.Sprintf("Initialize:%s", datadir))
+	log.Info(fmt.Sprintf("Initialize:%s", ctx.Datadir))
 
 	vm.shutdownChan = make(chan struct{}, 1)
 	vm.ctx = ctx
@@ -99,7 +103,7 @@ func (vm *VM) Initialize(ctx context.Context) error {
 		},
 		TrieCleanCache: 256,
 	}
-	vm.node, vm.chain = meereth.New(&meereth.Config{EthConfig: vm.config}, datadir)
+	vm.node, vm.chain = meereth.New(&meereth.Config{EthConfig: vm.config}, vm.ctx.Datadir)
 
 	return nil
 }
@@ -198,4 +202,8 @@ func (vm *VM) LastAccepted() (*hash.Hash, error) {
 	block := vm.chain.Backend.BlockChain().CurrentBlock()
 	h := hash.MustBytesToHash(block.Hash().Bytes())
 	return &h, nil
+}
+
+func NewVM(glog *log.GlogHandler) *VM {
+	return &VM{glog: glog}
 }
