@@ -44,6 +44,7 @@ func (vm *VM) Initialize(ctx *consensus.Context) error {
 	if err == nil {
 		vm.glog.Verbosity(lvl)
 	}
+	log.PrintOrigins(ctx.LogLocate)
 
 	log.Info(fmt.Sprintf("Initialize:%s", ctx.Datadir))
 
