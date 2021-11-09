@@ -22,7 +22,7 @@ func main() {
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: chainvm.Handshake,
 		Plugins: map[string]plugin.Plugin{
-			"vm": chainvm.New(&vm.VM{}),
+			"vm": chainvm.New(vm.NewVM(glogger)),
 		},
 
 		GRPCServer: plugin.DefaultGRPCServer,
