@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/event"
@@ -213,8 +214,14 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 						log.Error(err.Error())
 						return
 					}
+
 					if len(pksAddrs) > 0 {
-						ctx.To = hex.EncodeToString(pksAddrs[0].Script())
+						secpPksAddr,ok:=pksAddrs[0].(*address.SecpPubKeyAddress)
+						if !ok {
+							log.Error(fmt.Sprintf("Not SecpPubKeyAddress:%s",pksAddrs[0].String()))
+							return
+						}
+						ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
 						ctx.Value = uint64(tx.Tx.TxOut[0].Amount.Value)
 						txs = append(txs, ctx)
 					}
