@@ -182,6 +182,20 @@ func (vm *VM) BuildBlock(txs []*consensus.Tx) (consensus.Block, error) {
 					continue
 				}
 				block.AddTx(tx)
+			} else if tx.Type == consensus.TxTypeExport {
+				toAddr := common.HexToAddress(tx.To)
+				txData := &types.AccessListTx{
+					To:    &toAddr,
+					Value: big.NewInt(int64(tx.Value)),
+					Nonce: uint64(consensus.TxTypeExport),
+				}
+				etx := types.NewTx(txData)
+				txmb, err := etx.MarshalBinary()
+				if err != nil {
+					log.Warn("could not create transaction: %v", err)
+					return
+				}
+				block.SetExtra(txmb)
 			}
 		}
 

@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"time"
 
+	qconsensus "github.com/Qitmeer/qng/consensus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
@@ -265,7 +266,7 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 		me.config.Log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
 		return
 	}
-	if tx.Nonce() == 0 {
+	if tx.Nonce() == uint64(qconsensus.TxTypeExport) {
 		state.AddBalance(*tx.To(), tx.Value())
 	} else {
 		state.SubBalance(*tx.To(), tx.Value())
