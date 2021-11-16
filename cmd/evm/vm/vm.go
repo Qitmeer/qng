@@ -171,16 +171,18 @@ func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
 	return &Block{id: &h, ethBlock: block, vm: vm, status: consensus.Accepted}, nil
 }
 
-func (vm *VM) BuildBlock(txs []string) (consensus.Block, error) {
+func (vm *VM) BuildBlock(txs []*consensus.Tx) (consensus.Block, error) {
 	blocks, _ := core.GenerateChain(vm.config.Genesis.Config, vm.chain.Backend.BlockChain().CurrentBlock(), vm.chain.Backend.Engine(), vm.chain.Backend.ChainDb(), 1, func(i int, block *core.BlockGen) {
 		for _, tx := range txs {
-			txb := common.FromHex(tx)
-			var tx = &types.Transaction{}
-			if err := tx.UnmarshalBinary(txb); err != nil {
-				log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
-				continue
+			if tx.Type == consensus.TxTypeNormal {
+				txb := common.FromHex(string(tx.Data))
+				var tx = &types.Transaction{}
+				if err := tx.UnmarshalBinary(txb); err != nil {
+					log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
+					continue
+				}
+				block.AddTx(tx)
 			}
-			block.AddTx(tx)
 		}
 
 	})
