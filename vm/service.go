@@ -216,9 +216,9 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 					}
 
 					if len(pksAddrs) > 0 {
-						secpPksAddr,ok:=pksAddrs[0].(*address.SecpPubKeyAddress)
+						secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
 						if !ok {
-							log.Error(fmt.Sprintf("Not SecpPubKeyAddress:%s",pksAddrs[0].String()))
+							log.Error(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
 							return
 						}
 						ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
