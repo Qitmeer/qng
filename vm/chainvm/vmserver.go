@@ -96,7 +96,16 @@ func (vm *VMServer) Version(context.Context, *emptypb.Empty) (*proto.VersionResp
 }
 
 func (vm *VMServer) BuildBlock(ctx context.Context, req *proto.BuildBlockRequest) (*proto.BuildBlockResponse, error) {
-	blk, err := vm.vm.BuildBlock(req.Txs)
+	txs := []*consensus.Tx{}
+	for _, tx := range req.Txs {
+		t := &consensus.Tx{}
+		t.From = tx.From
+		t.To = tx.To
+		t.Data = tx.Data
+		t.Value = tx.Value
+		txs = append(txs, t)
+	}
+	blk, err := vm.vm.BuildBlock(txs)
 	if err != nil {
 		return nil, err
 	}

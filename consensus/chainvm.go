@@ -13,7 +13,7 @@ type ChainVM interface {
 
 	GetBlock(*hash.Hash) (Block, error)
 
-	BuildBlock([]string) (Block, error)
+	BuildBlock([]*Tx) (Block, error)
 
 	ParseBlock([]byte) (Block, error)
 

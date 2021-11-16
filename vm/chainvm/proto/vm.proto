@@ -35,8 +35,16 @@ message Handler {
     uint32 server = 3;
 }
 
+message Tx {
+    uint32 type = 1;
+    string from = 2;
+    string to = 3;
+    uint64 value = 4;
+    bytes data = 5;
+}
+
 message BuildBlockRequest {
-    repeated string txs = 1;
+    repeated Tx txs = 1;
 }
 
 message BuildBlockResponse {

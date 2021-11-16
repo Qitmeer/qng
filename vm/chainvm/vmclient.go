@@ -109,9 +109,18 @@ func (vm *VMClient) Version() (string, error) {
 	return resp.Version, nil
 }
 
-func (vm *VMClient) BuildBlock(txs []string) (consensus.Block, error) {
+func (vm *VMClient) BuildBlock(txs []*consensus.Tx) (consensus.Block, error) {
+	brtxs:=[]*proto.Tx{}
+	for _,tx:=range txs {
+		t:=&proto.Tx{}
+		t.Value=tx.Value
+		t.To=tx.To
+		t.From=tx.From
+		t.Data=tx.Data
+		brtxs=append(brtxs,t)
+	}
 	resp, err := vm.client.BuildBlock(vm.ctx, &proto.BuildBlockRequest{
-		Txs: txs,
+		Txs: brtxs,
 	})
 	if err != nil {
 		return nil, err

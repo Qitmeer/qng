@@ -1,12 +1,15 @@
 package vm
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/event"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/vm/chainvm"
@@ -201,18 +204,34 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 		}
 		vm, err := s.GetFactory(MeerEVMID)
 		if err == nil {
-			txs := []string{}
+			txs := []*consensus.Tx{}
 			for _, tx := range ban.Block.Transactions() {
-				for _, out := range tx.Tx.TxOut {
-					if !opreturn.IsMeerEVM(out.PkScript) {
-						continue
-					}
-					me, err := opreturn.NewOPReturnFrom(out.PkScript)
+				if types.IsCrossChainExportTx(tx.Tx) {
+					ctx := &consensus.Tx{Type: consensus.TxTypeExport}
+					_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
 					if err != nil {
 						log.Error(err.Error())
-						continue
+						return
 					}
-					txs = append(txs, me.(*opreturn.MeerEVM).GetHex())
+					if len(pksAddrs) > 0 {
+						ctx.To = hex.EncodeToString(pksAddrs[0].Script())
+						ctx.Value = uint64(tx.Tx.TxOut[0].Amount.Value)
+						txs = append(txs, ctx)
+					}
+
+				} else {
+					for _, out := range tx.Tx.TxOut {
+						if !opreturn.IsMeerEVM(out.PkScript) {
+							continue
+						}
+						me, err := opreturn.NewOPReturnFrom(out.PkScript)
+						if err != nil {
+							log.Error(err.Error())
+							continue
+						}
+						ctx := &consensus.Tx{Type: consensus.TxTypeNormal, Data: []byte(me.(*opreturn.MeerEVM).GetHex())}
+						txs = append(txs, ctx)
+					}
 				}
 			}
 			if len(txs) <= 0 {
