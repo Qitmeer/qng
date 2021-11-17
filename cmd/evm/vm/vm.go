@@ -6,17 +6,21 @@ package vm
 
 import (
 	"fmt"
+	"github.com/Qitmeer/meerevm/cmd/evm/meerengine"
 	"github.com/Qitmeer/meerevm/cmd/evm/util"
 	"github.com/Qitmeer/meerevm/eth"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethconsensus "github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
@@ -101,8 +105,10 @@ func (vm *VM) Initialize(ctx *consensus.Context) error {
 			GasCeil:   genesis.GasLimit * 11 / 10,
 			GasPrice:  big.NewInt(1),
 			Recommit:  time.Second,
+			ExtraData: []byte{byte(0)},
 		},
-		TrieCleanCache: 256,
+		TrieCleanCache:  256,
+		ConsensusEngine: CreateConsensusEngine,
 	}
 	vm.node, vm.chain = meereth.New(&meereth.Config{EthConfig: vm.config}, vm.ctx.Datadir)
 
@@ -165,18 +171,34 @@ func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
 	return &Block{id: &h, ethBlock: block, vm: vm, status: consensus.Accepted}, nil
 }
 
-func (vm *VM) BuildBlock(txs []string) (consensus.Block, error) {
+func (vm *VM) BuildBlock(txs []*consensus.Tx) (consensus.Block, error) {
 	blocks, _ := core.GenerateChain(vm.config.Genesis.Config, vm.chain.Backend.BlockChain().CurrentBlock(), vm.chain.Backend.Engine(), vm.chain.Backend.ChainDb(), 1, func(i int, block *core.BlockGen) {
-		block.SetCoinbase(vm.config.Miner.Etherbase)
 		for _, tx := range txs {
-			txb := common.FromHex(tx)
-			var tx = &types.Transaction{}
-			if err := tx.UnmarshalBinary(txb); err != nil {
-				log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
-				continue
+			if tx.Type == consensus.TxTypeNormal {
+				txb := common.FromHex(string(tx.Data))
+				var tx = &types.Transaction{}
+				if err := tx.UnmarshalBinary(txb); err != nil {
+					log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
+					continue
+				}
+				block.AddTx(tx)
+			} else if tx.Type == consensus.TxTypeExport {
+				toAddr := common.HexToAddress(tx.To)
+				txData := &types.AccessListTx{
+					To:    &toAddr,
+					Value: big.NewInt(int64(tx.Value)),
+					Nonce: uint64(consensus.TxTypeExport),
+				}
+				etx := types.NewTx(txData)
+				txmb, err := etx.MarshalBinary()
+				if err != nil {
+					log.Warn("could not create transaction: %v", err)
+					return
+				}
+				block.SetExtra(txmb)
 			}
-			block.AddTx(tx)
 		}
+
 	})
 	if len(blocks) != 1 {
 		return nil, fmt.Errorf("BuildBlock error")
@@ -207,4 +229,20 @@ func (vm *VM) LastAccepted() (*hash.Hash, error) {
 
 func NewVM(glog *log.GlogHandler) *VM {
 	return &VM{glog: glog}
+}
+
+func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) ethconsensus.Engine {
+	engine := meerengine.New(meerengine.Config{
+		CacheDir:         stack.ResolvePath(config.CacheDir),
+		CachesInMem:      config.CachesInMem,
+		CachesOnDisk:     config.CachesOnDisk,
+		CachesLockMmap:   config.CachesLockMmap,
+		DatasetDir:       config.DatasetDir,
+		DatasetsInMem:    config.DatasetsInMem,
+		DatasetsOnDisk:   config.DatasetsOnDisk,
+		DatasetsLockMmap: config.DatasetsLockMmap,
+		NotifyFull:       config.NotifyFull,
+	}, notify, noverify)
+	engine.SetThreads(-1) // Disable CPU mining
+	return engine
 }
