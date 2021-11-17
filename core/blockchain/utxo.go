@@ -144,6 +144,9 @@ func (view *UtxoViewpoint) Entries() map[types.TxOutPoint]*UtxoEntry {
 }
 
 func (view *UtxoViewpoint) AddTxOut(tx *types.Tx, txOutIdx uint32, blockHash *hash.Hash) {
+	if types.IsCrossChainExportTx(tx.Tx) {
+		return
+	}
 	// Can't add an output for an out of bounds index.
 	if txOutIdx >= uint32(len(tx.Tx.TxOut)) {
 		return
@@ -163,6 +166,9 @@ func (view *UtxoViewpoint) AddTxOut(tx *types.Tx, txOutIdx uint32, blockHash *ha
 // outputs, they are simply marked unspent.  All fields will be updated for
 // existing entries since it's possible it has changed during a reorg.
 func (view *UtxoViewpoint) AddTxOuts(tx *types.Tx, blockHash *hash.Hash) {
+	if types.IsCrossChainExportTx(tx.Tx) {
+		return
+	}
 	// Loop all of the transaction outputs and add those which are not
 	// provably unspendable.
 	isCoinBase := tx.Tx.IsCoinBase()

@@ -1218,17 +1218,21 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 	// to ignore overflow and out of range errors here because those error
 	// conditions would have already been caught by checkTransactionSanity.
 	totalAtomOut := make(map[types.CoinID]int64)
-	for _, txOut := range tx.Transaction().TxOut {
-		// Ensure the coinId is known
-		err := types.CheckCoinID(txOut.Amount.Id)
-		if err != nil {
-			return nil, err
-		}
-		totalAtomOut[txOut.Amount.Id] += txOut.Amount.Value
+	if types.IsCrossChainExportTx(tx.Transaction()) {
+		totalAtomOut[types.MEERID] = tx.Transaction().TxOut[0].Amount.Value
+	} else {
+		for _, txOut := range tx.Transaction().TxOut {
+			// Ensure the coinId is known
+			err := types.CheckCoinID(txOut.Amount.Id)
+			if err != nil {
+				return nil, err
+			}
+			totalAtomOut[txOut.Amount.Id] += txOut.Amount.Value
 
-		if !isMeerEVM {
-			if opreturn.IsMeerEVM(txOut.PkScript) {
-				isMeerEVM = true
+			if !isMeerEVM {
+				if opreturn.IsMeerEVM(txOut.PkScript) {
+					isMeerEVM = true
+				}
 			}
 		}
 	}

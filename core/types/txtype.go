@@ -33,6 +33,9 @@ const (
 	TxTypeTokenbase   TxType = 0x90 // token-base is reserved, not used at current stage.
 	TxTypeTokenMint   TxType = 0x91 // token owner mint token amount by locking MEER. (must validated token)
 	TxTypeTokenUnmint TxType = 0x92 // token owner unmint token amount by releasing MEER. (must validated token)
+
+	TxTypeCrossChainExport TxType = 0x0101 // Cross chain by export tx
+	TxTypeCrossChainImport TxType = 0x0102 // Cross chain by import tx
 )
 
 func (tt TxType) String() string {
@@ -69,6 +72,10 @@ func (tt TxType) String() string {
 		return "TxTypeTokenMint"
 	case TxTypeTokenUnmint:
 		return "TxTypeTokenUnmint"
+	case TxTypeCrossChainExport:
+		return "TxTypeCrossChainExport"
+	case TxTypeCrossChainImport:
+		return "TxTypeCrossChainImport"
 	}
 	return "Unknow"
 }
@@ -253,6 +260,20 @@ func IsTokenTx(tx *Transaction) bool {
 		IsTokenMintTx(tx) ||
 		IsTokenUnmintTx(tx)
 }
+
+// cross chain
+func IsCrossChainExportTx(tx *Transaction) bool {
+	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
+		return false
+	}
+	// TODO: Support multiple
+	return tx.TxOut[0].Amount.Id == ETHID
+}
+
+func IsCrossChainImportTx(tx *Transaction) bool {
+	return false
+}
+
 
 // Standard transaction type
 var StdTxs = []TxType{TxTypeRegular, TxTypeCoinbase}

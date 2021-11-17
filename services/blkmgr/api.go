@@ -454,7 +454,7 @@ func (api *PublicBlockAPI) GetTokenInfo() (interface{}, error) {
 		ts.CoinId = uint16(v.Id)
 		ts.CoinName = v.Name
 		ts.Owners = hex.EncodeToString(v.Owners)
-		if v.Id != types.MEERID {
+		if v.Id != types.MEERID && v.Id != types.ETHID {
 			ts.UpLimit = v.UpLimit
 			ts.Enable = v.Enable
 			for k, vb := range state.Balances {

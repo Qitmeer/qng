@@ -278,6 +278,14 @@ func BuildGenesisTokenState() *TokenState {
 		Name:    "MEER",
 	}
 
+	tys[types.ETHID] = TokenType{
+		Id:      types.ETHID,
+		Owners:  []byte("Qitmeer"),
+		UpLimit: math.MaxUint64,
+		Enable:  true,
+		Name:    "ETH",
+	}
+
 	return &TokenState{
 		PrevStateID: uint32(blockdag.MaxId),
 		Types:       tys,
