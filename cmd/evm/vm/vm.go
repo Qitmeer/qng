@@ -5,6 +5,7 @@
 package vm
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/meerevm/cmd/evm/meerengine"
 	"github.com/Qitmeer/meerevm/cmd/evm/util"
@@ -17,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -183,7 +185,18 @@ func (vm *VM) BuildBlock(txs []*consensus.Tx) (consensus.Block, error) {
 				}
 				block.AddTx(tx)
 			} else if tx.Type == consensus.TxTypeExport {
-				toAddr := common.HexToAddress(tx.To)
+				pubkBytes, err := hex.DecodeString(tx.To)
+				if err != nil {
+					log.Warn(err.Error())
+					continue
+				}
+				publicKey, err := crypto.UnmarshalPubkey(pubkBytes)
+				if err != nil {
+					log.Warn(err.Error())
+					continue
+				}
+
+				toAddr := crypto.PubkeyToAddress(*publicKey)
 				txData := &types.AccessListTx{
 					To:    &toAddr,
 					Value: big.NewInt(int64(tx.Value)),
