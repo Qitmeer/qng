@@ -268,9 +268,12 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 	}
 	if tx.Nonce() == uint64(qconsensus.TxTypeExport) {
 		state.AddBalance(*tx.To(), tx.Value())
+		me.config.Log.Info(fmt.Sprintf("Cross chain(%s):%d(MEER) => %d(ETH)", tx.To().String(), tx.Value().Int64(), tx.Value().Int64()))
 	} else {
 		state.SubBalance(*tx.To(), tx.Value())
+		me.config.Log.Info(fmt.Sprintf("Cross chain(%s):%d(ETH) => %d(MEER)", tx.To().String(), tx.Value().Int64(), tx.Value().Int64()))
 	}
+
 	nonce := state.GetNonce(*tx.To())
 	state.SetNonce(*tx.To(), nonce)
 }

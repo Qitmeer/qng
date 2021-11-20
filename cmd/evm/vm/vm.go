@@ -63,7 +63,7 @@ func (vm *VM) Initialize(ctx *consensus.Context) error {
 		ChainID:             big.NewInt(520),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
-		DAOForkSupport:      true,
+		DAOForkSupport:      false,
 		EIP150Block:         big.NewInt(0),
 		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
 		EIP155Block:         big.NewInt(0),
@@ -175,6 +175,7 @@ func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
 
 func (vm *VM) BuildBlock(txs []*consensus.Tx) (consensus.Block, error) {
 	blocks, _ := core.GenerateChain(vm.config.Genesis.Config, vm.chain.Backend.BlockChain().CurrentBlock(), vm.chain.Backend.Engine(), vm.chain.Backend.ChainDb(), 1, func(i int, block *core.BlockGen) {
+
 		for _, tx := range txs {
 			if tx.Type == consensus.TxTypeNormal {
 				txb := common.FromHex(string(tx.Data))
@@ -209,6 +210,7 @@ func (vm *VM) BuildBlock(txs []*consensus.Tx) (consensus.Block, error) {
 					return
 				}
 				block.SetExtra(txmb)
+				log.Info(hex.EncodeToString(txmb))
 			}
 		}
 
@@ -224,7 +226,7 @@ func (vm *VM) BuildBlock(txs []*consensus.Tx) (consensus.Block, error) {
 		return nil, fmt.Errorf("BuildBlock error")
 	}
 
-	log.Info(fmt.Sprintf("BuildBlock:number=%d hash=%s txs=%d", blocks[0].Number().Uint64(), blocks[0].Hash().String(), len(blocks[0].Transactions())))
+	log.Info(fmt.Sprintf("BuildBlock:number=%d hash=%s txs=%d,%d", blocks[0].Number().Uint64(), blocks[0].Hash().String(), len(blocks[0].Transactions()), len(txs)))
 
 	h := hash.MustBytesToHash(blocks[0].Hash().Bytes())
 	return &Block{id: &h, ethBlock: blocks[0], vm: vm, status: consensus.Accepted}, nil
