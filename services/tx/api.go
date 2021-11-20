@@ -114,6 +114,7 @@ func (api *PublicTxAPI) CreateRawTransactionV2(inputs []json.TransactionInput,
 		switch addr.(type) {
 		case *address.PubKeyHashAddress:
 		case *address.ScriptHashAddress:
+		case *address.SecpPubKeyAddress:
 		default:
 			return nil, rpc.RpcAddressKeyError("Invalid type: %T", addr)
 		}

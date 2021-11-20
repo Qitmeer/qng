@@ -271,9 +271,14 @@ func IsCrossChainExportTx(tx *Transaction) bool {
 }
 
 func IsCrossChainImportTx(tx *Transaction) bool {
-	return false
+	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
+		return false
+	}
+	if tx.TxIn[0].PreviousOut.OutIndex != TokenPrevOutIndex {
+		return false
+	}
+	return TxType(tx.TxIn[0].Sequence) == TxTypeCrossChainImport
 }
-
 
 // Standard transaction type
 var StdTxs = []TxType{TxTypeRegular, TxTypeCoinbase}

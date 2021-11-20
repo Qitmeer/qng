@@ -113,6 +113,7 @@ func (vm *VMClient) BuildBlock(txs []*consensus.Tx) (consensus.Block, error) {
 	brtxs := []*proto.Tx{}
 	for _, tx := range txs {
 		t := &proto.Tx{}
+		t.Type = uint32(tx.Type)
 		t.Value = tx.Value
 		t.To = tx.To
 		t.From = tx.From

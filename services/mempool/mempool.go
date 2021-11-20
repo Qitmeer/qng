@@ -405,7 +405,10 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		}
 		return nil, nil, err
 	}
-
+	if _, exist := txFees[types.MEERID]; !exist {
+		str := fmt.Sprintf("transaction %v must contain at least the utxo of base coin (MEER)", txHash)
+		return nil, nil, txRuleError(message.RejectInvalid, str)
+	}
 	// Don't allow transactions with non-standard inputs if the mempool config
 	// forbids their acceptance and relaying.
 	if !mp.cfg.Policy.AcceptNonStd {
@@ -454,12 +457,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	minFee := calcMinRequiredTxRelayFee(serializedSize,
 		mp.cfg.Policy.MinRelayTxFee)
 
-	if len(txFees) > 1 {
-		str := fmt.Sprintf("Multi coin type ouput transaction are not supported")
-		return nil, nil, txRuleError(message.RejectNonstandard, str)
-	}
-
-	txFee := types.Amount{Id: tx.Tx.TxOut[0].Amount.Id, Value: 0}
+	txFee := types.Amount{Id: types.MEERID, Value: 0}
 	if txFees != nil {
 		txFee.Value = txFees[txFee.Id]
 	}

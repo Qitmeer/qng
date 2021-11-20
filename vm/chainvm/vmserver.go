@@ -99,6 +99,7 @@ func (vm *VMServer) BuildBlock(ctx context.Context, req *proto.BuildBlockRequest
 	txs := []*consensus.Tx{}
 	for _, tx := range req.Txs {
 		t := &consensus.Tx{}
+		t.Type = consensus.TxType(tx.Type)
 		t.From = tx.From
 		t.To = tx.To
 		t.Data = tx.Data
