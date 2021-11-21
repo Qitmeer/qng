@@ -2,14 +2,14 @@
  * Copyright (c) 2017-2020 The qitmeer developers
  */
 
-package vm
+package evm
 
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/meerevm/cmd/evm/meerengine"
-	"github.com/Qitmeer/meerevm/cmd/evm/util"
 	"github.com/Qitmeer/meerevm/eth"
+	"github.com/Qitmeer/meerevm/evm/engine"
+	"github.com/Qitmeer/meerevm/evm/util"
 	"github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer/consensus"
 	"github.com/ethereum/go-ethereum/common"
@@ -263,7 +263,7 @@ func New() *VM {
 }
 
 func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) ethconsensus.Engine {
-	engine := meerengine.New(meerengine.Config{
+	engine := engine.New(engine.Config{
 		CacheDir:         stack.ResolvePath(config.CacheDir),
 		CachesInMem:      config.CachesInMem,
 		CachesOnDisk:     config.CachesOnDisk,
