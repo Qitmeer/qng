@@ -2,16 +2,14 @@ package consensus
 
 import (
 	"context"
-	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qitmeer/config"
 )
 
 type Context struct {
 	context.Context
+	Cfg *config.Config
+}
 
-	NetworkID protocol.Network
-	ChainID   uint32
-	NodeID    uint32
-	Datadir   string
-	LogLevel  string
-	LogLocate bool
+func (ctx *Context) GetConfig() *config.Config {
+	return ctx.Cfg
 }
