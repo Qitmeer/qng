@@ -1,6 +1,6 @@
 module github.com/Qitmeer/meerevm
 
-go 1.17
+go 1.16
 
 require github.com/ethereum/go-ethereum v1.10.9
 
@@ -46,6 +46,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef // indirect
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/text v0.3.6 // indirect
@@ -57,3 +58,4 @@ require (
 
 replace github.com/ethereum/go-ethereum => ./pkg/ethereum/go-ethereum-v1.10.9
 
+replace github.com/Qitmeer/qng => ./../qng

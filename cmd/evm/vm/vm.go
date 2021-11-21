@@ -28,8 +28,15 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
 	"math/big"
+	"os"
+	"runtime"
 	"sync"
 	"time"
+)
+
+// meerevm ID of the platform
+const (
+	MeerEVMID = "meerevm"
 )
 
 type VM struct {
@@ -44,13 +51,22 @@ type VM struct {
 	glog *log.GlogHandler
 }
 
+func (vm *VM) GetID() string {
+	return MeerEVMID
+}
+
 func (vm *VM) Initialize(ctx *consensus.Context) error {
-	//log.Glogger().Verbosity(log.LvlTrace)
+	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.LogfmtFormat()))
+	glogger.Verbosity(log.LvlTrace)
+	log.Root().SetHandler(glogger)
+
 	lvl, err := log.LvlFromString(ctx.LogLevel)
 	if err == nil {
 		vm.glog.Verbosity(lvl)
 	}
 	log.PrintOrigins(ctx.LogLocate)
+
+	log.Info("System info", "ETH VM Version", util.Version, "Go version", runtime.Version())
 
 	log.Info(fmt.Sprintf("Initialize:%s", ctx.Datadir))
 
@@ -242,8 +258,8 @@ func (vm *VM) LastAccepted() (*hash.Hash, error) {
 	return &h, nil
 }
 
-func NewVM(glog *log.GlogHandler) *VM {
-	return &VM{glog: glog}
+func New() *VM {
+	return &VM{}
 }
 
 func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) ethconsensus.Engine {
