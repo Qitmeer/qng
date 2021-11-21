@@ -10,8 +10,8 @@ import (
 	"github.com/Qitmeer/meerevm/cmd/evm/meerengine"
 	"github.com/Qitmeer/meerevm/cmd/evm/util"
 	"github.com/Qitmeer/meerevm/eth"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qitmeer/common/hash"
+	"github.com/Qitmeer/qitmeer/consensus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethconsensus "github.com/ethereum/go-ethereum/consensus"
@@ -40,7 +40,7 @@ const (
 )
 
 type VM struct {
-	ctx          *consensus.Context
+	ctx          consensus.Context
 	shutdownChan chan struct{}
 	shutdownWg   sync.WaitGroup
 
@@ -55,20 +55,20 @@ func (vm *VM) GetID() string {
 	return MeerEVMID
 }
 
-func (vm *VM) Initialize(ctx *consensus.Context) error {
+func (vm *VM) Initialize(ctx consensus.Context) error {
 	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.LogfmtFormat()))
 	glogger.Verbosity(log.LvlTrace)
 	log.Root().SetHandler(glogger)
 
-	lvl, err := log.LvlFromString(ctx.LogLevel)
+	lvl, err := log.LvlFromString(ctx.GetConfig().DebugLevel)
 	if err == nil {
 		vm.glog.Verbosity(lvl)
 	}
-	log.PrintOrigins(ctx.LogLocate)
+	log.PrintOrigins(ctx.GetConfig().DebugPrintOrigins)
 
 	log.Info("System info", "ETH VM Version", util.Version, "Go version", runtime.Version())
 
-	log.Info(fmt.Sprintf("Initialize:%s", ctx.Datadir))
+	log.Info(fmt.Sprintf("Initialize:%s", ctx.GetConfig().DataDir))
 
 	vm.shutdownChan = make(chan struct{}, 1)
 	vm.ctx = ctx
@@ -128,7 +128,7 @@ func (vm *VM) Initialize(ctx *consensus.Context) error {
 		TrieCleanCache:  256,
 		ConsensusEngine: CreateConsensusEngine,
 	}
-	vm.node, vm.chain = meereth.New(&meereth.Config{EthConfig: vm.config}, vm.ctx.Datadir)
+	vm.node, vm.chain = meereth.New(&meereth.Config{EthConfig: vm.config}, vm.ctx.GetConfig().DataDir)
 
 	return nil
 }
@@ -189,20 +189,12 @@ func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
 	return &Block{id: &h, ethBlock: block, vm: vm, status: consensus.Accepted}, nil
 }
 
-func (vm *VM) BuildBlock(txs []*consensus.Tx) (consensus.Block, error) {
+func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
 	blocks, _ := core.GenerateChain(vm.config.Genesis.Config, vm.chain.Backend.BlockChain().CurrentBlock(), vm.chain.Backend.Engine(), vm.chain.Backend.ChainDb(), 1, func(i int, block *core.BlockGen) {
 
 		for _, tx := range txs {
-			if tx.Type == consensus.TxTypeNormal {
-				txb := common.FromHex(string(tx.Data))
-				var tx = &types.Transaction{}
-				if err := tx.UnmarshalBinary(txb); err != nil {
-					log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
-					continue
-				}
-				block.AddTx(tx)
-			} else if tx.Type == consensus.TxTypeExport {
-				pubkBytes, err := hex.DecodeString(tx.To)
+			if tx.Type() == consensus.TxTypeCrossChainExport {
+				pubkBytes, err := hex.DecodeString(tx.To())
 				if err != nil {
 					log.Warn(err.Error())
 					continue
@@ -216,8 +208,8 @@ func (vm *VM) BuildBlock(txs []*consensus.Tx) (consensus.Block, error) {
 				toAddr := crypto.PubkeyToAddress(*publicKey)
 				txData := &types.AccessListTx{
 					To:    &toAddr,
-					Value: big.NewInt(int64(tx.Value)),
-					Nonce: uint64(consensus.TxTypeExport),
+					Value: big.NewInt(int64(tx.Value())),
+					Nonce: uint64(consensus.TxTypeCrossChainExport),
 				}
 				etx := types.NewTx(txData)
 				txmb, err := etx.MarshalBinary()
@@ -227,6 +219,14 @@ func (vm *VM) BuildBlock(txs []*consensus.Tx) (consensus.Block, error) {
 				}
 				block.SetExtra(txmb)
 				log.Info(hex.EncodeToString(txmb))
+			} else {
+				txb := common.FromHex(string(tx.Data()))
+				var tx = &types.Transaction{}
+				if err := tx.UnmarshalBinary(txb); err != nil {
+					log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
+					continue
+				}
+				block.AddTx(tx)
 			}
 		}
 
