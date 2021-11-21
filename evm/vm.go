@@ -47,8 +47,6 @@ type VM struct {
 	config *ethconfig.Config
 	node   *node.Node
 	chain  *meereth.Ether
-
-	glog *log.GlogHandler
 }
 
 func (vm *VM) GetID() string {
@@ -62,7 +60,7 @@ func (vm *VM) Initialize(ctx consensus.Context) error {
 
 	lvl, err := log.LvlFromString(ctx.GetConfig().DebugLevel)
 	if err == nil {
-		vm.glog.Verbosity(lvl)
+		glogger.Verbosity(lvl)
 	}
 	log.PrintOrigins(ctx.GetConfig().DebugPrintOrigins)
 
@@ -179,8 +177,8 @@ func (vm *VM) Shutdown() error {
 	return nil
 }
 
-func (vm *VM) Version() (string, error) {
-	return util.Version + fmt.Sprintf("(eth:%s)", params.VersionWithMeta), nil
+func (vm *VM) Version() string {
+	return util.Version + fmt.Sprintf("(eth:%s)", params.VersionWithMeta)
 }
 
 func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
@@ -193,8 +191,8 @@ func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
 	blocks, _ := core.GenerateChain(vm.config.Genesis.Config, vm.chain.Backend.BlockChain().CurrentBlock(), vm.chain.Backend.Engine(), vm.chain.Backend.ChainDb(), 1, func(i int, block *core.BlockGen) {
 
 		for _, tx := range txs {
-			if tx.Type() == consensus.TxTypeCrossChainExport {
-				pubkBytes, err := hex.DecodeString(tx.To())
+			if tx.GetType() == consensus.TxTypeCrossChainExport {
+				pubkBytes, err := hex.DecodeString(tx.GetTo())
 				if err != nil {
 					log.Warn(err.Error())
 					continue
@@ -208,7 +206,7 @@ func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
 				toAddr := crypto.PubkeyToAddress(*publicKey)
 				txData := &types.AccessListTx{
 					To:    &toAddr,
-					Value: big.NewInt(int64(tx.Value())),
+					Value: big.NewInt(int64(tx.GetValue())),
 					Nonce: uint64(consensus.TxTypeCrossChainExport),
 				}
 				etx := types.NewTx(txData)
@@ -220,7 +218,7 @@ func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
 				block.SetExtra(txmb)
 				log.Info(hex.EncodeToString(txmb))
 			} else {
-				txb := common.FromHex(string(tx.Data()))
+				txb := common.FromHex(string(tx.GetData()))
 				var tx = &types.Transaction{}
 				if err := tx.UnmarshalBinary(txb); err != nil {
 					log.Error(fmt.Sprintf("rlp decoding failed: %v", err))

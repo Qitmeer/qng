@@ -10,6 +10,5 @@ import (
 )
 
 func main() {
-	v := evm.New()
-	fmt.Println(v.Version())
+	fmt.Println(evm.New().Version())
 }
