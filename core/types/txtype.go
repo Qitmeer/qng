@@ -104,6 +104,12 @@ func DetermineTxType(tx *Transaction) TxType {
 	if IsTokenUnmintTx(tx) {
 		return TxTypeTokenUnmint
 	}
+	if IsCrossChainExportTx(tx) {
+		return TxType(consensus.TxTypeCrossChainExport)
+	}
+	if IsCrossChainImportTx(tx) {
+		return TxType(consensus.TxTypeCrossChainImport)
+	}
 	//TODO more txType
 	return TxTypeRegular
 }
@@ -279,7 +285,7 @@ func IsCrossChainImportTx(tx *Transaction) bool {
 }
 
 // Standard transaction type
-var StdTxs = []TxType{TxTypeRegular, TxTypeCoinbase}
+var StdTxs = []TxType{TxTypeRegular, TxTypeCoinbase, TxType(consensus.TxTypeCrossChainImport)}
 var NonStdTxs = []TxType{
 	TxTypeTokenNew,
 	TxTypeTokenRenew,

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/message"
@@ -287,14 +288,13 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	if err != nil {
 		return nil, nil, err
 	}
-
+	// Verify crypto signatures for each input and reject the transaction if
+	// any don't verify.
+	flags, err := mp.cfg.Policy.StandardVerifyFlags()
+	if err != nil {
+		return nil, nil, err
+	}
 	if types.IsTokenTx(tx.Tx) {
-		// Verify crypto signatures for each input and reject the transaction if
-		// any don't verify.
-		flags, err := mp.cfg.Policy.StandardVerifyFlags()
-		if err != nil {
-			return nil, nil, err
-		}
 
 		utxoView := blockchain.NewUtxoViewpoint()
 		if types.IsTokenMintTx(tx.Tx) {
@@ -330,6 +330,38 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 
 		log.Debug("Accepted transaction", "txHash", txHash, "pool size", len(mp.pool))
 
+		return nil, txD, nil
+	} else if types.IsCrossChainImportTx(tx.Tx) {
+		itx, err := consensus.NewImportTx(tx.Tx)
+		if err != nil {
+			return nil, nil, err
+		}
+		pks, err := itx.GetPKScript()
+		if err != nil {
+			return nil, nil, err
+		}
+		utxoView := blockchain.NewUtxoViewpoint()
+		utxoView.AddTokenTxOut(tx.Tx.TxIn[0].PreviousOut, pks)
+		vtsTx, err := itx.GetTransactionForEngine()
+		if err != nil {
+			return nil, nil, err
+		}
+		err = blockchain.ValidateTransactionScripts(types.NewTx(vtsTx), utxoView, flags,
+			mp.cfg.SigCache)
+		if err != nil {
+			if cerr, ok := err.(blockchain.RuleError); ok {
+				return nil, nil, chainRuleError(cerr)
+			}
+			return nil, nil, err
+		}
+		fee, err := mp.cfg.BC.VMService.VerifyTx(itx)
+		if err != nil {
+			return nil, nil, err
+		}
+		// Add to transaction pool.
+		txD := mp.addTransaction(utxoView, tx, nextBlockHeight, fee)
+
+		log.Debug(fmt.Sprintf("Accepted import transaction ,txHash:%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
 		return nil, txD, nil
 	}
 	// Fetch all of the unspent transaction outputs referenced by the inputs
@@ -531,10 +563,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 
 	// Verify crypto signatures for each input and reject the transaction if
 	// any don't verify.
-	flags, err := mp.cfg.Policy.StandardVerifyFlags()
-	if err != nil {
-		return nil, nil, err
-	}
+
 	err = blockchain.ValidateTransactionScripts(tx, utxoView, flags,
 		mp.cfg.SigCache)
 	if err != nil {

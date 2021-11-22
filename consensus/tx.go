@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2017-2020 The qitmeer developers
+ */
+
 package consensus
 
 import "github.com/Qitmeer/qitmeer/core/types"
@@ -10,7 +14,7 @@ type Tx struct {
 	Data  []byte
 }
 
-func (tx *Tx) GetType() types.TxType {
+func (tx *Tx) GetTxType() types.TxType {
 	return tx.Type
 }
 

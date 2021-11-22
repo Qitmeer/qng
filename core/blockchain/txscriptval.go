@@ -8,6 +8,7 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/consensus"
 	"math"
 	"runtime"
 
@@ -225,6 +226,28 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *U
 	txValItems := make([]*txValidateItem, 0, numInputs)
 	for _, tx := range txs {
 		if tx.IsDuplicate {
+			continue
+		}
+		if types.IsCrossChainImportTx(tx.Tx) {
+			itx, err := consensus.NewImportTx(tx.Tx)
+			if err != nil {
+				return err
+			}
+			pks, err := itx.GetPKScript()
+			if err != nil {
+				return err
+			}
+			utxoView.AddTokenTxOut(tx.Tx.TxIn[0].PreviousOut, pks)
+			vtsTx, err := itx.GetTransactionForEngine()
+			if err != nil {
+				return err
+			}
+			txVI := &txValidateItem{
+				txInIndex: 0,
+				txIn:      vtsTx.TxIn[0],
+				tx:        types.NewTx(vtsTx),
+			}
+			txValItems = append(txValItems, txVI)
 			continue
 		}
 		for txInIdx, txIn := range tx.Transaction().TxIn {

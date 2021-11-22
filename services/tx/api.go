@@ -5,9 +5,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qitmeer/consensus"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/common/math"
+	qconsensus "github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/blockchain/token"
@@ -1012,6 +1014,15 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 			return nil, err
 		}
 		redeemTx.TxIn[0].SignScript = sigScript
+	} else if types.IsCrossChainImportTx(&redeemTx) {
+		itx, err := qconsensus.NewImportTx(&redeemTx)
+		if err != nil {
+			return nil, err
+		}
+		err = itx.Sign(privateKey)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		txIndex := api.txManager.txIndex
 		if txIndex == nil {
@@ -1282,6 +1293,52 @@ func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, 
 			mtx.AddTxOut(&types.TxOutput{PkScript: pkScript})
 		}
 	}
+
+	mtxHex, err := marshal.MessageToHex(mtx)
+	if err != nil {
+		return nil, err
+	}
+	return mtxHex, nil
+}
+
+// import tx
+func (api *PublicTxAPI) CreateImportRawTransaction(pkAddress string, amount int64) (interface{}, error) {
+	mtx := types.NewTransaction()
+	mtx.AddTxIn(&types.TxInput{
+		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.TokenPrevOutIndex),
+		Sequence:    uint32(consensus.TxTypeCrossChainImport),
+	})
+
+	addr, err := address.DecodeAddress(pkAddress)
+	if err != nil {
+		return nil, rpc.RpcAddressKeyError("Could not decode "+
+			"address: %v", err)
+	}
+	if !address.IsForNetwork(addr, api.txManager.bm.ChainParams()) {
+		return nil, rpc.RpcAddressKeyError("Wrong network: %v",
+			addr)
+	}
+	pkAddr, ok := addr.(*address.SecpPubKeyAddress)
+	if !ok {
+		return nil, rpc.RpcAddressKeyError("Wrong address: %v", addr)
+	}
+
+	pkScript, err := txscript.PayToAddrScript(pkAddr.PKHAddress())
+	if err != nil {
+		return nil, rpc.RpcInternalError(err.Error(),
+			"Pay to address script")
+	}
+
+	mtx.AddTxOut(&types.TxOutput{
+		Amount:   types.Amount{Id: types.MEERID, Value: amount},
+		PkScript: pkScript,
+	})
+
+	pkaScript, err := txscript.NewScriptBuilder().AddData([]byte(pkAddress)).Script()
+	if err != nil {
+		return nil, err
+	}
+	mtx.TxIn[0].SignScript = pkaScript
 
 	mtxHex, err := marshal.MessageToHex(mtx)
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/blockdag"
@@ -385,6 +386,13 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params) error 
 					"is null")
 			}
 		}
+	}
+	if types.IsCrossChainImportTx(tx) {
+		itx, err := consensus.NewImportTx(tx)
+		if err != nil {
+			return err
+		}
+		return itx.CheckSanity()
 	}
 	return nil
 }
@@ -964,6 +972,21 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 				if err != nil {
 					return err
 				}
+			}
+			continue
+		}
+		if types.IsCrossChainImportTx(tx.Tx) {
+			itx, err := consensus.NewImportTx(tx.Tx)
+			if err != nil {
+				return err
+			}
+			_, err = b.VMService.VerifyTx(itx)
+			if err != nil {
+				return err
+			}
+			err = utxoView.connectTransaction(tx, node, uint32(idx), stxos, b)
+			if err != nil {
+				return err
 			}
 			continue
 		}

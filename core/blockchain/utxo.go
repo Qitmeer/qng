@@ -311,7 +311,7 @@ func (view *UtxoViewpoint) fetchInputUtxos(db database.DB, block *types.Serializ
 	txInFlight := map[hash.Hash]int{}
 	transactions := block.Transactions()
 	for i, tx := range transactions {
-		if tx.IsDuplicate || types.IsTokenTx(tx.Tx) {
+		if tx.IsDuplicate || types.IsTokenTx(tx.Tx) || types.IsCrossChainImportTx(tx.Tx) {
 			continue
 		}
 		txInFlight[*tx.Hash()] = i
@@ -326,6 +326,9 @@ func (view *UtxoViewpoint) fetchInputUtxos(db database.DB, block *types.Serializ
 			continue
 		}
 		if types.IsTokenTx(tx.Tx) && !types.IsTokenMintTx(tx.Tx) {
+			continue
+		}
+		if types.IsCrossChainImportTx(tx.Tx) {
 			continue
 		}
 
@@ -404,7 +407,7 @@ func (view *UtxoViewpoint) fetchUtxos(db database.DB, outpoints map[types.TxOutP
 func (view *UtxoViewpoint) connectTransaction(tx *types.Tx, node *BlockNode, blockIndex uint32, stxos *[]SpentTxOut, bc *BlockChain) error {
 	msgTx := tx.Transaction()
 	// Coinbase transactions don't have any inputs to spend.
-	if msgTx.IsCoinBase() {
+	if msgTx.IsCoinBase() || types.IsCrossChainImportTx(msgTx) {
 		// Add the transaction's outputs as available utxos.
 		view.AddTxOuts(tx, node.GetHash()) //TODO, remove type conversion
 		return nil

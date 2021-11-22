@@ -9,6 +9,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/blockdag"
 	"github.com/Qitmeer/qng/core/dbnamespace"
@@ -116,6 +117,8 @@ type BlockChain struct {
 	warningCaches      []thresholdStateCache
 	deploymentCaches   []thresholdStateCache
 	unknownRulesWarned bool
+
+	VMService consensus.VMI
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.

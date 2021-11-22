@@ -176,6 +176,13 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 						txs = append(txs, ctx)
 					}
 
+				} else if types.IsCrossChainImportTx(tx.Tx) {
+					ctx, err := qconsensus.NewImportTx(tx.Tx)
+					if err != nil {
+						log.Error(err.Error())
+						continue
+					}
+					txs = append(txs, ctx)
 				} else {
 					for _, out := range tx.Tx.TxOut {
 						if !opreturn.IsMeerEVM(out.PkScript) {
@@ -200,6 +207,32 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 			}
 		}
 	}
+}
+
+func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
+	itx, ok := tx.(*qconsensus.ImportTx)
+	if !ok {
+		return 0, fmt.Errorf("Not support tx:%s\n", tx.GetTxType().String())
+	}
+	v, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return 0, err
+	}
+	pka, err := itx.GetPKAddress()
+	if err != nil {
+		return 0, err
+	}
+	ba, err := v.GetBalance(pka.String())
+	if err != nil {
+		return 0, err
+	}
+	if ba <= 0 {
+		return 0, fmt.Errorf("Balance (%s) is %d\n", pka.String(), ba)
+	}
+	if ba < itx.Transaction.TxOut[0].Amount.Value {
+		return 0, fmt.Errorf("Balance (%s)  %d < output %d", pka.String(), ba, itx.Transaction.TxOut[0].Amount.Value)
+	}
+	return ba, nil
 }
 
 func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {

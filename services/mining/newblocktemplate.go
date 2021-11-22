@@ -185,7 +185,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 			log.Trace(fmt.Sprintf("Skipping coinbase tx %s", tx.Hash()))
 			continue
 		}
-		if types.IsTokenTx(tx.Tx) {
+		if types.IsTokenTx(tx.Tx) || types.IsCrossChainImportTx(tx.Tx) {
 			log.Trace(fmt.Sprintf("Skipping token tx %s", tx.Hash()))
 			blockTxns = append(blockTxns, tx)
 			txFees = append(txFees, 0)
