@@ -285,7 +285,7 @@ func IsCrossChainImportTx(tx *Transaction) bool {
 }
 
 // Standard transaction type
-var StdTxs = []TxType{TxTypeRegular, TxTypeCoinbase, TxType(consensus.TxTypeCrossChainImport)}
+var StdTxs = []TxType{TxTypeRegular, TxTypeCoinbase, TxType(consensus.TxTypeCrossChainImport), TxType(consensus.TxTypeCrossChainExport)}
 var NonStdTxs = []TxType{
 	TxTypeTokenNew,
 	TxTypeTokenRenew,
