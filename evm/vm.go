@@ -192,7 +192,7 @@ func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
 	blocks, _ := core.GenerateChain(vm.config.Genesis.Config, vm.chain.Backend.BlockChain().CurrentBlock(), vm.chain.Backend.Engine(), vm.chain.Backend.ChainDb(), 1, func(i int, block *core.BlockGen) {
 
 		for _, tx := range txs {
-			if tx.GetType() == consensus.TxTypeCrossChainExport {
+			if tx.GetTxType() == consensus.TxTypeCrossChainExport {
 				pubkBytes, err := hex.DecodeString(tx.GetTo())
 				if err != nil {
 					log.Warn(err.Error())
