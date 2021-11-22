@@ -12,6 +12,7 @@ import (
 	"github.com/Qitmeer/meerevm/evm/util"
 	"github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer/consensus"
+	"github.com/Qitmeer/qitmeer/core/address"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethconsensus "github.com/ethereum/go-ethereum/consensus"
@@ -254,6 +255,27 @@ func (vm *VM) LastAccepted() (*hash.Hash, error) {
 	block := vm.chain.Backend.BlockChain().CurrentBlock()
 	h := hash.MustBytesToHash(block.Hash().Bytes())
 	return &h, nil
+}
+
+func (vm *VM) GetBalance(addre string) (int64, error) {
+	addr, err := address.DecodeAddress(addre)
+	if err != nil {
+		return 0, err
+	}
+	secpPksAddr, ok := addr.(*address.SecpPubKeyAddress)
+	if !ok {
+		return 0, fmt.Errorf("Not SecpPubKeyAddress:%s", addr.String())
+	}
+	publicKey, err := crypto.UnmarshalPubkey(secpPksAddr.PubKey().SerializeUncompressed())
+	if err != nil {
+		return 0, err
+	}
+	eAddr := crypto.PubkeyToAddress(*publicKey)
+	state, err := vm.chain.Backend.BlockChain().State()
+	if err != nil {
+		return 0, err
+	}
+	return state.GetBalance(eAddr).Int64(), nil
 }
 
 func New() *VM {
