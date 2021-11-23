@@ -14,7 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng-core/log"
 	"github.com/Qitmeer/qng/p2p/netutil"
 	"github.com/Qitmeer/qng/p2p/qnr"
 )

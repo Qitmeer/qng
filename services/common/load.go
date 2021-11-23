@@ -11,7 +11,7 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng-core/log"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/version"
@@ -61,7 +61,6 @@ var (
 	defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
 	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
 	defaultDAGType     = "phantom"
-	defaultPluginDir   = filepath.Join(util.AppDir(), "plugin")
 )
 
 // loadConfig initializes and parses the config using a config file and command
@@ -96,7 +95,6 @@ func LoadConfig() (*config.Config, []string, error) {
 		NTP:                  false,
 		MempoolExpiry:        defaultMempoolExpiry,
 		AcceptNonStd:         true,
-		PluginDir:            defaultPluginDir,
 	}
 
 	// Pre-parse the command line options to see if an alternative config

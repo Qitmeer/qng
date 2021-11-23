@@ -11,7 +11,7 @@ import (
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng-core/log"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 )

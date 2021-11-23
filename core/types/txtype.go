@@ -6,6 +6,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng-core/consensus"
 	"github.com/Qitmeer/qng/common/math"
 )
 
@@ -33,9 +34,6 @@ const (
 	TxTypeTokenbase   TxType = 0x90 // token-base is reserved, not used at current stage.
 	TxTypeTokenMint   TxType = 0x91 // token owner mint token amount by locking MEER. (must validated token)
 	TxTypeTokenUnmint TxType = 0x92 // token owner unmint token amount by releasing MEER. (must validated token)
-
-	TxTypeCrossChainExport TxType = 0x0101 // Cross chain by export tx
-	TxTypeCrossChainImport TxType = 0x0102 // Cross chain by import tx
 )
 
 func (tt TxType) String() string {
@@ -72,9 +70,9 @@ func (tt TxType) String() string {
 		return "TxTypeTokenMint"
 	case TxTypeTokenUnmint:
 		return "TxTypeTokenUnmint"
-	case TxTypeCrossChainExport:
+	case TxType(consensus.TxTypeCrossChainExport):
 		return "TxTypeCrossChainExport"
-	case TxTypeCrossChainImport:
+	case TxType(consensus.TxTypeCrossChainImport):
 		return "TxTypeCrossChainImport"
 	}
 	return "Unknow"
@@ -105,6 +103,12 @@ func DetermineTxType(tx *Transaction) TxType {
 	}
 	if IsTokenUnmintTx(tx) {
 		return TxTypeTokenUnmint
+	}
+	if IsCrossChainExportTx(tx) {
+		return TxType(consensus.TxTypeCrossChainExport)
+	}
+	if IsCrossChainImportTx(tx) {
+		return TxType(consensus.TxTypeCrossChainImport)
 	}
 	//TODO more txType
 	return TxTypeRegular
@@ -271,12 +275,17 @@ func IsCrossChainExportTx(tx *Transaction) bool {
 }
 
 func IsCrossChainImportTx(tx *Transaction) bool {
-	return false
+	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
+		return false
+	}
+	if tx.TxIn[0].PreviousOut.OutIndex != TokenPrevOutIndex {
+		return false
+	}
+	return TxType(tx.TxIn[0].Sequence) == TxType(consensus.TxTypeCrossChainImport)
 }
 
-
 // Standard transaction type
-var StdTxs = []TxType{TxTypeRegular, TxTypeCoinbase}
+var StdTxs = []TxType{TxTypeRegular, TxTypeCoinbase, TxType(consensus.TxTypeCrossChainImport), TxType(consensus.TxTypeCrossChainExport)}
 var NonStdTxs = []TxType{
 	TxTypeTokenNew,
 	TxTypeTokenRenew,

@@ -3,8 +3,12 @@ package vm
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/meerevm/evm"
+	qconfig "github.com/Qitmeer/qng-core/config"
+	"github.com/Qitmeer/qng-core/consensus"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/consensus"
+	qconsensus "github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/event"
@@ -12,15 +16,6 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/vm/chainvm"
-
-	"io/ioutil"
-	"path/filepath"
-)
-
-// meerevm ID of the platform
-const (
-	MeerEVMID = "meerevm"
 )
 
 type Factory interface {
@@ -34,9 +29,7 @@ type Service struct {
 
 	events *event.Feed
 
-	factories map[string]Factory
-
-	versions map[string]string
+	vms map[string]consensus.ChainVM
 
 	cfg *config.Config
 }
@@ -46,23 +39,18 @@ func (s *Service) Start() error {
 	if err := s.Service.Start(); err != nil {
 		return err
 	}
-	vm, err := s.GetFactory(MeerEVMID)
-	if err != nil {
-		log.Debug(fmt.Sprintf("no %s", MeerEVMID))
-	} else {
-		err := vm.GetVM().Initialize(vm.Context())
+	for _, vm := range s.vms {
+		err := vm.Initialize(s.GetVMContext())
 		if err != nil {
-			log.Warn(err.Error())
-		} else {
-			err := vm.GetVM().Bootstrapping()
-			if err != nil {
-				log.Warn(err.Error())
-			} else {
-				err := vm.GetVM().Bootstrapped()
-				if err != nil {
-					log.Warn(err.Error())
-				}
-			}
+			return err
+		}
+		err = vm.Bootstrapping()
+		if err != nil {
+			return err
+		}
+		err = vm.Bootstrapped()
+		if err != nil {
+			return err
 		}
 	}
 	s.subscribe()
@@ -74,98 +62,61 @@ func (s *Service) Stop() error {
 	if err := s.Service.Stop(); err != nil {
 		return err
 	}
-	vm, err := s.GetFactory(MeerEVMID)
-	if err == nil {
-		vm.GetVM().Shutdown()
+	for _, vm := range s.vms {
+		vm.Shutdown()
 	}
+	s.vms = map[string]consensus.ChainVM{}
 	return nil
 }
 
-func (s *Service) GetFactory(id string) (Factory, error) {
-	f, ok := s.factories[id]
+func (s *Service) GetVM(id string) (consensus.ChainVM, error) {
+	f, ok := s.vms[id]
 	if !ok {
-		return nil, fmt.Errorf("No factory:%s", id)
+		return nil, fmt.Errorf("No VM:%s", id)
 	}
 	return f, nil
 }
 
-func (s *Service) HasFactory(id string) bool {
-	f, err := s.GetFactory(id)
+func (s *Service) HasVM(id string) bool {
+	f, err := s.GetVM(id)
 	return err == nil && f != nil
 }
 
-func (s *Service) RegisterFactory(vmID string, factory Factory) error {
-	if s.HasFactory(vmID) {
-		return fmt.Errorf(fmt.Sprintf("Already exists:%s", vmID))
+func (s *Service) Register(cvm consensus.ChainVM) error {
+	if s.HasVM(cvm.GetID()) {
+		return fmt.Errorf(fmt.Sprintf("Already exists:%s", cvm.GetID()))
 	}
 
-	s.factories[vmID] = factory
+	s.vms[cvm.GetID()] = cvm
 
-	log.Debug(fmt.Sprintf("Adding factory for vm %s", vmID))
-
-	vm, err := factory.New()
-	if err != nil {
-		return err
-	}
-
-	commonVM, ok := vm.(consensus.VM)
-	if !ok {
-		return nil
-	}
-
-	version, err := commonVM.Version()
-	if err != nil {
-		log.Error(fmt.Sprintf("fetching version for %q errored with: %s", vmID, err))
-
-		if err := commonVM.Shutdown(); err != nil {
-			return fmt.Errorf("shutting down VM errored with: %s", err)
-		}
-		return nil
-	}
-	s.versions[vmID] = version
+	log.Debug(fmt.Sprintf("Register vm %s", cvm.GetID()))
 	return nil
 }
 
 func (s *Service) Versions() (map[string]string, error) {
-	return s.versions, nil
+	vers := map[string]string{}
+	for _, vm := range s.vms {
+		vers[vm.GetID()] = vm.Version()
+	}
+	return vers, nil
 }
 
 func (s *Service) registerVMs() error {
-	if len(s.cfg.PluginDir) <= 0 {
-		return nil
-	}
-	files, err := ioutil.ReadDir(s.cfg.PluginDir)
-	if err != nil {
-		return err
-	}
-	log.Debug(fmt.Sprintf("Register Virtual Machines from:%s num:%d", s.cfg.PluginDir, len(files)))
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-		name := file.Name()
-		// Strip any extension from the file. This is to support windows .exe
-		// files.
-		name = name[:len(name)-len(filepath.Ext(name))]
-		// Skip hidden files.
-		if len(name) == 0 {
-			continue
-		}
 
-		if s.HasFactory(name) {
-			continue
-		}
+	err := s.Register(evm.New())
 
-		if err = s.RegisterFactory(name, &chainvm.Factory{
-			Path: filepath.Join(s.cfg.PluginDir, file.Name()),
-			Ctx: &consensus.Context{Context: s.Context(),
-				Datadir: s.cfg.DataDir, LogLevel: s.cfg.DebugLevel, NetworkID: params.ActiveNetParams.Net, LogLocate: s.cfg.DebugPrintOrigins},
-		}); err != nil {
-			return err
-		}
+	return err
+}
+
+func (s *Service) GetVMContext() consensus.Context {
+	return &qconsensus.Context{
+		Context: s.Context(),
+		Cfg: &qconfig.Config{
+			DataDir:           s.cfg.DataDir,
+			DebugLevel:        s.cfg.DebugLevel,
+			DebugPrintOrigins: s.cfg.DebugPrintOrigins,
+		},
 	}
-
-	return nil
 }
 
 func (s *Service) subscribe() {
@@ -202,23 +153,36 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 		if !ok {
 			return
 		}
-		vm, err := s.GetFactory(MeerEVMID)
+		vm, err := s.GetVM(evm.MeerEVMID)
 		if err == nil {
-			txs := []*consensus.Tx{}
+			txs := []consensus.Tx{}
 			for _, tx := range ban.Block.Transactions() {
 				if types.IsCrossChainExportTx(tx.Tx) {
-					ctx := &consensus.Tx{Type: consensus.TxTypeExport}
+					ctx := &qconsensus.Tx{Type: consensus.TxTypeCrossChainExport}
 					_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
 					if err != nil {
 						log.Error(err.Error())
 						return
 					}
+
 					if len(pksAddrs) > 0 {
-						ctx.To = hex.EncodeToString(pksAddrs[0].Script())
+						secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
+						if !ok {
+							log.Error(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
+							return
+						}
+						ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
 						ctx.Value = uint64(tx.Tx.TxOut[0].Amount.Value)
 						txs = append(txs, ctx)
 					}
 
+				} else if types.IsCrossChainImportTx(tx.Tx) {
+					ctx, err := qconsensus.NewImportTx(tx.Tx)
+					if err != nil {
+						log.Error(err.Error())
+						continue
+					}
+					txs = append(txs, ctx)
 				} else {
 					for _, out := range tx.Tx.TxOut {
 						if !opreturn.IsMeerEVM(out.PkScript) {
@@ -229,7 +193,7 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 							log.Error(err.Error())
 							continue
 						}
-						ctx := &consensus.Tx{Type: consensus.TxTypeNormal, Data: []byte(me.(*opreturn.MeerEVM).GetHex())}
+						ctx := &qconsensus.Tx{Data: []byte(me.(*opreturn.MeerEVM).GetHex())}
 						txs = append(txs, ctx)
 					}
 				}
@@ -237,7 +201,7 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 			if len(txs) <= 0 {
 				return
 			}
-			_, err := vm.GetVM().BuildBlock(txs)
+			_, err := vm.BuildBlock(txs)
 			if err != nil {
 				log.Warn(err.Error())
 			}
@@ -245,15 +209,38 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 	}
 }
 
+func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
+	itx, ok := tx.(*qconsensus.ImportTx)
+	if !ok {
+		return 0, fmt.Errorf("Not support tx:%s\n", tx.GetTxType().String())
+	}
+	v, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return 0, err
+	}
+	pka, err := itx.GetPKAddress()
+	if err != nil {
+		return 0, err
+	}
+	ba, err := v.GetBalance(pka.String())
+	if err != nil {
+		return 0, err
+	}
+	if ba <= 0 {
+		return 0, fmt.Errorf("Balance (%s) is %d\n", pka.String(), ba)
+	}
+	if ba < itx.Transaction.TxOut[0].Amount.Value {
+		return 0, fmt.Errorf("Balance (%s)  %d < output %d", pka.String(), ba, itx.Transaction.TxOut[0].Amount.Value)
+	}
+	return ba, nil
+}
+
 func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
 	ser := Service{
-		events:    events,
-		factories: make(map[string]Factory),
-		versions:  make(map[string]string),
-		cfg:       cfg,
+		events: events,
+		vms:    make(map[string]consensus.ChainVM),
+		cfg:    cfg,
 	}
-	ser.InitContext()
-
 	if err := ser.registerVMs(); err != nil {
 		log.Error(err.Error())
 		return nil, err

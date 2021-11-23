@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/message"
@@ -287,14 +288,13 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	if err != nil {
 		return nil, nil, err
 	}
-
+	// Verify crypto signatures for each input and reject the transaction if
+	// any don't verify.
+	flags, err := mp.cfg.Policy.StandardVerifyFlags()
+	if err != nil {
+		return nil, nil, err
+	}
 	if types.IsTokenTx(tx.Tx) {
-		// Verify crypto signatures for each input and reject the transaction if
-		// any don't verify.
-		flags, err := mp.cfg.Policy.StandardVerifyFlags()
-		if err != nil {
-			return nil, nil, err
-		}
 
 		utxoView := blockchain.NewUtxoViewpoint()
 		if types.IsTokenMintTx(tx.Tx) {
@@ -330,6 +330,38 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 
 		log.Debug("Accepted transaction", "txHash", txHash, "pool size", len(mp.pool))
 
+		return nil, txD, nil
+	} else if types.IsCrossChainImportTx(tx.Tx) {
+		itx, err := consensus.NewImportTx(tx.Tx)
+		if err != nil {
+			return nil, nil, err
+		}
+		pks, err := itx.GetPKScript()
+		if err != nil {
+			return nil, nil, err
+		}
+		utxoView := blockchain.NewUtxoViewpoint()
+		utxoView.AddTokenTxOut(tx.Tx.TxIn[0].PreviousOut, pks)
+		vtsTx, err := itx.GetTransactionForEngine()
+		if err != nil {
+			return nil, nil, err
+		}
+		err = blockchain.ValidateTransactionScripts(types.NewTx(vtsTx), utxoView, flags,
+			mp.cfg.SigCache)
+		if err != nil {
+			if cerr, ok := err.(blockchain.RuleError); ok {
+				return nil, nil, chainRuleError(cerr)
+			}
+			return nil, nil, err
+		}
+		fee, err := mp.cfg.BC.VMService.VerifyTx(itx)
+		if err != nil {
+			return nil, nil, err
+		}
+		// Add to transaction pool.
+		txD := mp.addTransaction(utxoView, tx, nextBlockHeight, fee)
+
+		log.Debug(fmt.Sprintf("Accepted import transaction ,txHash:%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
 		return nil, txD, nil
 	}
 	// Fetch all of the unspent transaction outputs referenced by the inputs
@@ -405,7 +437,10 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		}
 		return nil, nil, err
 	}
-
+	if _, exist := txFees[types.MEERID]; !exist {
+		str := fmt.Sprintf("transaction %v must contain at least the utxo of base coin (MEER)", txHash)
+		return nil, nil, txRuleError(message.RejectInvalid, str)
+	}
 	// Don't allow transactions with non-standard inputs if the mempool config
 	// forbids their acceptance and relaying.
 	if !mp.cfg.Policy.AcceptNonStd {
@@ -454,12 +489,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	minFee := calcMinRequiredTxRelayFee(serializedSize,
 		mp.cfg.Policy.MinRelayTxFee)
 
-	if len(txFees) > 1 {
-		str := fmt.Sprintf("Multi coin type ouput transaction are not supported")
-		return nil, nil, txRuleError(message.RejectNonstandard, str)
-	}
-
-	txFee := types.Amount{Id: tx.Tx.TxOut[0].Amount.Id, Value: 0}
+	txFee := types.Amount{Id: types.MEERID, Value: 0}
 	if txFees != nil {
 		txFee.Value = txFees[txFee.Id]
 	}
@@ -533,10 +563,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 
 	// Verify crypto signatures for each input and reject the transaction if
 	// any don't verify.
-	flags, err := mp.cfg.Policy.StandardVerifyFlags()
-	if err != nil {
-		return nil, nil, err
-	}
+
 	err = blockchain.ValidateTransactionScripts(tx, utxoView, flags,
 		mp.cfg.SigCache)
 	if err != nil {

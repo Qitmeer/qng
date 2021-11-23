@@ -10,7 +10,7 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng-core/log"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"golang.org/x/net/context"
@@ -185,7 +185,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 			log.Trace(fmt.Sprintf("Skipping coinbase tx %s", tx.Hash()))
 			continue
 		}
-		if types.IsTokenTx(tx.Tx) {
+		if types.IsTokenTx(tx.Tx) || types.IsCrossChainImportTx(tx.Tx) {
 			log.Trace(fmt.Sprintf("Skipping token tx %s", tx.Hash()))
 			blockTxns = append(blockTxns, tx)
 			txFees = append(txFees, 0)

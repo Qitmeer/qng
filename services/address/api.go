@@ -3,8 +3,12 @@
 package address
 
 import (
+	"fmt"
+	"github.com/Qitmeer/meerevm/evm"
 	"github.com/Qitmeer/qng/common/encode/base58"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
@@ -16,16 +20,18 @@ type AddressApi struct {
 	sync.Mutex
 	params *params.Params
 	config *config.Config
+	chain  *blockchain.BlockChain
 }
 
 type PublicAddressAPI struct {
 	addressApi *AddressApi
 }
 
-func NewAddressApi(cfg *config.Config, par *params.Params) *AddressApi {
+func NewAddressApi(cfg *config.Config, par *params.Params, chain *blockchain.BlockChain) *AddressApi {
 	return &AddressApi{
 		config: cfg,
 		params: par,
+		chain:  chain,
 	}
 }
 
@@ -67,4 +73,25 @@ func (api *PublicAddressAPI) CheckAddress(address string, network string) (inter
 			p.NetworkAddressPrefix, address[0:1])
 	}
 	return true, nil
+}
+
+func (api *PublicAddressAPI) GetBalance(pkAddress string, coinID types.CoinID) (interface{}, error) {
+	if coinID != types.ETHID {
+		return nil, fmt.Errorf("Not support %v", coinID)
+	}
+	cv, err := api.addressApi.chain.VMService.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil, err
+	}
+	return cv.GetBalance(pkAddress)
+}
+
+// private
+type PrivateAddressAPI struct {
+	addressApi *AddressApi
+}
+
+func NewPrivateAddressAPI(ai *AddressApi) *PrivateAddressAPI {
+	pmAPI := &PrivateAddressAPI{addressApi: ai}
+	return pmAPI
 }
