@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"time"
 
-	qconsensus "github.com/Qitmeer/qitmeer/consensus"
+	qconsensus "github.com/Qitmeer/qng-core/consensus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
