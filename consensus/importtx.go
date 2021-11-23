@@ -7,7 +7,7 @@ package consensus
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qitmeer/consensus"
+	"github.com/Qitmeer/qng-core/consensus"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"

@@ -4,7 +4,7 @@
 
 package consensus
 
-import "github.com/Qitmeer/qitmeer/core/types"
+import "github.com/Qitmeer/qng-core/core/types"
 
 type Tx struct {
 	Type  types.TxType

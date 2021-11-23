@@ -593,7 +593,7 @@ func (b *BlockChain) isCurrent() bool {
 	if checkpoint != nil && uint64(lastBlock.GetLayer()) < checkpoint.Layer {
 		return false
 	}
-
+	return true
 	// Not current if the latest best block has a timestamp before 24 hours
 	// ago.
 	//

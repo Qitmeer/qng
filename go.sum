@@ -43,6 +43,8 @@ github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/Qitmeer/crypto v0.0.0-20200516043559-dd457edff06c h1:QNadj9X+CFsdiX2EkZwE70An85XtPa2ppd7eBkzh40Q=
 github.com/Qitmeer/crypto v0.0.0-20200516043559-dd457edff06c/go.mod h1:gbGKdXSJn71Mc2xcKJHqC/waPiX0byZae67zarj83m4=
+github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a h1:LUGOJG/lF0TlnlYTlWa9e80Lowc9YCPp0wdiIHe9alY=
+github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:gbGKdXSJn71Mc2xcKJHqC/waPiX0byZae67zarj83m4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a h1:O2Erw/YvYAkIqkc2uvP/WwuWf0V8S0+pjU/FKHmjFU4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:KiA7g46zc6dkgf/3NbEpJirY75v656WYlmSQNR1wTVk=
 github.com/Shopify/sarama v1.26.1/go.mod h1:NbSGBSSndYaIhRcBtY9V0U7AyH+x71bG668AuWys/yU=
@@ -111,6 +113,8 @@ github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDk
 github.com/cloudflare/cloudflare-go v0.14.0/go.mod h1:EnwdgGMaFOruiPZRFSgn+TsQ3hQ7C/YWzIGLeu5c304=
 github.com/cloudflare/roughtime v0.0.0-20200829152512-a9bb6267a4f5 h1:KJH8GD3stgs2uX9CPwlzCAPEdvJ32c6N/W7vnb0wIaE=
 github.com/cloudflare/roughtime v0.0.0-20200829152512-a9bb6267a4f5/go.mod h1:BD+QT929bx4t8A/at+47tUVMKUGijjf8RyebEF7grGM=
+github.com/cloudflare/roughtime v0.0.0-20210217223727-1fe56bcbcfd4 h1:aCis8Toh0cWPLYwYrIjFbVkKS0jHo+TBwDsHTBqqxJw=
+github.com/cloudflare/roughtime v0.0.0-20210217223727-1fe56bcbcfd4/go.mod h1:+M4UQsInIRfmHn6RPcDqS4kKLUAACHW70TG9LqKsp70=
 github.com/consensys/bavard v0.1.8-0.20210406032232-f3452dc9b572/go.mod h1:Bpd0/3mZuaj6Sj+PqrmIquiOKy397AKGThQPaGzNXAQ=
 github.com/consensys/gnark-crypto v0.4.1-0.20210426202927-39ac3d4b3f1f/go.mod h1:815PAHg3wvysy0SyIqanF8gZ0Y1wjk/hrDHD/iT88+Q=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -132,6 +136,8 @@ github.com/davidlazar/go-crypto v0.0.0-20170701192655-dcfb0a7ac018/go.mod h1:rQY
 github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f h1:BOaYiTvg8p9vBUXpklC22XSK/mifLF7lG9jtmYYi3Tc=
 github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f/go.mod h1:rQYf4tfk5sSwFsnDg3qYaBxSjsD9S8+59vW0dKUgme4=
 github.com/dchest/blake256 v1.0.0/go.mod h1:xXNWCE1jsAP8DAjP+rKw2MbeqLczjI3TRx2VK+9OEYY=
+github.com/dchest/blake256 v1.1.0 h1:4AuEhGPT/3TTKFhTfBpZ8hgZE7wJpawcYaEawwsbtqM=
+github.com/dchest/blake256 v1.1.0/go.mod h1:xXNWCE1jsAP8DAjP+rKw2MbeqLczjI3TRx2VK+9OEYY=
 github.com/deckarep/golang-set v0.0.0-20180603214616-504e848d77ea/go.mod h1:93vsz/8Wt4joVM7c2AVqh+YRMiUSc14yDtF28KmMOgQ=
 github.com/deckarep/golang-set v1.7.1 h1:SCQV0S6gTtp6itiFrTqI+pfmJ4LN85S1YzhDf9rTHJQ=
 github.com/deckarep/golang-set v1.7.1/go.mod h1:93vsz/8Wt4joVM7c2AVqh+YRMiUSc14yDtF28KmMOgQ=

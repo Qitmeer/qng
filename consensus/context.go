@@ -2,7 +2,7 @@ package consensus
 
 import (
 	"context"
-	"github.com/Qitmeer/qitmeer/config"
+	"github.com/Qitmeer/qng-core/config"
 )
 
 type Context struct {

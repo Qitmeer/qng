@@ -375,6 +375,17 @@ function get_peer_info(){
   get_result "$data"
 }
 
+function get_balance() {
+  local pkAddress=$1
+  local coinID=$2
+  if [ "$coinID" == "" ]; then
+    coinID=1
+  fi
+
+  local data='{"jsonrpc":"2.0","method":"getBalance","params":["'$pkAddress'",'$coinID'],"id":null}'
+  get_result "$data"
+}
+
 function get_network_info(){
   local data='{"jsonrpc":"2.0","method":"getNetworkInfo","params":[],"id":null}'
   get_result "$data"
@@ -587,6 +598,7 @@ function usage(){
   echo "  timeinfo"
   echo "  subsidy"
   echo "  vmsinfo"
+  echo "  getbalance <PKAddress> <coinID>"
   echo "block  :"
   echo "  block <order|hash>"
   echo "  blockid <id>"
@@ -940,6 +952,10 @@ elif [ "$1" == "networkinfo" ]; then
 elif [ "$1" == "rpcinfo" ]; then
   shift
   get_rpc_info
+
+elif [ "$1" == "getbalance" ]; then
+  shift
+  get_balance $@
 
 elif [ "$1" == "rpcmax" ]; then
   shift

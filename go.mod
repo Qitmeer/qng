@@ -3,15 +3,15 @@ module github.com/Qitmeer/qng
 go 1.14
 
 require (
-	github.com/Qitmeer/crypto v0.0.0-20200516043559-dd457edff06c
+	github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a
 	github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a
 	github.com/Qitmeer/meerevm v0.0.0-00010101000000-000000000000
-	github.com/Qitmeer/qitmeer v0.0.0-00010101000000-000000000000
+	github.com/Qitmeer/qng-core v0.0.0-00010101000000-000000000000
 	github.com/aristanetworks/goarista v0.0.0-20200812190859-4cb0e71f3c0e
-	github.com/cloudflare/roughtime v0.0.0-20200829152512-a9bb6267a4f5
+	github.com/cloudflare/roughtime v0.0.0-20210217223727-1fe56bcbcfd4
 	github.com/davecgh/go-spew v1.1.1
 	github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f // indirect
-	github.com/dchest/blake256 v1.0.0
+	github.com/dchest/blake256 v1.1.0
 	github.com/deckarep/golang-set v1.7.1
 	github.com/dgraph-io/ristretto v0.0.2
 	github.com/ferranbt/fastssz v0.0.0-20200514094935-99fccaf93472
@@ -61,6 +61,7 @@ require (
 	google.golang.org/grpc v1.27.1
 	google.golang.org/protobuf v1.23.0
 	gopkg.in/yaml.v2 v2.4.0
+	roughtime.googlesource.com/roughtime.git v0.0.0-20190418172256-51f6971f5f06 // indirect
 )
 
 replace (
@@ -70,7 +71,7 @@ replace (
 	golang.org/x/tools v0.0.0-20181006002542-f60d9635b16a => github.com/golang/tools v0.0.0-20181006002542-f60d9635b16a
 )
 
-replace github.com/Qitmeer/qitmeer => ./../qitmeer
+replace github.com/Qitmeer/qng-core => ./../qng-core
 
 replace github.com/Qitmeer/meerevm => ./../meerevm
 

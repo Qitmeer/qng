@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qitmeer/consensus"
+	"github.com/Qitmeer/qng-core/consensus"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/common/math"

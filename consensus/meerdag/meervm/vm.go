@@ -6,9 +6,8 @@ package meervm
 
 import (
 	"context"
-	"github.com/Qitmeer/qitmeer/common/hash"
-	"github.com/Qitmeer/qitmeer/consensus"
-	"github.com/Qitmeer/qitmeer/version"
+	"github.com/Qitmeer/qng-core/common/hash"
+	"github.com/Qitmeer/qng-core/consensus"
 	"sync"
 )
 
@@ -54,7 +53,7 @@ func (vm *VM) Shutdown() error {
 }
 
 func (vm *VM) Version() string {
-	return version.String()
+	return ""
 }
 
 func (vm *VM) GetBlock(*hash.Hash) (consensus.Block, error) {

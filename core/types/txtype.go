@@ -6,7 +6,7 @@ package types
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qitmeer/consensus"
+	"github.com/Qitmeer/qng-core/consensus"
 	"github.com/Qitmeer/qng/common/math"
 )
 

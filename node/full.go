@@ -274,7 +274,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		return nil, err
 	}
 	// init address api
-	qm.addressApi = address.NewAddressApi(cfg, node.Params)
+	qm.addressApi = address.NewAddressApi(cfg, node.Params, bm.GetChain())
 
 	if err := qm.RegisterVMService(); err != nil {
 		return nil, err
