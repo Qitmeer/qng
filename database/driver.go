@@ -7,7 +7,7 @@ package database
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng-core/log"
 )
 
 // Driver defines a structure for backend drivers to use when they register

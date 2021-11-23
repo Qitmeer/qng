@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng-core/log"
 )
 
 var dblog log.Logger

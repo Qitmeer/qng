@@ -11,7 +11,7 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/core/blockdag"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng-core/log"
 	"sync"
 	"time"
 )

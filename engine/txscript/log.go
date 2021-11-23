@@ -7,7 +7,7 @@
 package txscript
 
 import (
-	l "github.com/Qitmeer/qng/log"
+	l "github.com/Qitmeer/qng-core/log"
 )
 
 // log is a logger that is initialized with no output filters.  This

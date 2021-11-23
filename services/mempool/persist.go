@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
-	l "github.com/Qitmeer/qng/log"
+	l "github.com/Qitmeer/qng-core/log"
 	"github.com/schollz/progressbar/v3"
 	"io"
 	"io/ioutil"
