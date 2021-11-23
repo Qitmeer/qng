@@ -5,10 +5,12 @@
 package main
 
 import (
-	"fmt"
 	"github.com/Qitmeer/meerevm/evm"
+	"github.com/Qitmeer/meerevm/evm/util"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 func main() {
-	fmt.Println(evm.New().Version())
+	util.InitLog("trace",true)
+	log.Info(evm.New().Version())
 }

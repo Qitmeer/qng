@@ -24,15 +24,14 @@ import (
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
 	"math/big"
-	"os"
 	"runtime"
 	"sync"
 	"time"
+	l "github.com/Qitmeer/qng-core/log"
 )
 
 // meerevm ID of the platform
@@ -55,15 +54,7 @@ func (vm *VM) GetID() string {
 }
 
 func (vm *VM) Initialize(ctx consensus.Context) error {
-	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.LogfmtFormat()))
-	glogger.Verbosity(log.LvlTrace)
-	log.Root().SetHandler(glogger)
-
-	lvl, err := log.LvlFromString(ctx.GetConfig().DebugLevel)
-	if err == nil {
-		glogger.Verbosity(lvl)
-	}
-	log.PrintOrigins(ctx.GetConfig().DebugPrintOrigins)
+	util.InitLog(ctx.GetConfig().DebugLevel,ctx.GetConfig().DebugPrintOrigins)
 
 	log.Info("System info", "ETH VM Version", util.Version, "Go version", runtime.Version())
 
@@ -293,6 +284,7 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		DatasetsOnDisk:   config.DatasetsOnDisk,
 		DatasetsLockMmap: config.DatasetsLockMmap,
 		NotifyFull:       config.NotifyFull,
+		Log: l.Root(),
 	}, notify, noverify)
 	engine.SetThreads(-1) // Disable CPU mining
 	return engine

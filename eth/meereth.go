@@ -84,6 +84,7 @@ func New(config *Config, datadir string) (*node.Node, *Ether) {
 			NoDiscovery: true,
 			NoDial:      true,
 		},
+		Logger:nil,
 	}
 
 	stack, err := node.New(nodeConf)

@@ -5,12 +5,16 @@ go 1.16
 require github.com/ethereum/go-ethereum v1.10.9
 
 require (
-	github.com/Qitmeer/qitmeer v0.0.0-00010101000000-000000000000
+	github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a // indirect
+	github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a // indirect
+	github.com/Qitmeer/qng-core v0.0.0-00010101000000-000000000000
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/VictoriaMetrics/fastcache v1.6.0 // indirect
 	github.com/btcsuite/btcd v0.20.1-beta // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/cloudflare/roughtime v0.0.0-20210217223727-1fe56bcbcfd4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dchest/blake256 v1.1.0 // indirect
 	github.com/deepmap/oapi-codegen v1.8.2 // indirect
 	github.com/dindinw/go-duktape v0.0.0-20211014112850-ba2007c86288 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
@@ -58,4 +62,4 @@ require (
 
 replace github.com/ethereum/go-ethereum => ./pkg/ethereum/go-ethereum-v1.10.9
 
-replace github.com/Qitmeer/qitmeer => ./../qitmeer
+replace github.com/Qitmeer/qng-core => ./../qng-core
