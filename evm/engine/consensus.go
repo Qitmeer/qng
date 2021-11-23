@@ -2,7 +2,7 @@
  * Copyright (c) 2017-2020 The qitmeer developers
  */
 
-package meerengine
+package engine
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"time"
 
-	qconsensus "github.com/Qitmeer/qng/consensus"
+	qconsensus "github.com/Qitmeer/qng-core/consensus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
@@ -266,11 +266,14 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 		me.config.Log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
 		return
 	}
-	if tx.Nonce() == uint64(qconsensus.TxTypeExport) {
+	if tx.Nonce() == uint64(qconsensus.TxTypeCrossChainExport) {
 		state.AddBalance(*tx.To(), tx.Value())
+		me.config.Log.Info(fmt.Sprintf("Cross chain(%s):%d(MEER) => %d(ETH)", tx.To().String(), tx.Value().Int64(), tx.Value().Int64()))
 	} else {
 		state.SubBalance(*tx.To(), tx.Value())
+		me.config.Log.Info(fmt.Sprintf("Cross chain(%s):%d(ETH) => %d(MEER)", tx.To().String(), tx.Value().Int64(), tx.Value().Int64()))
 	}
+
 	nonce := state.GetNonce(*tx.To())
 	state.SetNonce(*tx.To(), nonce)
 }
