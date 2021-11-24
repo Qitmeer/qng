@@ -7,7 +7,7 @@ require github.com/ethereum/go-ethereum v1.10.9
 require (
 	github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a // indirect
 	github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a // indirect
-	github.com/Qitmeer/qng-core v0.0.0-00010101000000-000000000000
+	github.com/Qitmeer/qng-core v0.0.0-20211123060419-6dbe3abafbb5
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/VictoriaMetrics/fastcache v1.6.0 // indirect
 	github.com/btcsuite/btcd v0.20.1-beta // indirect
@@ -61,5 +61,3 @@ require (
 )
 
 replace github.com/ethereum/go-ethereum => ./pkg/ethereum/go-ethereum-v1.10.9
-
-replace github.com/Qitmeer/qng-core => ./../qng-core
