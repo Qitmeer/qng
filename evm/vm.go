@@ -32,6 +32,7 @@ import (
 	"sync"
 	"time"
 	l "github.com/Qitmeer/qng-core/log"
+	qtypes "github.com/Qitmeer/qng-core/core/types"
 )
 
 // meerevm ID of the platform
@@ -183,7 +184,7 @@ func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
 	blocks, _ := core.GenerateChain(vm.config.Genesis.Config, vm.chain.Backend.BlockChain().CurrentBlock(), vm.chain.Backend.Engine(), vm.chain.Backend.ChainDb(), 1, func(i int, block *core.BlockGen) {
 
 		for _, tx := range txs {
-			if tx.GetTxType() == consensus.TxTypeCrossChainExport {
+			if tx.GetTxType() == qtypes.TxTypeCrossChainExport {
 				pubkBytes, err := hex.DecodeString(tx.GetTo())
 				if err != nil {
 					log.Warn(err.Error())
@@ -199,7 +200,7 @@ func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
 				txData := &types.AccessListTx{
 					To:    &toAddr,
 					Value: big.NewInt(int64(tx.GetValue())),
-					Nonce: uint64(consensus.TxTypeCrossChainExport),
+					Nonce: uint64(qtypes.TxTypeCrossChainExport),
 				}
 				etx := types.NewTx(txData)
 				txmb, err := etx.MarshalBinary()
