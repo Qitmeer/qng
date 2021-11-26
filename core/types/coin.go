@@ -12,6 +12,7 @@ type CoinID uint16
 
 const (
 	MEERID CoinID = 0
+	ETHID  CoinID = 1
 
 	QitmeerReservedID CoinID = 255
 )
@@ -19,6 +20,8 @@ const (
 func (c CoinID) Name() string {
 	if c == MEERID {
 		return "MEER"
+	} else if c == ETHID {
+		return "ETH"
 	} else if t, ok := CoinNameMap[c]; ok {
 		return t
 	} else {
@@ -48,7 +51,7 @@ func NewCoinID(name string) CoinID {
 }
 
 var CoinNameMap = map[CoinID]string{}
-var CoinIDList = []CoinID{MEERID}
+var CoinIDList = []CoinID{MEERID, ETHID}
 
 // Check if a valid coinId, current only check if the coinId is known.
 func CheckCoinID(id CoinID) error {

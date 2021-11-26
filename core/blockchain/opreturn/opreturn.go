@@ -14,6 +14,7 @@ type OPReturnType byte
 
 var OPRNameMap = map[OPReturnType]string{
 	OPReturnType(txscript.OP_MEER_LOCK): "LockAmount",
+	OPReturnType(txscript.OP_MEER_EVM):  "MeerEVM",
 }
 
 func (t OPReturnType) Name() string {
@@ -49,6 +50,23 @@ func IsOPReturn(pks []byte) bool {
 	return ops[0].GetOpcode().GetValue() == txscript.OP_RETURN
 }
 
+func GetOPReturnType(pks []byte) OPReturnType {
+	if len(pks) <= 0 {
+		return OPReturnType(txscript.OP_0)
+	}
+	ops, err := txscript.ParseScript(pks)
+	if err != nil {
+		return OPReturnType(txscript.OP_0)
+	}
+	if len(ops) <= 1 {
+		return OPReturnType(txscript.OP_0)
+	}
+	if ops[1].GetOpcode() == nil {
+		return OPReturnType(txscript.OP_0)
+	}
+	return OPReturnType(ops[1].GetOpcode().GetValue())
+}
+
 func NewOPReturnFrom(pks []byte) (IOPReturn, error) {
 	ops, err := txscript.ParseScript(pks)
 	if err != nil {
@@ -61,6 +79,13 @@ func NewOPReturnFrom(pks []byte) (IOPReturn, error) {
 	switch opType {
 	case txscript.OP_MEER_LOCK:
 		sa := LockAmount{}
+		err := sa.Init(ops)
+		if err != nil {
+			return nil, err
+		}
+		return &sa, nil
+	case txscript.OP_MEER_EVM:
+		sa := MeerEVM{}
 		err := sa.Init(ops)
 		if err != nil {
 			return nil, err
