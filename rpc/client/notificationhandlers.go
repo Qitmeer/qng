@@ -8,9 +8,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/Qitmeer/qng/common/hash"
-	j "github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng-core/common/hash"
+	j "github.com/Qitmeer/qng-core/core/json"
+	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"time"
 )

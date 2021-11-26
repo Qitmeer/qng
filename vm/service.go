@@ -6,16 +6,16 @@ import (
 	"github.com/Qitmeer/meerevm/evm"
 	qconfig "github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/consensus"
-	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng-core/config"
 	qconsensus "github.com/Qitmeer/qng/consensus"
-	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng-core/core/address"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/blockchain/opreturn"
+	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/event"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng/node/service"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng-core/params"
 )
 
 type Factory interface {
@@ -158,7 +158,7 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 			txs := []consensus.Tx{}
 			for _, tx := range ban.Block.Transactions() {
 				if types.IsCrossChainExportTx(tx.Tx) {
-					ctx := &qconsensus.Tx{Type: consensus.TxTypeCrossChainExport}
+					ctx := &qconsensus.Tx{Type: types.TxTypeCrossChainExport}
 					_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
 					if err != nil {
 						log.Error(err.Error())

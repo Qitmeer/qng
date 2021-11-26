@@ -1,7 +1,7 @@
 package blockdag
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng-core/common/hash"
 	"sort"
 )
 

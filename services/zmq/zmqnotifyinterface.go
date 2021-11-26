@@ -1,8 +1,8 @@
 package zmq
 
 import (
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng-core/config"
+	"github.com/Qitmeer/qng-core/core/types"
 	_ "log"
 )
 

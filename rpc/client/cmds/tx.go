@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	"github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng-core/core/json"
 )
 
 type CreateRawTransactionCmd struct {

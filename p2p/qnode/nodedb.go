@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Qitmeer/qng/common/encode/rlp"
+	"github.com/Qitmeer/qng-core/common/encode/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"

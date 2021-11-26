@@ -2,7 +2,7 @@ package common
 
 import (
 	"context"
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/node/notify"
 	"github.com/Qitmeer/qng/p2p/encoder"

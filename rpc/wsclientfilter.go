@@ -1,9 +1,9 @@
 package rpc
 
 import (
-	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng-core/core/address"
+	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng-core/crypto/ecc/secp256k1"
 	"golang.org/x/crypto/ripemd160"
 	"sync"
 )

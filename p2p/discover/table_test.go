@@ -7,7 +7,7 @@ package discover
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng-core/crypto/ecc/secp256k1"
 	"math/rand"
 
 	"net"
@@ -16,7 +16,7 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/Qitmeer/qng/crypto"
+	"github.com/Qitmeer/qng-core/crypto"
 	"github.com/Qitmeer/qng/p2p/netutil"
 	"github.com/Qitmeer/qng/p2p/qnode"
 	"github.com/Qitmeer/qng/p2p/qnr"

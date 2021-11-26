@@ -2,16 +2,16 @@ package mining
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockdag"
-	"github.com/Qitmeer/qng/core/merkle"
-	s "github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng-core/core/merkle"
+	s "github.com/Qitmeer/qng-core/core/serialization"
+	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng-core/core/types/pow"
+	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng-core/log"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng-core/params"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"golang.org/x/net/context"
 )

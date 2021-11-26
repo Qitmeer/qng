@@ -5,22 +5,21 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng-core/consensus"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/marshal"
-	"github.com/Qitmeer/qng/common/math"
+	"github.com/Qitmeer/qng-core/common/hash"
+	"github.com/Qitmeer/qng-core/common/marshal"
+	"github.com/Qitmeer/qng-core/common/math"
 	qconsensus "github.com/Qitmeer/qng/consensus"
-	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/core/blockchain/opreturn"
+	"github.com/Qitmeer/qng-core/core/address"
+	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng-core/core/json"
 	"github.com/Qitmeer/qng/core/message"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/crypto/ecc"
+	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng-core/crypto/ecc"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng-core/engine/txscript"
+	"github.com/Qitmeer/qng-core/params"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -1306,7 +1305,7 @@ func (api *PublicTxAPI) CreateImportRawTransaction(pkAddress string, amount int6
 	mtx := types.NewTransaction()
 	mtx.AddTxIn(&types.TxInput{
 		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.TokenPrevOutIndex),
-		Sequence:    uint32(consensus.TxTypeCrossChainImport),
+		Sequence:    uint32(types.TxTypeCrossChainImport),
 	})
 
 	addr, err := address.DecodeAddress(pkAddress)

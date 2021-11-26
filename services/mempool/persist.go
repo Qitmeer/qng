@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng-core/core/types"
 	l "github.com/Qitmeer/qng-core/log"
 	"github.com/schollz/progressbar/v3"
 	"io"

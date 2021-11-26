@@ -7,12 +7,11 @@ package consensus
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng-core/consensus"
-	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/crypto/ecc"
-	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng-core/core/address"
+	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng-core/crypto/ecc"
+	"github.com/Qitmeer/qng-core/engine/txscript"
+	"github.com/Qitmeer/qng-core/params"
 )
 
 type ImportTx struct {
@@ -118,7 +117,7 @@ func (itx *ImportTx) GetTransactionForEngine() (*types.Transaction, error) {
 func NewImportTx(tx *types.Transaction) (*ImportTx, error) {
 
 	itx := &ImportTx{Transaction: tx, Tx: &Tx{}}
-	itx.Type = consensus.TxTypeCrossChainImport
+	itx.Type = types.TxTypeCrossChainImport
 
 	ops, err := txscript.ParseScript(tx.TxIn[0].SignScript)
 	if err != nil {

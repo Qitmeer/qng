@@ -16,9 +16,9 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng-core/common/hash"
+	"github.com/Qitmeer/qng-core/core/protocol"
+	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/database/ffldb/treap"
 	"github.com/syndtr/goleveldb/leveldb"

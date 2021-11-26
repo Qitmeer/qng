@@ -7,12 +7,12 @@ package qnode
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng-core/crypto/ecc/secp256k1"
 	"io"
 
-	"github.com/Qitmeer/qng/common/encode/rlp"
-	"github.com/Qitmeer/qng/common/math"
-	"github.com/Qitmeer/qng/crypto"
+	"github.com/Qitmeer/qng-core/common/encode/rlp"
+	"github.com/Qitmeer/qng-core/common/math"
+	"github.com/Qitmeer/qng-core/crypto"
 	"github.com/Qitmeer/qng/p2p/qnr"
 	"golang.org/x/crypto/sha3"
 )

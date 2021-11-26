@@ -9,7 +9,7 @@
 package statedb
 
 import (
-	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng-core/common/roughtime"
 	"github.com/Qitmeer/qng-core/log"
 	"github.com/Qitmeer/qng/metrics"
 	"strconv"

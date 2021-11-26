@@ -7,7 +7,7 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/blockdag"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng-core/params"
 	"math"
 )
 

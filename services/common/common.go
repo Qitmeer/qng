@@ -1,7 +1,7 @@
 package common
 
 import (
-	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng/services/mempool"
 )
 
