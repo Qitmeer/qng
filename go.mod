@@ -6,7 +6,7 @@ require (
 	github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a
 	github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a
 	github.com/Qitmeer/meerevm v0.0.0-00010101000000-000000000000
-	github.com/Qitmeer/qng-core v0.0.0-00010101000000-000000000000
+	github.com/Qitmeer/qng-core v0.0.0-20211123060419-6dbe3abafbb5
 	github.com/aristanetworks/goarista v0.0.0-20200812190859-4cb0e71f3c0e
 	github.com/cloudflare/roughtime v0.0.0-20210217223727-1fe56bcbcfd4
 	github.com/davecgh/go-spew v1.1.1
@@ -71,8 +71,5 @@ replace (
 	golang.org/x/tools v0.0.0-20181006002542-f60d9635b16a => github.com/golang/tools v0.0.0-20181006002542-f60d9635b16a
 )
 
-replace github.com/Qitmeer/qng-core => ./../qng-core
-
 replace github.com/Qitmeer/meerevm => ./../meerevm
-
-replace github.com/ethereum/go-ethereum => ./../meerevm/pkg/ethereum/go-ethereum-v1.10.9
+replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-q
