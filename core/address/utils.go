@@ -14,6 +14,9 @@ func IsForNetwork(addr types.Address, p *params.Params) bool {
 	switch addr := addr.(type) {
 	case *PubKeyHashAddress:
 		return addr.netID == p.PubKeyHashAddrID
+	case *SecpPubKeyAddress:
+		return addr.net.Net == p.Net
+
 	}
 	return false
 }
