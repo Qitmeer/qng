@@ -51,8 +51,8 @@ github.com/Qitmeer/go-ethereum v1.10.9-q h1:kG5PoKeB3Zj7O/jcKqsqRQDaLpXMkWRTjI/E
 github.com/Qitmeer/go-ethereum v1.10.9-q/go.mod h1:CaTMQrv51WaAlD2eULQ3f03KiahDRO28fleQcKjWrrg=
 github.com/Qitmeer/meerevm v0.0.0-20211123222056-c467f7f90219 h1:uqluAOStG+VtDgXzGtmXiQK6b2ja43qlDgq6Zs8iJW4=
 github.com/Qitmeer/meerevm v0.0.0-20211123222056-c467f7f90219/go.mod h1:1mSWYSzLqCLhWqlO8Px+gCFro5el2zjUMZUcmXaW2DE=
-github.com/Qitmeer/qng-core v0.0.0-20211123060419-6dbe3abafbb5 h1:JPu8sec1+tDOjKeNESa8zmoF7pVBoXS+ggMWPmA7VU8=
-github.com/Qitmeer/qng-core v0.0.0-20211123060419-6dbe3abafbb5/go.mod h1:OXIjYsQ2jal60J5FnnkglTSykeSVgYSuTkaBYWHBfR0=
+github.com/Qitmeer/qng-core v1.2.0 h1:tGS6ucArT0E7HJeftnCT5hHDBEMtdtTv0L0WRjAx7jg=
+github.com/Qitmeer/qng-core v1.2.0/go.mod h1:OXIjYsQ2jal60J5FnnkglTSykeSVgYSuTkaBYWHBfR0=
 github.com/Shopify/sarama v1.26.1/go.mod h1:NbSGBSSndYaIhRcBtY9V0U7AyH+x71bG668AuWys/yU=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
