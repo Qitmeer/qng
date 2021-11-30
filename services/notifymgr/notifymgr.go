@@ -2,7 +2,7 @@ package notifymgr
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/log"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/rpc"

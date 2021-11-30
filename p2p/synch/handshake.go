@@ -7,7 +7,7 @@ package synch
 import (
 	"bufio"
 	"fmt"
-	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng-core/core/protocol"
 	"github.com/Qitmeer/qng/p2p/peers"
 	"github.com/multiformats/go-multistream"
 	"io"

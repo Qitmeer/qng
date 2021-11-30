@@ -3,7 +3,7 @@ package blockdag
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/database"
 )

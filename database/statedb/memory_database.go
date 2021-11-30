@@ -10,7 +10,7 @@ package statedb
 
 import (
 	"errors"
-	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng-core/common/util"
 	"sync"
 )
 

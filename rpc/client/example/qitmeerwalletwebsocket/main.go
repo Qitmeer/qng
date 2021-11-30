@@ -8,10 +8,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/util"
-	j "github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng-core/common/hash"
+	"github.com/Qitmeer/qng-core/common/util"
+	j "github.com/Qitmeer/qng-core/core/json"
+	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng/rpc/client"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"io/ioutil"

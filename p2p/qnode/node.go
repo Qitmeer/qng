@@ -15,7 +15,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/Qitmeer/qng/common/encode/rlp"
+	"github.com/Qitmeer/qng-core/common/encode/rlp"
 	"github.com/Qitmeer/qng/p2p/qnr"
 )
 

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Qitmeer/qng/common/mclock"
+	"github.com/Qitmeer/qng-core/common/mclock"
 )
 
 const (

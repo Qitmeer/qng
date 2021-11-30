@@ -12,8 +12,8 @@ import (
 	"math"
 	"runtime"
 
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng-core/engine/txscript"
 )
 
 // txValidateItem holds a transaction along with which input to validate.

@@ -5,8 +5,8 @@
 package common
 
 import (
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng-core/core/protocol"
+	"github.com/Qitmeer/qng-core/params"
 	"os"
 )
 

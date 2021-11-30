@@ -8,7 +8,7 @@ package ffldb
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng-core/core/protocol"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng-core/log"
 )

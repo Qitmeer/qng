@@ -12,7 +12,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockdag"
 	"sync"
 
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng-core/params"
 )
 
 // The number of values to precalculate on initialization of the subsidy

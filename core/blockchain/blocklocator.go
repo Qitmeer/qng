@@ -1,7 +1,7 @@
 package blockchain
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng/core/blockdag"
 )
 

@@ -9,10 +9,10 @@ import (
 	"sync"
 
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng-core/engine/txscript"
+	"github.com/Qitmeer/qng-core/params"
 )
 
 var (

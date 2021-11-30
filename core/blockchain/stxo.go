@@ -3,10 +3,10 @@ package blockchain
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng-core/core/serialization"
+	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng/database"
 )
 

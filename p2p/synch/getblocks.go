@@ -8,7 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng/core/blockdag"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/peers"
