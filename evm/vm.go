@@ -166,6 +166,8 @@ func (vm *VM) Shutdown() error {
 	vm.node.Close()
 
 	close(vm.shutdownChan)
+
+	vm.node.Wait()
 	vm.shutdownWg.Wait()
 	return nil
 }
