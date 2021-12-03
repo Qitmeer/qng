@@ -5,7 +5,7 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"math"

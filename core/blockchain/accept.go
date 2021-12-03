@@ -11,7 +11,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/blockdag"
 	"github.com/Qitmeer/qng-core/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng-core/params"
 	"math"

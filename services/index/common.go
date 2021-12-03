@@ -12,7 +12,7 @@ import (
 	"errors"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng-core/database"
 )
 
 var (

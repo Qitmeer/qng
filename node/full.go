@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng/node/notify"
 	"github.com/Qitmeer/qng/node/service"

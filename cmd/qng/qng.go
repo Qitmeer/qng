@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/log"
-	_ "github.com/Qitmeer/qng/database/ffldb"
+	_ "github.com/Qitmeer/qng-core/database/ffldb"
 	"github.com/Qitmeer/qng/node"
 	"github.com/Qitmeer/qng-core/params"
 	"github.com/Qitmeer/qng/services/common"
