@@ -2,9 +2,9 @@ name: GoTest
 
 on:
   push:
-    branches: [ master,0.10-dev,0.10.6-mixnet ]
+    branches: [ main ]
   pull_request:
-    branches: [ master,0.10-dev,0.10.6-mixnet ]
+    branches: [ main ]
 
   workflow_dispatch:
 
@@ -23,7 +23,7 @@ jobs:
         run: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.16.0
 
       - name: Build
-        run: make qitmeer
+        run: make qng
 
       - name: Test
         run: |
