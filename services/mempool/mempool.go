@@ -12,7 +12,7 @@ import (
 	"github.com/Qitmeer/qng-core/common/roughtime"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/event"
+	"github.com/Qitmeer/qng-core/core/event"
 	"github.com/Qitmeer/qng/core/message"
 	"github.com/Qitmeer/qng-core/core/types"
 	"math"

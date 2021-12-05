@@ -4,7 +4,7 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng/core/blockdag"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng-core/core/serialization"
 	"github.com/Qitmeer/qng-core/core/types"
@@ -605,7 +605,7 @@ func (b *BlockChain) FetchUtxoView(tx *types.Tx) (*UtxoViewpoint, error) {
 	// Request the utxos from the point of view of the end of the main
 	// chain.
 	view := NewUtxoViewpoint()
-	view.SetViewpoints(b.GetMiningTips(blockdag.MaxPriority))
+	view.SetViewpoints(b.GetMiningTips(meerdag.MaxPriority))
 	b.ChainRLock()
 	err := view.fetchUtxosMain(b.db, neededSet)
 	b.ChainRUnlock()

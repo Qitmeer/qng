@@ -9,7 +9,7 @@ package progresslog
 import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/roughtime"
-	"github.com/Qitmeer/qng/core/blockdag"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/log"
 	"sync"
@@ -110,7 +110,7 @@ func (b *BlockProgressLogger) LogBlockHeight(block *types.SerializedBlock) {
 
 	b.subsystemLogger.Info(fmt.Sprintf("%s %d %s in the last %s (%d %s, order %s, %s)",
 		b.progressAction, b.receivedLogBlocks, blockStr, tDuration,
-		b.receivedLogTx, txStr, blockdag.GetOrderLogStr(uint(block.Order())), block.Block().Header.Timestamp))
+		b.receivedLogTx, txStr, meerdag.GetOrderLogStr(uint(block.Order())), block.Block().Header.Timestamp))
 
 	b.receivedLogBlocks = 0
 	b.receivedLogTx = 0

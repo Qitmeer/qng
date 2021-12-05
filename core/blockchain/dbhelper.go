@@ -7,7 +7,7 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/common/roughtime"
 	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng/core/blockdag"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng-core/core/serialization"
 	"github.com/Qitmeer/qng-core/core/types"
@@ -450,7 +450,7 @@ func dbFetchBlockByHash(dbTx database.Tx, hash *hash.Hash) (*types.SerializedBlo
 func (b *BlockChain) BlockOrderByHash(hash *hash.Hash) (uint64, error) {
 	ib := b.bd.GetBlock(hash)
 	if ib == nil {
-		return uint64(blockdag.MaxBlockOrder), fmt.Errorf("No block\n")
+		return uint64(meerdag.MaxBlockOrder), fmt.Errorf("No block\n")
 	}
 	return uint64(ib.GetOrder()), nil
 }
