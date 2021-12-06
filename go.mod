@@ -3,9 +3,8 @@ module github.com/Qitmeer/qng
 go 1.14
 
 require (
-	github.com/Qitmeer/meerevm v0.0.0-00010101000000-000000000000
-	github.com/Qitmeer/qng-core v1.2.1
-	github.com/aristanetworks/goarista v0.0.0-20200812190859-4cb0e71f3c0e // indirect
+	github.com/Qitmeer/meerevm v0.0.0-20211130062744-a8d9b69dc8c0
+	github.com/Qitmeer/qng-core v1.2.2
 	github.com/davecgh/go-spew v1.1.1
 	github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f // indirect
 	github.com/deckarep/golang-set v1.7.1
@@ -13,12 +12,13 @@ require (
 	github.com/ferranbt/fastssz v0.0.0-20200514094935-99fccaf93472
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
-	github.com/golang/protobuf v1.4.3
+	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.4
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/ipfs/go-ds-leveldb v0.4.2
 	github.com/ipfs/go-ipfs-addr v0.0.1
 	github.com/jessevdk/go-flags v1.4.0
+	github.com/klauspost/cpuid v1.2.3 // indirect
 	github.com/libp2p/go-libp2p v0.11.0
 	github.com/libp2p/go-libp2p-core v0.6.1
 	github.com/libp2p/go-libp2p-discovery v0.5.0
@@ -28,7 +28,6 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.3.2
 	github.com/libp2p/go-libp2p-secio v0.2.2
 	github.com/libp2p/go-sockaddr v0.1.0 // indirect
-	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/minio/highwayhash v1.0.0
 	github.com/multiformats/go-multiaddr v0.3.1
 	github.com/multiformats/go-multiaddr-net v0.2.0
@@ -40,9 +39,14 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/zeromq/goczmq v4.1.0+incompatible
 	go.opencensus.io v0.22.4
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
-	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d
+	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
+	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
 	gonum.org/v1/gonum v0.6.0
+	gopkg.in/jcmturner/aescts.v1 v1.0.1 // indirect
+	gopkg.in/jcmturner/dnsutils.v1 v1.0.1 // indirect
+	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
+	gopkg.in/jcmturner/gokrb5.v7 v7.5.0 // indirect
+	gopkg.in/jcmturner/rpc.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -52,7 +56,5 @@ replace (
 	golang.org/x/net v0.0.0-20181005035420-146acd28ed58 => github.com/golang/net v0.0.0-20181005035420-146acd28ed58
 	golang.org/x/tools v0.0.0-20181006002542-f60d9635b16a => github.com/golang/tools v0.0.0-20181006002542-f60d9635b16a
 )
-
-replace github.com/Qitmeer/meerevm => ./../meerevm
 
 replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-q
