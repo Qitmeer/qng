@@ -7,7 +7,7 @@ package token
 import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/math"
-	"github.com/Qitmeer/qng/core/blockdag"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng-core/core/serialization"
 	"github.com/Qitmeer/qng-core/core/types"
@@ -287,7 +287,7 @@ func BuildGenesisTokenState() *TokenState {
 	}
 
 	return &TokenState{
-		PrevStateID: uint32(blockdag.MaxId),
+		PrevStateID: uint32(meerdag.MaxId),
 		Types:       tys,
 		Balances:    TokenBalancesMap{},
 		Updates:     []ITokenUpdate{},

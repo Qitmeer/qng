@@ -11,7 +11,7 @@ import (
 	"github.com/Qitmeer/qng-core/core/address"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
-	"github.com/Qitmeer/qng/core/event"
+	"github.com/Qitmeer/qng-core/core/event"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng/node/service"

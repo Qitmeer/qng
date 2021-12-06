@@ -11,9 +11,9 @@ import (
 	"github.com/Qitmeer/qng-core/common/util"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng/core/blockdag"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng/core/event"
+	"github.com/Qitmeer/qng-core/core/event"
 	"github.com/Qitmeer/qng-core/core/merkle"
 	"github.com/Qitmeer/qng-core/core/serialization"
 	"github.com/Qitmeer/qng-core/core/types"
@@ -81,7 +81,7 @@ type BlockChain struct {
 	// These fields are related to checkpoint handling.  They are protected
 	// by the chain lock.
 	nextCheckpoint *params.Checkpoint
-	checkpointNode blockdag.IBlock
+	checkpointNode meerdag.IBlock
 
 	// The state is used as a fairly efficient way to cache information
 	// about the current best chain state that is returned to callers when
@@ -103,7 +103,7 @@ type BlockChain struct {
 	pruner *chainPruner
 
 	//block dag
-	bd *blockdag.BlockDAG
+	bd *meerdag.MeerDAG
 
 	// Cache Invalid tx
 	CacheInvalidTx bool
@@ -200,12 +200,12 @@ type BestState struct {
 	TotalTxns    uint64               // The total number of txns in the chain.
 	TotalSubsidy uint64               // The total subsidy for the chain.
 	TokenTipHash *hash.Hash           // The Hash of token state tip for the chain.
-	GraphState   *blockdag.GraphState // The graph state of dag
+	GraphState   *meerdag.GraphState // The graph state of dag
 }
 
 // newBestState returns a new best stats instance for the given parameters.
 func newBestState(tipHash *hash.Hash, bits uint32, blockSize, numTxns uint64, medianTime time.Time,
-	totalTxns uint64, totalsubsidy uint64, gs *blockdag.GraphState, tokenTipHash *hash.Hash) *BestState {
+	totalTxns uint64, totalsubsidy uint64, gs *meerdag.GraphState, tokenTipHash *hash.Hash) *BestState {
 	return &BestState{
 		Hash:         *tipHash,
 		Bits:         bits,
@@ -347,7 +347,7 @@ func New(config *Config) (*BlockChain, error) {
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
-	b.bd = &blockdag.BlockDAG{}
+	b.bd = &meerdag.MeerDAG{}
 	b.bd.Init(config.DAGType, b.CalcWeight,
 		1.0/float64(par.TargetTimePerBlock/time.Second), b.db, b.getBlockData)
 	// Initialize the chain state from the passed database.  When the db
@@ -383,7 +383,7 @@ func New(config *Config) (*BlockChain, error) {
 	log.Info(fmt.Sprintf("Chain state:totaltx=%d tipsNum=%d mainOrder=%d total=%d", b.BestSnapshot().TotalTxns, len(tips), b.bd.GetMainChainTip().GetOrder(), b.bd.GetBlockTotal()))
 
 	for _, v := range tips {
-		log.Info(fmt.Sprintf("hash=%s,order=%s,height=%d", v.GetHash(), blockdag.GetOrderLogStr(v.GetOrder()), v.GetHeight()))
+		log.Info(fmt.Sprintf("hash=%s,order=%s,height=%d", v.GetHash(), meerdag.GetOrderLogStr(v.GetOrder()), v.GetHeight()))
 	}
 
 	return &b, nil
@@ -791,7 +791,7 @@ func panicf(format string, args ...interface{}) {
 //    This is useful when using checkpoints.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectDagChain(ib blockdag.IBlock, block *types.SerializedBlock, newOrders *list.List, oldOrders *list.List) (bool, error) {
+func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedBlock, newOrders *list.List, oldOrders *list.List) (bool, error) {
 	if newOrders.Len() == 0 {
 		return true, nil
 	}
@@ -856,7 +856,7 @@ func (b *BlockChain) connectDagChain(ib blockdag.IBlock, block *types.Serialized
 }
 
 // This function is fast check before global sequencing,it can judge who is the bad block quickly.
-func (b *BlockChain) fastDoubleSpentCheck(ib blockdag.IBlock, block *types.SerializedBlock) {
+func (b *BlockChain) fastDoubleSpentCheck(ib meerdag.IBlock, block *types.SerializedBlock) {
 	/*transactions:=block.Transactions()
 	if len(transactions)>1 {
 		for i, tx := range transactions {
@@ -888,7 +888,7 @@ func (b *BlockChain) fastDoubleSpentCheck(ib blockdag.IBlock, block *types.Seria
 	}*/
 }
 
-func (b *BlockChain) updateBestState(ib blockdag.IBlock, block *types.SerializedBlock, attachNodes *list.List) error {
+func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedBlock, attachNodes *list.List) error {
 	// No warnings about unknown rules until the chain is current.
 	if b.isCurrent() {
 		// Warn if any unknown new rules are either about to activate or
@@ -903,7 +903,7 @@ func (b *BlockChain) updateBestState(ib blockdag.IBlock, block *types.Serialized
 	lastState := b.BestSnapshot()
 
 	for e := attachNodes.Front(); e != nil; e = e.Next() {
-		b.bd.UpdateWeight(e.Value.(blockdag.IBlock))
+		b.bd.UpdateWeight(e.Value.(meerdag.IBlock))
 	}
 
 	// Calculate the number of transactions that would be added by adding
@@ -956,7 +956,7 @@ func (b *BlockChain) updateBestState(ib blockdag.IBlock, block *types.Serialized
 // it would be inefficient to repeat it.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectBlock(node blockdag.IBlock, block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
+func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
 	// Atomically insert info into the database.
 	err := b.db.Update(func(dbTx database.Tx) error {
 		// Update the utxo set using the state of the utxo view.  This
@@ -1062,10 +1062,10 @@ func (b *BlockChain) FetchSubsidyCache() *SubsidyCache {
 //
 // This function MUST be called with the chain state lock held (for writes).
 
-func (b *BlockChain) reorganizeChain(ib blockdag.IBlock, detachNodes *list.List, attachNodes *list.List, newBlock *types.SerializedBlock) error {
+func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, attachNodes *list.List, newBlock *types.SerializedBlock) error {
 	oldBlocks := []*hash.Hash{}
 	for e := detachNodes.Front(); e != nil; e = e.Next() {
-		ob := e.Value.(*blockdag.BlockOrderHelp)
+		ob := e.Value.(*meerdag.BlockOrderHelp)
 		oldBlocks = append(oldBlocks, ob.Block.GetHash())
 	}
 
@@ -1082,7 +1082,7 @@ func (b *BlockChain) reorganizeChain(ib blockdag.IBlock, detachNodes *list.List,
 	var err error
 
 	for e := detachNodes.Back(); e != nil; e = e.Prev() {
-		n := e.Value.(*blockdag.BlockOrderHelp)
+		n := e.Value.(*meerdag.BlockOrderHelp)
 		if n == nil {
 			panic(err.Error())
 		}
@@ -1134,7 +1134,7 @@ func (b *BlockChain) reorganizeChain(ib blockdag.IBlock, detachNodes *list.List,
 	}
 
 	for e := attachNodes.Front(); e != nil; e = e.Next() {
-		nodeBlock := e.Value.(blockdag.IBlock)
+		nodeBlock := e.Value.(meerdag.IBlock)
 		if nodeBlock.GetID() == ib.GetID() {
 			block = newBlock
 		} else {
@@ -1202,7 +1202,7 @@ func (b *BlockChain) countSpentOutputs(block *types.SerializedBlock) int {
 }
 
 // Return the dag instance
-func (b *BlockChain) BlockDAG() *blockdag.BlockDAG {
+func (b *BlockChain) BlockDAG() *meerdag.MeerDAG {
 	return b.bd
 }
 
@@ -1337,7 +1337,7 @@ func (b *BlockChain) GetFeeByCoinID(h *hash.Hash, coinId types.CoinID) int64 {
 	return fees[coinId]
 }
 
-func (b *BlockChain) CalcWeight(ib blockdag.IBlock, bi *blockdag.BlueInfo) int64 {
+func (b *BlockChain) CalcWeight(ib meerdag.IBlock, bi *meerdag.BlueInfo) int64 {
 	if ib.GetStatus().KnownInvalid() {
 		return 0
 	}
@@ -1377,7 +1377,7 @@ func (b *BlockChain) ChainParams() *params.Params {
 }
 
 func (b *BlockChain) GetTokenTipHash() *hash.Hash {
-	if uint(b.TokenTipID) == blockdag.MaxId {
+	if uint(b.TokenTipID) == meerdag.MaxId {
 		return nil
 	}
 	ib := b.bd.GetBlockById(uint(b.TokenTipID))
@@ -1418,7 +1418,7 @@ func (b *BlockChain) CalculateTokenStateRoot(txs []*types.Tx, parents []*hash.Ha
 	return *tsMerkle[0]
 }
 
-func (b *BlockChain) getBlockData(hash *hash.Hash) blockdag.IBlockData {
+func (b *BlockChain) getBlockData(hash *hash.Hash) meerdag.IBlockData {
 	block, err := b.fetchBlockByHash(hash)
 	if err != nil {
 		log.Error(err.Error())
@@ -1431,7 +1431,7 @@ func (b *BlockChain) getBlockData(hash *hash.Hash) blockdag.IBlockData {
 // prior to, and including, the block node.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) CalcPastMedianTime(block blockdag.IBlock) time.Time {
+func (b *BlockChain) CalcPastMedianTime(block meerdag.IBlock) time.Time {
 	// Create a slice of the previous few block timestamps used to calculate
 	// the median per the number defined by the constant medianTimeBlocks.
 	timestamps := make([]int64, medianTimeBlocks)

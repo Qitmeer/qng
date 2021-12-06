@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/event"
+	"github.com/Qitmeer/qng-core/core/event"
 	ser "github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng-core/params"
 	"github.com/Qitmeer/qng/rpc/websocket"

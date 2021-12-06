@@ -48,9 +48,6 @@ qng-build:
 		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qng"
     endif
 
-meerdag:
-	@go build -o $(GOBIN)/plugin/meerdag "github.com/Qitmeer/qng/consensus/meerdag"
-
 checkversion: qng-build
 #	@echo version $(VERSION)
 
