@@ -79,7 +79,7 @@ func main() {
 			Recommit: time.Second,
 		},
 	}
-	stack, eth := meereth.New(&meereth.Config{EthConfig:&config})
+	stack, eth := meereth.New(&meereth.Config{EthConfig:&config},"./data")
 	stack.Start()
 	eth.Backend.StartMining(1)
 
