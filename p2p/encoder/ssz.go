@@ -19,12 +19,17 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 )
 
+// SSZ network encode size for data head
+const (
+	SszNetworkEncoderHeadSize = 16
+)
+
 // MaxGossipSize allowed for gossip messages.
 // It is the maximum allowed size of uncompressed gossip messages.
-var MaxGossipSize = uint64(qtypes.MaxBlockPayload + 16) // Adjust according to block
+var MaxGossipSize = uint64(qtypes.MaxBlockPayload + SszNetworkEncoderHeadSize) // Adjust according to block
 
 // MaxChunkSize is the the maximum allowed size of uncompressed req/resp chunked responses.
-var MaxChunkSize = uint64(qtypes.MaxBlockPayload + 16) // Adjust according to block
+var MaxChunkSize = uint64(qtypes.MaxBlockPayload + SszNetworkEncoderHeadSize) // Adjust according to block
 
 // This pool defines the sync pool for our buffered snappy writers, so that they
 // can be constantly reused.
