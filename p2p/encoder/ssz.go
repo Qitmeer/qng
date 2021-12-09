@@ -6,6 +6,7 @@ package encoder
 
 import (
 	"fmt"
+	qtypes "github.com/Qitmeer/qng-core/core/types"
 	"github.com/prysmaticlabs/go-ssz/types"
 	"io"
 	"io/ioutil"
@@ -18,12 +19,17 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 )
 
+// SSZ network encode size for data head
+const (
+	SszNetworkEncoderHeadSize = 16
+)
+
 // MaxGossipSize allowed for gossip messages.
 // It is the maximum allowed size of uncompressed gossip messages.
-var MaxGossipSize = uint64(1 << 20) // 1 MiB
+var MaxGossipSize = uint64(qtypes.MaxBlockPayload + SszNetworkEncoderHeadSize) // Adjust according to block
 
 // MaxChunkSize is the the maximum allowed size of uncompressed req/resp chunked responses.
-var MaxChunkSize = uint64(1 << 20) // 1 MiB
+var MaxChunkSize = uint64(qtypes.MaxBlockPayload + SszNetworkEncoderHeadSize) // Adjust according to block
 
 // This pool defines the sync pool for our buffered snappy writers, so that they
 // can be constantly reused.
