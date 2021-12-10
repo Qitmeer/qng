@@ -3,7 +3,7 @@ syntax = "proto3";
 package qitmeer.p2p.v1;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "messages.proto";
+import "message.proto";
 
 message MerkleBlockRequest {
   repeated Hash hashes = 1 [(gogoproto.moretags) = "ssz-max:\"2000\""];
