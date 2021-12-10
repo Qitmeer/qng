@@ -232,7 +232,7 @@ func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 	if ba < itx.Transaction.TxOut[0].Amount.Value {
 		return 0, fmt.Errorf("Balance (%s)  %d < output %d", pka.String(), ba, itx.Transaction.TxOut[0].Amount.Value)
 	}
-	return ba, nil
+	return ba-itx.Transaction.TxOut[0].Amount.Value, nil
 }
 
 func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
