@@ -38,9 +38,11 @@ import (
 	"time"
 )
 
-// ClientIdentifier is a hard coded identifier to report into the network.
-const (
+var (
+	// ClientIdentifier is a hard coded identifier to report into the network.
 	ClientIdentifier = "meereth"
+
+	MeerethChainID int64 = 223
 )
 
 type ETHChain struct {
@@ -404,7 +406,7 @@ func NewETHChain(datadir string) (*ETHChain,error) {
 
 func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	chainConfig := &params.ChainConfig {
-		ChainID:             big.NewInt(520),
+		ChainID:             big.NewInt(MeerethChainID),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      false,
@@ -440,7 +442,7 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	etherbase := genAddress
 	econfig := ethconfig.Defaults
 
-	econfig.NetworkId = 520
+	econfig.NetworkId = uint64(MeerethChainID)
 	econfig.Genesis = genesis
 	econfig.SyncMode = downloader.FullSync
 	econfig.NoPruning = true
