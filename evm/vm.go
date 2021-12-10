@@ -7,32 +7,20 @@ package evm
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/meerevm/eth"
-	"github.com/Qitmeer/meerevm/evm/engine"
+	"github.com/Qitmeer/meerevm/chain"
 	"github.com/Qitmeer/meerevm/evm/util"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/consensus"
 	"github.com/Qitmeer/qng-core/core/address"
+	qtypes "github.com/Qitmeer/qng-core/core/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	ethconsensus "github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/miner"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/params"
 	"math/big"
 	"runtime"
 	"sync"
-	"time"
-	l "github.com/Qitmeer/qng-core/log"
-	qtypes "github.com/Qitmeer/qng-core/core/types"
 )
 
 // meerevm ID of the platform
@@ -45,9 +33,7 @@ type VM struct {
 	shutdownChan chan struct{}
 	shutdownWg   sync.WaitGroup
 
-	config *ethconfig.Config
-	node   *node.Node
-	chain  *meereth.Ether
+	chain  *chain.ETHChain
 }
 
 func (vm *VM) GetID() string {
@@ -66,69 +52,22 @@ func (vm *VM) Initialize(ctx consensus.Context) error {
 
 	//
 
-	chainConfig := &params.ChainConfig{
-		ChainID:             big.NewInt(520),
-		HomesteadBlock:      big.NewInt(0),
-		DAOForkBlock:        big.NewInt(0),
-		DAOForkSupport:      false,
-		EIP150Block:         big.NewInt(0),
-		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:         big.NewInt(0),
-		EIP158Block:         big.NewInt(0),
-		ByzantiumBlock:      big.NewInt(0),
-		ConstantinopleBlock: big.NewInt(0),
-		PetersburgBlock:     big.NewInt(0),
-		IstanbulBlock:       big.NewInt(0),
-		MuirGlacierBlock:    big.NewInt(0),
-		BerlinBlock:         big.NewInt(0),
-		//		LondonBlock:         big.NewInt(0),
-		LondonBlock: nil,
-		Ethash:      new(params.EthashConfig),
+	ethchain,err:=chain.NewETHChain(vm.ctx.GetConfig().DataDir)
+	if err != nil {
+		return err
 	}
-
-	genBalance := big.NewInt(1000000000000000000)
-	genAddress := common.HexToAddress("0x71bc4403Af41634Cda7C32600A8024d54e7F6499")
-
-	genesis := &core.Genesis{
-		Config:     chainConfig,
-		Nonce:      0,
-		Number:     0,
-		ExtraData:  hexutil.MustDecode("0x00"),
-		GasLimit:   100000000,
-		Difficulty: big.NewInt(0),
-		Alloc:      core.GenesisAlloc{genAddress: {Balance: genBalance}},
-	}
-
-	etherbase := genAddress
-
-	vm.config = &ethconfig.Config{
-		Genesis:         genesis,
-		SyncMode:        downloader.FullSync,
-		DatabaseCache:   256,
-		DatabaseHandles: 256,
-		TxPool:          core.DefaultTxPoolConfig,
-		GPO:             ethconfig.Defaults.GPO,
-		Ethash:          ethconfig.Defaults.Ethash,
-		Miner: miner.Config{
-			Etherbase: etherbase,
-			GasCeil:   genesis.GasLimit * 11 / 10,
-			GasPrice:  big.NewInt(1),
-			Recommit:  time.Second,
-			ExtraData: []byte{byte(0)},
-		},
-		TrieCleanCache:  256,
-		ConsensusEngine: CreateConsensusEngine,
-	}
-	vm.node, vm.chain = meereth.New(&meereth.Config{EthConfig: vm.config}, vm.ctx.GetConfig().DataDir)
-
+	vm.chain = ethchain
 	return nil
 }
 
 func (vm *VM) Bootstrapping() error {
 	log.Debug("Bootstrapping")
-	vm.node.Start()
+	err:=vm.chain.Start()
+	if err != nil {
+		return err
+	}
 	//
-	rpcClient, err := vm.node.Attach()
+	rpcClient, err := vm.chain.Node().Attach()
 	if err != nil {
 		log.Error(fmt.Sprintf("Failed to attach to self: %v", err))
 	}
@@ -138,16 +77,21 @@ func (vm *VM) Bootstrapping() error {
 	if err != nil {
 		log.Error(err.Error())
 	} else {
-		log.Info(fmt.Sprintf("Current block number:%d", blockNum))
+		log.Info(fmt.Sprintf("MeerETH block chain current block number:%d", blockNum))
+	}
+
+	cbh:=vm.chain.Ether().BlockChain().CurrentBlock().Header()
+	if cbh != nil {
+		log.Info(fmt.Sprintf("MeerETH block chain current block:number=%d hash=%s",cbh.Number.Uint64(),cbh.Hash().String()))
 	}
 
 	//
-	state, err := vm.chain.Backend.BlockChain().State()
+	state, err := vm.chain.Ether().BlockChain().State()
 	if err != nil {
 		return nil
 	}
 
-	log.Info(fmt.Sprintf("miner account,addr:%v balance:%v", vm.config.Miner.Etherbase, state.GetBalance(vm.config.Miner.Etherbase)))
+	log.Info(fmt.Sprintf("miner account,addr:%v balance:%v", vm.chain.Config().Eth.Miner.Etherbase, state.GetBalance(vm.chain.Config().Eth.Miner.Etherbase)))
 
 	return nil
 }
@@ -163,27 +107,26 @@ func (vm *VM) Shutdown() error {
 		return nil
 	}
 
-	vm.node.Close()
-
 	close(vm.shutdownChan)
+	vm.chain.Stop()
 
-	vm.node.Wait()
+	vm.chain.Wait()
 	vm.shutdownWg.Wait()
 	return nil
 }
 
 func (vm *VM) Version() string {
-	return util.Version + fmt.Sprintf("(eth:%s)", params.VersionWithMeta)
+	return util.Version + " " + vm.chain.Config().Node.Version
 }
 
 func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
-	block := vm.chain.Backend.BlockChain().CurrentBlock()
+	block := vm.chain.Ether().BlockChain().CurrentBlock()
 	h := hash.MustBytesToHash(block.Hash().Bytes())
 	return &Block{id: &h, ethBlock: block, vm: vm, status: consensus.Accepted}, nil
 }
 
 func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
-	blocks, _ := core.GenerateChain(vm.config.Genesis.Config, vm.chain.Backend.BlockChain().CurrentBlock(), vm.chain.Backend.Engine(), vm.chain.Backend.ChainDb(), 1, func(i int, block *core.BlockGen) {
+	blocks, _ := core.GenerateChain(vm.chain.Config().Eth.Genesis.Config, vm.chain.Ether().BlockChain().CurrentBlock(), vm.chain.Ether().Engine(), vm.chain.Ether().ChainDb(), 1, func(i int, block *core.BlockGen) {
 
 		for _, tx := range txs {
 			if tx.GetTxType() == qtypes.TxTypeCrossChainExport {
@@ -227,7 +170,7 @@ func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
 	if len(blocks) != 1 {
 		return nil, fmt.Errorf("BuildBlock error")
 	}
-	num, err := vm.chain.Backend.BlockChain().InsertChainWithoutSealVerification(blocks[0])
+	num, err := vm.chain.Ether().BlockChain().InsertChainWithoutSealVerification(blocks[0])
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +189,7 @@ func (vm *VM) ParseBlock([]byte) (consensus.Block, error) {
 }
 
 func (vm *VM) LastAccepted() (*hash.Hash, error) {
-	block := vm.chain.Backend.BlockChain().CurrentBlock()
+	block := vm.chain.Ether().BlockChain().CurrentBlock()
 	h := hash.MustBytesToHash(block.Hash().Bytes())
 	return &h, nil
 }
@@ -265,7 +208,7 @@ func (vm *VM) GetBalance(addre string) (int64, error) {
 		return 0, err
 	}
 	eAddr := crypto.PubkeyToAddress(*publicKey)
-	state, err := vm.chain.Backend.BlockChain().State()
+	state, err := vm.chain.Ether().BlockChain().State()
 	if err != nil {
 		return 0, err
 	}
@@ -274,21 +217,4 @@ func (vm *VM) GetBalance(addre string) (int64, error) {
 
 func New() *VM {
 	return &VM{}
-}
-
-func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) ethconsensus.Engine {
-	engine := engine.New(engine.Config{
-		CacheDir:         stack.ResolvePath(config.CacheDir),
-		CachesInMem:      config.CachesInMem,
-		CachesOnDisk:     config.CachesOnDisk,
-		CachesLockMmap:   config.CachesLockMmap,
-		DatasetDir:       config.DatasetDir,
-		DatasetsInMem:    config.DatasetsInMem,
-		DatasetsOnDisk:   config.DatasetsOnDisk,
-		DatasetsLockMmap: config.DatasetsLockMmap,
-		NotifyFull:       config.NotifyFull,
-		Log: l.Root(),
-	}, notify, noverify)
-	engine.SetThreads(-1) // Disable CPU mining
-	return engine
 }
