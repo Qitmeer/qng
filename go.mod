@@ -12,6 +12,7 @@ require (
 	github.com/dchest/blake256 v1.1.0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+	gopkg.in/urfave/cli.v1 v1.20.0
 )
 
 replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-q
