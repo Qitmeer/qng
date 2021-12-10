@@ -7,6 +7,7 @@ package chain
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/Qitmeer/meerevm/evm/engine"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/external"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -30,8 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
-	"github.com/Qitmeer/meerevm/evm/engine"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -43,6 +42,7 @@ var (
 	ClientIdentifier = "meereth"
 
 	MeerethChainID int64 = 223
+	Args []string = []string{ClientIdentifier}
 )
 
 type ETHChain struct {
@@ -388,7 +388,7 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain,error) {
 	app.Flags = append(app.Flags, rpcFlags...)
 	app.Flags = append(app.Flags, metricsFlags...)
 
-	err:=app.Run(os.Args)
+	err:=app.Run(Args)
 	if err !=nil {
 		return nil,err
 	}
