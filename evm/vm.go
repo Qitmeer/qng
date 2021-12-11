@@ -145,7 +145,33 @@ func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
 				txData := &types.AccessListTx{
 					To:    &toAddr,
 					Value: big.NewInt(int64(tx.GetValue())),
-					Nonce: uint64(qtypes.TxTypeCrossChainExport),
+					Nonce: uint64(tx.GetTxType()),
+				}
+				etx := types.NewTx(txData)
+				txmb, err := etx.MarshalBinary()
+				if err != nil {
+					log.Warn("could not create transaction: %v", err)
+					return
+				}
+				block.SetExtra(txmb)
+				log.Info(hex.EncodeToString(txmb))
+			} else if tx.GetTxType() == qtypes.TxTypeCrossChainImport {
+				pubkBytes, err := hex.DecodeString(tx.GetFrom())
+				if err != nil {
+					log.Warn(err.Error())
+					continue
+				}
+				publicKey, err := crypto.UnmarshalPubkey(pubkBytes)
+				if err != nil {
+					log.Warn(err.Error())
+					continue
+				}
+
+				toAddr := crypto.PubkeyToAddress(*publicKey)
+				txData := &types.AccessListTx{
+					To:    &toAddr,
+					Value: big.NewInt(int64(tx.GetValue())),
+					Nonce: uint64(tx.GetTxType()),
 				}
 				etx := types.NewTx(txData)
 				txmb, err := etx.MarshalBinary()
