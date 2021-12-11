@@ -266,13 +266,23 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 		me.config.Log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
 		return
 	}
+	oldBalance:=state.GetBalance(*tx.To())
+	if oldBalance == nil {
+		oldBalance = big.NewInt(0)
+	}
+
 	if tx.Nonce() == uint64(qtypes.TxTypeCrossChainExport) {
 		state.AddBalance(*tx.To(), tx.Value())
 		me.config.Log.Info(fmt.Sprintf("Cross chain(%s):%d(MEER) => %d(ETH)", tx.To().String(), tx.Value().Int64(), tx.Value().Int64()))
 	} else {
-		state.SubBalance(*tx.To(), tx.Value())
+		state.SetBalance(*tx.To(),big.NewInt(0))
 		me.config.Log.Info(fmt.Sprintf("Cross chain(%s):%d(ETH) => %d(MEER)", tx.To().String(), tx.Value().Int64(), tx.Value().Int64()))
 	}
+
+
+	newBalance:=state.GetBalance(*tx.To())
+
+	me.config.Log.Info(fmt.Sprintf("Balance(%s): %d => %d",tx.To().String(),oldBalance.Int64(),newBalance.Int64()))
 
 	nonce := state.GetNonce(*tx.To())
 	state.SetNonce(*tx.To(), nonce)
