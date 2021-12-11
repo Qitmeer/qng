@@ -240,6 +240,13 @@ function create_raw_txv3() {
   get_result "$data"
 }
 
+function create_import_raw_tx() {
+  local pkaddress=$1
+  local amount=$2
+  local data='{"jsonrpc":"2.0","method":"createImportRawTransaction","params":["'$pkaddress'",'$amount'],"id":1}'
+  get_result "$data"
+}
+
 function create_token_raw_tx(){
   local txtype=$1
   local coinId=$2
@@ -623,6 +630,7 @@ function usage(){
   echo "  createRawTxV2"
   echo "  createRawTxV3"
   echo "  createTokenRawTx"
+  echo "  createImportRawTx <PKAdress> <amount>"
   echo "  txSign <rawTx>"
   echo "  sendRawTx <signedRawTx>"
   echo "  getrawtxs <address>"
@@ -1014,6 +1022,10 @@ elif [ "$1" == "createRawTxV3" ]; then
 elif [ "$1" == "createTokenRawTx" ]; then
   shift
   create_token_raw_tx $@
+
+elif [ "$1" == "createImportRawTx" ]; then
+  shift
+  create_import_raw_tx $@
 
 elif [ "$1" == "decodeRawTx" ]; then
   shift
