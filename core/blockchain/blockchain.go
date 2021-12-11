@@ -1282,7 +1282,7 @@ func (b *BlockChain) CalculateFees(block *types.SerializedBlock) types.AmountMap
 		if i == 0 || tx.Tx.IsCoinBase() || tx.IsDuplicate {
 			continue
 		}
-		if types.IsCrossChainImportTx(tx.Tx) {
+		if types.IsCrossChainExportTx(tx.Tx) {
 			totalAtomOut[types.MEERID] += int64(tx.Tx.TxOut[0].Amount.Value)
 			continue
 		}
