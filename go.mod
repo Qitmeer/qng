@@ -39,6 +39,7 @@ require (
 	go.opencensus.io v0.22.4
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
+	// indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -49,4 +50,4 @@ replace (
 	golang.org/x/tools v0.0.0-20181006002542-f60d9635b16a => github.com/golang/tools v0.0.0-20181006002542-f60d9635b16a
 )
 
-replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-q
+replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-q.2
