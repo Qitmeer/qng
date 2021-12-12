@@ -439,7 +439,15 @@ func (api *PublicBlockAPI) GetCoinbase(h hash.Hash, verbose *bool) (interface{},
 
 // GetCoinbase
 func (api *PublicBlockAPI) GetFees(h hash.Hash) (interface{}, error) {
-	return api.bm.chain.GetFees(&h), nil
+	feesMap:=map[string]int64{}
+	fsm:=api.bm.chain.GetFees(&h)
+	for coinId,v:=range fsm {
+		if v <= 0 {
+			continue
+		}
+		feesMap[coinId.Name()]=v
+	}
+	return feesMap, nil
 }
 
 func (api *PublicBlockAPI) GetTokenInfo() (interface{}, error) {

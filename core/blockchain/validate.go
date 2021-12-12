@@ -980,11 +980,11 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			if err != nil {
 				return err
 			}
-			_, err = b.VMService.VerifyTx(itx)
+			fee, err := b.VMService.VerifyTx(itx)
 			if err != nil {
 				return err
 			}
-			err = utxoView.connectTransaction(tx, node, uint32(idx), stxos, b)
+			err = utxoView.connectImportTransaction(tx, node, uint32(idx), stxos, b,fee+int64(itx.Value))
 			if err != nil {
 				return err
 			}

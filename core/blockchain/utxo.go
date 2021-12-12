@@ -407,7 +407,7 @@ func (view *UtxoViewpoint) fetchUtxos(db database.DB, outpoints map[types.TxOutP
 func (view *UtxoViewpoint) connectTransaction(tx *types.Tx, node *BlockNode, blockIndex uint32, stxos *[]SpentTxOut, bc *BlockChain) error {
 	msgTx := tx.Transaction()
 	// Coinbase transactions don't have any inputs to spend.
-	if msgTx.IsCoinBase() || types.IsCrossChainImportTx(msgTx) {
+	if msgTx.IsCoinBase() {
 		// Add the transaction's outputs as available utxos.
 		view.AddTxOuts(tx, node.GetHash()) //TODO, remove type conversion
 		return nil
@@ -461,6 +461,27 @@ func (view *UtxoViewpoint) connectTransaction(tx *types.Tx, node *BlockNode, blo
 	// Add the transaction's outputs as available utxos.
 	view.AddTxOuts(tx, node.GetHash()) //TODO, remove type conversion
 
+	return nil
+}
+
+func (view *UtxoViewpoint) connectImportTransaction(tx *types.Tx, node *BlockNode, blockIndex uint32, stxos *[]SpentTxOut, bc *BlockChain,balance int64) error {
+	if stxos == nil {
+		return nil
+	}
+
+	var stxo = SpentTxOut{
+		Amount:     types.Amount{Id:types.MEERID,Value:balance},
+		Fees:       types.Amount{Value: 0, Id: types.MEERID},
+		PkScript:   nil,
+		BlockHash:  hash.ZeroHash,
+		IsCoinBase: false,
+		TxIndex:    0,
+		TxInIndex:  0,
+	}
+
+	*stxos = append(*stxos, stxo)
+
+	view.AddTxOuts(tx, node.GetHash())
 	return nil
 }
 
