@@ -39,8 +39,8 @@ github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a h1:LUGOJG/lF0TlnlYT
 github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:gbGKdXSJn71Mc2xcKJHqC/waPiX0byZae67zarj83m4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a h1:O2Erw/YvYAkIqkc2uvP/WwuWf0V8S0+pjU/FKHmjFU4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:KiA7g46zc6dkgf/3NbEpJirY75v656WYlmSQNR1wTVk=
-github.com/Qitmeer/go-ethereum v1.10.9-q h1:kG5PoKeB3Zj7O/jcKqsqRQDaLpXMkWRTjI/EHTm2baM=
-github.com/Qitmeer/go-ethereum v1.10.9-q/go.mod h1:CaTMQrv51WaAlD2eULQ3f03KiahDRO28fleQcKjWrrg=
+github.com/Qitmeer/go-ethereum v1.10.9-q.2 h1:60fEOiCZ/L/opJ62dnHyql0ZNBkwpTm43owguOQeMbI=
+github.com/Qitmeer/go-ethereum v1.10.9-q.2/go.mod h1:c5mdg+S/A4faGVSyjul+xYkXdBVg3edy3DpsGhdzBmU=
 github.com/Qitmeer/qng-core v1.2.0 h1:tGS6ucArT0E7HJeftnCT5hHDBEMtdtTv0L0WRjAx7jg=
 github.com/Qitmeer/qng-core v1.2.0/go.mod h1:OXIjYsQ2jal60J5FnnkglTSykeSVgYSuTkaBYWHBfR0=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 h1:fLjPD/aNc3UIOA6tDi6QXUemppXK3P9BI7mr2hd6gx8=
@@ -114,6 +114,8 @@ github.com/deepmap/oapi-codegen v1.8.2/go.mod h1:YLgSKSDv/bZQB7N4ws6luhozi3cEdRk
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgryski/go-bitstream v0.0.0-20180413035011-3522498ce2c8/go.mod h1:VMaSuZ+SZcx/wljOQKvp5srsbCiKDEb6K2wC4+PiBmQ=
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
+github.com/dindinw/go-duktape v0.0.0-20211014112850-ba2007c86288 h1:zqe534a6faNWAHtQQw9Dz0evsn/3P9GTphvxGukL8aQ=
+github.com/dindinw/go-duktape v0.0.0-20211014112850-ba2007c86288/go.mod h1:2tBqBHv6UMUEDS9cXrAOJv6A+okIYUNoc910JjZvf3Q=
 github.com/dlclark/regexp2 v1.2.0/go.mod h1:2pZnwuY/m+8K6iRw6wQdMtk+rH5tNGR1i55kozfMjCc=
 github.com/docker/docker v1.4.2-0.20180625184442-8e610b2b55bf h1:sh8rkQZavChcmakYiSlqu2425CHyFXLZZnvm7PDpU8M=
 github.com/docker/docker v1.4.2-0.20180625184442-8e610b2b55bf/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
