@@ -469,13 +469,15 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
 	nodeConf.HTTPHost = node.DefaultHTTPHost
 	nodeConf.WSHost = node.DefaultWSHost
+	nodeConf.HTTPPort = 18545
+	nodeConf.WSPort = 18546
 
 
 	nodeConf.P2P.MaxPeers = 0
 	nodeConf.P2P.DiscoveryV5 = false
 	nodeConf.P2P.NoDiscovery = true
 	nodeConf.P2P.NoDial = true
-
+	nodeConf.P2P.ListenAddr = ":40404"
 	//
 	return &MeerethConfig{
 		Eth:     econfig,
