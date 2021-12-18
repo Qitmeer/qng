@@ -1149,7 +1149,7 @@ func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, 
 
 	mtx := types.NewTransaction()
 	mtx.AddTxIn(&types.TxInput{
-		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.TokenPrevOutIndex),
+		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.SupperPrevOutIndex),
 		Sequence:    uint32(txt),
 	})
 
@@ -1304,7 +1304,7 @@ func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, 
 func (api *PublicTxAPI) CreateImportRawTransaction(pkAddress string, amount int64) (interface{}, error) {
 	mtx := types.NewTransaction()
 	mtx.AddTxIn(&types.TxInput{
-		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.TokenPrevOutIndex),
+		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.SupperPrevOutIndex),
 		Sequence:    uint32(types.TxTypeCrossChainImport),
 	})
 

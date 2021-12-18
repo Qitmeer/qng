@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/config"
+	"github.com/Qitmeer/qng-core/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/core/event"
@@ -71,7 +72,7 @@ func (tm *TxManager) Stop() error {
 	return nil
 }
 
-func (tm *TxManager) MemPool() blkmgr.TxPool {
+func (tm *TxManager) MemPool() consensus.TxPool {
 	return tm.txMemPool
 }
 

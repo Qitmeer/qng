@@ -3,6 +3,7 @@ package node
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng-core/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng-core/database"
@@ -150,8 +151,8 @@ func (qm *QitmeerFull) RegisterAccountService() error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterVMService() error {
-	vmServer, err := vm.NewService(qm.node.Config, &qm.node.events)
+func (qm *QitmeerFull) RegisterVMService(tp consensus.TxPool) error {
+	vmServer, err := vm.NewService(qm.node.Config, &qm.node.events,tp)
 	if err != nil {
 		return err
 	}
@@ -276,7 +277,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	// init address api
 	qm.addressApi = address.NewAddressApi(cfg, node.Params, bm.GetChain())
 
-	if err := qm.RegisterVMService(); err != nil {
+	if err := qm.RegisterVMService(txManager.MemPool()); err != nil {
 		return nil, err
 	}
 	bm.GetChain().VMService = qm.GetVMService()

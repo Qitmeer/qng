@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/common/roughtime"
 	"github.com/Qitmeer/qng-core/config"
+	"github.com/Qitmeer/qng-core/core/address"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/core/event"
@@ -449,7 +450,20 @@ func (m *Miner) initCoinbase() error {
 	} else {
 		m.coinbaseAddress = mAddrs[rand.Intn(len(mAddrs))]
 	}
-	log.Info(fmt.Sprintf("Init Coinbase Address:%s", m.coinbaseAddress.String()))
+	if m.GetCoinbasePKAddress() != nil {
+		log.Info(fmt.Sprintf("Init Coinbase PK Address:%s    PKH Address:%s", m.GetCoinbasePKAddress().String(),m.GetCoinbasePKAddress().PKHAddress().String()))
+	}else{
+		log.Info(fmt.Sprintf("Init Coinbase Address:%s", m.coinbaseAddress.String()))
+	}
+
+	return nil
+}
+
+func (m *Miner) GetCoinbasePKAddress() *address.SecpPubKeyAddress {
+	pka,ok:=m.coinbaseAddress.(*address.SecpPubKeyAddress)
+	if ok {
+		return pka
+	}
 	return nil
 }
 

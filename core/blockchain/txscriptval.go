@@ -218,14 +218,14 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *U
 	numInputs := 0
 	txs := block.Transactions()
 	for _, tx := range txs {
-		if tx.IsDuplicate {
+		if tx.IsDuplicate || types.IsCrossChainVMTx(tx.Tx)  {
 			continue
 		}
 		numInputs += len(tx.Transaction().TxIn)
 	}
 	txValItems := make([]*txValidateItem, 0, numInputs)
 	for _, tx := range txs {
-		if tx.IsDuplicate {
+		if tx.IsDuplicate || types.IsCrossChainVMTx(tx.Tx) {
 			continue
 		}
 		if types.IsCrossChainImportTx(tx.Tx) {

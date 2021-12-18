@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/common/roughtime"
+	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/event"
@@ -171,9 +172,22 @@ func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
 		StartingPriority: CalcPriority(msgTx, utxoView, height, mp.cfg.BD),
 	}
 	mp.pool[*tx.Hash()] = txD
-	for _, txIn := range msgTx.TxIn {
-		mp.outpoints[txIn.PreviousOut] = tx
+
+	if !types.IsCrossChainVMTx(tx.Tx) &&
+		!types.IsCrossChainImportTx(tx.Tx) &&
+		!types.IsTokenNewTx(tx.Tx) &&
+		!types.IsTokenRenewTx(tx.Tx) &&
+		!types.IsTokenInvalidateTx(tx.Tx) &&
+		!types.IsTokenValidateTx(tx.Tx) {
+
+		for txIdx, txIn := range msgTx.TxIn {
+			if txIdx == 0 && (types.IsTokenMintTx(tx.Tx) || types.IsTokenUnmintTx(tx.Tx)) {
+				continue
+			}
+			mp.outpoints[txIn.PreviousOut] = tx
+		}
 	}
+
 	atomic.StoreInt64(&mp.lastUpdated, roughtime.Now().Unix())
 
 	// Add unconfirmed address index entries associated with the transaction
@@ -363,6 +377,23 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 
 		log.Debug(fmt.Sprintf("Accepted import transaction ,txHash:%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
 		return nil, txD, nil
+	}else if types.IsCrossChainVMTx(tx.Tx) {
+		if opreturn.IsMeerEVMTx(tx.Tx) {
+			me, err := opreturn.NewOPReturnFrom(tx.Tx.TxOut[0].PkScript)
+			if err != nil {
+				return nil,nil,err
+			}
+			vtx := &consensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(me.(*opreturn.MeerEVM).GetHex())}
+			fee, err := mp.cfg.BC.VMService.VerifyTx(vtx)
+			if err != nil {
+				return nil, nil, err
+			}
+			// Add to transaction pool.
+			txD := mp.addTransaction(blockchain.NewUtxoViewpoint(), tx, nextBlockHeight, fee)
+
+			log.Debug(fmt.Sprintf("Accepted meerevm transaction ,txHash:%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
+			return nil, txD, nil
+		}
 	}
 	// Fetch all of the unspent transaction outputs referenced by the inputs
 	// to this transaction.  This function also attempts to fetch the

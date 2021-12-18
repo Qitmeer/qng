@@ -32,6 +32,8 @@ type Service struct {
 	vms map[string]consensus.ChainVM
 
 	cfg *config.Config
+
+	tp consensus.TxPool
 }
 
 func (s *Service) Start() error {
@@ -116,6 +118,7 @@ func (s *Service) GetVMContext() consensus.Context {
 			DebugLevel:        s.cfg.DebugLevel,
 			DebugPrintOrigins: s.cfg.DebugPrintOrigins,
 		},
+		Tp:s.tp,
 	}
 }
 
@@ -156,6 +159,7 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 		vm, err := s.GetVM(evm.MeerEVMID)
 		if err == nil {
 			txs := []consensus.Tx{}
+
 			for _, tx := range ban.Block.Transactions() {
 				if types.IsCrossChainExportTx(tx.Tx) {
 					ctx := &qconsensus.Tx{Type: types.TxTypeCrossChainExport}
@@ -183,17 +187,26 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 						continue
 					}
 					txs = append(txs, ctx)
-				} else {
-					for _, out := range tx.Tx.TxOut {
-						if !opreturn.IsMeerEVM(out.PkScript) {
-							continue
+				} else if opreturn.IsMeerEVMTx(tx.Tx) {
+					me, err := opreturn.NewOPReturnFrom(tx.Tx.TxOut[0].PkScript)
+					if err != nil {
+						log.Error(err.Error())
+						continue
+					}
+
+					ctx := &qconsensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(me.(*opreturn.MeerEVM).GetHex())}
+					_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(ban.Block.Transactions()[0].Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
+					if err != nil {
+						log.Error(err.Error())
+						return
+					}
+					if len(pksAddrs) > 0 {
+						secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
+						if !ok {
+							log.Error(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
+							return
 						}
-						me, err := opreturn.NewOPReturnFrom(out.PkScript)
-						if err != nil {
-							log.Error(err.Error())
-							continue
-						}
-						ctx := &qconsensus.Tx{Data: []byte(me.(*opreturn.MeerEVM).GetHex())}
+						ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
 						txs = append(txs, ctx)
 					}
 				}
@@ -210,14 +223,23 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 }
 
 func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
-	itx, ok := tx.(*qconsensus.ImportTx)
-	if !ok {
-		return 0, fmt.Errorf("Not support tx:%s\n", tx.GetTxType().String())
-	}
 	v, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
 		return 0, err
 	}
+	if tx.GetTxType() == types.TxTypeCrossChainVM {
+		return v.VerifyTx(tx)
+	}
+
+	if tx.GetTxType() != types.TxTypeCrossChainImport {
+		return 0,fmt.Errorf("Not support:%s\n",tx.GetTxType().String())
+	}
+
+	itx, ok := tx.(*qconsensus.ImportTx)
+	if !ok {
+		return 0, fmt.Errorf("Not support tx:%s\n", tx.GetTxType().String())
+	}
+
 	pka, err := itx.GetPKAddress()
 	if err != nil {
 		return 0, err
@@ -235,11 +257,12 @@ func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 	return ba-itx.Transaction.TxOut[0].Amount.Value, nil
 }
 
-func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
+func NewService(cfg *config.Config, events *event.Feed,tp consensus.TxPool) (*Service, error) {
 	ser := Service{
 		events: events,
 		vms:    make(map[string]consensus.ChainVM),
 		cfg:    cfg,
+		tp:tp,
 	}
 	if err := ser.registerVMs(); err != nil {
 		log.Error(err.Error())
