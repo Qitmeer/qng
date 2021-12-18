@@ -451,7 +451,6 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	econfig.ConsensusEngine = CreateConsensusEngine
 
 
-
 	econfig.Ethash.DatasetDir = "ethash/dataset"
 
 	econfig.Miner.Etherbase = etherbase
@@ -463,8 +462,8 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	nodeConf.DataDir = datadir
 	nodeConf.Name = ClientIdentifier
 	nodeConf.Version = params.VersionWithMeta
-	nodeConf.HTTPModules = append(nodeConf.HTTPModules, "eth")
-	nodeConf.WSModules = append(nodeConf.WSModules, "eth")
+	nodeConf.HTTPModules = append(nodeConf.HTTPModules, "eth","txpool")
+	nodeConf.WSModules = append(nodeConf.WSModules, "eth","txpool")
 	nodeConf.IPCPath = ClientIdentifier+".ipc"
 	nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
 	nodeConf.HTTPHost = node.DefaultHTTPHost
