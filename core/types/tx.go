@@ -101,9 +101,9 @@ const (
 	// has no expiry.
 	NoExpiryValue uint32 = 0
 
-	// TokenPrevOutIndex is the token index field of a previous
+	// SupperPrevOutIndex is the supper index field of a previous
 	// outpoint can be.
-	TokenPrevOutIndex uint32 = 0xfffffffe
+	SupperPrevOutIndex uint32 = 0xfffffffe
 
 	// TokenInSequence is the maximum tx type the sequence field
 	// of a transaction input can be.

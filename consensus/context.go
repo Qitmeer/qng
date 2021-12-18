@@ -8,4 +8,5 @@ import (
 type Context interface {
 	context.Context
 	GetConfig() *config.Config
+	GetTxPool() TxPool
 }

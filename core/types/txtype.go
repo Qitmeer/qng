@@ -36,6 +36,7 @@ const (
 
 	TxTypeCrossChainExport TxType = 0x0101 // Cross chain by export tx
 	TxTypeCrossChainImport TxType = 0x0102 // Cross chain by import tx
+	TxTypeCrossChainVM TxType = 0x0103 // Cross chain by vm tx
 )
 
 func (tt TxType) String() string {
@@ -76,6 +77,8 @@ func (tt TxType) String() string {
 		return "TxTypeCrossChainExport"
 	case TxTypeCrossChainImport:
 		return "TxTypeCrossChainImport"
+	case TxTypeCrossChainVM:
+		return "TxTypeCrossChainVM"
 	}
 	return "Unknow"
 }
@@ -111,6 +114,9 @@ func DetermineTxType(tx *Transaction) TxType {
 	}
 	if IsCrossChainImportTx(tx) {
 		return TxTypeCrossChainImport
+	}
+	if IsCrossChainVMTx(tx) {
+		return TxTypeCrossChainVM
 	}
 	//TODO more txType
 	return TxTypeRegular
@@ -202,7 +208,7 @@ func IsTokenNewTx(tx *Transaction) bool {
 	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
 		return false
 	}
-	if tx.TxIn[0].PreviousOut.OutIndex != TokenPrevOutIndex {
+	if tx.TxIn[0].PreviousOut.OutIndex != SupperPrevOutIndex {
 		return false
 	}
 	return TxType(tx.TxIn[0].Sequence) == TxTypeTokenNew
@@ -212,7 +218,7 @@ func IsTokenRenewTx(tx *Transaction) bool {
 	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
 		return false
 	}
-	if tx.TxIn[0].PreviousOut.OutIndex != TokenPrevOutIndex {
+	if tx.TxIn[0].PreviousOut.OutIndex != SupperPrevOutIndex {
 		return false
 	}
 	return TxType(tx.TxIn[0].Sequence) == TxTypeTokenRenew
@@ -222,7 +228,7 @@ func IsTokenValidateTx(tx *Transaction) bool {
 	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
 		return false
 	}
-	if tx.TxIn[0].PreviousOut.OutIndex != TokenPrevOutIndex {
+	if tx.TxIn[0].PreviousOut.OutIndex != SupperPrevOutIndex {
 		return false
 	}
 	return TxType(tx.TxIn[0].Sequence) == TxTypeTokenValidate
@@ -232,7 +238,7 @@ func IsTokenInvalidateTx(tx *Transaction) bool {
 	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
 		return false
 	}
-	if tx.TxIn[0].PreviousOut.OutIndex != TokenPrevOutIndex {
+	if tx.TxIn[0].PreviousOut.OutIndex != SupperPrevOutIndex {
 		return false
 	}
 	return TxType(tx.TxIn[0].Sequence) == TxTypeTokenInvalidate
@@ -242,7 +248,7 @@ func IsTokenMintTx(tx *Transaction) bool {
 	if len(tx.TxOut) < 1 || len(tx.TxIn) <= 1 {
 		return false
 	}
-	if tx.TxIn[0].PreviousOut.OutIndex != TokenPrevOutIndex {
+	if tx.TxIn[0].PreviousOut.OutIndex != SupperPrevOutIndex {
 		return false
 	}
 	return TxType(tx.TxIn[0].Sequence) == TxTypeTokenMint
@@ -252,7 +258,7 @@ func IsTokenUnmintTx(tx *Transaction) bool {
 	if len(tx.TxOut) < 1 || len(tx.TxIn) <= 1 {
 		return false
 	}
-	if tx.TxIn[0].PreviousOut.OutIndex != TokenPrevOutIndex {
+	if tx.TxIn[0].PreviousOut.OutIndex != SupperPrevOutIndex {
 		return false
 	}
 	return TxType(tx.TxIn[0].Sequence) == TxTypeTokenUnmint
@@ -268,26 +274,54 @@ func IsTokenTx(tx *Transaction) bool {
 }
 
 // cross chain
+func GetSupportCoinsForCrossChain() map[CoinID]bool {
+	// TODO:This is an extensible cross chain configuration. There are more possibilities in the future
+	return map[CoinID]bool{
+		ETHID : true,
+    }
+}
+
 func IsCrossChainExportTx(tx *Transaction) bool {
 	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
 		return false
 	}
-	// TODO: Support multiple
-	return tx.TxOut[0].Amount.Id == ETHID
+	enable,ok:=GetSupportCoinsForCrossChain()[tx.TxOut[0].Amount.Id]
+	return ok && enable
 }
 
 func IsCrossChainImportTx(tx *Transaction) bool {
 	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
 		return false
 	}
-	if tx.TxIn[0].PreviousOut.OutIndex != TokenPrevOutIndex {
+	if tx.TxIn[0].PreviousOut.OutIndex != SupperPrevOutIndex {
 		return false
 	}
 	return TxType(tx.TxIn[0].Sequence) == TxTypeCrossChainImport
 }
 
+func IsCrossChainVMTx(tx *Transaction) bool {
+	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
+		return false
+	}
+	if tx.TxIn[0].PreviousOut.OutIndex != SupperPrevOutIndex {
+		return false
+	}
+	if TxType(tx.TxIn[0].Sequence) != TxTypeCrossChainVM {
+		return false
+	}
+
+	enable,ok:=GetSupportCoinsForCrossChain()[tx.TxOut[0].Amount.Id]
+	return ok && enable
+}
+
+func IsCrossChainTx(tx *Transaction) bool {
+	return IsCrossChainExportTx(tx) ||
+		IsCrossChainImportTx(tx) ||
+		IsCrossChainVMTx(tx)
+}
+
 // Standard transaction type
-var StdTxs = []TxType{TxTypeRegular, TxTypeCoinbase, TxTypeCrossChainImport, TxTypeCrossChainExport}
+var StdTxs = []TxType{TxTypeRegular, TxTypeCoinbase, TxTypeCrossChainImport, TxTypeCrossChainExport, TxTypeCrossChainVM}
 var NonStdTxs = []TxType{
 	TxTypeTokenNew,
 	TxTypeTokenRenew,
