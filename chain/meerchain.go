@@ -20,23 +20,24 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
+	qcommon "github.com/Qitmeer/meerevm/common"
 )
 
 type MeerChain struct {
-
-	gasPool  *core.GasPool
-
 	chain  *ETHChain
+
+	parent *types.Block
 }
 
-func (b *MeerChain) ConnectBlock(txs []qconsensus.Tx) error {
-	block,_,err:=b.buildBlock(txs)
+func (b *MeerChain) ConnectBlock(block qconsensus.Block) error {
+
+	mblock,_,err:=b.buildBlock(block.Transactions())
 
 	if err != nil {
 		return err
 	}
 
-	num, err := b.chain.Ether().BlockChain().InsertChainWithoutSealVerification(block)
+	num, err := b.chain.Ether().BlockChain().InsertChainWithoutSealVerification(mblock)
 	if err != nil {
 		return err
 	}
@@ -44,13 +45,55 @@ func (b *MeerChain) ConnectBlock(txs []qconsensus.Tx) error {
 		return fmt.Errorf("BuildBlock error")
 	}
 
-	log.Info(fmt.Sprintf("BuildBlock:number=%d hash=%s txs=%d,%d", block.Number().Uint64(), block.Hash().String(), len(block.Transactions()), len(txs)))
+	b.parent = mblock
+
+	//
+	mbhb:=block.ID().Bytes()
+	qcommon.ReverseBytes(&mbhb)
+	mbh:=common.BytesToHash(mbhb)
+	//
+	WriteBlockNumber(b.chain.Ether().ChainDb(),mbh,mblock.NumberU64())
+	//
+	log.Info(fmt.Sprintf("MeerEVM Block:number=%d hash=%s txs=%d  => blockHash(%s) txs=%d", mblock.Number().Uint64(), mblock.Hash().String(), len(mblock.Transactions()),mbh.String(), len(block.Transactions())))
 
 
 	return nil
 }
 
-func (b *MeerChain) DisconnectBlock(txs []qconsensus.Tx) error {
+func (b *MeerChain) DisconnectBlock(block qconsensus.Block) error {
+	if b.parent == nil {
+		return nil
+	}
+	mbhb:=block.ID().Bytes()
+	qcommon.ReverseBytes(&mbhb)
+	mbh:=common.BytesToHash(mbhb)
+
+	bn:=ReadBlockNumber(b.chain.Ether().ChainDb(),mbh)
+	if bn == nil {
+		return nil
+	}
+	defer func() {
+		DeleteBlockNumber(b.chain.Ether().ChainDb(),mbh)
+	}()
+
+	if *bn > b.parent.NumberU64() {
+		return nil
+	}
+
+	var newParent *types.Block
+	if *bn == b.parent.NumberU64() {
+		newParent=b.chain.Ether().BlockChain().GetBlockByHash(b.parent.ParentHash())
+
+	}else{
+		newParent=b.chain.Ether().BlockChain().GetBlockByNumber(*bn)
+	}
+
+	if newParent == nil {
+		return fmt.Errorf("Can't find %v in meerevm",b.parent.ParentHash().String())
+	}
+
+	log.Info(fmt.Sprintf("Reorganize:%s(%d) => %s(%d)",b.parent.Hash().String(),b.parent.NumberU64(),newParent.Hash().String(),newParent.NumberU64()))
+	b.parent=newParent
 	return nil
 }
 
@@ -58,19 +101,23 @@ func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx) (*types.Block, types.Receip
 	config:=b.chain.Config().Eth.Genesis.Config
 	engine:=b.chain.Ether().Engine()
 	db:=b.chain.Ether().ChainDb()
-	parent:=b.chain.Ether().BlockChain().CurrentBlock()
+
+	if b.parent == nil {
+		b.parent=b.chain.Ether().BlockChain().CurrentBlock()
+	}
+
 
 	uncles   :=[]*types.Header{}
 
 	chainreader := &fakeChainReader{config: config}
 
-	statedb, err := state.New(parent.Root(), state.NewDatabase(db), nil)
+	statedb, err := state.New(b.parent.Root(), state.NewDatabase(db), nil)
 	if err != nil {
 		return nil,nil,err
 	}
 
 
-	header := makeHeader(chainreader, parent, statedb, engine)
+	header := makeHeader(chainreader, b.parent, statedb, engine)
 
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(statedb)

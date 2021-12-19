@@ -164,12 +164,12 @@ func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
 	return 	nil,nil
 }
 
-func (vm *VM) ConnectBlock(txs []consensus.Tx) error {
-	return vm.mchain.ConnectBlock(txs)
+func (vm *VM) ConnectBlock(block consensus.Block) error {
+	return vm.mchain.ConnectBlock(block)
 }
 
-func (vm *VM) DisconnectBlock(txs []consensus.Tx) error {
-	return vm.mchain.DisconnectBlock(txs)
+func (vm *VM) DisconnectBlock(block consensus.Block) error {
+	return vm.mchain.DisconnectBlock(block)
 }
 
 func (vm *VM) ParseBlock([]byte) (consensus.Block, error) {
