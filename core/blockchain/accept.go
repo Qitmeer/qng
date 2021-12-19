@@ -151,12 +151,13 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	// Notify the caller that the new block was accepted into the block
 	// chain.  The caller would typically want to react by relaying the
 	// inventory to other peers.
+	b.ChainUnlock()
 	b.sendNotification(BlockAccepted, &BlockAcceptedNotifyData{
 		IsMainChainTipChange: isMainChainTipChange,
 		Block:                block,
 		Flags:                flags,
 	})
-
+	b.ChainLock()
 	return nil
 }
 
