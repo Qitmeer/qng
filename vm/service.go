@@ -152,73 +152,11 @@ func (s *Service) subscribe() {
 func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 	switch notification.Type {
 	case blockchain.BlockAccepted:
-		ban, ok := notification.Data.(*blockchain.BlockAcceptedNotifyData)
+		_, ok := notification.Data.(*blockchain.BlockAcceptedNotifyData)
 		if !ok {
 			return
 		}
-		vm, err := s.GetVM(evm.MeerEVMID)
-		if err == nil {
-			txs := []consensus.Tx{}
 
-			for _, tx := range ban.Block.Transactions() {
-				if types.IsCrossChainExportTx(tx.Tx) {
-					ctx := &qconsensus.Tx{Type: types.TxTypeCrossChainExport}
-					_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
-					if err != nil {
-						log.Error(err.Error())
-						return
-					}
-
-					if len(pksAddrs) > 0 {
-						secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
-						if !ok {
-							log.Error(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
-							return
-						}
-						ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
-						ctx.Value = uint64(tx.Tx.TxOut[0].Amount.Value)
-						txs = append(txs, ctx)
-					}
-
-				} else if types.IsCrossChainImportTx(tx.Tx) {
-					ctx, err := qconsensus.NewImportTx(tx.Tx)
-					if err != nil {
-						log.Error(err.Error())
-						continue
-					}
-					txs = append(txs, ctx)
-				} else if opreturn.IsMeerEVMTx(tx.Tx) {
-					me, err := opreturn.NewOPReturnFrom(tx.Tx.TxOut[0].PkScript)
-					if err != nil {
-						log.Error(err.Error())
-						continue
-					}
-
-					ctx := &qconsensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(me.(*opreturn.MeerEVM).GetHex())}
-					_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(ban.Block.Transactions()[0].Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
-					if err != nil {
-						log.Error(err.Error())
-						return
-					}
-					if len(pksAddrs) > 0 {
-						secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
-						if !ok {
-							log.Error(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
-							return
-						}
-						ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
-						txs = append(txs, ctx)
-					}
-				}
-			}
-			if len(txs) <= 0 {
-				return
-			}
-			_, err := vm.BuildBlock(txs)
-			if err != nil {
-				log.Warn(err.Error())
-			}
-		}
 	}
 }
 
@@ -256,6 +194,75 @@ func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 	}
 	return ba-itx.Transaction.TxOut[0].Amount.Value, nil
 }
+
+func (s *Service) ConnectBlock(block *types.SerializedBlock) error {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return err
+	}
+	txs := []consensus.Tx{}
+
+	for idx, tx := range block.Transactions() {
+		if idx == 0 {
+			continue
+		}
+
+		if types.IsCrossChainExportTx(tx.Tx) {
+			ctx := &qconsensus.Tx{Type: types.TxTypeCrossChainExport}
+			_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
+			if err != nil {
+				return err
+			}
+
+			if len(pksAddrs) > 0 {
+				secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
+				if !ok {
+					return fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
+				}
+				ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
+				ctx.Value = uint64(tx.Tx.TxOut[0].Amount.Value)
+				txs = append(txs, ctx)
+			}
+
+		} else if types.IsCrossChainImportTx(tx.Tx) {
+			ctx, err := qconsensus.NewImportTx(tx.Tx)
+			if err != nil {
+				return err
+			}
+			txs = append(txs, ctx)
+		} else if opreturn.IsMeerEVMTx(tx.Tx) {
+			me, err := opreturn.NewOPReturnFrom(tx.Tx.TxOut[0].PkScript)
+			if err != nil {
+				return err
+			}
+
+			ctx := &qconsensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(me.(*opreturn.MeerEVM).GetHex())}
+			_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(block.Transactions()[0].Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
+			if err != nil {
+				return err
+			}
+			if len(pksAddrs) > 0 {
+				secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
+				if !ok {
+					return fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
+				}
+				ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
+				txs = append(txs, ctx)
+			}
+		}
+	}
+	if len(txs) <= 0 {
+		return nil
+	}
+	_, err = vm.BuildBlock(txs)
+	return err
+}
+
+func (s *Service) DisconnectBlock(block *types.SerializedBlock) error {
+
+	return nil
+}
+
 
 func NewService(cfg *config.Config, events *event.Feed,tp consensus.TxPool) (*Service, error) {
 	ser := Service{

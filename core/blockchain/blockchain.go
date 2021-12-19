@@ -961,8 +961,13 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
+	err:=b.VMService.ConnectBlock(block)
+	if err != nil {
+		return err
+	}
+
 	// Atomically insert info into the database.
-	err := b.db.Update(func(dbTx database.Tx) error {
+	err = b.db.Update(func(dbTx database.Tx) error {
 		// Update the utxo set using the state of the utxo view.  This
 		// entails removing all of the utxos spent and adding the new
 		// ones created by the block.
@@ -1011,8 +1016,12 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
+	err:=b.VMService.DisconnectBlock(block)
+	if err != nil {
+		return err
+	}
 	// Calculate the exact subsidy produced by adding the block.
-	err := b.db.Update(func(dbTx database.Tx) error {
+	err = b.db.Update(func(dbTx database.Tx) error {
 		// Update the utxo set using the state of the utxo view.  This
 		// entails restoring all of the utxos spent and removing the new
 		// ones created by the block.
