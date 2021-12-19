@@ -200,7 +200,35 @@ func (s *Service) ConnectBlock(block *types.SerializedBlock) error {
 	if err != nil {
 		return err
 	}
-	txs := []consensus.Tx{}
+	b,err:=s.normalizeBlock(block)
+	if err != nil {
+		return err
+	}
+
+	if len(b.Txs) <= 0 {
+		return nil
+	}
+	return vm.ConnectBlock(b)
+}
+
+func (s *Service) DisconnectBlock(block *types.SerializedBlock) error {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return err
+	}
+	b,err:=s.normalizeBlock(block)
+	if err != nil {
+		return err
+	}
+
+	if len(b.Txs) <= 0 {
+		return nil
+	}
+	return vm.DisconnectBlock(b)
+}
+
+func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Block,error) {
+	result:=&qconsensus.Block{Id:block.Hash(),Txs:[]consensus.Tx{}}
 
 	for idx, tx := range block.Transactions() {
 		if idx == 0 {
@@ -211,58 +239,48 @@ func (s *Service) ConnectBlock(block *types.SerializedBlock) error {
 			ctx := &qconsensus.Tx{Type: types.TxTypeCrossChainExport}
 			_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
 			if err != nil {
-				return err
+				return nil,err
 			}
 
 			if len(pksAddrs) > 0 {
 				secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
 				if !ok {
-					return fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
+					return nil,fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
 				}
 				ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
 				ctx.Value = uint64(tx.Tx.TxOut[0].Amount.Value)
-				txs = append(txs, ctx)
+				result.Txs = append(result.Txs, ctx)
 			}
 
 		} else if types.IsCrossChainImportTx(tx.Tx) {
 			ctx, err := qconsensus.NewImportTx(tx.Tx)
 			if err != nil {
-				return err
+				return nil,err
 			}
-			txs = append(txs, ctx)
+			result.Txs = append(result.Txs, ctx)
 		} else if opreturn.IsMeerEVMTx(tx.Tx) {
 			me, err := opreturn.NewOPReturnFrom(tx.Tx.TxOut[0].PkScript)
 			if err != nil {
-				return err
+				return nil,err
 			}
 
 			ctx := &qconsensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(me.(*opreturn.MeerEVM).GetHex())}
 			_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(block.Transactions()[0].Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
 			if err != nil {
-				return err
+				return nil,err
 			}
 			if len(pksAddrs) > 0 {
 				secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
 				if !ok {
-					return fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
+					return nil,fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
 				}
 				ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
-				txs = append(txs, ctx)
+				result.Txs = append(result.Txs, ctx)
 			}
 		}
 	}
-	if len(txs) <= 0 {
-		return nil
-	}
-	_, err = vm.BuildBlock(txs)
-	return err
+	return result,nil
 }
-
-func (s *Service) DisconnectBlock(block *types.SerializedBlock) error {
-
-	return nil
-}
-
 
 func NewService(cfg *config.Config, events *event.Feed,tp consensus.TxPool) (*Service, error) {
 	ser := Service{
