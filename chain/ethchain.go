@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
@@ -439,7 +438,7 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	}
 
 
-	etherbase := genAddress
+	etherbase := common.Address{}
 	econfig := ethconfig.Defaults
 
 	econfig.NetworkId = uint64(MeerethChainID)

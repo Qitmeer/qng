@@ -5,7 +5,6 @@
 package evm
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/meerevm/chain"
 	"github.com/Qitmeer/meerevm/evm/util"
@@ -21,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/event"
-	"math/big"
 	"runtime"
 	"sync"
 )
@@ -40,6 +38,7 @@ type VM struct {
 	shutdownWg   sync.WaitGroup
 
 	chain  *chain.ETHChain
+	mchain *chain.MeerChain
 
 	txsCh  chan core.NewTxsEvent
 	txsSub event.Subscription
@@ -65,6 +64,7 @@ func (vm *VM) Initialize(ctx consensus.Context) error {
 		return err
 	}
 	vm.chain = ethchain
+	vm.mchain = chain.NewMeerChain(ethchain)
 
 	vm.txsSub = ethchain.Ether().TxPool().SubscribeNewTxsEvent(vm.txsCh)
 
@@ -105,8 +105,12 @@ func (vm *VM) Bootstrapping() error {
 		return nil
 	}
 
-	log.Info(fmt.Sprintf("miner account,addr:%v balance:%v", vm.chain.Config().Eth.Miner.Etherbase, state.GetBalance(vm.chain.Config().Eth.Miner.Etherbase)))
+	log.Info(fmt.Sprintf("Etherbase:%v balance:%v", vm.chain.Config().Eth.Miner.Etherbase, state.GetBalance(vm.chain.Config().Eth.Miner.Etherbase)))
 
+	//
+	for addr:=range vm.chain.Config().Eth.Genesis.Alloc {
+		log.Info(fmt.Sprintf("Alloc address:%v balance:%v", addr.String(), state.GetBalance(addr)))
+	}
 	//
 	pending, err := vm.chain.Ether().TxPool().Pending(true)
 	if err != nil {
@@ -157,101 +161,15 @@ func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
 }
 
 func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
-	blocks, _ := core.GenerateChain(vm.chain.Config().Eth.Genesis.Config, vm.chain.Ether().BlockChain().CurrentBlock(), vm.chain.Ether().Engine(), vm.chain.Ether().ChainDb(), 1, func(i int, block *core.BlockGen) {
+	return 	nil,nil
+}
 
-		for _, tx := range txs {
-			if tx.GetTxType() == qtypes.TxTypeCrossChainExport {
-				pubkBytes, err := hex.DecodeString(tx.GetTo())
-				if err != nil {
-					log.Warn(err.Error())
-					continue
-				}
-				publicKey, err := crypto.UnmarshalPubkey(pubkBytes)
-				if err != nil {
-					log.Warn(err.Error())
-					continue
-				}
+func (vm *VM) ConnectBlock(txs []consensus.Tx) error {
+	return vm.mchain.ConnectBlock(txs)
+}
 
-				toAddr := crypto.PubkeyToAddress(*publicKey)
-				txData := &types.AccessListTx{
-					To:    &toAddr,
-					Value: big.NewInt(int64(tx.GetValue())),
-					Nonce: uint64(tx.GetTxType()),
-				}
-				etx := types.NewTx(txData)
-				txmb, err := etx.MarshalBinary()
-				if err != nil {
-					log.Warn("could not create transaction: %v", err)
-					return
-				}
-				block.SetExtra(txmb)
-				log.Info(hex.EncodeToString(txmb))
-			} else if tx.GetTxType() == qtypes.TxTypeCrossChainImport {
-				pubkBytes, err := hex.DecodeString(tx.GetFrom())
-				if err != nil {
-					log.Warn(err.Error())
-					continue
-				}
-				publicKey, err := crypto.UnmarshalPubkey(pubkBytes)
-				if err != nil {
-					log.Warn(err.Error())
-					continue
-				}
-
-				toAddr := crypto.PubkeyToAddress(*publicKey)
-				txData := &types.AccessListTx{
-					To:    &toAddr,
-					Value: big.NewInt(int64(tx.GetValue())),
-					Nonce: uint64(tx.GetTxType()),
-				}
-				etx := types.NewTx(txData)
-				txmb, err := etx.MarshalBinary()
-				if err != nil {
-					log.Warn("could not create transaction: %v", err)
-					return
-				}
-				block.SetExtra(txmb)
-				log.Info(hex.EncodeToString(txmb))
-			} else if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
-				txb := common.FromHex(string(tx.GetData()))
-				var txmb = &types.Transaction{}
-				if err := txmb.UnmarshalBinary(txb); err != nil {
-					log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
-					continue
-				}
-				pubkBytes, err := hex.DecodeString(tx.GetTo())
-				if err != nil {
-					log.Warn(err.Error())
-					continue
-				}
-				publicKey, err := crypto.UnmarshalPubkey(pubkBytes)
-				if err != nil {
-					log.Warn(err.Error())
-					continue
-				}
-
-				toAddr := crypto.PubkeyToAddress(*publicKey)
-				block.SetCoinbase(toAddr)
-				block.AddTx(txmb)
-			}
-		}
-
-	})
-	if len(blocks) != 1 {
-		return nil, fmt.Errorf("BuildBlock error")
-	}
-	num, err := vm.chain.Ether().BlockChain().InsertChainWithoutSealVerification(blocks[0])
-	if err != nil {
-		return nil, err
-	}
-	if num != 1 {
-		return nil, fmt.Errorf("BuildBlock error")
-	}
-
-	log.Info(fmt.Sprintf("BuildBlock:number=%d hash=%s txs=%d,%d", blocks[0].Number().Uint64(), blocks[0].Hash().String(), len(blocks[0].Transactions()), len(txs)))
-
-	h := hash.MustBytesToHash(blocks[0].Hash().Bytes())
-	return &Block{id: &h, ethBlock: blocks[0], vm: vm, status: consensus.Accepted}, nil
+func (vm *VM) DisconnectBlock(txs []consensus.Tx) error {
+	return vm.mchain.DisconnectBlock(txs)
 }
 
 func (vm *VM) ParseBlock([]byte) (consensus.Block, error) {
