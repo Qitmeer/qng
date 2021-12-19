@@ -21,4 +21,5 @@ require (
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
 	golang.org/x/sys v0.0.0-20211204120058-94396e421777
 	gonum.org/v1/gonum v0.0.0-20190608115022-c5f01565d866
+	github.com/libp2p/go-libp2p-core v0.6.1
 )
