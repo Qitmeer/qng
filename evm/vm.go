@@ -266,21 +266,22 @@ func (vm *VM)  validateTx(tx *types.Transaction) error {
 }
 
 func (vm *VM) addTx(tx *types.Transaction) error {
-	mtx := qtypes.NewTransaction()
-	mtx.AddTxIn(&qtypes.TxInput{
-		PreviousOut: *qtypes.NewOutPoint(&hash.ZeroHash, qtypes.SupperPrevOutIndex),
-		Sequence:    uint32(qtypes.TxTypeCrossChainVM),
-		AmountIn: qtypes.Amount{Id:qtypes.ETHID,Value:0},
-		SignScript: []byte{},
-	})
 	txmb, err := tx.MarshalBinary()
 	if err != nil {
 		return err
 	}
 	txmbHex:=hexutil.Encode(txmb)
+
+	mtx := qtypes.NewTransaction()
+	mtx.AddTxIn(&qtypes.TxInput{
+		PreviousOut: *qtypes.NewOutPoint(&hash.ZeroHash, qtypes.SupperPrevOutIndex),
+		Sequence:    uint32(qtypes.TxTypeCrossChainVM),
+		AmountIn: qtypes.Amount{Id:qtypes.ETHID,Value:0},
+		SignScript: []byte(txmbHex),
+	})
 	mtx.AddTxOut(&qtypes.TxOutput{
 		Amount:   qtypes.Amount{Value: 0, Id: qtypes.ETHID},
-		PkScript: opreturn.NewEVMTx(txmbHex).PKScript(),
+		PkScript: opreturn.NewEVMTx().PKScript(),
 	})
 
 	acceptedTxs,err:=vm.ctx.GetTxPool().ProcessTransaction(qtypes.NewTx(mtx),false,false,true)
