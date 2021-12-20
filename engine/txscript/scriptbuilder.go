@@ -214,7 +214,7 @@ func (b *ScriptBuilder) AddData(data []byte) *ScriptBuilder {
 	if dataLen > MaxScriptElementSize {
 		str := fmt.Sprintf("adding a data element of %d bytes would "+
 			"exceed the maximum allowed script element size of %d",
-			dataLen, maxScriptSize)
+			dataLen, MaxScriptElementSize)
 		b.err = ErrScriptNotCanonical(str)
 		return b
 	}
