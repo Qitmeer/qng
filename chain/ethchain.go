@@ -300,15 +300,12 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain,error) {
 		utils.LegacyMinerGasTargetFlag,
 		utils.MinerGasLimitFlag,
 		utils.MinerGasPriceFlag,
-		utils.MinerEtherbaseFlag,
 		utils.MinerExtraDataFlag,
 		utils.MinerRecommitIntervalFlag,
 		utils.MinerNoVerifyFlag,
 		utils.NodeKeyFileFlag,
 		utils.NodeKeyHexFlag,
 		utils.MainnetFlag,
-		utils.DeveloperFlag,
-		utils.DeveloperPeriodFlag,
 		utils.RopstenFlag,
 		utils.RinkebyFlag,
 		utils.GoerliFlag,
@@ -368,7 +365,7 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain,error) {
 
 	app.Action = func(ctx *cli.Context) {
 		ec.ctx = ctx
-		ec.ctx.GlobalSet("ws","true")
+		filterConfig(ctx)
 		ec.node, ec.backend, ec.ether = makeFullNode(ec.ctx,ec.config)
 	}
 	app.HideVersion = true
@@ -452,9 +449,9 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	nodeConf.DataDir = datadir
 	nodeConf.Name = ClientIdentifier
 	nodeConf.Version = params.VersionWithMeta
-	nodeConf.HTTPModules = append(nodeConf.HTTPModules, "eth","txpool")
-	nodeConf.WSModules = append(nodeConf.WSModules, "eth","txpool")
-	nodeConf.IPCPath = ClientIdentifier+".ipc"
+	nodeConf.HTTPModules = append(nodeConf.HTTPModules, "eth")
+	nodeConf.WSModules = append(nodeConf.WSModules, "eth")
+	nodeConf.IPCPath = ""
 	nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
 	nodeConf.HTTPHost = node.DefaultHTTPHost
 	nodeConf.WSHost = node.DefaultWSHost
@@ -697,4 +694,42 @@ func InitEnv(env string) {
 	}
 	log.Debug(fmt.Sprintf("Initialize meerevm environment:%v",args))
 	Args=append(Args,args...)
+}
+
+func filterConfig(ctx *cli.Context)  {
+	hms:=ctx.GlobalString(utils.HTTPApiFlag.Name)
+	if len(hms) > 0 {
+		modules := utils.SplitAndTrim(hms)
+		nmodules:=""
+		for _,mod:=range modules {
+			if mod == "ethash" || mod == "miner" {
+				continue
+			}
+			if len(nmodules) > 0 {
+				nmodules = nmodules + "," + mod
+			}else{
+				nmodules = mod
+			}
+		}
+		fmt.Println(hms,"=>",nmodules)
+		ctx.GlobalSet(utils.HTTPApiFlag.Name,nmodules)
+	}
+
+	wms:=ctx.GlobalString(utils.WSApiFlag.Name)
+	if len(hms) > 0 {
+		modules := utils.SplitAndTrim(wms)
+		nmodules:=""
+		for _,mod:=range modules {
+			if mod == "ethash" || mod == "miner" {
+				continue
+			}
+			if len(nmodules) > 0 {
+				nmodules = nmodules + "," + mod
+			}else{
+				nmodules = mod
+			}
+		}
+		fmt.Println(hms,"=>",nmodules)
+		ctx.GlobalSet(utils.WSApiFlag.Name,nmodules)
+	}
 }

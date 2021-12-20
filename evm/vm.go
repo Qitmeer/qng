@@ -115,6 +115,7 @@ func (vm *VM) Bootstrapping() error {
 	}
 	//
 	vm.initTxPool()
+	//vm.chain.Ether().Miner().Close()
 	return nil
 }
 
