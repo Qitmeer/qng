@@ -16,6 +16,7 @@ type Block interface {
 	Bytes() []byte
 	Height() uint64
 	Timestamp() time.Time
+	Transactions() []Tx
 }
 
 type BlockHeader interface {

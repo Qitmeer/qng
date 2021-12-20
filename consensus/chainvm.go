@@ -20,4 +20,10 @@ type ChainVM interface {
 	LastAccepted() (*hash.Hash, error)
 
 	GetBalance(string) (int64, error)
+
+	VerifyTx(tx Tx) (int64, error)
+
+	ConnectBlock(block Block) error
+
+	DisconnectBlock(block Block) error
 }

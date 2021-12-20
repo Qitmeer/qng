@@ -96,6 +96,9 @@ type Config struct {
 	Blacklist      []string `long:"blacklist" description:"Add some IP network or IP that will be banned. (eg. 192.168.1.0/24 or ::1)"`
 	MaxBadResp     int      `long:"maxbadresp" description:"maxbadresp is the maximum number of bad responses from a peer before we stop talking to it."`
 	Circuit        bool     `long:"circuit" description:"All peers will ignore dual channel mode detection"`
+
+	// meerevm environment
+	EVMEnv string `long:"evmenv" description:"meer EVM environment"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {
