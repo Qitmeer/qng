@@ -402,6 +402,10 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params) error 
 			return err
 		}
 		return itx.CheckSanity()
+	}else if types.IsCrossChainExportTx(tx) {
+		if len(tx.TxOut[0].PkScript) <= 0 {
+			return fmt.Errorf("Tx output is error:%s",types.DetermineTxType(tx))
+		}
 	}
 	return nil
 }

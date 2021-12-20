@@ -459,7 +459,7 @@ func (api *PublicTxAPI) GetUtxo(txHash hash.Hash, vout uint32, includeMempool *b
 	scriptClass, addrs, reqSigs, _ := txscript.ExtractPkScriptAddrs(script, api.txManager.bm.ChainParams())
 	addresses := make([]string, len(addrs))
 	for i, addr := range addrs {
-		addresses[i] = addr.Encode()
+		addresses[i] = addr.String()
 	}
 	txOutReply := &json.GetUtxoResult{
 		BestBlock:     bestBlockHash,
@@ -794,7 +794,7 @@ func (api *PublicTxAPI) createVinListPrevOut(mtx *types.Tx, chainParams *params.
 		// filter when needed.
 		encodedAddrs := make([]string, len(addrs))
 		for j, addr := range addrs {
-			encodedAddr := addr.Encode()
+			encodedAddr := addr.String()
 			encodedAddrs[j] = encodedAddr
 
 			// No need to check the map again if the filter already
@@ -933,19 +933,9 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 	if len(privkeyByte) != 32 {
 		return nil, fmt.Errorf("error:%d", len(privkeyByte))
 	}
-	privateKey, pubKey := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
-	h160 := hash.Hash160(pubKey.SerializeCompressed())
-
+	privateKey, _ := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
 	param := params.ActiveNetParams.Params
-	addr, err := address.NewPubKeyHashAddress(h160, param, ecc.ECDSA_Secp256k1)
-	if err != nil {
-		return nil, err
-	}
-	// Create a new script which pays to the provided address.
-	pkScript, err := txscript.PayToAddrScript(addr)
-	if err != nil {
-		return nil, err
-	}
+
 
 	if len(rawTxStr)%2 != 0 {
 		return nil, fmt.Errorf("rawTxStr:%d", len(rawTxStr))
@@ -1064,10 +1054,7 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 				return nil, fmt.Errorf("Vin is  illegal %s", blockRegion.Hash)
 			}
 
-			pks := pkScript
-			if redeemTx.LockTime != 0 {
-				pks = prevTx.TxOut[redeemTx.TxIn[i].PreviousOut.OutIndex].PkScript
-			}
+			pks := prevTx.TxOut[redeemTx.TxIn[i].PreviousOut.OutIndex].PkScript
 			sigScript, err := txscript.SignTxOutput(param, &redeemTx, i, pks, txscript.SigHashAll, kdb, nil, nil, ecc.ECDSA_Secp256k1)
 			if err != nil {
 				return nil, err
@@ -1084,7 +1071,6 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 }
 
 // token
-
 func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, coinName *string, owners *string, uplimit *uint64, inputs []json.TransactionInput, amounts json.Amounts, feeType uint16, feeValue int64) (interface{}, error) {
 	txt := types.TxTypeTokenRegulation
 	if !strings.HasPrefix(txtype, "0x") {

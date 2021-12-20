@@ -70,6 +70,9 @@ func (itx *ImportTx) CheckSanity() error {
 	if itx.Transaction.TxOut[0].Amount.Id != types.MEERID {
 		return fmt.Errorf("Import output must MEER coin")
 	}
+	if len(itx.Transaction.TxOut[0].PkScript) <= 0 {
+		return fmt.Errorf("PKScript is error")
+	}
 	_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(itx.Transaction.TxOut[0].PkScript, params.ActiveNetParams.Params)
 	if err != nil {
 		return err

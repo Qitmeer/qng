@@ -99,7 +99,7 @@ func (f *wsClientFilter) addAddress(a types.Address) {
 		}
 	}
 
-	f.otherAddresses[a.Encode()] = struct{}{}
+	f.otherAddresses[a.String()] = struct{}{}
 }
 
 // addAddressStr parses an address from a string and then adds it to the
@@ -153,7 +153,7 @@ func (f *wsClientFilter) existsAddress(a types.Address) bool {
 		}
 	}
 
-	_, ok := f.otherAddresses[a.Encode()]
+	_, ok := f.otherAddresses[a.String()]
 	return ok
 }
 
@@ -187,7 +187,7 @@ func (f *wsClientFilter) removeAddress(a types.Address) {
 		}
 	}
 
-	delete(f.otherAddresses, a.Encode())
+	delete(f.otherAddresses, a.String())
 }
 
 // removeAddressStr parses an address from a string and then removes it from the

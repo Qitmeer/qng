@@ -254,6 +254,8 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Bloc
 				ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
 				ctx.Value = uint64(tx.Tx.TxOut[0].Amount.Value)
 				result.Txs = append(result.Txs, ctx)
+			}else{
+				return nil,fmt.Errorf("tx format error :TxTypeCrossChainExport")
 			}
 
 		} else if types.IsCrossChainImportTx(tx.Tx) {
@@ -275,6 +277,8 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Bloc
 				}
 				ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
 				result.Txs = append(result.Txs, ctx)
+			}else{
+				return nil,fmt.Errorf("tx format error :TxTypeCrossChainVM")
 			}
 		}
 	}
