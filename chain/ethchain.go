@@ -297,9 +297,6 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain,error) {
 		utils.ListenPortFlag,
 		utils.MaxPeersFlag,
 		utils.MaxPendingPeersFlag,
-		utils.MiningEnabledFlag,
-		utils.MinerThreadsFlag,
-		utils.MinerNotifyFlag,
 		utils.LegacyMinerGasTargetFlag,
 		utils.MinerGasLimitFlag,
 		utils.MinerGasPriceFlag,
@@ -307,13 +304,8 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain,error) {
 		utils.MinerExtraDataFlag,
 		utils.MinerRecommitIntervalFlag,
 		utils.MinerNoVerifyFlag,
-		utils.NATFlag,
-		utils.NoDiscoverFlag,
-		utils.DiscoveryV5Flag,
-		utils.NetrestrictFlag,
 		utils.NodeKeyFileFlag,
 		utils.NodeKeyHexFlag,
-		utils.DNSDiscoveryFlag,
 		utils.MainnetFlag,
 		utils.DeveloperFlag,
 		utils.DeveloperPeriodFlag,
@@ -330,7 +322,6 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain,error) {
 		utils.GpoMaxGasPriceFlag,
 		utils.GpoIgnoreGasPriceFlag,
 		utils.MinerNotifyFullFlag,
-		utils.CatalystFlag,
 	}
 
 	rpcFlags := []cli.Flag{
@@ -475,7 +466,8 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	nodeConf.P2P.DiscoveryV5 = false
 	nodeConf.P2P.NoDiscovery = true
 	nodeConf.P2P.NoDial = true
-	nodeConf.P2P.ListenAddr = ":40404"
+	nodeConf.P2P.ListenAddr = ""
+	nodeConf.P2P.NAT=nil
 	//
 	return &MeerethConfig{
 		Eth:     econfig,
@@ -693,4 +685,16 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 	}, notify, noverify)
 	engine.SetThreads(-1) // Disable CPU mining
 	return engine
+}
+
+func InitEnv(env string) {
+	if len(env) <= 0 {
+		return
+	}
+	args:=strings.Split(env," ")
+	if len(args) <= 0 {
+		return
+	}
+	log.Debug(fmt.Sprintf("Initialize meerevm environment:%v",args))
+	Args=append(Args,args...)
 }

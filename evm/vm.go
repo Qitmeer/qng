@@ -22,6 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"runtime"
 	"sync"
+	"time"
 )
 
 // meerevm ID of the platform
@@ -53,11 +54,12 @@ func (vm *VM) Initialize(ctx consensus.Context) error {
 
 	log.Info("System info", "ETH VM Version", util.Version, "Go version", runtime.Version())
 
-	log.Info(fmt.Sprintf("Initialize:%s", ctx.GetConfig().DataDir))
+	log.Debug(fmt.Sprintf("Initialize:%s", ctx.GetConfig().DataDir))
 
 	vm.ctx = ctx
 
 	//
+	chain.InitEnv(ctx.GetConfig().EVMEnv)
 
 	ethchain,err:=chain.NewETHChain(vm.ctx.GetConfig().DataDir)
 	if err != nil {
@@ -91,12 +93,12 @@ func (vm *VM) Bootstrapping() error {
 	if err != nil {
 		log.Error(err.Error())
 	} else {
-		log.Info(fmt.Sprintf("MeerETH block chain current block number:%d", blockNum))
+		log.Debug(fmt.Sprintf("MeerETH block chain current block number:%d", blockNum))
 	}
 
 	cbh:=vm.chain.Ether().BlockChain().CurrentBlock().Header()
 	if cbh != nil {
-		log.Info(fmt.Sprintf("MeerETH block chain current block:number=%d hash=%s",cbh.Number.Uint64(),cbh.Hash().String()))
+		log.Debug(fmt.Sprintf("MeerETH block chain current block:number=%d hash=%s",cbh.Number.Uint64(),cbh.Hash().String()))
 	}
 
 	//
@@ -105,29 +107,14 @@ func (vm *VM) Bootstrapping() error {
 		return nil
 	}
 
-	log.Info(fmt.Sprintf("Etherbase:%v balance:%v", vm.chain.Config().Eth.Miner.Etherbase, state.GetBalance(vm.chain.Config().Eth.Miner.Etherbase)))
+	log.Debug(fmt.Sprintf("Etherbase:%v balance:%v", vm.chain.Config().Eth.Miner.Etherbase, state.GetBalance(vm.chain.Config().Eth.Miner.Etherbase)))
 
 	//
 	for addr:=range vm.chain.Config().Eth.Genesis.Alloc {
-		log.Info(fmt.Sprintf("Alloc address:%v balance:%v", addr.String(), state.GetBalance(addr)))
+		log.Debug(fmt.Sprintf("Alloc address:%v balance:%v", addr.String(), state.GetBalance(addr)))
 	}
 	//
-	pending, err := vm.chain.Ether().TxPool().Pending(true)
-	if err != nil {
-		log.Error("Failed to fetch pending transactions", "err", err)
-	}else{
-		if len(pending) > 0 {
-			for _,txs :=range pending {
-				for _,tx:=range txs {
-					err:=vm.addTx(tx)
-					if err != nil {
-						log.Error(err.Error())
-					}
-				}
-			}
-		}
-	}
-	
+	vm.initTxPool()
 	return nil
 }
 
@@ -277,8 +264,37 @@ func (vm *VM) addTx(tx *types.Transaction) error {
 		PkScript: opreturn.NewEVMTx(txmbHex).PKScript(),
 	})
 
-	_,err=vm.ctx.GetTxPool().MaybeAcceptTransaction(qtypes.NewTx(mtx),true,false)
-	return err
+	acceptedTxs,err:=vm.ctx.GetTxPool().ProcessTransaction(qtypes.NewTx(mtx),false,false,true)
+	if err != nil {
+		return err
+	}
+	vm.ctx.GetNotify().AnnounceNewTransactions(acceptedTxs, nil)
+	vm.ctx.GetNotify().AddRebroadcastInventory(acceptedTxs)
+
+	return nil
+}
+
+func (vm *VM) initTxPool() {
+	go func() {
+		<-time.After(time.Second*2)
+		log.Debug("EVM:start init txpool")
+		pending, err := vm.chain.Ether().TxPool().Pending(true)
+		if err != nil {
+			log.Error("Failed to fetch pending transactions", "err", err)
+		}else{
+			if len(pending) > 0 {
+				for _,txs :=range pending {
+					for _,tx:=range txs {
+						err:=vm.addTx(tx)
+						if err != nil {
+							log.Error(err.Error())
+						}
+					}
+				}
+			}
+		}
+
+	}()
 }
 
 func (vm *VM) handler() {

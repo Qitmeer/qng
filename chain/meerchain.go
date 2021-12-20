@@ -54,7 +54,7 @@ func (b *MeerChain) ConnectBlock(block qconsensus.Block) error {
 	//
 	WriteBlockNumber(b.chain.Ether().ChainDb(),mbh,mblock.NumberU64())
 	//
-	log.Info(fmt.Sprintf("MeerEVM Block:number=%d hash=%s txs=%d  => blockHash(%s) txs=%d", mblock.Number().Uint64(), mblock.Hash().String(), len(mblock.Transactions()),mbh.String(), len(block.Transactions())))
+	log.Debug(fmt.Sprintf("MeerEVM Block:number=%d hash=%s txs=%d  => blockHash(%s) txs=%d", mblock.Number().Uint64(), mblock.Hash().String(), len(mblock.Transactions()),mbh.String(), len(block.Transactions())))
 
 
 	return nil
@@ -92,7 +92,7 @@ func (b *MeerChain) DisconnectBlock(block qconsensus.Block) error {
 		return fmt.Errorf("Can't find %v in meerevm",b.parent.ParentHash().String())
 	}
 
-	log.Info(fmt.Sprintf("Reorganize:%s(%d) => %s(%d)",b.parent.Hash().String(),b.parent.NumberU64(),newParent.Hash().String(),newParent.NumberU64()))
+	log.Debug(fmt.Sprintf("Reorganize:%s(%d) => %s(%d)",b.parent.Hash().String(),b.parent.NumberU64(),newParent.Hash().String(),newParent.NumberU64()))
 	b.parent=newParent
 	return nil
 }
