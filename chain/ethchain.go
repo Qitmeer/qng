@@ -8,6 +8,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/Qitmeer/meerevm/evm/engine"
+	"github.com/Qitmeer/qng-core/core/protocol"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/external"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -28,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
+	qparams "github.com/Qitmeer/qng-core/params"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
 	"path/filepath"
@@ -455,8 +457,7 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
 	nodeConf.HTTPHost = node.DefaultHTTPHost
 	nodeConf.WSHost = node.DefaultWSHost
-	nodeConf.HTTPPort = 18545
-	nodeConf.WSPort = 18546
+	nodeConf.HTTPPort,nodeConf.WSPort=getDefaultRPCPort()
 
 
 	nodeConf.P2P.MaxPeers = 0
@@ -711,7 +712,6 @@ func filterConfig(ctx *cli.Context)  {
 				nmodules = mod
 			}
 		}
-		fmt.Println(hms,"=>",nmodules)
 		ctx.GlobalSet(utils.HTTPApiFlag.Name,nmodules)
 	}
 
@@ -729,7 +729,19 @@ func filterConfig(ctx *cli.Context)  {
 				nmodules = mod
 			}
 		}
-		fmt.Println(hms,"=>",nmodules)
 		ctx.GlobalSet(utils.WSApiFlag.Name,nmodules)
+	}
+}
+
+func getDefaultRPCPort() (int,int) {
+	switch qparams.ActiveNetParams.Net {
+	case protocol.MainNet:
+		return 8535,8536
+	case protocol.TestNet:
+		return 18535,18536
+	case protocol.MixNet:
+		return 28535,28536
+	default:
+		return 38535,38536
 	}
 }

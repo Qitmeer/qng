@@ -5,6 +5,7 @@
 package evm
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/meerevm/chain"
 	"github.com/Qitmeer/meerevm/evm/util"
@@ -139,7 +140,24 @@ func (vm *VM) Shutdown() error {
 }
 
 func (vm *VM) Version() string {
-	return util.Version + " " + vm.chain.Config().Node.Version
+	result:=map[string]string{}
+	result["MeerVer"]=util.Version
+	result["EvmVer"]=vm.chain.Config().Node.Version
+	result["ChainID"]=vm.chain.Ether().BlockChain().Config().ChainID.String()
+	result["NetworkId"]=fmt.Sprintf("%d",vm.chain.Config().Eth.NetworkId)
+	if len(vm.chain.Config().Node.HTTPHost) > 0 {
+		result["http"]=fmt.Sprintf("http://%s:%d",vm.chain.Config().Node.HTTPHost,vm.chain.Config().Node.HTTPPort)
+	}
+	if len(vm.chain.Config().Node.WSHost) > 0 {
+		result["ws"]=fmt.Sprintf("ws://%s:%d",vm.chain.Config().Node.WSHost,vm.chain.Config().Node.WSPort)
+	}
+
+	resultJson, err := json.Marshal(result)
+	if err != nil {
+		log.Error(err.Error())
+		return ""
+	}
+	return string(resultJson)
 }
 
 func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
