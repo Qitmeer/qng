@@ -8,7 +8,6 @@ import (
 	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
-	"github.com/Qitmeer/qng/node/notify"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/rpc"
@@ -33,7 +32,7 @@ type QitmeerFull struct {
 	// under node
 	node *Node
 	// msg notifier
-	nfManager notify.Notify
+	nfManager consensus.Notify
 	// database
 	db database.DB
 
@@ -152,7 +151,7 @@ func (qm *QitmeerFull) RegisterAccountService() error {
 }
 
 func (qm *QitmeerFull) RegisterVMService(tp consensus.TxPool) error {
-	vmServer, err := vm.NewService(qm.node.Config, &qm.node.events,tp)
+	vmServer, err := vm.NewService(qm.node.Config, &qm.node.events,tp,qm.nfManager)
 	if err != nil {
 		return err
 	}

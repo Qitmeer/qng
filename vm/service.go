@@ -34,6 +34,8 @@ type Service struct {
 	cfg *config.Config
 
 	tp consensus.TxPool
+
+	Notify consensus.Notify
 }
 
 func (s *Service) Start() error {
@@ -117,8 +119,10 @@ func (s *Service) GetVMContext() consensus.Context {
 			DataDir:           s.cfg.DataDir,
 			DebugLevel:        s.cfg.DebugLevel,
 			DebugPrintOrigins: s.cfg.DebugPrintOrigins,
+			EVMEnv:s.cfg.EVMEnv,
 		},
 		Tp:s.tp,
+		Notify:s.Notify,
 	}
 }
 
@@ -282,12 +286,13 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Bloc
 	return result,nil
 }
 
-func NewService(cfg *config.Config, events *event.Feed,tp consensus.TxPool) (*Service, error) {
+func NewService(cfg *config.Config, events *event.Feed,tp consensus.TxPool,Notify consensus.Notify) (*Service, error) {
 	ser := Service{
 		events: events,
 		vms:    make(map[string]consensus.ChainVM),
 		cfg:    cfg,
 		tp:tp,
+		Notify:Notify,
 	}
 	if err := ser.registerVMs(); err != nil {
 		log.Error(err.Error())

@@ -11,7 +11,6 @@ import (
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
-	"github.com/Qitmeer/qng/node/notify"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/common"
@@ -33,7 +32,7 @@ type TxManager struct {
 	txMemPool *mempool.TxPool
 
 	// notify
-	ntmgr notify.Notify
+	ntmgr consensus.Notify
 
 	// db
 	db database.DB
@@ -77,7 +76,7 @@ func (tm *TxManager) MemPool() consensus.TxPool {
 }
 
 func NewTxManager(bm *blkmgr.BlockManager, txIndex *index.TxIndex,
-	addrIndex *index.AddrIndex, cfg *config.Config, ntmgr notify.Notify,
+	addrIndex *index.AddrIndex, cfg *config.Config, ntmgr consensus.Notify,
 	sigCache *txscript.SigCache, db database.DB, events *event.Feed) (*TxManager, error) {
 	// mem-pool
 	amt, _ := types.NewMeer(uint64(cfg.MinTxFee))

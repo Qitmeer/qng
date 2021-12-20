@@ -10,7 +10,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/event"
 	pv "github.com/Qitmeer/qng-core/core/protocol"
-	"github.com/Qitmeer/qng/node/notify"
+	"github.com/Qitmeer/qng-core/consensus"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/discover"
@@ -81,7 +81,7 @@ type Service struct {
 	blockChain  *blockchain.BlockChain
 	timeSource  blockchain.MedianTimeSource
 	txMemPool   *mempool.TxPool
-	notify      notify.Notify
+	notify      consensus.Notify
 	rebroadcast *Rebroadcast
 }
 
@@ -431,11 +431,11 @@ func (s *Service) TimeSource() blockchain.MedianTimeSource {
 	return s.timeSource
 }
 
-func (s *Service) SetNotify(notify notify.Notify) {
+func (s *Service) SetNotify(notify consensus.Notify) {
 	s.notify = notify
 }
 
-func (s *Service) Notify() notify.Notify {
+func (s *Service) Notify() consensus.Notify {
 	return s.notify
 }
 

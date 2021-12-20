@@ -10,6 +10,7 @@ type Context struct {
 	context.Context
 	Cfg *config.Config
 	Tp consensus.TxPool
+	Notify consensus.Notify
 }
 
 func (ctx *Context) GetConfig() *config.Config {
@@ -18,4 +19,8 @@ func (ctx *Context) GetConfig() *config.Config {
 
 func (ctx *Context) GetTxPool() consensus.TxPool {
 	return ctx.Tp
+}
+
+func (ctx *Context) GetNotify() consensus.Notify {
+	return ctx.Notify
 }
