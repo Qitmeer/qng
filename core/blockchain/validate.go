@@ -1001,12 +1001,8 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 		}
 		if types.IsCrossChainVMTx(tx.Tx) {
 			if opreturn.IsMeerEVMTx(tx.Tx) {
-				me, err := opreturn.NewOPReturnFrom(tx.Tx.TxOut[0].PkScript)
-				if err != nil {
-					return err
-				}
-				vtx := &consensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(me.(*opreturn.MeerEVM).GetHex())}
-				_, err = b.VMService.VerifyTx(vtx)
+				vtx := &consensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(tx.Tx.TxIn[0].SignScript)}
+				_, err := b.VMService.VerifyTx(vtx)
 				if err != nil {
 					return err
 				}

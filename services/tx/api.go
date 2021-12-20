@@ -8,18 +8,17 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/common/marshal"
 	"github.com/Qitmeer/qng-core/common/math"
-	qconsensus "github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng-core/core/address"
-	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
-	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng-core/core/json"
-	"github.com/Qitmeer/qng/core/message"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/crypto/ecc"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng-core/params"
+	qconsensus "github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/blockchain/token"
+	"github.com/Qitmeer/qng/core/dbnamespace"
+	"github.com/Qitmeer/qng/core/message"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -145,41 +144,6 @@ func (api *PublicTxAPI) CreateRawTransactionV2(inputs []json.TransactionInput,
 	// value is a string and it would result in returning an empty string to
 	// the client instead of nothing (nil) in the case of an error.
 	mtxHex, err := marshal.MessageToHex(mtx)
-	if err != nil {
-		return nil, err
-	}
-	return mtxHex, nil
-}
-
-func (api *PublicTxAPI) CreateRawTransactionV3(inputs []json.TransactionInput,
-	amounts json.AdreesAmount, lockTime *int64, evmtxHex *string) (interface{}, error) {
-	mtxH, err := api.CreateRawTransactionV2(inputs, amounts, lockTime)
-	if err != nil {
-		return nil, err
-	}
-	if evmtxHex != nil {
-		if len(*evmtxHex) <= 0 {
-			return mtxH, nil
-		}
-	} else {
-		return mtxH, nil
-	}
-	mtxHex, ok := mtxH.(string)
-	if !ok {
-		return nil, fmt.Errorf("Parse string error:%v", mtxH)
-	}
-	serializedTx, err := hex.DecodeString(mtxHex)
-	if err != nil {
-		return nil, rpc.RpcDecodeHexError(mtxHex)
-	}
-	var mtx types.Transaction
-	err = mtx.Deserialize(bytes.NewReader(serializedTx))
-	if err != nil {
-		return nil, rpc.RpcDeserializationError("Could not decode Tx: %v", err)
-	}
-	mtx.TxOut = append(mtx.TxOut, opreturn.GetOPReturnTxOutput(opreturn.NewEVMTx(*evmtxHex)))
-	//
-	mtxHex, err = marshal.MessageToHex(&mtx)
 	if err != nil {
 		return nil, err
 	}

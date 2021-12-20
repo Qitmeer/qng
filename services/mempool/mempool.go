@@ -379,11 +379,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		return nil, txD, nil
 	}else if types.IsCrossChainVMTx(tx.Tx) {
 		if opreturn.IsMeerEVMTx(tx.Tx) {
-			me, err := opreturn.NewOPReturnFrom(tx.Tx.TxOut[0].PkScript)
-			if err != nil {
-				return nil,nil,err
-			}
-			vtx := &consensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(me.(*opreturn.MeerEVM).GetHex())}
+			vtx := &consensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(tx.Tx.TxIn[0].SignScript)}
 			fee, err := mp.cfg.BC.VMService.VerifyTx(vtx)
 			if err != nil {
 				return nil, nil, err

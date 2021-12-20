@@ -263,12 +263,7 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Bloc
 			}
 			result.Txs = append(result.Txs, ctx)
 		} else if opreturn.IsMeerEVMTx(tx.Tx) {
-			me, err := opreturn.NewOPReturnFrom(tx.Tx.TxOut[0].PkScript)
-			if err != nil {
-				return nil,err
-			}
-
-			ctx := &qconsensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(me.(*opreturn.MeerEVM).GetHex())}
+			ctx := &qconsensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(tx.Tx.TxIn[0].SignScript)}
 			_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(block.Transactions()[0].Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
 			if err != nil {
 				return nil,err
