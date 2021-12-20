@@ -3,7 +3,8 @@
 package vm
 
 import (
-	"fmt"
+	"encoding/json"
+	qjson "github.com/Qitmeer/qng-core/core/json"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 )
@@ -32,9 +33,15 @@ func (api *PublicVMAPI) GetVMsInfo() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := []string{}
+	result := qjson.OrderedResult{}
 	for id, v := range vs {
-		result = append(result, fmt.Sprintf("%s:%s", id, v))
+		strv:=map[string]string{}
+		err=json.Unmarshal([]byte(v),&strv)
+		if err != nil {
+			log.Error(err.Error())
+			continue
+		}
+		result=append(result,qjson.KV{Key:id,Val:strv})
 	}
 	return result, nil
 }

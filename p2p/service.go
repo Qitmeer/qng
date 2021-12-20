@@ -599,7 +599,7 @@ func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*
 			Encoding:             "ssz-snappy",
 			ProtocolVersion:      pv.ProtocolVersion,
 			Services:             defaultServices,
-			UserAgent:            BuildUserAgent("Qitmeer"),
+			UserAgent:            BuildUserAgent("QNG"),
 			DisableRelayTx:       cfg.BlocksOnly,
 			MaxOrphanTxs:         cfg.MaxOrphanTxs,
 			Params:               param,
