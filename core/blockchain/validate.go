@@ -321,6 +321,15 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params) error 
 			return err
 		}
 		return update.CheckSanity()
+	}else if types.IsCrossChainVMTx(tx) {
+		if opreturn.IsMeerEVMTx(tx) {
+			me, err := opreturn.NewOPReturnFrom(tx.TxOut[0].PkScript)
+			if err != nil {
+				return err
+			}
+			return me.Verify(tx)
+		}
+		return fmt.Errorf("Not support cross chain tx:%s",types.DetermineTxType(tx))
 	}
 
 	// Ensure the transaction amounts are in range.  Each transaction
@@ -393,6 +402,10 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params) error 
 			return err
 		}
 		return itx.CheckSanity()
+	}else if types.IsCrossChainExportTx(tx) {
+		if len(tx.TxOut[0].PkScript) <= 0 {
+			return fmt.Errorf("Tx output is error:%s",types.DetermineTxType(tx))
+		}
 	}
 	return nil
 }
@@ -990,6 +1003,17 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			}
 			continue
 		}
+		if types.IsCrossChainVMTx(tx.Tx) {
+			if opreturn.IsMeerEVMTx(tx.Tx) {
+				vtx := &consensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(tx.Tx.TxIn[0].SignScript)}
+				_, err := b.VMService.VerifyTx(vtx)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			return fmt.Errorf("Not support:%s",types.DetermineTxType(tx.Tx))
+		}
 		txFee, err := b.CheckTransactionInputs(tx, utxoView)
 		if err != nil {
 			return err
@@ -1236,7 +1260,6 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 		}
 	}
 
-	isMeerEVM := false
 	// Calculate the total output amount for this transaction.  It is safe
 	// to ignore overflow and out of range errors here because those error
 	// conditions would have already been caught by checkTransactionSanity.
@@ -1251,12 +1274,6 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 				return nil, err
 			}
 			totalAtomOut[txOut.Amount.Id] += txOut.Amount.Value
-
-			if !isMeerEVM {
-				if opreturn.IsMeerEVM(txOut.PkScript) {
-					isMeerEVM = true
-				}
-			}
 		}
 	}
 
@@ -1284,14 +1301,6 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 				"transaction %v is %v which is less than the amount "+
 				"spent of %v", coinId.Name(), txHash, atomin, atomout)
 			return nil, ruleError(ErrSpendTooHigh, str)
-		}
-		if isMeerEVM {
-			if atomin < atomout+opreturn.MeerEVMFee {
-				str := fmt.Sprintf("total %s value of all transaction inputs for "+
-					"transaction %v is %v which is less than the amount "+
-					"spent of %v for %f (meerevm fee)", coinId.Name(), txHash, atomin, atomout, opreturn.MeerEVMFee)
-				return nil, ruleError(ErrSpendTooHigh, str)
-			}
 		}
 		allFees[coinId] = atomin - atomout
 	}

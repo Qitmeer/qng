@@ -3,8 +3,8 @@ module github.com/Qitmeer/qng
 go 1.14
 
 require (
-	github.com/Qitmeer/meerevm v0.0.0-20211211040358-dbeb32a65910
-	github.com/Qitmeer/qng-core v1.2.2
+	github.com/Qitmeer/meerevm v0.0.0-20211221024755-1ccbf164c66c
+	github.com/Qitmeer/qng-core v1.2.3
 	github.com/davecgh/go-spew v1.1.1
 	github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f // indirect
 	github.com/deckarep/golang-set v1.7.1
@@ -18,6 +18,7 @@ require (
 	github.com/ipfs/go-ipfs-addr v0.0.1
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/libp2p/go-libp2p v0.11.0
+	github.com/libp2p/go-libp2p-circuit v0.3.1
 	github.com/libp2p/go-libp2p-core v0.6.1
 	github.com/libp2p/go-libp2p-discovery v0.5.0
 	github.com/libp2p/go-libp2p-kad-dht v0.5.0
@@ -35,6 +36,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.8.3
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+	github.com/urfave/cli/v2 v2.3.0
 	github.com/zeromq/goczmq v4.1.0+incompatible
 	go.opencensus.io v0.22.4
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e

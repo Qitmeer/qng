@@ -8,18 +8,17 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/common/marshal"
 	"github.com/Qitmeer/qng-core/common/math"
-	qconsensus "github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng-core/core/address"
-	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
-	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng-core/core/json"
-	"github.com/Qitmeer/qng/core/message"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/crypto/ecc"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng-core/params"
+	qconsensus "github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/blockchain/token"
+	"github.com/Qitmeer/qng/core/dbnamespace"
+	"github.com/Qitmeer/qng/core/message"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -145,41 +144,6 @@ func (api *PublicTxAPI) CreateRawTransactionV2(inputs []json.TransactionInput,
 	// value is a string and it would result in returning an empty string to
 	// the client instead of nothing (nil) in the case of an error.
 	mtxHex, err := marshal.MessageToHex(mtx)
-	if err != nil {
-		return nil, err
-	}
-	return mtxHex, nil
-}
-
-func (api *PublicTxAPI) CreateRawTransactionV3(inputs []json.TransactionInput,
-	amounts json.AdreesAmount, lockTime *int64, evmtxHex *string) (interface{}, error) {
-	mtxH, err := api.CreateRawTransactionV2(inputs, amounts, lockTime)
-	if err != nil {
-		return nil, err
-	}
-	if evmtxHex != nil {
-		if len(*evmtxHex) <= 0 {
-			return mtxH, nil
-		}
-	} else {
-		return mtxH, nil
-	}
-	mtxHex, ok := mtxH.(string)
-	if !ok {
-		return nil, fmt.Errorf("Parse string error:%v", mtxH)
-	}
-	serializedTx, err := hex.DecodeString(mtxHex)
-	if err != nil {
-		return nil, rpc.RpcDecodeHexError(mtxHex)
-	}
-	var mtx types.Transaction
-	err = mtx.Deserialize(bytes.NewReader(serializedTx))
-	if err != nil {
-		return nil, rpc.RpcDeserializationError("Could not decode Tx: %v", err)
-	}
-	mtx.TxOut = append(mtx.TxOut, opreturn.GetOPReturnTxOutput(opreturn.NewEVMTx(*evmtxHex)))
-	//
-	mtxHex, err = marshal.MessageToHex(&mtx)
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +459,7 @@ func (api *PublicTxAPI) GetUtxo(txHash hash.Hash, vout uint32, includeMempool *b
 	scriptClass, addrs, reqSigs, _ := txscript.ExtractPkScriptAddrs(script, api.txManager.bm.ChainParams())
 	addresses := make([]string, len(addrs))
 	for i, addr := range addrs {
-		addresses[i] = addr.Encode()
+		addresses[i] = addr.String()
 	}
 	txOutReply := &json.GetUtxoResult{
 		BestBlock:     bestBlockHash,
@@ -830,7 +794,7 @@ func (api *PublicTxAPI) createVinListPrevOut(mtx *types.Tx, chainParams *params.
 		// filter when needed.
 		encodedAddrs := make([]string, len(addrs))
 		for j, addr := range addrs {
-			encodedAddr := addr.Encode()
+			encodedAddr := addr.String()
 			encodedAddrs[j] = encodedAddr
 
 			// No need to check the map again if the filter already
@@ -969,19 +933,9 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 	if len(privkeyByte) != 32 {
 		return nil, fmt.Errorf("error:%d", len(privkeyByte))
 	}
-	privateKey, pubKey := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
-	h160 := hash.Hash160(pubKey.SerializeCompressed())
-
+	privateKey, _ := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
 	param := params.ActiveNetParams.Params
-	addr, err := address.NewPubKeyHashAddress(h160, param, ecc.ECDSA_Secp256k1)
-	if err != nil {
-		return nil, err
-	}
-	// Create a new script which pays to the provided address.
-	pkScript, err := txscript.PayToAddrScript(addr)
-	if err != nil {
-		return nil, err
-	}
+
 
 	if len(rawTxStr)%2 != 0 {
 		return nil, fmt.Errorf("rawTxStr:%d", len(rawTxStr))
@@ -1100,10 +1054,7 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 				return nil, fmt.Errorf("Vin is  illegal %s", blockRegion.Hash)
 			}
 
-			pks := pkScript
-			if redeemTx.LockTime != 0 {
-				pks = prevTx.TxOut[redeemTx.TxIn[i].PreviousOut.OutIndex].PkScript
-			}
+			pks := prevTx.TxOut[redeemTx.TxIn[i].PreviousOut.OutIndex].PkScript
 			sigScript, err := txscript.SignTxOutput(param, &redeemTx, i, pks, txscript.SigHashAll, kdb, nil, nil, ecc.ECDSA_Secp256k1)
 			if err != nil {
 				return nil, err
@@ -1120,7 +1071,6 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 }
 
 // token
-
 func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, coinName *string, owners *string, uplimit *uint64, inputs []json.TransactionInput, amounts json.Amounts, feeType uint16, feeValue int64) (interface{}, error) {
 	txt := types.TxTypeTokenRegulation
 	if !strings.HasPrefix(txtype, "0x") {
@@ -1149,7 +1099,7 @@ func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, 
 
 	mtx := types.NewTransaction()
 	mtx.AddTxIn(&types.TxInput{
-		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.TokenPrevOutIndex),
+		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.SupperPrevOutIndex),
 		Sequence:    uint32(txt),
 	})
 
@@ -1304,7 +1254,7 @@ func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, 
 func (api *PublicTxAPI) CreateImportRawTransaction(pkAddress string, amount int64) (interface{}, error) {
 	mtx := types.NewTransaction()
 	mtx.AddTxIn(&types.TxInput{
-		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.TokenPrevOutIndex),
+		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.SupperPrevOutIndex),
 		Sequence:    uint32(types.TxTypeCrossChainImport),
 	})
 

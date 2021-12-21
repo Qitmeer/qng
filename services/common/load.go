@@ -44,6 +44,8 @@ const (
 	defaultTrickleInterval        = 10 * time.Second
 	defaultCacheInvalidTx         = false
 	defaultMempoolExpiry          = int64(time.Hour)
+	defaultRPCUser                = "test"
+	defaultRPCPass                = "test"
 )
 const (
 	defaultSigCacheMaxSize = 100000
@@ -95,6 +97,8 @@ func LoadConfig() (*config.Config, []string, error) {
 		NTP:                  false,
 		MempoolExpiry:        defaultMempoolExpiry,
 		AcceptNonStd:         true,
+		RPCUser:			  defaultRPCUser,
+		RPCPass:              defaultRPCPass,
 	}
 
 	// Pre-parse the command line options to see if an alternative config

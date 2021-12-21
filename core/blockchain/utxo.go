@@ -311,7 +311,10 @@ func (view *UtxoViewpoint) fetchInputUtxos(db database.DB, block *types.Serializ
 	txInFlight := map[hash.Hash]int{}
 	transactions := block.Transactions()
 	for i, tx := range transactions {
-		if tx.IsDuplicate || types.IsTokenTx(tx.Tx) || types.IsCrossChainImportTx(tx.Tx) {
+		if tx.IsDuplicate ||
+			types.IsTokenTx(tx.Tx) ||
+			types.IsCrossChainImportTx(tx.Tx) ||
+			types.IsCrossChainVMTx(tx.Tx) {
 			continue
 		}
 		txInFlight[*tx.Hash()] = i
@@ -329,6 +332,9 @@ func (view *UtxoViewpoint) fetchInputUtxos(db database.DB, block *types.Serializ
 			continue
 		}
 		if types.IsCrossChainImportTx(tx.Tx) {
+			continue
+		}
+		if types.IsCrossChainVMTx(tx.Tx) {
 			continue
 		}
 

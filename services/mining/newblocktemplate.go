@@ -3,6 +3,8 @@ package mining
 import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
+	"github.com/Qitmeer/qng-core/core/address"
+	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/core/merkle"
@@ -185,8 +187,24 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 			log.Trace(fmt.Sprintf("Skipping coinbase tx %s", tx.Hash()))
 			continue
 		}
-		if types.IsTokenTx(tx.Tx) || types.IsCrossChainImportTx(tx.Tx) {
+		if types.IsTokenTx(tx.Tx) {
 			log.Trace(fmt.Sprintf("Skipping token tx %s", tx.Hash()))
+			blockTxns = append(blockTxns, tx)
+			txFees = append(txFees, 0)
+			tokenSOC := int64(blockchain.CountSigOps(tx))
+			txSigOpCosts = append(txSigOpCosts, tokenSOC)
+			tokenSigOpCost += tokenSOC
+			tokenSize += uint32(tx.Transaction().SerializeSize())
+			continue
+		}else if types.IsCrossChainImportTx(tx.Tx) || types.IsCrossChainVMTx(tx.Tx) {
+			if opreturn.IsMeerEVMTx(tx.Tx)  {
+				_,ok:=payToAddress.(*address.SecpPubKeyAddress)
+				if !ok {
+					log.Info(fmt.Sprintf("Ignore meerevm tx:Your miner address is not supported, please use PKAddress by (./qx ec-to-pkaddr) for --miningaddr"))
+					continue
+				}
+			}
+			log.Trace(fmt.Sprintf("Skipping cross chain tx %s", tx.Hash()))
 			blockTxns = append(blockTxns, tx)
 			txFees = append(txFees, 0)
 			tokenSOC := int64(blockchain.CountSigOps(tx))

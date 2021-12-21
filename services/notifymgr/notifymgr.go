@@ -32,7 +32,7 @@ func (ntmgr *NotifyMgr) AnnounceNewTransactions(newTxs []*types.TxDesc, filters 
 		ntmgr.RelayInventory(tx, filters)
 	}
 
-	if ntmgr.RpcServer != nil {
+	if ntmgr.RpcServer != nil && ntmgr.RpcServer.IsStarted() {
 		ntmgr.RpcServer.NotifyNewTransactions(newTxs)
 	}
 }

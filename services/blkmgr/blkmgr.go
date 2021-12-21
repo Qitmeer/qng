@@ -14,7 +14,7 @@ import (
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
-	"github.com/Qitmeer/qng/node/notify"
+	"github.com/Qitmeer/qng-core/consensus"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng-core/params"
@@ -46,7 +46,7 @@ type BlockManager struct {
 	config *config.Config
 	params *params.Params
 
-	notify notify.Notify
+	notify consensus.Notify
 
 	chain *blockchain.BlockChain
 
@@ -83,7 +83,7 @@ type BlockManager struct {
 
 // NewBlockManager returns a new block manager.
 // Use Start to begin processing asynchronous block and inv updates.
-func NewBlockManager(ntmgr notify.Notify, indexManager blockchain.IndexManager, db database.DB,
+func NewBlockManager(ntmgr consensus.Notify, indexManager blockchain.IndexManager, db database.DB,
 	timeSource blockchain.MedianTimeSource, sigCache *txscript.SigCache,
 	cfg *config.Config, par *params.Params,
 	interrupt <-chan struct{}, events *event.Feed, peerServer *p2p.Service) (*BlockManager, error) {
@@ -138,7 +138,7 @@ func NewBlockManager(ntmgr notify.Notify, indexManager blockchain.IndexManager, 
 
 	bm.zmqNotify = zmq.NewZMQNotification(cfg)
 
-	bm.subscribe(events)
+	bm.chain.Subscribe(bm.handleNotifyMsg)
 	return &bm, nil
 }
 
@@ -598,31 +598,6 @@ func (b *BlockManager) SetTxManager(txManager TxManager) {
 
 func (b *BlockManager) GetTxManager() TxManager {
 	return b.txManager
-}
-
-func (b *BlockManager) subscribe(events *event.Feed) {
-	ch := make(chan *event.Event)
-	sub := events.Subscribe(ch)
-	go func() {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case ev := <-ch:
-				if ev.Data != nil {
-					switch value := ev.Data.(type) {
-					case *blockchain.Notification:
-						b.handleNotifyMsg(value)
-					}
-				}
-				if ev.Ack != nil {
-					ev.Ack <- struct{}{}
-				}
-			case <-b.quit:
-				log.Info("Close BlockManager Event Subscribe")
-				return
-			}
-		}
-	}()
 }
 
 // headerNode is used as a node in a list of headers that are linked together
