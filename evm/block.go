@@ -70,3 +70,7 @@ func (b *Block) Bytes() []byte {
 }
 
 func (b *Block) String() string { return fmt.Sprintf("EVM block, ID = %s", b.ID()) }
+
+func (b *Block) Transactions() []consensus.Tx {
+	return nil
+}

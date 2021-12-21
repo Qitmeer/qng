@@ -8,6 +8,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/Qitmeer/meerevm/evm/engine"
+	"github.com/Qitmeer/qng-core/core/protocol"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/external"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -25,10 +26,10 @@ import (
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
+	qparams "github.com/Qitmeer/qng-core/params"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
 	"path/filepath"
@@ -298,26 +299,15 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain,error) {
 		utils.ListenPortFlag,
 		utils.MaxPeersFlag,
 		utils.MaxPendingPeersFlag,
-		utils.MiningEnabledFlag,
-		utils.MinerThreadsFlag,
-		utils.MinerNotifyFlag,
 		utils.LegacyMinerGasTargetFlag,
 		utils.MinerGasLimitFlag,
 		utils.MinerGasPriceFlag,
-		utils.MinerEtherbaseFlag,
 		utils.MinerExtraDataFlag,
 		utils.MinerRecommitIntervalFlag,
 		utils.MinerNoVerifyFlag,
-		utils.NATFlag,
-		utils.NoDiscoverFlag,
-		utils.DiscoveryV5Flag,
-		utils.NetrestrictFlag,
 		utils.NodeKeyFileFlag,
 		utils.NodeKeyHexFlag,
-		utils.DNSDiscoveryFlag,
 		utils.MainnetFlag,
-		utils.DeveloperFlag,
-		utils.DeveloperPeriodFlag,
 		utils.RopstenFlag,
 		utils.RinkebyFlag,
 		utils.GoerliFlag,
@@ -331,7 +321,6 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain,error) {
 		utils.GpoMaxGasPriceFlag,
 		utils.GpoIgnoreGasPriceFlag,
 		utils.MinerNotifyFullFlag,
-		utils.CatalystFlag,
 	}
 
 	rpcFlags := []cli.Flag{
@@ -378,7 +367,7 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain,error) {
 
 	app.Action = func(ctx *cli.Context) {
 		ec.ctx = ctx
-		ec.ctx.GlobalSet("ws","true")
+		filterConfig(ctx)
 		ec.node, ec.backend, ec.ether = makeFullNode(ec.ctx,ec.config)
 	}
 	app.HideVersion = true
@@ -439,7 +428,7 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	}
 
 
-	etherbase := genAddress
+	etherbase := common.Address{}
 	econfig := ethconfig.Defaults
 
 	econfig.NetworkId = uint64(MeerethChainID)
@@ -449,7 +438,6 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	econfig.SkipBcVersionCheck = false
 	econfig.TrieDirtyCache = 0
 	econfig.ConsensusEngine = CreateConsensusEngine
-
 
 
 	econfig.Ethash.DatasetDir = "ethash/dataset"
@@ -465,17 +453,19 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	nodeConf.Version = params.VersionWithMeta
 	nodeConf.HTTPModules = append(nodeConf.HTTPModules, "eth")
 	nodeConf.WSModules = append(nodeConf.WSModules, "eth")
-	nodeConf.IPCPath = ClientIdentifier+".ipc"
+	nodeConf.IPCPath = ""
 	nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
 	nodeConf.HTTPHost = node.DefaultHTTPHost
 	nodeConf.WSHost = node.DefaultWSHost
+	nodeConf.HTTPPort,nodeConf.WSPort=getDefaultRPCPort()
 
 
 	nodeConf.P2P.MaxPeers = 0
 	nodeConf.P2P.DiscoveryV5 = false
 	nodeConf.P2P.NoDiscovery = true
 	nodeConf.P2P.NoDial = true
-
+	nodeConf.P2P.ListenAddr = ""
+	nodeConf.P2P.NAT=nil
 	//
 	return &MeerethConfig{
 		Eth:     econfig,
@@ -693,4 +683,65 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 	}, notify, noverify)
 	engine.SetThreads(-1) // Disable CPU mining
 	return engine
+}
+
+func InitEnv(env string) {
+	if len(env) <= 0 {
+		return
+	}
+	args:=strings.Split(env," ")
+	if len(args) <= 0 {
+		return
+	}
+	log.Debug(fmt.Sprintf("Initialize meerevm environment:%v",args))
+	Args=append(Args,args...)
+}
+
+func filterConfig(ctx *cli.Context)  {
+	hms:=ctx.GlobalString(utils.HTTPApiFlag.Name)
+	if len(hms) > 0 {
+		modules := utils.SplitAndTrim(hms)
+		nmodules:=""
+		for _,mod:=range modules {
+			if mod == "ethash" || mod == "miner" {
+				continue
+			}
+			if len(nmodules) > 0 {
+				nmodules = nmodules + "," + mod
+			}else{
+				nmodules = mod
+			}
+		}
+		ctx.GlobalSet(utils.HTTPApiFlag.Name,nmodules)
+	}
+
+	wms:=ctx.GlobalString(utils.WSApiFlag.Name)
+	if len(hms) > 0 {
+		modules := utils.SplitAndTrim(wms)
+		nmodules:=""
+		for _,mod:=range modules {
+			if mod == "ethash" || mod == "miner" {
+				continue
+			}
+			if len(nmodules) > 0 {
+				nmodules = nmodules + "," + mod
+			}else{
+				nmodules = mod
+			}
+		}
+		ctx.GlobalSet(utils.WSApiFlag.Name,nmodules)
+	}
+}
+
+func getDefaultRPCPort() (int,int) {
+	switch qparams.ActiveNetParams.Net {
+	case protocol.MainNet:
+		return 8535,8536
+	case protocol.TestNet:
+		return 18535,18536
+	case protocol.MixNet:
+		return 28535,28536
+	default:
+		return 38535,38536
+	}
 }
