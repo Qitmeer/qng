@@ -40,6 +40,12 @@ https://github.com/Qitmeer/qng/releases
 ~ cd ./script
 ~ ./cli.sh vmsinfo
 ``` 
+* If you don't need the default configuration, we provide an environment configuration parameter to meet your custom configuration for MeerEVM:
+```
+~ ./qng --testnet --evmenv="--http.port=18545 --ws.port=18546"
+~ 
+``` 
+
 
 * You first need to transfer your money in qitmeer to MeerEVM:
 ```
