@@ -99,6 +99,10 @@ func MarshJsonVin(tx *types.Transaction) []json.Vin {
 			}
 
 		}
+		return vinList
+	}else if types.IsCrossChainImportTx(tx) || types.IsCrossChainVMTx(tx) {
+		vinList[0].TxType = types.DetermineTxType(tx).String()
+		return vinList
 	}
 
 	for i, txIn := range tx.TxIn {
@@ -198,7 +202,7 @@ func MarshJsonCoinbaseVout(tx *types.Transaction, filterAddrMap map[string]struc
 		passesFilter := len(filterAddrMap) == 0
 		encodedAddrs := make([]string, len(addrs))
 		for j, addr := range addrs {
-			encodedAddr := addr.Encode()
+			encodedAddr := addr.String()
 			encodedAddrs[j] = encodedAddr
 
 			// No need to check the map again if the filter already
