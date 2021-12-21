@@ -47,9 +47,9 @@ https://github.com/Qitmeer/qng/releases
 ``` 
 
 
-* You first need to transfer your money in qitmeer to MeerEVM:
-```
-~ ./cli.sh createRawTxV2 '[{"txid":"ce28ec92cc99b13d9f7a658d2f1e08aa9e4f27ebcfaf5344750bb77484a79657","vout":0}],{"Tk6uXJ3kjh3yA4q94KQF9DTL14rDbd4vb2kztbkfhMBziR35HYkkx":{"coinid":1,"amount":11000000000}}'
+* You first need to transfer your money in qitmeer to MeerEVM:`createExportRawTx <txid> <vout> <PKAdress> <amount>`
+``` 
+~ ./cli.sh createExportRawTx ce28ec92cc99b13d9f7a658d2f1e08aa9e4f27ebcfaf5344750bb77484a79657 0 Tk6uXJ3kjh3yA4q94KQF9DTL14rDbd4vb2kztbkfhMBziR35HYkkx 11000000000
 ~ ./cli.sh txSign [Your_Private_Key] [rawTx]
 ~ ./cli.sh sendRawTx [signRawTx]
 ``` 

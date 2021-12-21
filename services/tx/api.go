@@ -1250,8 +1250,11 @@ func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, 
 	return mtxHex, nil
 }
 
-// import tx
+// cross chain import tx
 func (api *PublicTxAPI) CreateImportRawTransaction(pkAddress string, amount int64) (interface{}, error) {
+	if amount <=0 {
+		return nil,fmt.Errorf("Amount is empty")
+	}
 	mtx := types.NewTransaction()
 	mtx.AddTxIn(&types.TxInput{
 		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.SupperPrevOutIndex),
@@ -1294,4 +1297,18 @@ func (api *PublicTxAPI) CreateImportRawTransaction(pkAddress string, amount int6
 		return nil, err
 	}
 	return mtxHex, nil
+}
+
+// cross chain export tx
+func (api *PublicTxAPI) CreateExportRawTransaction(txid string,vout uint32,pkAddress string, amount int64) (interface{}, error) {
+	if amount <=0 {
+		return nil,fmt.Errorf("Amount is empty")
+	}
+
+	aa := json.AdreesAmount{}
+	aa[pkAddress] = json.Amout{CoinId: uint16(types.ETHID), Amount: amount}
+	inputs:=[]json.TransactionInput{
+		json.TransactionInput{Txid:txid,Vout:vout},
+	}
+	return api.CreateRawTransactionV2(inputs, aa, nil)
 }
