@@ -9,6 +9,7 @@ import (
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/core/types/pow"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"strings"
 )
 
 type FutureGetBlockTemplateResult chan *response
@@ -90,9 +91,9 @@ func (r FutureGetRemoteGBTCmdResult) Receive() (*types.BlockHeader, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	serialized, err := hex.DecodeString(string(res))
+	serialized, err := hex.DecodeString(strings.ReplaceAll(string(res), `"`, ""))
 	if err != nil {
+		fmt.Println(err.Error(), len(string(res)), string(res))
 		return nil, fmt.Errorf(err.Error())
 	}
 	var header types.BlockHeader
@@ -114,17 +115,17 @@ func (c *Client) GetRemoteGBT(powType pow.PowType) (*types.BlockHeader, error) {
 
 type FutureSubmitBlockHeaderResult chan *response
 
-func (r FutureSubmitBlockHeaderResult) Receive() (string, error) {
+func (r FutureSubmitBlockHeaderResult) Receive() (*j.SubmitBlockResult, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	var result string
+	var result j.SubmitBlockResult
 	err = json.Unmarshal(res, &result)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return result, nil
+	return &result, nil
 }
 
 func (c *Client) SubmitBlockHeaderAsync(header *types.BlockHeader) FutureSubmitBlockHeaderResult {
@@ -132,6 +133,6 @@ func (c *Client) SubmitBlockHeaderAsync(header *types.BlockHeader) FutureSubmitB
 	return c.sendCmd(cmd)
 }
 
-func (c *Client) SubmitBlockHeader(header *types.BlockHeader) (string, error) {
+func (c *Client) SubmitBlockHeader(header *types.BlockHeader) (*j.SubmitBlockResult, error) {
 	return c.SubmitBlockHeaderAsync(header).Receive()
 }
