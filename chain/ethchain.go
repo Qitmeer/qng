@@ -455,8 +455,8 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	nodeConf.WSModules = append(nodeConf.WSModules, "eth")
 	nodeConf.IPCPath = ""
 	nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
-	nodeConf.HTTPHost = node.DefaultHTTPHost
-	nodeConf.WSHost = node.DefaultWSHost
+	//nodeConf.HTTPHost = node.DefaultHTTPHost
+	//nodeConf.WSHost = node.DefaultWSHost
 	nodeConf.HTTPPort,nodeConf.WSPort=getDefaultRPCPort()
 
 
