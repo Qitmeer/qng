@@ -122,6 +122,11 @@ var TestNetParams = Params{
 			StartTime:  2880,
 			ExpireTime: 28800,
 		},
+		DeploymentMeerEVM: {
+			BitNumber:  1,
+			StartTime:  253340, // =238940+2880*5
+			ExpireTime: 253440,
+		},
 	},
 
 	// Address encoding magics
