@@ -34,7 +34,7 @@ type nodeConfig struct {
 
 func newNodeConfig(homeDir string, extraArgs []string) *nodeConfig {
 	c := &nodeConfig{
-		program:   "qitmeer",
+		program:   "qng",
 		listen:    "127.0.0.1:" + params.PrivNetParam.DefaultPort, //38130 by default
 		rpclisten: "127.0.0.1:" + params.PrivNetParam.RpcPort,     //38131 by default
 		rpcuser:   "testuser",
@@ -130,7 +130,7 @@ func (n *node) redirectOutput(reader io.ReadCloser, waitPid *sync.WaitGroup) err
 func (n *node) storePid(waitPid *sync.WaitGroup) error {
 	n.pid = n.cmd.Process.Pid
 	defer waitPid.Done()
-	f, err := os.Create(filepath.Join(n.config.homeDir, "qitmeer.pid"))
+	f, err := os.Create(filepath.Join(n.config.homeDir, "qng.pid"))
 	if err != nil {
 		return err
 	}

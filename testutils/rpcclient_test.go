@@ -18,12 +18,12 @@ import (
 )
 
 const (
-	defaultConfigFilename         = "qitmeer.conf"
+	defaultConfigFilename         = "qng.conf"
 	defaultDataDirname            = "data"
 	defaultLogLevel               = "info"
 	defaultDebugPrintOrigins      = false
 	defaultLogDirname             = "logs"
-	defaultLogFilename            = "qitmeer.log"
+	defaultLogFilename            = "qng.log"
 	defaultGenerate               = false
 	defaultBlockMinSize           = 0
 	defaultBlockMaxSize           = 375000
@@ -39,7 +39,7 @@ const (
 )
 
 var (
-	defaultHomeDir, _  = ioutil.TempDir("", "qitmeer-test-rpc-server")
+	defaultHomeDir, _  = ioutil.TempDir("", "qng-test-rpc-server")
 	defaultConfigFile  = filepath.Join(defaultHomeDir, defaultConfigFilename)
 	defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
 	defaultDbType      = "ffldb"

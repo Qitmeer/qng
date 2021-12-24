@@ -301,6 +301,7 @@ const (
 	maxP2PPort = minP2PPort + 10000 // 48199 The max is exclusive
 	minRPCPort = maxP2PPort         // 48200
 	maxRPCPort = minRPCPort + 10000 // 58199
+
 )
 
 // GenListenArgs returns auto generated args for p2p listen and rpc listen in the format of

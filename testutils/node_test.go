@@ -27,7 +27,7 @@ func TestNewNodeCmdArgs(t *testing.T) {
 		t.Errorf("failed to create node, expect %v but got %v", "", node.cmd.Dir)
 	}
 	args := []string{
-		"qitmeer",
+		"qng",
 		"--listen=127.0.0.1:38130",
 		"--rpclisten=127.0.0.1:38131",
 		"--rpcuser=testuser",
@@ -53,11 +53,11 @@ func TestNewNodeCmdArgs(t *testing.T) {
 }
 
 func TestNodeStartStop(t *testing.T) {
-	found, err := exec.LookPath("qitmeer")
+	found, err := exec.LookPath("qng")
 	if err != nil {
 		t.Skip(fmt.Sprintf("skip the test since: %v", err))
 	} else {
-		t.Logf("found qitmeer execuable at %v", found)
+		t.Logf("found qng execuable at %v", found)
 	}
 	testDir, _ := ioutil.TempDir("", "test")
 	defer os.RemoveAll(testDir)
