@@ -97,6 +97,10 @@ const (
 	// soft-fork package.
 	DeploymentToken
 
+	// DeploymentMeerEVM defines the rule change deployment ID for the meerevm
+	// soft-fork package.
+	DeploymentMeerEVM
+
 	// NOTE: DefinedDeployments must always come last since it is used to
 	// determine how many defined deployments there currently are.
 
