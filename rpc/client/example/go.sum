@@ -66,6 +66,7 @@ github.com/Qitmeer/meerevm v0.0.0-20211221024755-1ccbf164c66c/go.mod h1:GveBza+j
 github.com/Qitmeer/qng-core v1.2.0/go.mod h1:OXIjYsQ2jal60J5FnnkglTSykeSVgYSuTkaBYWHBfR0=
 github.com/Qitmeer/qng-core v1.2.2/go.mod h1:fAwMxsNxHy8IVXinwfvQ7tWppwo4D9UNhBXouf1gR8U=
 github.com/Qitmeer/qng-core v1.2.3/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
+github.com/Qitmeer/qng-core v1.2.4/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
 github.com/Shopify/sarama v1.26.1/go.mod h1:NbSGBSSndYaIhRcBtY9V0U7AyH+x71bG668AuWys/yU=
 github.com/Shopify/sarama v1.29.1/go.mod h1:mdtqvCSg8JOxk8PmpTNGyo6wzd4BMm4QXSfDnTXmgkE=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
