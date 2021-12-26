@@ -3,8 +3,8 @@ module github.com/Qitmeer/qng
 go 1.14
 
 require (
-	github.com/Qitmeer/meerevm v0.0.0-20211221024755-1ccbf164c66c
-	github.com/Qitmeer/qng-core v1.2.3
+	github.com/Qitmeer/meerevm v0.0.0-20211225063000-5303685263c4
+	github.com/Qitmeer/qng-core v1.2.4
 	github.com/davecgh/go-spew v1.1.1
 	github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f // indirect
 	github.com/deckarep/golang-set v1.7.1
@@ -41,6 +41,7 @@ require (
 	go.opencensus.io v0.22.4
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
+	golang.org/x/tools v0.1.6
 	// indirect
 	gopkg.in/yaml.v2 v2.4.0
 )

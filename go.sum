@@ -64,15 +64,12 @@ github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a h1:O2Er
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:KiA7g46zc6dkgf/3NbEpJirY75v656WYlmSQNR1wTVk=
 github.com/Qitmeer/go-ethereum v1.10.9-q.2 h1:60fEOiCZ/L/opJ62dnHyql0ZNBkwpTm43owguOQeMbI=
 github.com/Qitmeer/go-ethereum v1.10.9-q.2/go.mod h1:c5mdg+S/A4faGVSyjul+xYkXdBVg3edy3DpsGhdzBmU=
-github.com/Qitmeer/meerevm v0.0.0-20211211040358-dbeb32a65910 h1:LhhOIo6VhUf1QueKwE/jUF375U2oiBb/kMd4DhJhPAo=
-github.com/Qitmeer/meerevm v0.0.0-20211211040358-dbeb32a65910/go.mod h1:GxEU9QgwjS4NCdD2novyb3Ih+qkMwtRaChCwJJIaBeA=
-github.com/Qitmeer/meerevm v0.0.0-20211221024755-1ccbf164c66c h1:zO/jljvw/NfG4At0xyQyPu1QsSlFWP4m4PicnoeHgSY=
 github.com/Qitmeer/meerevm v0.0.0-20211221024755-1ccbf164c66c/go.mod h1:GveBza+j9twzRrfS0Tq976eZi6yQ1VFKs4c+vM4xEfE=
-github.com/Qitmeer/qng-core v1.2.0/go.mod h1:OXIjYsQ2jal60J5FnnkglTSykeSVgYSuTkaBYWHBfR0=
-github.com/Qitmeer/qng-core v1.2.2 h1:0QT2K+Sg03Rve6lpux/VjIldPWF2P9jNfGtXxBtxlLc=
-github.com/Qitmeer/qng-core v1.2.2/go.mod h1:fAwMxsNxHy8IVXinwfvQ7tWppwo4D9UNhBXouf1gR8U=
-github.com/Qitmeer/qng-core v1.2.3 h1:HHCsKwQE8T6dC3TSlBmjnAEFv+pSRZ3C8So1j03/788=
+github.com/Qitmeer/meerevm v0.0.0-20211225063000-5303685263c4 h1:VKDgIv4wxCkJohbG6nOoMNUJHLcDTn924pjdByTQ5bE=
+github.com/Qitmeer/meerevm v0.0.0-20211225063000-5303685263c4/go.mod h1:U6z1GfSnQvjQhzaHT45Qr8T1F8PyuQ4TJRPB91gUx4w=
 github.com/Qitmeer/qng-core v1.2.3/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
+github.com/Qitmeer/qng-core v1.2.4 h1:RVL+7Srmt7I9+vRPNvKhita+3rymo/+mJM6yOZVCLj4=
+github.com/Qitmeer/qng-core v1.2.4/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
 github.com/Shopify/sarama v1.29.1/go.mod h1:mdtqvCSg8JOxk8PmpTNGyo6wzd4BMm4QXSfDnTXmgkE=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 h1:fLjPD/aNc3UIOA6tDi6QXUemppXK3P9BI7mr2hd6gx8=
@@ -334,6 +331,7 @@ github.com/google/pprof v0.0.0-20200430221834-fc25d7d30c6d/go.mod h1:ZgVRPoUq/hf
 github.com/google/pprof v0.0.0-20200708004538-1a94d8640e99/go.mod h1:ZgVRPoUq/hfqzAqh7sHMqb3I9Rq5C59dIz2SbBwJ4eM=
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
 github.com/google/uuid v1.1.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/google/uuid v1.1.2 h1:EVhdT+1Kseyi1/pUmXKaFxYsDNy9RQYkMWRH68J/W7Y=
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/google/uuid v1.1.5 h1:kxhtnfFVi+rYdOALN0B3k9UT86zVJKfBimRaciULW4I=
 github.com/google/uuid v1.1.5/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
@@ -371,6 +369,7 @@ github.com/holiman/bloomfilter/v2 v2.0.3/go.mod h1:zpoh+gs7qcpqrHr3dB55AMiJwo0iU
 github.com/holiman/uint256 v1.2.0 h1:gpSYcPLWGv4sG43I2mVLiDZCNDh/EpGjSk8tmtxitHM=
 github.com/holiman/uint256 v1.2.0/go.mod h1:y4ga/t+u+Xwd7CpDgZESaRcWy0I7XMlTMA25ApIH5Jw=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
+github.com/huin/goupnp v1.0.0 h1:wg75sLpL6DZqwHQN6E1Cfk6mtfzS45z8OV+ic+DtHRo=
 github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7Bnc=
 github.com/huin/goupnp v1.0.2 h1:RfGLP+h3mvisuWEyybxNq5Eft3NWhHLPeUN72kpKZoI=
 github.com/huin/goupnp v1.0.2/go.mod h1:0dxJBVBHqTMjIUMkESDTNgOOx/Mw5wYIfyFmdzSamkM=
@@ -900,6 +899,7 @@ github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65 h1:hJfAW
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-ssz v0.0.0-20200101200214-e24db4d9e963 h1:Th5ufPIaL5s/7i3gXHTgiTwfsUhWDP/PwFRiI6qV6v0=
 github.com/prysmaticlabs/go-ssz v0.0.0-20200101200214-e24db4d9e963/go.mod h1:VecIJZrewdAuhVckySLFt2wAAHRME934bSDurP8ftkc=
+github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 h1:N/ElC8H3+5XpJzTSTfLsJV/mx9Q9g7kxmchpfZyxgzM=
 github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/retailnext/hllpp v1.0.1-0.20180308014038-101a6d2f8b52/go.mod h1:RDpi1RftBQPUCDRw6SmxeaREsAaRKnOclghuzp/WRzc=
 github.com/rivo/uniseg v0.2.0 h1:S1pD9weZBuJdFmowNwbpi7BJ8TNftyUImj/0WQi72jY=

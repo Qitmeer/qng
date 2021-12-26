@@ -42,7 +42,9 @@ https://github.com/Qitmeer/qng/releases
 ``` 
 * If you don't need the default configuration, we provide an environment configuration parameter to meet your custom configuration for MeerEVM:
 ```
-~ ./qng --testnet --evmenv="--http.port=18545 --ws.port=18546"
+~ ./qng --testnet --evmenv="--http"
+or
+~ ./qng --testnet --evmenv="--http --http.port=18545 --ws --ws.port=18546"
 ~ 
 ``` 
 

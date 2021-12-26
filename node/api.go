@@ -98,6 +98,9 @@ func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 		case params.DeploymentToken:
 			forkName = "token"
 
+		case params.DeploymentMeerEVM:
+			forkName = "meerevm"
+
 		default:
 			return nil, fmt.Errorf("Unknown deployment %v detected\n", deployment)
 		}
