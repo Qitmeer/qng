@@ -160,4 +160,27 @@ var PrivNetParams = Params{
 	TokenAdminPkScript: hexMustDecode("00000000c96d6d76a914785bfbf4ecad8b72f2582be83616c5d364a3244288ac"),
 
 	CoinbaseMaturity: 16,
+
+
+	// Consensus rule change deployments.
+	//
+	// The miner confirmation window is defined as:
+	//   target proof of work timespan / target proof of work spacing
+	RuleChangeActivationThreshold: 57,
+	MinerConfirmationWindow:       60,
+	Deployments: []ConsensusDeployment{
+		DeploymentTestDummy: {
+			BitNumber: 28,
+		},
+		DeploymentToken: {
+			BitNumber:  0,
+			StartTime:  100,
+			ExpireTime: 200,
+		},
+		DeploymentMeerEVM: {
+			BitNumber:  1,
+			StartTime:  210,
+			ExpireTime: 310,
+		},
+	},
 }
