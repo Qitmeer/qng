@@ -12,6 +12,10 @@ func (bd *MeerDAG) HasBlock(h *hash.Hash) bool {
 	return bd.GetBlockId(h) != MaxId
 }
 
+func (bd *MeerDAG) hasBlock(h *hash.Hash) bool {
+	return bd.getBlockId(h) != MaxId
+}
+
 // Is there a block in DAG?
 func (bd *MeerDAG) hasBlockById(id uint) bool {
 	return bd.getBlockById(id) != nil
@@ -157,10 +161,11 @@ func (bd *MeerDAG) doGetBlockByOrder(dbTx database.Tx, order uint) IBlock {
 			return nil
 		}
 	} else {
-		id, er := DBGetBlockIdByOrder(dbTx, order)
-		if er == nil {
+		id, err := DBGetBlockIdByOrder(dbTx, order)
+		if err == nil {
 			bid = uint(id)
 		} else {
+			log.Error(err.Error())
 			return nil
 		}
 	}

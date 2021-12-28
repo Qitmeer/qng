@@ -183,7 +183,6 @@ func DBGetDAGTips(dbTx database.Tx) ([]uint, error) {
 	for cok := cursor.First(); cok; cok = cursor.Next() {
 		id := uint(ByteOrder.Uint32(cursor.Key()))
 		main:= cursor.Value()
-
 		if len(main) > 0 {
 			if main[0] > 0 {
 				mainTip = id

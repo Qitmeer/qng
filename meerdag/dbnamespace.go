@@ -34,4 +34,8 @@ var (
 	// BlockIdBucketName is the name of the db bucket used to house to
 	// the block hash -> block DAG Id.
 	BlockIdBucketName = []byte("blockid")
+
+	// DAGTipsBucketName is the name of the db bucket used to house to
+	// the block id -> is main chain
+	DAGTipsBucketName = []byte("dagtips")
 )

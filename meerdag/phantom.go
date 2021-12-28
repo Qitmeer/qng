@@ -585,14 +585,22 @@ func (ph *Phantom) Decode(r io.Reader) error {
 
 // load
 func (ph *Phantom) Load(dbTx database.Tx) error {
+	tips,err:=DBGetDAGTips(dbTx)
+	if err != nil {
+		return err
+	}
 
 	ph.mainChain.genesis = 0
+	ph.mainChain.tip = tips[0]
 
 	for i := uint(0); i < ph.bd.blockTotal; i++ {
 		block := Block{id: i}
 		ib := ph.CreateBlock(&block)
 		err := DBGetDAGBlock(dbTx, ib)
 		if err != nil {
+			if err.IsEmpty() {
+				continue
+			}
 			return err
 		}
 		if i == 0 && !ib.GetHash().IsEqual(ph.bd.GetGenesisHash()) {
@@ -610,8 +618,6 @@ func (ph *Phantom) Load(dbTx database.Tx) error {
 			ib.GetParents().AddSet(parentsSet)
 		}
 		ph.bd.blocks[ib.GetID()] = ib
-
-		ph.bd.updateTips(ib)
 		//
 		if !ib.IsOrdered() {
 			ph.diffAnticone.AddPair(ib.GetID(), ib)
@@ -627,8 +633,16 @@ func (ph *Phantom) Load(dbTx database.Tx) error {
 		}
 		block.data = ph.bd.getBlockData(ib.GetHash())
 	}
+	// load tips
+	for _,v:=range tips {
+		tip:=ph.getBlock(v)
+		if tip == nil {
+			return fmt.Errorf("Can't find tip:%d\n",v)
+		}
+		ph.bd.updateTips(tip)
+	}
+	ph.bd.optimizeTips(dbTx)
 
-	ph.mainChain.tip = ph.GetMainParent(ph.bd.tips).GetID()
 	return ph.CheckMainChainDB(dbTx)
 }
 
