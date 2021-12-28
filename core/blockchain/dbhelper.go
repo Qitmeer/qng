@@ -475,14 +475,5 @@ func dbFetchHeaderByHash(dbTx database.Tx, hash *hash.Hash) (*types.BlockHeader,
 // dbMaybeStoreBlock stores the provided block in the database if it's not
 // already there.
 func dbMaybeStoreBlock(dbTx database.Tx, block *types.SerializedBlock) error {
-	// Store the block in ffldb if not already done.
-	hasBlock, err := dbTx.HasBlock(block.Hash())
-	if err != nil {
-		return err
-	}
-	if hasBlock {
-		return nil
-	}
-
 	return dbTx.StoreBlock(block)
 }
