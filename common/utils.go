@@ -4,6 +4,13 @@
 
 package common
 
+import (
+	"encoding/hex"
+	"github.com/Qitmeer/qng-core/crypto/ecc"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+)
+
 func ReverseBytes(bs *[]byte) {
 	length := len(*bs)
 	for i := 0; i < length/2; i++ {
@@ -12,4 +19,17 @@ func ReverseBytes(bs *[]byte) {
 		(*bs)[index] = (*bs)[i]
 		(*bs)[i] = temp
 	}
+}
+
+func NewMeerEVMAddress(pubkeyHex string) (common.Address,error) {
+	pubkBytes,err:=hex.DecodeString(pubkeyHex)
+	if err != nil {
+		return common.Address{},err
+	}
+
+	publicKey, err := ecc.Secp256k1.ParsePubKey(pubkBytes)
+	if err != nil {
+		return common.Address{},err
+	}
+	return crypto.PubkeyToAddress(*publicKey.ToECDSA()),nil
 }
