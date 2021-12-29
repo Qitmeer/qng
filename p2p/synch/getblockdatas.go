@@ -252,8 +252,8 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 		}
 		block:=b.Block
 		if block == nil {
-			log.Error(fmt.Sprintf("No block bytes:%s",b.Hash.String()))
-			break
+			log.Trace(fmt.Sprintf("No block bytes:%s",b.Hash.String()))
+			continue
 		}
 		isOrphan, err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags)
 		if err != nil {
