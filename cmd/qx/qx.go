@@ -76,6 +76,7 @@ entropy (seed) & mnemoic & hd & ec :
 addr & tx & sign :
     ec-to-addr            convert an EC public key to a paymant address. default is qx address
 	ec-to-pkaddr          convert an EC public key to a paymant public key address. default is qx address
+	ec-to-ethaddr         convert an EC public key to a ethereum address.
     tx-encode             encode a unsigned transaction.
     tx-decode             decode a transaction in base16 to json format.
     tx-sign               sign a transactions using a private key.
@@ -392,6 +393,12 @@ func main() {
 	}
 	ecToPKAddrCmd.Var(&base58checkVersion, "v", "base58check `version` [mainnet|testnet|privnet]")
 
+	// PKAddress
+	ecToETHAddrCmd := flag.NewFlagSet("ec-to-ethaddr", flag.ExitOnError)
+	ecToETHAddrCmd.Usage = func() {
+		cmdUsage(ecToETHAddrCmd, "Usage: qx ec-to-ethaddr [ec_public_key] \n")
+	}
+
 	// Transaction
 	txDecodeCmd := flag.NewFlagSet("tx-decode", flag.ExitOnError)
 	txDecodeCmd.Usage = func() {
@@ -486,6 +493,7 @@ MEER is the 64 bit spend amount in qitmeer.`)
 		wifToPubCmd,
 		ecToAddrCmd,
 		ecToPKAddrCmd,
+		ecToETHAddrCmd,
 		txEncodeCmd,
 		txDecodeCmd,
 		txSignCmd,
@@ -1284,6 +1292,24 @@ MEER is the 64 bit spend amount in qitmeer.`)
 			}
 			str := strings.TrimSpace(string(src))
 			qx.EcPubKeyToPKAddressSTDO(base58checkVersion.String(), str)
+		}
+	}
+
+	if ecToETHAddrCmd.Parsed() {
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeNamedPipe) == 0 {
+			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
+				ecToETHAddrCmd.Usage()
+			} else {
+				qx.EcPubKeyToETHAddressSTDO(os.Args[len(os.Args)-1])
+			}
+		} else { //try from STDIN
+			src, err := ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				errExit(err)
+			}
+			str := strings.TrimSpace(string(src))
+			qx.EcPubKeyToETHAddressSTDO(str)
 		}
 	}
 

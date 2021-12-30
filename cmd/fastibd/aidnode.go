@@ -116,7 +116,7 @@ func (node *AidNode) Upgrade() error {
 			ib := &meerdag.PhantomBlock{Block: block}
 			err := meerdag.DBGetDAGBlock(dbTx, ib)
 			if err != nil {
-				if err.IsEmpty() {
+				if err.(*meerdag.DAGError).IsEmpty() {
 					isEmpty=true
 					return nil
 				}

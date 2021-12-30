@@ -3,13 +3,18 @@
 package address
 
 import (
+	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/meerevm/common"
 	"github.com/Qitmeer/meerevm/evm"
-	"github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/common/encode/base58"
-	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng-core/config"
+	"github.com/Qitmeer/qng-core/core/address"
+	qjson "github.com/Qitmeer/qng-core/core/json"
 	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng-core/crypto/ecc"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -46,6 +51,11 @@ func (c *AddressApi) APIs() []api.API {
 			NameSpace: cmds.DefaultServiceNameSpace,
 			Service:   NewPublicAddressAPI(c),
 			Public:    true,
+		},
+		{
+			NameSpace: cmds.TestNameSpace,
+			Service:   NewPrivateAddressAPI(c),
+			Public:    false,
 		},
 	}
 }
@@ -94,4 +104,33 @@ type PrivateAddressAPI struct {
 func NewPrivateAddressAPI(ai *AddressApi) *PrivateAddressAPI {
 	pmAPI := &PrivateAddressAPI{addressApi: ai}
 	return pmAPI
+}
+
+func (api *PrivateAddressAPI) GetAddresses(privateKeyHex string) (interface{}, error) {
+	privkeyByte, err := hex.DecodeString(privateKeyHex)
+	if err != nil {
+		return nil,err
+	}
+	if len(privkeyByte) != 32 {
+		return nil,fmt.Errorf("error length:%d", len(privkeyByte))
+	}
+	privateKey, pubKey := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
+
+	serializedKey := pubKey.SerializeCompressed()
+	addr, err := address.NewSecpPubKeyAddress(serializedKey, params.ActiveNetParams.Params)
+	if err != nil {
+		return nil,err
+	}
+	eaddr,err:=common.NewMeerEVMAddress(hex.EncodeToString(pubKey.SerializeUncompressed()))
+	if err != nil {
+		return nil,err
+	}
+	result := qjson.OrderedResult{
+		qjson.KV{Key:"PrivateKey",Val:hex.EncodeToString(privateKey.Serialize())},
+		qjson.KV{Key:"PKHAddress",Val:addr.PKHAddress().String()},
+		qjson.KV{Key:"PKAddress",Val:addr.String()},
+		qjson.KV{Key:"MeerEVM Address",Val:eaddr.String()},
+	}
+
+	return result, nil
 }
