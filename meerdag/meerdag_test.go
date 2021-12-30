@@ -6,6 +6,8 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/common/roughtime"
 	"github.com/Qitmeer/qng-core/config"
+	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng-core/core/types/pow"
 	"github.com/Qitmeer/qng-core/database"
 	l "github.com/Qitmeer/qng-core/log"
 	"github.com/Qitmeer/qng-core/params"
@@ -13,6 +15,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // Structure of blocks data
@@ -90,23 +93,21 @@ func loadTestData(fileName string, testData *TestData) error {
 
 // DAG block data
 type TestBlock struct {
-	hash      hash.Hash
-	parents   []*hash.Hash
-	timeStamp int64
+	block *types.SerializedBlock
 }
 
 // Return the hash
 func (tb *TestBlock) GetHash() *hash.Hash {
-	return &tb.hash
+	return tb.block.Hash()
 }
 
 // Get all parents set,the dag block has more than one parent
 func (tb *TestBlock) GetParents() []*hash.Hash {
-	return tb.parents
+	return tb.block.Block().Parents
 }
 
 func (tb *TestBlock) GetTimestamp() int64 {
-	return tb.timeStamp
+	return tb.block.Block().Header.Timestamp.Unix()
 }
 
 // Acquire the weight of block
@@ -120,10 +121,6 @@ func (tb *TestBlock) GetPriority() int {
 
 // This is the interface for Block DAG,can use to call public function.
 var bd MeerDAG
-
-// Used to simulate block hash,It's just a test program,beacause
-// we only care about the block DAG.
-var tempHash int = 0
 
 var randTool *rand.Rand = rand.New(rand.NewSource(roughtime.Now().UnixNano()))
 
@@ -139,10 +136,12 @@ var tbMap map[string]IBlock
 func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
 	output := io.Writer(os.Stdout)
 	glogger := l.NewGlogHandler(l.StreamHandler(output, l.TerminalFormat(false)))
-	glogger.Verbosity(l.LvlError)
+	glogger.Verbosity(l.LvlTrace)
 	l.Root().SetHandler(glogger)
 	blockdaglogger := l.New(l.Ctx{"module": "blockdag"})
 	UseLogger(blockdaglogger)
+	l.PrintOrigins(true)
+	params.ActiveNetParams=&params.PrivNetParam
 
 	testData = &TestData{}
 	err := loadTestData(testDataFilePath, testData)
@@ -183,34 +182,64 @@ func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
 		for _, parent := range tbd[i].Parents {
 			parents = append(parents, tbMap[parent].GetHash())
 		}
-		block := buildBlock(parents)
-		l, _, ib, _ := bd.AddBlock(block)
-		if l != nil && l.Len() > 0 {
-			tbMap[tbd[i].Tag] = ib
-			err = bd.Commit()
-			if err != nil {
-				return nil
-			}
-		} else {
-			fmt.Printf("Error:%d  %s\n", tempHash, tbd[i].Tag)
+		_,err := buildBlock(tbd[i].Tag,parents)
+		if err != nil {
+			fmt.Println(err)
 			return nil
 		}
-
 	}
 
 	return instance
 }
 
-func buildBlock(parents []*hash.Hash) *TestBlock {
-	tempHash++
-	hashStr := fmt.Sprintf("%d", tempHash)
-	h := hash.MustHexToDecodedHash(hashStr)
-	tBlock := &TestBlock{hash: h}
-	tBlock.parents = parents
-	tBlock.timeStamp = roughtime.Now().Unix()
+func buildBlock(tag string,parents []*hash.Hash) (*TestBlock,error) {
+	block,ib,err:=addBlock(tag,parents)
+	if err != nil {
+		return nil,err
+	}
+	err = commitBlock(tag,block,ib)
+	if err != nil {
+		return nil,err
+	}
+	return block,nil
+}
 
-	//
-	return tBlock
+func addBlock(tag string,parents []*hash.Hash) (*TestBlock,IBlock,error) {
+	b:=&types.Block{
+		Header:types.BlockHeader{
+			Pow:pow.GetInstance(pow.MEERXKECCAKV1, 0, []byte{}),
+			Timestamp:time.Unix(int64(len(tbMap)),0),
+			Difficulty:uint32(len(tbMap)),
+		},
+		Parents:parents,
+		Transactions:[]*types.Transaction{},
+	}
+	block := &TestBlock{block:types.NewBlock(b)}
+
+
+	l, _, ib, _ := bd.AddBlock(block)
+	if l != nil && l.Len() > 0 {
+		return block,ib,nil
+	} else {
+		return nil,nil,fmt.Errorf("Error: %s\n", tag)
+	}
+}
+
+func commitBlock(tag string,block *TestBlock,ib IBlock) error {
+	tbMap[tag] = ib
+	err := bd.Commit()
+	if err != nil {
+		return err
+	}
+	err = storeBlock(block)
+	if err != nil {
+		return err
+	}
+	err = dbPutTotal(bd.GetBlockTotal())
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func getBlockTag(id uint) string {
@@ -361,4 +390,68 @@ func getBlocksByTag(tags []string) []*hash.Hash {
 
 func exit() {
 	removeBlockDB("./blocks_ffldb")
+}
+
+func storeBlock(block *TestBlock) error {
+	return bd.db.Update(func(dbTx database.Tx) error {
+		return dbTx.StoreBlock(block.block)
+	})
+}
+
+func fetchBlock(h *hash.Hash) (*TestBlock,error) {
+	tb:=&TestBlock{}
+	err:=bd.db.View(func(dbTx database.Tx) error {
+		blockBytes, err := dbTx.FetchBlock(h)
+		if err != nil {
+			return err
+		}
+
+		block, err := types.NewBlockFromBytes(blockBytes)
+		if err != nil {
+			return err
+		}
+		tb.block=block
+		return nil
+	})
+	if err != nil {
+		return nil,err
+	}
+	return tb,nil
+}
+
+func dbPutTotal(total uint) error {
+	var serializedTotal [4]byte
+	ByteOrder.PutUint32(serializedTotal[:], uint32(total))
+
+	return bd.db.Update(func(dbTx database.Tx) error {
+		return dbTx.Metadata().Put([]byte("blocktotal"), serializedTotal[:])
+	})
+}
+
+func dbGetTotal() (uint32,error) {
+	total:=uint32(0)
+	err:=bd.db.View(func(dbTx database.Tx) error {
+		serializedTotal:=dbTx.Metadata().Get([]byte("blocktotal"))
+		if serializedTotal == nil {
+			return fmt.Errorf("No data")
+		}
+		total = ByteOrder.Uint32(serializedTotal)
+		return nil
+	})
+	if err != nil {
+		return total,err
+	}
+	return total,nil
+}
+
+func dbGetGenesis() (*hash.Hash,error) {
+	block := Block{id: 0}
+	ib := &PhantomBlock{&block, 0, NewIdSet(), NewIdSet()}
+	err:=bd.db.View(func(dbTx database.Tx) error {
+		return DBGetDAGBlock(dbTx, ib)
+	})
+	if err != nil {
+		return nil,err
+	}
+	return ib.GetHash(),nil
 }
