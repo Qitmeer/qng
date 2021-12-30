@@ -373,6 +373,14 @@ func Test_tips(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	parents = []*hash.Hash{}
+	parents = append(parents, tbMap["M"].GetHash())
+
+	_,err = buildBlock("N",parents)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	bd.db.Close()
 
 	checkLoad(t)

@@ -1175,7 +1175,9 @@ func (bd *MeerDAG) commit() error {
 			return err
 		}
 		for k := range bd.tips.GetMap() {
-			if bd.lastSnapshot.tips.Has(k) {
+			if bd.lastSnapshot.tips.Has(k) &&
+				k != bd.instance.GetMainChainTipId() &&
+				k != bd.lastSnapshot.mainChainTip {
 				continue
 			}
 			err := bd.db.Update(func(dbTx database.Tx) error {

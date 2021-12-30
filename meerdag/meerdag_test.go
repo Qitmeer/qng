@@ -136,7 +136,7 @@ var tbMap map[string]IBlock
 func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
 	output := io.Writer(os.Stdout)
 	glogger := l.NewGlogHandler(l.StreamHandler(output, l.TerminalFormat(false)))
-	glogger.Verbosity(l.LvlTrace)
+	glogger.Verbosity(l.LvlError)
 	l.Root().SetHandler(glogger)
 	blockdaglogger := l.New(l.Ctx{"module": "blockdag"})
 	UseLogger(blockdaglogger)

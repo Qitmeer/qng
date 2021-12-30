@@ -544,7 +544,11 @@ func (ph *Phantom) GetMainParent(parents *IdSet) IBlock {
 		return nil
 	}
 	if parents.Size() == 1 {
-		return ph.getBlock(parents.List()[0])
+		ib:= ph.getBlock(parents.List()[0])
+		if ib == nil {
+			return nil
+		}
+		return ib
 	}
 	return ph.getBluest(parents)
 }
