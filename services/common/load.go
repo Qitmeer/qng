@@ -444,7 +444,7 @@ func newConfigParser(cfg *config.Config, options flags.Options) *flags.Parser {
 // the levels accordingly.  An appropriate error is returned if anything is
 // invalid.
 func ParseAndSetDebugLevels(debugLevel string) error {
-
+	log.LocationTrims=append(log.LocationTrims,"github.com/Qitmeer/qng")
 	// When the specified string doesn't have any delimters, treat it as
 	// the log level for all subsystems.
 	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {
