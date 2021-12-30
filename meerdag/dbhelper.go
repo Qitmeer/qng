@@ -23,7 +23,7 @@ func (e *DAGError) IsEmpty() bool {
 	return e.Error() == DAGErrorEmpty
 }
 
-func NewDAGError(e error) *DAGError {
+func NewDAGError(e error) error {
 	if e == nil {
 		return nil
 	}
@@ -48,7 +48,7 @@ func DBPutDAGBlock(dbTx database.Tx, block IBlock) error {
 }
 
 // DBGetDAGBlock get dag block data by resouce ID
-func DBGetDAGBlock(dbTx database.Tx, block IBlock) *DAGError {
+func DBGetDAGBlock(dbTx database.Tx, block IBlock) error {
 	bucket := dbTx.Metadata().Bucket(BlockIndexBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(block.GetID()))
@@ -57,7 +57,6 @@ func DBGetDAGBlock(dbTx database.Tx, block IBlock) *DAGError {
 	if data == nil {
 		return &DAGError{DAGErrorEmpty}
 	}
-
 	return NewDAGError(block.Decode(bytes.NewReader(data)))
 }
 
@@ -185,6 +184,9 @@ func DBGetDAGTips(dbTx database.Tx) ([]uint, error) {
 		main:= cursor.Value()
 		if len(main) > 0 {
 			if main[0] > 0 {
+				if mainTip != MaxId {
+					return nil,fmt.Errorf("Too many main tip")
+				}
 				mainTip = id
 				continue
 			}

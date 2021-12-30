@@ -50,7 +50,7 @@ func (bd *MeerDAG) UpgradeDB(dbTx database.Tx,mainTip *hash.Hash,total uint64,ge
 		ib := &PhantomBlock{&block, 0, NewIdSet(), NewIdSet()}
 		err := DBGetDAGBlock(dbTx, ib)
 		if err != nil {
-			if err.IsEmpty() {
+			if err.(*DAGError).IsEmpty() {
 				continue
 			}
 			return err

@@ -544,7 +544,11 @@ func (ph *Phantom) GetMainParent(parents *IdSet) IBlock {
 		return nil
 	}
 	if parents.Size() == 1 {
-		return ph.getBlock(parents.List()[0])
+		ib:= ph.getBlock(parents.List()[0])
+		if ib == nil {
+			return nil
+		}
+		return ib
 	}
 	return ph.getBluest(parents)
 }
@@ -598,7 +602,7 @@ func (ph *Phantom) Load(dbTx database.Tx) error {
 		ib := ph.CreateBlock(&block)
 		err := DBGetDAGBlock(dbTx, ib)
 		if err != nil {
-			if err.IsEmpty() {
+			if err.(*DAGError).IsEmpty() {
 				continue
 			}
 			return err
