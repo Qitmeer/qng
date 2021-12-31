@@ -406,6 +406,12 @@ function get_vms_info(){
   get_result "$data"
 }
 
+function get_addresses(){
+  local pkAddress=$1
+  local data='{"jsonrpc":"2.0","method":"test_getAddresses","params":["'$pkAddress'"],"id":null}'
+  get_result "$data"
+}
+
 function get_rpc_info(){
   local data='{"jsonrpc":"2.0","method":"getRpcInfo","params":[],"id":null}'
   get_result "$data"
@@ -609,6 +615,7 @@ function usage(){
   echo "  subsidy"
   echo "  vmsinfo"
   echo "  getbalance <PKAddress> <coinID>"
+  echo "  getaddresses <private key>"
   echo "block  :"
   echo "  block <order|hash>"
   echo "  blockid <id>"
@@ -943,6 +950,10 @@ elif [ "$1" == "fees" ]; then
 elif [ "$1" == "timeinfo" ]; then
   shift
   time_info $@
+
+elif [ "$1" == "getaddresses" ]; then
+  shift
+  get_addresses $@
 
 elif [ "$1" == "subsidy" ]; then
   shift

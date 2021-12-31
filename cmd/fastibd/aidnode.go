@@ -108,6 +108,7 @@ func (node *AidNode) Upgrade() error {
 
 	for i = uint(1); i <= endNum; i++ {
 		blockHash = nil
+		isEmpty:=false
 		err := node.db.View(func(dbTx database.Tx) error {
 
 			block := &meerdag.Block{}
@@ -115,6 +116,10 @@ func (node *AidNode) Upgrade() error {
 			ib := &meerdag.PhantomBlock{Block: block}
 			err := meerdag.DBGetDAGBlock(dbTx, ib)
 			if err != nil {
+				if err.(*meerdag.DAGError).IsEmpty() {
+					isEmpty=true
+					return nil
+				}
 				return err
 			}
 			blockHash = ib.GetHash()
@@ -123,6 +128,9 @@ func (node *AidNode) Upgrade() error {
 		})
 		if err != nil {
 			return err
+		}
+		if isEmpty {
+			continue
 		}
 
 		if blockHash == nil {

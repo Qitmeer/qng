@@ -3,6 +3,7 @@ package qx
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/meerevm/common"
 	"github.com/Qitmeer/qng-core/common/encode/base58"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/core/address"
@@ -112,6 +113,16 @@ func EcPubKeyToPKAddressSTDO(version string, pubkey string) {
 	}
 
 	addr, err := address.NewSecpPubKeyAddress(pubKey.SerializeCompressed(), param)
+	if err != nil {
+		ErrExit(err)
+	}
+
+	fmt.Printf("%s\n", addr.String())
+}
+
+func EcPubKeyToETHAddressSTDO(pubkey string) {
+	addr, err := common.NewMeerEVMAddress(pubkey)
+
 	if err != nil {
 		ErrExit(err)
 	}

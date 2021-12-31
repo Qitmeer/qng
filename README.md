@@ -34,6 +34,28 @@ https://github.com/Qitmeer/qng/releases
 ``` 
 *  If you use the old address(`PKH Address`), you will only be unable to package the cross chain transaction.
 
+### Address
+##### Use qx Command line tools 
+* PKH Address:
+```
+~ ./qx ec-to-public [Your_Private_Key] | ./qx ec-to-addr -v=testnet
+```
+* PK Address:
+```
+~ ./qx ec-to-public [Your_Private_Key] | ./qx ec-to-pkaddr -v=testnet
+```
+* MeerDAG Address:
+```
+~ ./qx ec-to-public [Your_Private_Key] | ./qx ec-to-ethaddr
+```
+
+##### Use qng RPC 
+* All addresses corresponding to the same private key: 
+```
+~ ./cli.sh getaddresses [Your_Private_Key]
+```
+(Due to safety reasons, you need to actively open the private module by `./qng --modules=test`)
+
 ### MeerEVM
 * If you want to use our MeerEVM function, the required interface information can be queried in this RPC:
 ```
