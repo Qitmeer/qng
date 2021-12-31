@@ -7,6 +7,7 @@ package util
 import (
 	"github.com/ethereum/go-ethereum/log"
 	"os"
+	qlog "github.com/Qitmeer/qng-core/log"
 )
 
 func InitLog(DebugLevel string,DebugPrintOrigins bool)  {
@@ -19,4 +20,6 @@ func InitLog(DebugLevel string,DebugPrintOrigins bool)  {
 		glogger.Verbosity(lvl)
 	}
 	log.PrintOrigins(DebugPrintOrigins)
+
+	qlog.LocationTrims=append(qlog.LocationTrims,"github.com/Qitmeer/meerevm")
 }
