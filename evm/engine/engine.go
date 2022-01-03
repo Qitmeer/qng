@@ -5,8 +5,8 @@
 package engine
 
 import (
-	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/Qitmeer/qng-core/log"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/rpc"
 	"sync"

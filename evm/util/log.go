@@ -5,12 +5,12 @@
 package util
 
 import (
+	qlog "github.com/Qitmeer/qng-core/log"
 	"github.com/ethereum/go-ethereum/log"
 	"os"
-	qlog "github.com/Qitmeer/qng-core/log"
 )
 
-func InitLog(DebugLevel string,DebugPrintOrigins bool)  {
+func InitLog(DebugLevel string, DebugPrintOrigins bool) {
 	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
 	glogger.Verbosity(log.LvlTrace)
 	log.Root().SetHandler(glogger)
@@ -21,5 +21,5 @@ func InitLog(DebugLevel string,DebugPrintOrigins bool)  {
 	}
 	log.PrintOrigins(DebugPrintOrigins)
 
-	qlog.LocationTrims=append(qlog.LocationTrims,"github.com/Qitmeer/meerevm")
+	qlog.LocationTrims = append(qlog.LocationTrims, "github.com/Qitmeer/meerevm")
 }

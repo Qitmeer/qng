@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"time"
 
+	qtypes "github.com/Qitmeer/qng-core/core/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
@@ -19,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 	"golang.org/x/crypto/sha3"
-	qtypes "github.com/Qitmeer/qng-core/core/types"
 )
 
 var (
@@ -266,7 +266,7 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 		me.config.Log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
 		return
 	}
-	oldBalance:=state.GetBalance(*tx.To())
+	oldBalance := state.GetBalance(*tx.To())
 	if oldBalance == nil {
 		oldBalance = big.NewInt(0)
 	}
@@ -275,17 +275,16 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 		state.AddBalance(*tx.To(), tx.Value())
 		me.config.Log.Info(fmt.Sprintf("Cross chain(%s):%s(MEER) => %s(ETH)", tx.To().String(), tx.Value().String(), tx.Value().String()))
 	} else {
-		state.SubBalance(*tx.To(),tx.Value())
+		state.SubBalance(*tx.To(), tx.Value())
 		me.config.Log.Info(fmt.Sprintf("Cross chain(%s):%s(ETH) => %s(MEER)", tx.To().String(), tx.Value().String(), tx.Value().String()))
 	}
 
+	newBalance := state.GetBalance(*tx.To())
 
-	newBalance:=state.GetBalance(*tx.To())
+	changeB := big.NewInt(0)
+	changeB = changeB.Sub(newBalance, oldBalance)
 
-	changeB:=big.NewInt(0)
-	changeB=changeB.Sub(newBalance,oldBalance)
-
-	me.config.Log.Info(fmt.Sprintf("Balance(%s): %s => %s = %s",tx.To().String(),oldBalance.String(),newBalance.String(),changeB.String()))
+	me.config.Log.Info(fmt.Sprintf("Balance(%s): %s => %s = %s", tx.To().String(), oldBalance.String(), newBalance.String(), changeB.String()))
 
 	nonce := state.GetNonce(*tx.To())
 	state.SetNonce(*tx.To(), nonce)

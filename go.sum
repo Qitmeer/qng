@@ -60,6 +60,7 @@ github.com/Qitmeer/go-ethereum v1.10.9-q.2 h1:60fEOiCZ/L/opJ62dnHyql0ZNBkwpTm43o
 github.com/Qitmeer/go-ethereum v1.10.9-q.2/go.mod h1:c5mdg+S/A4faGVSyjul+xYkXdBVg3edy3DpsGhdzBmU=
 github.com/Qitmeer/qng-core v1.2.6 h1:0zpRxhROqK8+/kKbaCXCcS6kftKXUc0NT5wp9ri41iU=
 github.com/Qitmeer/qng-core v1.2.6/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
+github.com/Qitmeer/qng-core v1.2.7 h1:tWQAlXMh9/1DXumPEOBUumprnM15lSlwSq+MfL+qjNU=
 github.com/Qitmeer/qng-core v1.2.7/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
 github.com/Shopify/sarama v1.29.1/go.mod h1:mdtqvCSg8JOxk8PmpTNGyo6wzd4BMm4QXSfDnTXmgkE=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=

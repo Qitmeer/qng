@@ -1,6 +1,6 @@
 // Copyright (c) 2017-2018 The qitmeer developers
 
-package evm 
+package evm
 
 import (
 	l "github.com/Qitmeer/qng-core/log"

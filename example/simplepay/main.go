@@ -29,14 +29,16 @@ import (
 )
 
 func checkError(err error) {
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 }
 
 func main() {
 
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 
-	chainConfig := &params.ChainConfig {
+	chainConfig := &params.ChainConfig{
 		ChainID:             big.NewInt(1),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
@@ -51,22 +53,22 @@ func main() {
 		IstanbulBlock:       big.NewInt(0),
 		MuirGlacierBlock:    big.NewInt(0),
 		BerlinBlock:         big.NewInt(0),
-//		LondonBlock:         big.NewInt(0),
-		LondonBlock:         nil,
-		Ethash:              nil,
+		//		LondonBlock:         big.NewInt(0),
+		LondonBlock: nil,
+		Ethash:      nil,
 	}
 
 	genBalance := big.NewInt(1000000000000000000)
 	genKey, _ := mcommon.NewKey(rand.Reader)
 
 	genesis := &core.Genesis{
-		Config: chainConfig,
+		Config:     chainConfig,
 		Nonce:      0,
 		Number:     0,
 		ExtraData:  hexutil.MustDecode("0x00"),
 		GasLimit:   100000000,
 		Difficulty: big.NewInt(0),
-		Alloc: core.GenesisAlloc{ genKey.Address: { Balance: genBalance }},
+		Alloc:      core.GenesisAlloc{genKey.Address: {Balance: genBalance}},
 	}
 
 	etherbase := common.Address{1}
@@ -81,11 +83,11 @@ func main() {
 		Ethash:          ethconfig.Defaults.Ethash,
 		Miner: miner.Config{
 			Etherbase: etherbase,
-			GasCeil:  genesis.GasLimit * 11 / 10,
-			GasPrice: big.NewInt(1),
-			Recommit: time.Second,
+			GasCeil:   genesis.GasLimit * 11 / 10,
+			GasPrice:  big.NewInt(1),
+			Recommit:  time.Second,
 		},
-		ConsensusEngine:ethconfig.CreateDefaultConsensusEngine,
+		ConsensusEngine: ethconfig.CreateDefaultConsensusEngine,
 	}
 	datadir, err := filepath.Abs("./data")
 	if err != nil {
@@ -118,17 +120,16 @@ func main() {
 			NoDiscovery: true,
 			NoDial:      true,
 		},
-		Logger:nil,
+		Logger: nil,
 	}
 
-
-	ethchain,err:=chain.NewETHChainByCfg(&chain.MeerethConfig{
+	ethchain, err := chain.NewETHChainByCfg(&chain.MeerethConfig{
 		Eth:     config,
 		Node:    nodeConf,
 		Metrics: metrics.DefaultConfig,
 	})
 
-	err=ethchain.Start()
+	err = ethchain.Start()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -146,9 +147,9 @@ func main() {
 	gasLimit := 21000
 
 	// LondonBlock is not nil
-	gasPrice := big.NewInt(500000000)  // how the price work ?  not work
-	gasPrice = big.NewInt(510000000)   // how the price work ?  work, after 5 block (height=6)
-	gasPrice = big.NewInt(1000000000)  // how the price work ?  work immediately
+	gasPrice := big.NewInt(500000000) // how the price work ?  not work
+	gasPrice = big.NewInt(510000000)  // how the price work ?  work, after 5 block (height=6)
+	gasPrice = big.NewInt(1000000000) // how the price work ?  work immediately
 	// The working price from the example: miner/stress/1559/main.go
 	// gasPrice = big.NewInt(100000000000+mrand.Int63n(65536))
 
@@ -164,18 +165,19 @@ func main() {
 	//payee   balance=9,000,000,000,000
 	//21000*9 = 189000 => gas=189,000, price = 1 => fees = 189,000
 
-	payee, err := mcommon.NewKey(rand.Reader); checkError(err)
+	payee, err := mcommon.NewKey(rand.Reader)
+	checkError(err)
 
 	showBalance := func() {
 		state, err := ethchain.Ether().BlockChain().State()
 		checkError(err)
 		log.Info("miner account", "addr", etherbase, "balance", state.GetBalance(etherbase))
-		log.Info("genesis account", "addr", genKey.Address, "balance",state.GetBalance(genKey.Address))
+		log.Info("genesis account", "addr", genKey.Address, "balance", state.GetBalance(genKey.Address))
 		log.Info("payee account", "addr", payee.Address, "balance", state.GetBalance(payee.Address))
 	}
 
 	showTxPoolStatus := func() int {
-		pending, queued := ethchain.Backend().TxPool().Stats();
+		pending, queued := ethchain.Backend().TxPool().Stats()
 		log.Info("TxPool status", "pending", pending, "queued", queued)
 		return pending
 	}
@@ -184,8 +186,9 @@ func main() {
 		// send the tx
 		for i := 0; i < 9; i++ {
 			tx := types.NewTransaction(nonce, payee.Address, value, uint64(gasLimit), gasPrice, nil)
-			signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chainID), genKey.PrivateKey); checkError(err)
-			log.Info("Add signed tx to the local TxPool", "tx",signedTx.Hash())
+			signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chainID), genKey.PrivateKey)
+			checkError(err)
+			log.Info("Add signed tx to the local TxPool", "tx", signedTx.Hash())
 			if err := ethchain.Backend().TxPool().AddLocal(signedTx); err != nil {
 				log.Error("error when send tx", "error", err)
 				continue

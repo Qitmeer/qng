@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/meerevm/chain"
+	qcommon "github.com/Qitmeer/meerevm/common"
 	"github.com/Qitmeer/meerevm/evm/util"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/consensus"
@@ -24,7 +25,6 @@ import (
 	"runtime"
 	"sync"
 	"time"
-	qcommon "github.com/Qitmeer/meerevm/common"
 )
 
 // meerevm ID of the platform
@@ -32,9 +32,7 @@ const (
 	MeerEVMID = "meerevm"
 
 	txSlotSize = 32 * 1024
-	txMaxSize = 4 * txSlotSize
-
-
+	txMaxSize  = 4 * txSlotSize
 )
 
 type VM struct {
@@ -54,7 +52,7 @@ func (vm *VM) GetID() string {
 }
 
 func (vm *VM) Initialize(ctx consensus.Context) error {
-	util.InitLog(ctx.GetConfig().DebugLevel,ctx.GetConfig().DebugPrintOrigins)
+	util.InitLog(ctx.GetConfig().DebugLevel, ctx.GetConfig().DebugPrintOrigins)
 
 	log.Info("System info", "ETH VM Version", util.Version, "Go version", runtime.Version())
 
@@ -65,7 +63,7 @@ func (vm *VM) Initialize(ctx consensus.Context) error {
 	//
 	chain.InitEnv(ctx.GetConfig().EVMEnv)
 
-	ethchain,err:=chain.NewETHChain(vm.ctx.GetConfig().DataDir)
+	ethchain, err := chain.NewETHChain(vm.ctx.GetConfig().DataDir)
 	if err != nil {
 		return err
 	}
@@ -82,7 +80,7 @@ func (vm *VM) Initialize(ctx consensus.Context) error {
 
 func (vm *VM) Bootstrapping() error {
 	log.Debug("Bootstrapping")
-	err:=vm.chain.Start()
+	err := vm.chain.Start()
 	if err != nil {
 		return err
 	}
@@ -100,9 +98,9 @@ func (vm *VM) Bootstrapping() error {
 		log.Debug(fmt.Sprintf("MeerETH block chain current block number:%d", blockNum))
 	}
 
-	cbh:=vm.chain.Ether().BlockChain().CurrentBlock().Header()
+	cbh := vm.chain.Ether().BlockChain().CurrentBlock().Header()
 	if cbh != nil {
-		log.Debug(fmt.Sprintf("MeerETH block chain current block:number=%d hash=%s",cbh.Number.Uint64(),cbh.Hash().String()))
+		log.Debug(fmt.Sprintf("MeerETH block chain current block:number=%d hash=%s", cbh.Number.Uint64(), cbh.Hash().String()))
 	}
 
 	//
@@ -114,7 +112,7 @@ func (vm *VM) Bootstrapping() error {
 	log.Debug(fmt.Sprintf("Etherbase:%v balance:%v", vm.chain.Config().Eth.Miner.Etherbase, state.GetBalance(vm.chain.Config().Eth.Miner.Etherbase)))
 
 	//
-	for addr:=range vm.chain.Config().Eth.Genesis.Alloc {
+	for addr := range vm.chain.Config().Eth.Genesis.Alloc {
 		log.Debug(fmt.Sprintf("Alloc address:%v balance:%v", addr.String(), state.GetBalance(addr)))
 	}
 	//
@@ -143,16 +141,16 @@ func (vm *VM) Shutdown() error {
 }
 
 func (vm *VM) Version() string {
-	result:=map[string]string{}
-	result["MeerVer"]=util.Version
-	result["EvmVer"]=vm.chain.Config().Node.Version
-	result["ChainID"]=vm.chain.Ether().BlockChain().Config().ChainID.String()
-	result["NetworkId"]=fmt.Sprintf("%d",vm.chain.Config().Eth.NetworkId)
+	result := map[string]string{}
+	result["MeerVer"] = util.Version
+	result["EvmVer"] = vm.chain.Config().Node.Version
+	result["ChainID"] = vm.chain.Ether().BlockChain().Config().ChainID.String()
+	result["NetworkId"] = fmt.Sprintf("%d", vm.chain.Config().Eth.NetworkId)
 	if len(vm.chain.Config().Node.HTTPHost) > 0 {
-		result["http"]=fmt.Sprintf("http://%s:%d",vm.chain.Config().Node.HTTPHost,vm.chain.Config().Node.HTTPPort)
+		result["http"] = fmt.Sprintf("http://%s:%d", vm.chain.Config().Node.HTTPHost, vm.chain.Config().Node.HTTPPort)
 	}
 	if len(vm.chain.Config().Node.WSHost) > 0 {
-		result["ws"]=fmt.Sprintf("ws://%s:%d",vm.chain.Config().Node.WSHost,vm.chain.Config().Node.WSPort)
+		result["ws"] = fmt.Sprintf("ws://%s:%d", vm.chain.Config().Node.WSHost, vm.chain.Config().Node.WSPort)
 	}
 
 	resultJson, err := json.Marshal(result)
@@ -170,7 +168,7 @@ func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
 }
 
 func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
-	return 	nil,nil
+	return nil, nil
 }
 
 func (vm *VM) ConnectBlock(block consensus.Block) error {
@@ -209,11 +207,11 @@ func (vm *VM) GetBalance(addre string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	ba:=state.GetBalance(eAddr)
+	ba := state.GetBalance(eAddr)
 	if ba == nil {
-		return 0,fmt.Errorf("No balance")
+		return 0, fmt.Errorf("No balance")
 	}
-	ba=ba.Div(ba,qcommon.Precision)
+	ba = ba.Div(ba, qcommon.Precision)
 	return ba.Int64(), nil
 }
 
@@ -222,20 +220,20 @@ func (vm *VM) VerifyTx(tx consensus.Tx) (int64, error) {
 		txb := common.FromHex(string(tx.GetData()))
 		var txe = &types.Transaction{}
 		if err := txe.UnmarshalBinary(txb); err != nil {
-			return 0,fmt.Errorf("rlp decoding failed: %v", err)
+			return 0, fmt.Errorf("rlp decoding failed: %v", err)
 		}
-		err:=vm.validateTx(txe)
+		err := vm.validateTx(txe)
 		if err != nil {
-			return 0,err
+			return 0, err
 		}
-		cost:=txe.Cost()
-		cost=cost.Div(cost,qcommon.Precision)
-		return cost.Int64(),nil
+		cost := txe.Cost()
+		cost = cost.Div(cost, qcommon.Precision)
+		return cost.Int64(), nil
 	}
-	return 0,fmt.Errorf("Not support")
+	return 0, fmt.Errorf("Not support")
 }
 
-func (vm *VM)  validateTx(tx *types.Transaction) error {
+func (vm *VM) validateTx(tx *types.Transaction) error {
 	if uint64(tx.Size()) > txMaxSize {
 		return core.ErrOversizedData
 	}
@@ -280,21 +278,21 @@ func (vm *VM) addTx(tx *types.Transaction) error {
 	if err != nil {
 		return err
 	}
-	txmbHex:=hexutil.Encode(txmb)
+	txmbHex := hexutil.Encode(txmb)
 
 	mtx := qtypes.NewTransaction()
 	mtx.AddTxIn(&qtypes.TxInput{
 		PreviousOut: *qtypes.NewOutPoint(&hash.ZeroHash, qtypes.SupperPrevOutIndex),
 		Sequence:    uint32(qtypes.TxTypeCrossChainVM),
-		AmountIn: qtypes.Amount{Id:qtypes.ETHID,Value:0},
-		SignScript: []byte(txmbHex),
+		AmountIn:    qtypes.Amount{Id: qtypes.ETHID, Value: 0},
+		SignScript:  []byte(txmbHex),
 	})
 	mtx.AddTxOut(&qtypes.TxOutput{
 		Amount:   qtypes.Amount{Value: 0, Id: qtypes.ETHID},
 		PkScript: opreturn.NewEVMTx().PKScript(),
 	})
 
-	acceptedTxs,err:=vm.ctx.GetTxPool().ProcessTransaction(qtypes.NewTx(mtx),false,false,true)
+	acceptedTxs, err := vm.ctx.GetTxPool().ProcessTransaction(qtypes.NewTx(mtx), false, false, true)
 	if err != nil {
 		return err
 	}
@@ -306,16 +304,16 @@ func (vm *VM) addTx(tx *types.Transaction) error {
 
 func (vm *VM) initTxPool() {
 	go func() {
-		<-time.After(time.Second*2)
+		<-time.After(time.Second * 2)
 		log.Debug("EVM:start init txpool")
 		pending, err := vm.chain.Ether().TxPool().Pending(true)
 		if err != nil {
 			log.Error("Failed to fetch pending transactions", "err", err)
-		}else{
+		} else {
 			if len(pending) > 0 {
-				for _,txs :=range pending {
-					for _,tx:=range txs {
-						err:=vm.addTx(tx)
+				for _, txs := range pending {
+					for _, tx := range txs {
+						err := vm.addTx(tx)
 						if err != nil {
 							log.Error(err.Error())
 						}
@@ -337,7 +335,7 @@ out:
 
 		case ev := <-vm.txsCh:
 			for _, tx := range ev.Txs {
-				err:=vm.addTx(tx)
+				err := vm.addTx(tx)
 				if err != nil {
 					log.Error(err.Error())
 				}
@@ -356,7 +354,6 @@ cleanup:
 			break cleanup
 		}
 	}
-
 
 	vm.shutdownWg.Done()
 	log.Debug("Meerevm handler done")
