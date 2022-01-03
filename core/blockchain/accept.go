@@ -341,10 +341,11 @@ func (b *BlockChain) IsValidTxType(tt types.TxType) bool {
 		txTypesCfg = append(txTypesCfg, types.TokenTxs...)
 	}
 
-	ok, err = b.isDeploymentActive(params.DeploymentMeerEVM)
-	if err == nil && ok && len(types.MeerEVMTxs) > 0 {
+	// TODO Deployment should be used in the future depending on the situation
+	//ok, err = b.isDeploymentActive(params.DeploymentMeerEVM)
+	//if err == nil && ok && len(types.MeerEVMTxs) > 0 {
 		txTypesCfg = append(txTypesCfg, types.MeerEVMTxs...)
-	}
+	//}
 
 	for _, txt := range txTypesCfg {
 		if txt == tt {
