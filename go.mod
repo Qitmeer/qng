@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/Qitmeer/meerevm v0.0.0-20211231010647-a21b05151b1d
-	github.com/Qitmeer/qng-core v1.2.6
+	github.com/Qitmeer/qng-core v1.2.7
 	github.com/davecgh/go-spew v1.1.1
 	github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f // indirect
 	github.com/deckarep/golang-set v1.7.1
