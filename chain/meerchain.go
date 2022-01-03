@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 
+	qcommon "github.com/Qitmeer/meerevm/common"
 	qconsensus "github.com/Qitmeer/qng-core/consensus"
 	qtypes "github.com/Qitmeer/qng-core/core/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -20,18 +21,17 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
-	qcommon "github.com/Qitmeer/meerevm/common"
 )
 
 type MeerChain struct {
-	chain  *ETHChain
+	chain *ETHChain
 
 	parent *types.Block
 }
 
 func (b *MeerChain) ConnectBlock(block qconsensus.Block) error {
 
-	mblock,_,err:=b.buildBlock(block.Transactions())
+	mblock, _, err := b.buildBlock(block.Transactions())
 
 	if err != nil {
 		return err
@@ -48,14 +48,13 @@ func (b *MeerChain) ConnectBlock(block qconsensus.Block) error {
 	b.parent = mblock
 
 	//
-	mbhb:=block.ID().Bytes()
+	mbhb := block.ID().Bytes()
 	qcommon.ReverseBytes(&mbhb)
-	mbh:=common.BytesToHash(mbhb)
+	mbh := common.BytesToHash(mbhb)
 	//
-	WriteBlockNumber(b.chain.Ether().ChainDb(),mbh,mblock.NumberU64())
+	WriteBlockNumber(b.chain.Ether().ChainDb(), mbh, mblock.NumberU64())
 	//
-	log.Debug(fmt.Sprintf("MeerEVM Block:number=%d hash=%s txs=%d  => blockHash(%s) txs=%d", mblock.Number().Uint64(), mblock.Hash().String(), len(mblock.Transactions()),mbh.String(), len(block.Transactions())))
-
+	log.Debug(fmt.Sprintf("MeerEVM Block:number=%d hash=%s txs=%d  => blockHash(%s) txs=%d", mblock.Number().Uint64(), mblock.Hash().String(), len(mblock.Transactions()), mbh.String(), len(block.Transactions())))
 
 	return nil
 }
@@ -64,16 +63,16 @@ func (b *MeerChain) DisconnectBlock(block qconsensus.Block) error {
 	if b.parent == nil {
 		return nil
 	}
-	mbhb:=block.ID().Bytes()
+	mbhb := block.ID().Bytes()
 	qcommon.ReverseBytes(&mbhb)
-	mbh:=common.BytesToHash(mbhb)
+	mbh := common.BytesToHash(mbhb)
 
-	bn:=ReadBlockNumber(b.chain.Ether().ChainDb(),mbh)
+	bn := ReadBlockNumber(b.chain.Ether().ChainDb(), mbh)
 	if bn == nil {
 		return nil
 	}
 	defer func() {
-		DeleteBlockNumber(b.chain.Ether().ChainDb(),mbh)
+		DeleteBlockNumber(b.chain.Ether().ChainDb(), mbh)
 	}()
 
 	if *bn > b.parent.NumberU64() {
@@ -82,67 +81,64 @@ func (b *MeerChain) DisconnectBlock(block qconsensus.Block) error {
 
 	var newParent *types.Block
 	if *bn == b.parent.NumberU64() {
-		newParent=b.chain.Ether().BlockChain().GetBlockByHash(b.parent.ParentHash())
+		newParent = b.chain.Ether().BlockChain().GetBlockByHash(b.parent.ParentHash())
 
-	}else{
-		newParent=b.chain.Ether().BlockChain().GetBlockByNumber(*bn)
+	} else {
+		newParent = b.chain.Ether().BlockChain().GetBlockByNumber(*bn)
 	}
 
 	if newParent == nil {
-		return fmt.Errorf("Can't find %v in meerevm",b.parent.ParentHash().String())
+		return fmt.Errorf("Can't find %v in meerevm", b.parent.ParentHash().String())
 	}
 
-	log.Debug(fmt.Sprintf("Reorganize:%s(%d) => %s(%d)",b.parent.Hash().String(),b.parent.NumberU64(),newParent.Hash().String(),newParent.NumberU64()))
-	b.parent=newParent
+	log.Debug(fmt.Sprintf("Reorganize:%s(%d) => %s(%d)", b.parent.Hash().String(), b.parent.NumberU64(), newParent.Hash().String(), newParent.NumberU64()))
+	b.parent = newParent
 	return nil
 }
 
-func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx) (*types.Block, types.Receipts,error) {
-	config:=b.chain.Config().Eth.Genesis.Config
-	engine:=b.chain.Ether().Engine()
-	db:=b.chain.Ether().ChainDb()
+func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx) (*types.Block, types.Receipts, error) {
+	config := b.chain.Config().Eth.Genesis.Config
+	engine := b.chain.Ether().Engine()
+	db := b.chain.Ether().ChainDb()
 
 	if b.parent == nil {
-		b.parent=b.chain.Ether().BlockChain().CurrentBlock()
+		b.parent = b.chain.Ether().BlockChain().CurrentBlock()
 	}
 
-
-	uncles   :=[]*types.Header{}
+	uncles := []*types.Header{}
 
 	chainreader := &fakeChainReader{config: config}
 
 	statedb, err := state.New(b.parent.Root(), state.NewDatabase(db), nil)
 	if err != nil {
-		return nil,nil,err
+		return nil, nil, err
 	}
-
 
 	header := makeHeader(chainreader, b.parent, statedb, engine)
 
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(statedb)
 	}
-	txs,receipts,err:=b.fillBlock(qtxs,header,statedb)
+	txs, receipts, err := b.fillBlock(qtxs, header, statedb)
 	if err != nil {
-		return nil,nil,err
+		return nil, nil, err
 	}
 
 	block, _ := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts)
 
 	root, err := statedb.Commit(config.IsEIP158(header.Number))
 	if err != nil {
-		return nil,nil,fmt.Errorf(fmt.Sprintf("state write error: %v", err))
+		return nil, nil, fmt.Errorf(fmt.Sprintf("state write error: %v", err))
 	}
 	if err := statedb.Database().TrieDB().Commit(root, false, nil); err != nil {
-		return nil,nil,fmt.Errorf(fmt.Sprintf("trie write error: %v", err))
+		return nil, nil, fmt.Errorf(fmt.Sprintf("trie write error: %v", err))
 	}
-	return block, receipts,nil
+	return block, receipts, nil
 }
 
-func (b *MeerChain) fillBlock(qtxs []qconsensus.Tx,header *types.Header,statedb *state.StateDB) ([]*types.Transaction,[]*types.Receipt,error) {
-	txs      :=[]*types.Transaction{}
-	receipts :=[]*types.Receipt{}
-
+func (b *MeerChain) fillBlock(qtxs []qconsensus.Tx, header *types.Header, statedb *state.StateDB) ([]*types.Transaction, []*types.Receipt, error) {
+	txs := []*types.Transaction{}
+	receipts := []*types.Receipt{}
 
 	header.Coinbase = b.chain.config.Eth.Miner.Etherbase
 	for _, tx := range qtxs {
@@ -150,15 +146,15 @@ func (b *MeerChain) fillBlock(qtxs []qconsensus.Tx,header *types.Header,statedb 
 			txb := common.FromHex(string(tx.GetData()))
 			var txmb = &types.Transaction{}
 			if err := txmb.UnmarshalBinary(txb); err != nil {
-				return nil,nil,err
+				return nil, nil, err
 			}
 			pubkBytes, err := hex.DecodeString(tx.GetTo())
 			if err != nil {
-				return nil,nil,err
+				return nil, nil, err
 			}
 			publicKey, err := crypto.UnmarshalPubkey(pubkBytes)
 			if err != nil {
-				return nil,nil,err
+				return nil, nil, err
 			}
 
 			toAddr := crypto.PubkeyToAddress(*publicKey)
@@ -173,72 +169,77 @@ func (b *MeerChain) fillBlock(qtxs []qconsensus.Tx,header *types.Header,statedb 
 		if tx.GetTxType() == qtypes.TxTypeCrossChainExport {
 			pubkBytes, err := hex.DecodeString(tx.GetTo())
 			if err != nil {
-				return nil,nil,err
+				return nil, nil, err
 			}
 			publicKey, err := crypto.UnmarshalPubkey(pubkBytes)
 			if err != nil {
-				return nil,nil,err
+				return nil, nil, err
 			}
 
+			value := big.NewInt(int64(tx.GetValue()))
+			value = value.Mul(value, qcommon.Precision)
 			toAddr := crypto.PubkeyToAddress(*publicKey)
 			txData := &types.AccessListTx{
 				To:    &toAddr,
-				Value: big.NewInt(int64(tx.GetValue())),
+				Value: value,
 				Nonce: uint64(tx.GetTxType()),
 			}
 			etx := types.NewTx(txData)
 			txmb, err := etx.MarshalBinary()
 			if err != nil {
-				return nil,nil,err
+				return nil, nil, err
 			}
-			if len(header.Extra) > 0  {
-				return nil,nil,fmt.Errorf("import and export tx conflict")
+			if len(header.Extra) > 0 {
+				return nil, nil, fmt.Errorf("import and export tx conflict")
 			}
 			header.Extra = txmb
 		} else if tx.GetTxType() == qtypes.TxTypeCrossChainImport {
 			pubkBytes, err := hex.DecodeString(tx.GetFrom())
 			if err != nil {
-				return nil,nil,err
+				return nil, nil, err
 			}
 			publicKey, err := crypto.UnmarshalPubkey(pubkBytes)
 			if err != nil {
-				return nil,nil,err
+				return nil, nil, err
 			}
 
 			toAddr := crypto.PubkeyToAddress(*publicKey)
+
+			value := big.NewInt(int64(tx.GetValue()))
+			value = value.Mul(value, qcommon.Precision)
 			txData := &types.AccessListTx{
 				To:    &toAddr,
-				Value: big.NewInt(int64(tx.GetValue())),
+				Value: value,
 				Nonce: uint64(tx.GetTxType()),
 			}
 			etx := types.NewTx(txData)
 			txmb, err := etx.MarshalBinary()
 			if err != nil {
-				return nil,nil,err
+				return nil, nil, err
 			}
-			if len(header.Extra) > 0  {
-				return nil,nil,fmt.Errorf("import and export tx conflict")
+			if len(header.Extra) > 0 {
+				return nil, nil, fmt.Errorf("import and export tx conflict")
 			}
 			header.Extra = txmb
 		} else if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
 			txb := common.FromHex(string(tx.GetData()))
 			var txmb = &types.Transaction{}
 			if err := txmb.UnmarshalBinary(txb); err != nil {
-				return nil,nil,err
+				return nil, nil, err
 			}
-			err:=b.addTx(txmb,header,statedb,&txs,&receipts,gasPool)
+			err := b.addTx(txmb, header, statedb, &txs, &receipts, gasPool)
 			if err != nil {
-				return nil,nil,err
+				return nil, nil, err
 			}
 		}
 
 	}
 
-	return txs,receipts,nil
+	return txs, receipts, nil
 }
 
-func (b *MeerChain) addTx(tx *types.Transaction,header  *types.Header,statedb *state.StateDB,txs *[]*types.Transaction, receipts *[]*types.Receipt,gasPool  *core.GasPool) error {
-	config:=b.chain.Config().Eth.Genesis.Config
+func (b *MeerChain) addTx(tx *types.Transaction, header *types.Header, statedb *state.StateDB, txs *[]*types.Transaction, receipts *[]*types.Receipt, gasPool *core.GasPool) error {
+	config := b.chain.Config().Eth.Genesis.Config
 	statedb.Prepare(tx.Hash(), len(*txs))
 	receipt, err := core.ApplyTransaction(config, nil, &header.Coinbase, gasPool, statedb, header, tx, &header.GasUsed, vm.Config{})
 	if err != nil {
@@ -250,13 +251,10 @@ func (b *MeerChain) addTx(tx *types.Transaction,header  *types.Header,statedb *s
 	return nil
 }
 
-
-func NewMeerChain(chain  *ETHChain) *MeerChain {
-	mc:=&MeerChain{chain:chain}
+func NewMeerChain(chain *ETHChain) *MeerChain {
+	mc := &MeerChain{chain: chain}
 	return mc
 }
-
-
 
 func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.StateDB, engine consensus.Engine) *types.Header {
 	var time uint64

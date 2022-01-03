@@ -31,11 +31,11 @@ func (ctx *MContext) GetNotify() consensus.Notify {
 }
 
 func main() {
-	debugLevel:="trace"
-	debugPrintOrigins:=true
-	util.InitLog(debugLevel,debugPrintOrigins)
+	debugLevel := "trace"
+	debugPrintOrigins := true
+	util.InitLog(debugLevel, debugPrintOrigins)
 
-	ctx:=&MContext{
+	ctx := &MContext{
 		Context: context.Background(),
 		Cfg: &config.Config{
 			DataDir:           "./data",
@@ -43,7 +43,7 @@ func main() {
 			DebugPrintOrigins: debugPrintOrigins,
 		},
 	}
-	vm:=evm.New()
+	vm := evm.New()
 	vm.Initialize(ctx)
 	log.Info(vm.Version())
 }

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/meerevm/evm/engine"
 	"github.com/Qitmeer/qng-core/core/protocol"
+	qparams "github.com/Qitmeer/qng-core/params"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/external"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -29,7 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
-	qparams "github.com/Qitmeer/qng-core/params"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
 	"path/filepath"
@@ -42,8 +42,8 @@ var (
 	// ClientIdentifier is a hard coded identifier to report into the network.
 	ClientIdentifier = "meereth"
 
-	MeerethChainID int64 = 223
-	Args []string = []string{ClientIdentifier}
+	MeerethChainID int64    = 223
+	Args           []string = []string{ClientIdentifier}
 )
 
 type ETHChain struct {
@@ -52,16 +52,14 @@ type ETHChain struct {
 	started  int32
 	shutdown int32
 
-	config *MeerethConfig
-	node   *node.Node
-	ether  *eth.Ethereum
+	config  *MeerethConfig
+	node    *node.Node
+	ether   *eth.Ethereum
 	backend *eth.EthAPIBackend
 
 	genPrivateKey *ecdsa.PrivateKey
-	genAddress common.Address
-
+	genAddress    common.Address
 }
-
 
 func (ec *ETHChain) Start() error {
 	if atomic.AddInt32(&ec.started, 1) != 1 {
@@ -110,9 +108,9 @@ func (ec *ETHChain) Config() *MeerethConfig {
 }
 
 func (ec *ETHChain) startNode() error {
-	stack:=ec.node
-	ctx:=ec.ctx
-	err:=stack.Start()
+	stack := ec.node
+	ctx := ec.ctx
+	err := stack.Start()
 	if err != nil {
 		return err
 	}
@@ -198,7 +196,7 @@ func (ec *ETHChain) startNode() error {
 }
 
 func (ec *ETHChain) unlockAccounts() {
-	stack:=ec.node
+	stack := ec.node
 	var unlocks []string
 	inputs := strings.Split(ec.ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
 	for _, input := range inputs {
@@ -222,8 +220,8 @@ func (ec *ETHChain) unlockAccounts() {
 	}
 }
 
-func NewETHChainByCfg(config *MeerethConfig) (*ETHChain,error) {
-	ec:=&ETHChain{config:config}
+func NewETHChainByCfg(config *MeerethConfig) (*ETHChain, error) {
+	ec := &ETHChain{config: config}
 
 	//
 	app := cli.NewApp()
@@ -368,7 +366,7 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain,error) {
 	app.Action = func(ctx *cli.Context) {
 		ec.ctx = ctx
 		filterConfig(ctx)
-		ec.node, ec.backend, ec.ether = makeFullNode(ec.ctx,ec.config)
+		ec.node, ec.backend, ec.ether = makeFullNode(ec.ctx, ec.config)
 	}
 	app.HideVersion = true
 	app.Copyright = ClientIdentifier
@@ -377,24 +375,24 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain,error) {
 	app.Flags = append(app.Flags, rpcFlags...)
 	app.Flags = append(app.Flags, metricsFlags...)
 
-	err:=app.Run(Args)
-	if err !=nil {
-		return nil,err
+	err := app.Run(Args)
+	if err != nil {
+		return nil, err
 	}
 
-	return ec,nil
+	return ec, nil
 }
 
-func NewETHChain(datadir string) (*ETHChain,error) {
-	config,err:=makeMeerethConfig(datadir)
+func NewETHChain(datadir string) (*ETHChain, error) {
+	config, err := makeMeerethConfig(datadir)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	return NewETHChainByCfg(config)
 }
 
-func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
-	chainConfig := &params.ChainConfig {
+func makeMeerethConfig(datadir string) (*MeerethConfig, error) {
+	chainConfig := &params.ChainConfig{
 		ChainID:             big.NewInt(MeerethChainID),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
@@ -427,7 +425,6 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 		Alloc:      core.GenesisAlloc{genAddress: {Balance: genBalance}},
 	}
 
-
 	etherbase := common.Address{}
 	econfig := ethconfig.Defaults
 
@@ -439,12 +436,10 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	econfig.TrieDirtyCache = 0
 	econfig.ConsensusEngine = CreateConsensusEngine
 
-
 	econfig.Ethash.DatasetDir = "ethash/dataset"
 
 	econfig.Miner.Etherbase = etherbase
 	econfig.Miner.ExtraData = []byte{byte(0)}
-
 
 	nodeConf := node.DefaultConfig
 
@@ -457,25 +452,24 @@ func makeMeerethConfig(datadir string) (*MeerethConfig,error) {
 	nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
 	//nodeConf.HTTPHost = node.DefaultHTTPHost
 	//nodeConf.WSHost = node.DefaultWSHost
-	nodeConf.HTTPPort,nodeConf.WSPort=getDefaultRPCPort()
-
+	nodeConf.HTTPPort, nodeConf.WSPort = getDefaultRPCPort()
 
 	nodeConf.P2P.MaxPeers = 0
 	nodeConf.P2P.DiscoveryV5 = false
 	nodeConf.P2P.NoDiscovery = true
 	nodeConf.P2P.NoDial = true
 	nodeConf.P2P.ListenAddr = ""
-	nodeConf.P2P.NAT=nil
+	nodeConf.P2P.NAT = nil
 	//
 	return &MeerethConfig{
 		Eth:     econfig,
 		Node:    nodeConf,
 		Metrics: metrics.DefaultConfig,
-	},nil
+	}, nil
 }
 
-func makeFullNode(ctx *cli.Context,cfg *MeerethConfig) (*node.Node, *eth.EthAPIBackend,*eth.Ethereum) {
-	stack:= makeConfigNode(ctx,cfg)
+func makeFullNode(ctx *cli.Context, cfg *MeerethConfig) (*node.Node, *eth.EthAPIBackend, *eth.Ethereum) {
+	stack := makeConfigNode(ctx, cfg)
 	if ctx.GlobalIsSet(utils.OverrideLondonFlag.Name) {
 		cfg.Eth.OverrideLondon = new(big.Int).SetUint64(ctx.GlobalUint64(utils.OverrideLondonFlag.Name))
 	}
@@ -496,10 +490,10 @@ func makeFullNode(ctx *cli.Context,cfg *MeerethConfig) (*node.Node, *eth.EthAPIB
 	if cfg.Ethstats.URL != "" {
 		utils.RegisterEthStatsService(stack, backend, cfg.Ethstats.URL)
 	}
-	return stack, backend.(*eth.EthAPIBackend),ethe
+	return stack, backend.(*eth.EthAPIBackend), ethe
 }
 
-func makeConfigNode(ctx *cli.Context,cfg *MeerethConfig) *node.Node {
+func makeConfigNode(ctx *cli.Context, cfg *MeerethConfig) *node.Node {
 	utils.SetNodeConfig(ctx, &cfg.Node)
 	stack, err := node.New(&cfg.Node)
 	if err != nil {
@@ -517,7 +511,6 @@ func makeConfigNode(ctx *cli.Context,cfg *MeerethConfig) *node.Node {
 
 	return stack
 }
-
 
 func setAccountManagerBackends(stack *node.Node) error {
 	conf := stack.Config()
@@ -568,7 +561,6 @@ func setAccountManagerBackends(stack *node.Node) error {
 
 	return nil
 }
-
 
 func applyMetricConfig(ctx *cli.Context, cfg *MeerethConfig) {
 	if ctx.GlobalIsSet(utils.MetricsEnabledFlag.Name) {
@@ -689,59 +681,59 @@ func InitEnv(env string) {
 	if len(env) <= 0 {
 		return
 	}
-	args:=strings.Split(env," ")
+	args := strings.Split(env, " ")
 	if len(args) <= 0 {
 		return
 	}
-	log.Debug(fmt.Sprintf("Initialize meerevm environment:%v",args))
-	Args=append(Args,args...)
+	log.Debug(fmt.Sprintf("Initialize meerevm environment:%v", args))
+	Args = append(Args, args...)
 }
 
-func filterConfig(ctx *cli.Context)  {
-	hms:=ctx.GlobalString(utils.HTTPApiFlag.Name)
+func filterConfig(ctx *cli.Context) {
+	hms := ctx.GlobalString(utils.HTTPApiFlag.Name)
 	if len(hms) > 0 {
 		modules := utils.SplitAndTrim(hms)
-		nmodules:=""
-		for _,mod:=range modules {
+		nmodules := ""
+		for _, mod := range modules {
 			if mod == "ethash" || mod == "miner" {
 				continue
 			}
 			if len(nmodules) > 0 {
 				nmodules = nmodules + "," + mod
-			}else{
+			} else {
 				nmodules = mod
 			}
 		}
-		ctx.GlobalSet(utils.HTTPApiFlag.Name,nmodules)
+		ctx.GlobalSet(utils.HTTPApiFlag.Name, nmodules)
 	}
 
-	wms:=ctx.GlobalString(utils.WSApiFlag.Name)
+	wms := ctx.GlobalString(utils.WSApiFlag.Name)
 	if len(hms) > 0 {
 		modules := utils.SplitAndTrim(wms)
-		nmodules:=""
-		for _,mod:=range modules {
+		nmodules := ""
+		for _, mod := range modules {
 			if mod == "ethash" || mod == "miner" {
 				continue
 			}
 			if len(nmodules) > 0 {
 				nmodules = nmodules + "," + mod
-			}else{
+			} else {
 				nmodules = mod
 			}
 		}
-		ctx.GlobalSet(utils.WSApiFlag.Name,nmodules)
+		ctx.GlobalSet(utils.WSApiFlag.Name, nmodules)
 	}
 }
 
-func getDefaultRPCPort() (int,int) {
+func getDefaultRPCPort() (int, int) {
 	switch qparams.ActiveNetParams.Net {
 	case protocol.MainNet:
-		return 8535,8536
+		return 8535, 8536
 	case protocol.TestNet:
-		return 18535,18536
+		return 18535, 18536
 	case protocol.MixNet:
-		return 28535,28536
+		return 28535, 28536
 	default:
-		return 38535,38536
+		return 38535, 38536
 	}
 }
