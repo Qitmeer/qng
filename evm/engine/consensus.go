@@ -273,16 +273,19 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 
 	if tx.Nonce() == uint64(qtypes.TxTypeCrossChainExport) {
 		state.AddBalance(*tx.To(), tx.Value())
-		me.config.Log.Info(fmt.Sprintf("Cross chain(%s):%d(MEER) => %d(ETH)", tx.To().String(), tx.Value().Int64(), tx.Value().Int64()))
+		me.config.Log.Info(fmt.Sprintf("Cross chain(%s):%s(MEER) => %s(ETH)", tx.To().String(), tx.Value().String(), tx.Value().String()))
 	} else {
-		state.SetBalance(*tx.To(),big.NewInt(0))
-		me.config.Log.Info(fmt.Sprintf("Cross chain(%s):%d(ETH) => %d(MEER)", tx.To().String(), tx.Value().Int64(), tx.Value().Int64()))
+		state.SubBalance(*tx.To(),tx.Value())
+		me.config.Log.Info(fmt.Sprintf("Cross chain(%s):%s(ETH) => %s(MEER)", tx.To().String(), tx.Value().String(), tx.Value().String()))
 	}
 
 
 	newBalance:=state.GetBalance(*tx.To())
 
-	me.config.Log.Info(fmt.Sprintf("Balance(%s): %d => %d",tx.To().String(),oldBalance.Int64(),newBalance.Int64()))
+	changeB:=big.NewInt(0)
+	changeB=changeB.Sub(newBalance,oldBalance)
+
+	me.config.Log.Info(fmt.Sprintf("Balance(%s): %s => %s = %s",tx.To().String(),oldBalance.String(),newBalance.String(),changeB.String()))
 
 	nonce := state.GetNonce(*tx.To())
 	state.SetNonce(*tx.To(), nonce)

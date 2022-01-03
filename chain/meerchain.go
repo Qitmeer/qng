@@ -180,10 +180,12 @@ func (b *MeerChain) fillBlock(qtxs []qconsensus.Tx,header *types.Header,statedb 
 				return nil,nil,err
 			}
 
+			value:=big.NewInt(int64(tx.GetValue()))
+			value=value.Mul(value,qcommon.Precision)
 			toAddr := crypto.PubkeyToAddress(*publicKey)
 			txData := &types.AccessListTx{
 				To:    &toAddr,
-				Value: big.NewInt(int64(tx.GetValue())),
+				Value: value,
 				Nonce: uint64(tx.GetTxType()),
 			}
 			etx := types.NewTx(txData)
@@ -206,9 +208,12 @@ func (b *MeerChain) fillBlock(qtxs []qconsensus.Tx,header *types.Header,statedb 
 			}
 
 			toAddr := crypto.PubkeyToAddress(*publicKey)
+
+			value:=big.NewInt(int64(tx.GetValue()))
+			value=value.Mul(value,qcommon.Precision)
 			txData := &types.AccessListTx{
 				To:    &toAddr,
-				Value: big.NewInt(int64(tx.GetValue())),
+				Value: value,
 				Nonce: uint64(tx.GetTxType()),
 			}
 			etx := types.NewTx(txData)

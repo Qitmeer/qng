@@ -9,6 +9,9 @@ import (
 	"github.com/Qitmeer/qng-core/crypto/ecc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
+	"math/big"
+	qtypes "github.com/Qitmeer/qng-core/core/types"
 )
 
 func ReverseBytes(bs *[]byte) {
@@ -33,3 +36,7 @@ func NewMeerEVMAddress(pubkeyHex string) (common.Address,error) {
 	}
 	return crypto.PubkeyToAddress(*publicKey.ToECDSA()),nil
 }
+
+var (
+	Precision = big.NewInt(params.Ether).Mul(big.NewInt(params.Ether),big.NewInt(qtypes.AtomsPerCoin))
+)

@@ -24,6 +24,7 @@ import (
 	"runtime"
 	"sync"
 	"time"
+	qcommon "github.com/Qitmeer/meerevm/common"
 )
 
 // meerevm ID of the platform
@@ -32,6 +33,8 @@ const (
 
 	txSlotSize = 32 * 1024
 	txMaxSize = 4 * txSlotSize
+
+
 )
 
 type VM struct {
@@ -206,7 +209,12 @@ func (vm *VM) GetBalance(addre string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return state.GetBalance(eAddr).Int64(), nil
+	ba:=state.GetBalance(eAddr)
+	if ba == nil {
+		return 0,fmt.Errorf("No balance")
+	}
+	ba=ba.Div(ba,qcommon.Precision)
+	return ba.Int64(), nil
 }
 
 func (vm *VM) VerifyTx(tx consensus.Tx) (int64, error) {
@@ -220,7 +228,9 @@ func (vm *VM) VerifyTx(tx consensus.Tx) (int64, error) {
 		if err != nil {
 			return 0,err
 		}
-		return txe.Cost().Int64(),nil
+		cost:=txe.Cost()
+		cost=cost.Div(cost,qcommon.Precision)
+		return cost.Int64(),nil
 	}
 	return 0,fmt.Errorf("Not support")
 }
