@@ -124,8 +124,8 @@ var TestNetParams = Params{
 		},
 		DeploymentMeerEVM: {
 			BitNumber:  1,
-			StartTime:  253340, // =238940+2880*5
-			ExpireTime: 253440,
+			StartTime:  270561, // =270561+2880
+			ExpireTime: 270661,
 		},
 	},
 
