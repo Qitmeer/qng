@@ -209,7 +209,7 @@ func (vm *VM) GetBalance(addre string) (int64, error) {
 	}
 	ba := state.GetBalance(eAddr)
 	if ba == nil {
-		return 0, fmt.Errorf("No balance")
+		return 0, fmt.Errorf("No balance for address %s", eAddr)
 	}
 	ba = ba.Div(ba, qcommon.Precision)
 	return ba.Int64(), nil
