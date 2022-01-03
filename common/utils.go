@@ -38,5 +38,5 @@ func NewMeerEVMAddress(pubkeyHex string) (common.Address,error) {
 }
 
 var (
-	Precision = big.NewInt(params.Ether).Mul(big.NewInt(params.Ether),big.NewInt(qtypes.AtomsPerCoin))
+	Precision = big.NewInt(params.Ether).Div(big.NewInt(params.Ether),big.NewInt(qtypes.AtomsPerCoin))
 )
