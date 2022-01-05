@@ -3,7 +3,7 @@ module github.com/Qitmeer/qng
 go 1.14
 
 require (
-	github.com/Qitmeer/meerevm v0.0.0-20220103092335-1b350b5fe768
+	github.com/Qitmeer/meerevm v0.0.0-20220105083239-9c42f85955b8
 	github.com/Qitmeer/qng-core v1.2.7
 	github.com/davecgh/go-spew v1.1.1
 	github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f // indirect

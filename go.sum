@@ -62,6 +62,7 @@ github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a h1:LUGOJG/lF0TlnlYT
 github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:gbGKdXSJn71Mc2xcKJHqC/waPiX0byZae67zarj83m4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a h1:O2Erw/YvYAkIqkc2uvP/WwuWf0V8S0+pjU/FKHmjFU4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:KiA7g46zc6dkgf/3NbEpJirY75v656WYlmSQNR1wTVk=
+github.com/Qitmeer/go-ethereum v1.10.9-3 h1:TtbYnrkrd8Z/sjGdAxHpRLBoRF/c/DbEvGfgtTWDe6k=
 github.com/Qitmeer/go-ethereum v1.10.9-3/go.mod h1:c5mdg+S/A4faGVSyjul+xYkXdBVg3edy3DpsGhdzBmU=
 github.com/Qitmeer/go-ethereum v1.10.9-q.2 h1:60fEOiCZ/L/opJ62dnHyql0ZNBkwpTm43owguOQeMbI=
 github.com/Qitmeer/go-ethereum v1.10.9-q.2/go.mod h1:c5mdg+S/A4faGVSyjul+xYkXdBVg3edy3DpsGhdzBmU=
@@ -74,6 +75,8 @@ github.com/Qitmeer/meerevm v0.0.0-20220103055737-300cb6eb3fc8 h1:c8950P2ypLZrFFi
 github.com/Qitmeer/meerevm v0.0.0-20220103055737-300cb6eb3fc8/go.mod h1:IBsFUNltSxTvPBeAcYjlQFQySdcZ6XgYN2KDfsbLTXA=
 github.com/Qitmeer/meerevm v0.0.0-20220103092335-1b350b5fe768 h1:GonGBosRDhHnyOnuoXhIg5pithqFStiI3txda1E+XQg=
 github.com/Qitmeer/meerevm v0.0.0-20220103092335-1b350b5fe768/go.mod h1:IBsFUNltSxTvPBeAcYjlQFQySdcZ6XgYN2KDfsbLTXA=
+github.com/Qitmeer/meerevm v0.0.0-20220105083239-9c42f85955b8 h1:RnYtvHfR/sijV2hxn6KND3L3vepfMsHiYRn4GhR2C3Q=
+github.com/Qitmeer/meerevm v0.0.0-20220105083239-9c42f85955b8/go.mod h1:9VY9ahc8xMcbgOU3zf1Zi/fsjHVVOzvYV8kAdhc5xB8=
 github.com/Qitmeer/qng-core v1.2.6/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
 github.com/Qitmeer/qng-core v1.2.7 h1:tWQAlXMh9/1DXumPEOBUumprnM15lSlwSq+MfL+qjNU=
 github.com/Qitmeer/qng-core v1.2.7/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
