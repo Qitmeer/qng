@@ -257,8 +257,6 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain, error) {
 		utils.EthashDatasetsInMemoryFlag,
 		utils.EthashDatasetsOnDiskFlag,
 		utils.EthashDatasetsLockMmapFlag,
-		utils.TxPoolLocalsFlag,
-		utils.TxPoolNoLocalsFlag,
 		utils.TxPoolJournalFlag,
 		utils.TxPoolRejournalFlag,
 		utils.TxPoolPriceLimitFlag,
@@ -441,6 +439,8 @@ func makeMeerethConfig(datadir string) (*MeerethConfig, error) {
 	econfig.Miner.Etherbase = etherbase
 	econfig.Miner.ExtraData = []byte{byte(0)}
 
+	econfig.TxPool.NoLocals=true
+
 	nodeConf := node.DefaultConfig
 
 	nodeConf.DataDir = datadir
@@ -460,6 +460,7 @@ func makeMeerethConfig(datadir string) (*MeerethConfig, error) {
 	nodeConf.P2P.NoDial = true
 	nodeConf.P2P.ListenAddr = ""
 	nodeConf.P2P.NAT = nil
+
 	//
 	return &MeerethConfig{
 		Eth:     econfig,

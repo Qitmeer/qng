@@ -227,6 +227,7 @@ func (vm *VM) VerifyTx(tx consensus.Tx) (int64, error) {
 			return 0, err
 		}
 		cost := txe.Cost()
+		cost = cost.Sub(cost,txe.Value())
 		cost = cost.Div(cost, qcommon.Precision)
 		return cost.Int64(), nil
 	}
@@ -302,22 +303,27 @@ func (vm *VM) addTx(tx *types.Transaction) error {
 	return nil
 }
 
+func (vm *VM) sendTxs(txs []*types.Transaction) {
+	for _, tx := range txs {
+		err := vm.addTx(tx)
+		if err != nil {
+			log.Error(fmt.Sprintf("Remove tx(%s) from tx pool:%v",tx.Hash().String(),err.Error()))
+			vm.chain.Ether().TxPool().RemoveTx(tx.Hash(),true)
+		}
+	}
+}
+
 func (vm *VM) initTxPool() {
 	go func() {
 		<-time.After(time.Second * 2)
 		log.Debug("EVM:start init txpool")
-		pending, err := vm.chain.Ether().TxPool().Pending(true)
+		pending, err := vm.chain.Ether().TxPool().Pending(false)
 		if err != nil {
 			log.Error("Failed to fetch pending transactions", "err", err)
 		} else {
 			if len(pending) > 0 {
 				for _, txs := range pending {
-					for _, tx := range txs {
-						err := vm.addTx(tx)
-						if err != nil {
-							log.Error(err.Error())
-						}
-					}
+					vm.sendTxs(txs)
 				}
 			}
 		}
@@ -334,12 +340,7 @@ out:
 		select {
 
 		case ev := <-vm.txsCh:
-			for _, tx := range ev.Txs {
-				err := vm.addTx(tx)
-				if err != nil {
-					log.Error(err.Error())
-				}
-			}
+			vm.sendTxs(ev.Txs)
 
 		case <-vm.shutdownChan:
 			break out
