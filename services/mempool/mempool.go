@@ -308,6 +308,12 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	if err != nil {
 		return nil, nil, err
 	}
+	// Don't allow transactions with fees too low to get into a mined block.
+	serializedSize := int64(msgTx.SerializeSize())
+
+	minFee := calcMinRequiredTxRelayFee(serializedSize,
+		mp.cfg.Policy.MinRelayTxFee)
+
 	if types.IsTokenTx(tx.Tx) {
 
 		utxoView := blockchain.NewUtxoViewpoint()
@@ -372,6 +378,22 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		if err != nil {
 			return nil, nil, err
 		}
+		if fee < minFee {
+			str := fmt.Sprintf("transaction %v has %v fees which is under the required amount of %v, tx size is %v bytes, policy-rate is %v/KB.", txHash,
+				fee, minFee, serializedSize, mp.cfg.Policy.MinRelayTxFee.Value)
+			return nil, nil, txRuleError(message.RejectInsufficientFee, str)
+		}
+		if !allowHighFees {
+			maxFee := calcMinRequiredTxRelayFee(serializedSize*maxRelayFeeMultiplier,
+				mp.cfg.Policy.MinRelayTxFee)
+			if fee > maxFee {
+				err = fmt.Errorf("transaction %v has %v fee which is above the "+
+					"allowHighFee check threshold amount of %v (= %v byte * %v/kB * %v)", txHash,
+					fee, maxFee, serializedSize, mp.cfg.Policy.MinRelayTxFee.Value, maxRelayFeeMultiplier)
+				return nil, nil, err
+			}
+		}
+
 		// Add to transaction pool.
 		txD := mp.addTransaction(utxoView, tx, nextBlockHeight, fee)
 
@@ -383,6 +405,11 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			fee, err := mp.cfg.BC.VMService.VerifyTx(vtx)
 			if err != nil {
 				return nil, nil, err
+			}
+			if fee < minFee {
+				str := fmt.Sprintf("transaction %v has %v fees which is under the required amount of %v, tx size is %v bytes, policy-rate is %v/byte.", txHash,
+					fee, minFee, serializedSize, mp.cfg.Policy.MinRelayTxFee.Value)
+				return nil, nil, txRuleError(message.RejectInsufficientFee, str)
 			}
 			// Add to transaction pool.
 			txD := mp.addTransaction(blockchain.NewUtxoViewpoint(), tx, nextBlockHeight, fee)
@@ -510,11 +537,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		return nil, nil, txRuleError(message.RejectNonstandard, str)
 	}
 
-	// Don't allow transactions with fees too low to get into a mined block.
-	serializedSize := int64(msgTx.SerializeSize())
 
-	minFee := calcMinRequiredTxRelayFee(serializedSize,
-		mp.cfg.Policy.MinRelayTxFee)
 
 	txFee := types.Amount{Id: types.MEERID, Value: 0}
 	if txFees != nil {
