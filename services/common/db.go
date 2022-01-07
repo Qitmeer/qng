@@ -2,11 +2,13 @@ package common
 
 import (
 	"fmt"
+	"github.com/Qitmeer/meerevm/chain"
 	"github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/log"
 	"github.com/Qitmeer/qng-core/params"
 	"os"
+	"path"
 	"path/filepath"
 )
 
@@ -83,6 +85,11 @@ func removeBlockDB(dbPath string) error {
 func CleanupBlockDB(cfg *config.Config) {
 	dbPath := blockDbPath(cfg.DbType, cfg)
 	err := removeBlockDB(dbPath)
+	if err != nil {
+		log.Error(err.Error())
+	}
+	dbPath = path.Join(cfg.DataDir,chain.ClientIdentifier)
+	err = os.RemoveAll(dbPath)
 	if err != nil {
 		log.Error(err.Error())
 	}
