@@ -439,7 +439,7 @@ func makeMeerethConfig(datadir string) (*MeerethConfig, error) {
 	econfig.Miner.Etherbase = etherbase
 	econfig.Miner.ExtraData = []byte{byte(0)}
 
-	econfig.TxPool.NoLocals=true
+	econfig.TxPool.NoLocals = true
 
 	nodeConf := node.DefaultConfig
 

@@ -227,7 +227,7 @@ func (vm *VM) VerifyTx(tx consensus.Tx) (int64, error) {
 			return 0, err
 		}
 		cost := txe.Cost()
-		cost = cost.Sub(cost,txe.Value())
+		cost = cost.Sub(cost, txe.Value())
 		cost = cost.Div(cost, qcommon.Precision)
 		return cost.Int64(), nil
 	}
@@ -307,8 +307,8 @@ func (vm *VM) sendTxs(txs []*types.Transaction) {
 	for _, tx := range txs {
 		err := vm.addTx(tx)
 		if err != nil {
-			log.Error(fmt.Sprintf("Remove tx(%s) from tx pool:%v",tx.Hash().String(),err.Error()))
-			vm.chain.Ether().TxPool().RemoveTx(tx.Hash(),true)
+			log.Error(fmt.Sprintf("Remove tx(%s) from tx pool:%v", tx.Hash().String(), err.Error()))
+			vm.chain.Ether().TxPool().RemoveTx(tx.Hash(), true)
 		}
 	}
 }
