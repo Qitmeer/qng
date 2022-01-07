@@ -100,7 +100,7 @@ func MarshJsonVin(tx *types.Transaction) []json.Vin {
 
 		}
 		return vinList
-	}else if types.IsCrossChainImportTx(tx) || types.IsCrossChainVMTx(tx) {
+	} else if types.IsCrossChainImportTx(tx) || types.IsCrossChainVMTx(tx) {
 		vinList[0].TxType = types.DetermineTxType(tx).String()
 		return vinList
 	}

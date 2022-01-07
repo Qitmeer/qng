@@ -4,8 +4,8 @@ import (
 	"container/list"
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/meerdag/anticone"
 	"github.com/Qitmeer/qng-core/database"
+	"github.com/Qitmeer/qng-core/meerdag/anticone"
 	"io"
 )
 

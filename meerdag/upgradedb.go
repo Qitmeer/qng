@@ -7,19 +7,19 @@ import (
 )
 
 // update db to new version
-func (bd *MeerDAG) UpgradeDB(dbTx database.Tx,mainTip *hash.Hash,total uint64,genesis *hash.Hash) error {
+func (bd *MeerDAG) UpgradeDB(dbTx database.Tx, mainTip *hash.Hash, total uint64, genesis *hash.Hash) error {
 	bucket := dbTx.Metadata().Bucket(DAGTipsBucketName)
 	cursor := bucket.Cursor()
 	if cursor.First() {
 		return fmt.Errorf("Data format error: already exists tips")
 	}
-	log.Info(fmt.Sprintf("Start upgrade MeerDAG.tips🛠 (total=%d mainTip=%s)",total,mainTip.String()))
+	log.Info(fmt.Sprintf("Start upgrade MeerDAG.tips🛠 (total=%d mainTip=%s)", total, mainTip.String()))
 
-	blocks:=map[uint]IBlock{}
+	blocks := map[uint]IBlock{}
 	var tips *IdSet
 	var mainTipBlock IBlock
 
-	getBlockById:=func(id uint) IBlock {
+	getBlockById := func(id uint) IBlock {
 		if id == MaxId {
 			return nil
 		}
@@ -30,7 +30,7 @@ func (bd *MeerDAG) UpgradeDB(dbTx database.Tx,mainTip *hash.Hash,total uint64,ge
 		return block
 	}
 
-	updateTips:=func(b IBlock) {
+	updateTips := func(b IBlock) {
 		if tips == nil {
 			tips = NewIdSet()
 			tips.AddPair(b.GetID(), b)
@@ -73,19 +73,19 @@ func (bd *MeerDAG) UpgradeDB(dbTx database.Tx,mainTip *hash.Hash,total uint64,ge
 		updateTips(ib)
 
 		if ib.GetHash().IsEqual(mainTip) {
-			mainTipBlock=ib
+			mainTipBlock = ib
 		}
 	}
 	if mainTipBlock == nil || tips == nil || tips.IsEmpty() || !tips.Has(mainTipBlock.GetID()) {
 		return fmt.Errorf("Main chain tip error")
 	}
 
-	for k:=range tips.GetMap() {
-		err:=DBPutDAGTip(dbTx,k,k == mainTipBlock.GetID())
+	for k := range tips.GetMap() {
+		err := DBPutDAGTip(dbTx, k, k == mainTipBlock.GetID())
 		if err != nil {
 			return err
 		}
 	}
-	log.Info(fmt.Sprintf("End upgrade MeerDAG.tips🛠:bridging tips num(%d)",tips.Size()))
+	log.Info(fmt.Sprintf("End upgrade MeerDAG.tips🛠:bridging tips num(%d)", tips.Size()))
 	return nil
 }

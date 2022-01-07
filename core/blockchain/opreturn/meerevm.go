@@ -18,7 +18,7 @@ func (m *MeerEVM) Verify(tx *types.Transaction) error {
 		return fmt.Errorf("Tx is error")
 	}
 	if tx.TxOut[0].Amount.Id != types.ETHID {
-		return fmt.Errorf("tx is not %s",types.ETHID.Name())
+		return fmt.Errorf("tx is not %s", types.ETHID.Name())
 	}
 	if tx.TxOut[0].Amount.Value != 0 {
 		return fmt.Errorf("Tx output value must zero")
@@ -48,7 +48,6 @@ func (m *MeerEVM) PKScript() []byte {
 	return pks
 }
 
-
 func NewEVMTx() *MeerEVM {
 	return &MeerEVM{}
 }
@@ -59,7 +58,7 @@ func IsMeerEVM(pks []byte) bool {
 }
 
 func IsMeerEVMTx(tx *types.Transaction) bool {
-	if !types.IsCrossChainVMTx(tx){
+	if !types.IsCrossChainVMTx(tx) {
 		return false
 	}
 	return IsMeerEVM(tx.TxOut[0].PkScript)
