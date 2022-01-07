@@ -5,5 +5,4 @@
 package consensus
 
 type DAG interface {
-
 }

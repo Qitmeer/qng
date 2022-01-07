@@ -26,4 +26,3 @@ type TxPool interface {
 
 	ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allowHighFees bool) ([]*types.TxDesc, error)
 }
-

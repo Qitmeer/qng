@@ -161,7 +161,6 @@ var PrivNetParams = Params{
 
 	CoinbaseMaturity: 16,
 
-
 	// Consensus rule change deployments.
 	//
 	// The miner confirmation window is defined as:

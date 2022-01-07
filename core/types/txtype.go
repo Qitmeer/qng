@@ -37,7 +37,7 @@ const (
 
 	TxTypeCrossChainExport TxType = 0x0101 // Cross chain by export tx
 	TxTypeCrossChainImport TxType = 0x0102 // Cross chain by import tx
-	TxTypeCrossChainVM TxType = 0x0103 // Cross chain by vm tx
+	TxTypeCrossChainVM     TxType = 0x0103 // Cross chain by vm tx
 )
 
 func (tt TxType) String() string {
@@ -278,8 +278,8 @@ func IsTokenTx(tx *Transaction) bool {
 func GetSupportCoinsForCrossChain() map[CoinID]bool {
 	// TODO:This is an extensible cross chain configuration. There are more possibilities in the future
 	return map[CoinID]bool{
-		ETHID : true,
-    }
+		ETHID: true,
+	}
 }
 
 func IsCrossChainExportTx(tx *Transaction) bool {
@@ -289,7 +289,7 @@ func IsCrossChainExportTx(tx *Transaction) bool {
 	if tx.TxIn[0].PreviousOut.Hash == hash.ZeroHash {
 		return false
 	}
-	enable,ok:=GetSupportCoinsForCrossChain()[tx.TxOut[0].Amount.Id]
+	enable, ok := GetSupportCoinsForCrossChain()[tx.TxOut[0].Amount.Id]
 	return ok && enable
 }
 
@@ -317,7 +317,7 @@ func IsCrossChainVMTx(tx *Transaction) bool {
 		return false
 	}
 
-	enable,ok:=GetSupportCoinsForCrossChain()[tx.TxOut[0].Amount.Id]
+	enable, ok := GetSupportCoinsForCrossChain()[tx.TxOut[0].Amount.Id]
 	return ok && enable
 }
 

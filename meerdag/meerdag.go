@@ -278,7 +278,7 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 	}
 	// Must keep no block in outside.
 	if bd.hasBlock(b.GetHash()) {
-		return nil,nil,nil,false
+		return nil, nil, nil, false
 	}
 	parents := []IBlock{}
 	if bd.blockTotal > 0 {
@@ -1181,7 +1181,7 @@ func (bd *MeerDAG) commit() error {
 				continue
 			}
 			err := bd.db.Update(func(dbTx database.Tx) error {
-				return DBPutDAGTip(dbTx, k,k == bd.instance.GetMainChainTipId())
+				return DBPutDAGTip(dbTx, k, k == bd.instance.GetMainChainTipId())
 			})
 			if err != nil {
 				return err
@@ -1244,7 +1244,7 @@ func (bd *MeerDAG) commit() error {
 	if !ok {
 		return nil
 	}
-	err:=ph.mainChain.commit()
+	err := ph.mainChain.commit()
 	if err != nil {
 		return err
 	}
