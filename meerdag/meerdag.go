@@ -769,33 +769,6 @@ func (bd *MeerDAG) GetConfirmations(id uint) uint {
 	return 0
 }
 
-func (bd *MeerDAG) GetValidTips(expectPriority int) []*hash.Hash {
-	bd.stateLock.Lock()
-	defer bd.stateLock.Unlock()
-	tips := bd.getValidTips(true)
-
-	result := []*hash.Hash{tips[0].GetHash()}
-	epNum := expectPriority
-	for k, v := range tips {
-		if k == 0 {
-			if v.GetData().GetPriority() <= 1 {
-				epNum--
-			}
-			continue
-		}
-		if v.GetData().GetPriority() > 1 {
-			result = append(result, v.GetHash())
-			continue
-		}
-		if epNum <= 0 {
-			break
-		}
-		result = append(result, v.GetHash())
-		epNum--
-	}
-	return result
-}
-
 // Checking the layer grap of block
 func (bd *MeerDAG) checkLayerGap(parentsNode []IBlock) bool {
 	if len(parentsNode) == 0 {
