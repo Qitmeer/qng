@@ -406,11 +406,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			if err != nil {
 				return nil, nil, err
 			}
-			if fee < minFee {
-				str := fmt.Sprintf("transaction %v has %v fees which is under the required amount of %v, tx size is %v bytes, policy-rate is %v/byte.", txHash,
-					fee, minFee, serializedSize, mp.cfg.Policy.MinRelayTxFee.Value)
-				return nil, nil, txRuleError(message.RejectInsufficientFee, str)
-			}
+
 			// Add to transaction pool.
 			txD := mp.addTransaction(blockchain.NewUtxoViewpoint(), tx, nextBlockHeight, fee)
 
