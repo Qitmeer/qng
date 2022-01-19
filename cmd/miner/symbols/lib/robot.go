@@ -9,10 +9,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/cmd/miner/common"
-	"github.com/Qitmeer/qng/cmd/miner/core"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng/cmd/miner/common"
+	"github.com/Qitmeer/qng/cmd/miner/core"
 	"github.com/Qitmeer/qng/rpc/client"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"io/ioutil"
@@ -258,6 +258,15 @@ func (this *QitmeerRobot) SubmitWork() {
 						}
 					}
 					this.SubmitLock.Unlock()
+					time.AfterFunc(1*time.Second, func() {
+						this.SubmitLock.Lock()
+						r := this.Work.Get()
+						this.SubmitLock.Unlock()
+						if this.Work.Block != nil {
+							common.MinerLoger.Info("Change Task", "height", height)
+						}
+						this.NotifyWork(r)
+					})
 				} else {
 					if !this.Pool { // solo
 						this.PendingLock.Lock()

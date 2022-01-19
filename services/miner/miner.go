@@ -6,15 +6,15 @@ import (
 	"github.com/Qitmeer/qng-core/common/roughtime"
 	"github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/core/address"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/core/event"
 	"github.com/Qitmeer/qng-core/core/json"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/core/types/pow"
 	"github.com/Qitmeer/qng-core/engine/txscript"
-	"github.com/Qitmeer/qng/node/service"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/mempool"
@@ -451,8 +451,8 @@ func (m *Miner) initCoinbase() error {
 		m.coinbaseAddress = mAddrs[rand.Intn(len(mAddrs))]
 	}
 	if m.GetCoinbasePKAddress() != nil {
-		log.Info(fmt.Sprintf("Init Coinbase PK Address:%s    PKH Address:%s", m.GetCoinbasePKAddress().String(),m.GetCoinbasePKAddress().PKHAddress().String()))
-	}else{
+		log.Info(fmt.Sprintf("Init Coinbase PK Address:%s    PKH Address:%s", m.GetCoinbasePKAddress().String(), m.GetCoinbasePKAddress().PKHAddress().String()))
+	} else {
 		log.Info(fmt.Sprintf("Init Coinbase Address:%s", m.coinbaseAddress.String()))
 	}
 
@@ -460,7 +460,7 @@ func (m *Miner) initCoinbase() error {
 }
 
 func (m *Miner) GetCoinbasePKAddress() *address.SecpPubKeyAddress {
-	pka,ok:=m.coinbaseAddress.(*address.SecpPubKeyAddress)
+	pka, ok := m.coinbaseAddress.(*address.SecpPubKeyAddress)
 	if ok {
 		return pka
 	}
