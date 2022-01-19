@@ -104,6 +104,10 @@ func (bd *MeerDAG) BuildMerkleTreeStoreFromTips() []*hash.Hash {
 
 // Refresh the dag tip with new block,it will cause changes in tips set.
 func (bd *MeerDAG) updateTips(b IBlock) {
+	if b.HasChildren() {
+		log.Warn(fmt.Sprintf("Cannot add illegal tip"))
+		return
+	}
 	if bd.tips == nil {
 		bd.tips = NewIdSet()
 		bd.tips.AddPair(b.GetID(), b)

@@ -645,6 +645,9 @@ func (ph *Phantom) Load(dbTx database.Tx) error {
 		}
 		ph.bd.updateTips(tip)
 	}
+	if !ph.bd.tips.Has(ph.mainChain.tip) {
+		return fmt.Errorf("Main chain tip and tips is mismatch")
+	}
 	ph.bd.optimizeTips(dbTx)
 
 	return ph.CheckMainChainDB(dbTx)
