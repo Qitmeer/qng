@@ -185,7 +185,7 @@ func DBGetDAGTips(dbTx database.Tx) ([]uint, error) {
 		if len(main) > 0 {
 			if main[0] > 0 {
 				if mainTip != MaxId {
-					return nil, fmt.Errorf("Too many main tip")
+					return nil, fmt.Errorf("Too many main tip:cur(%d) => next(%d)", mainTip, id)
 				}
 				mainTip = id
 				continue
