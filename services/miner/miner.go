@@ -391,8 +391,14 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	for _, out := range coinbaseTxOuts {
 		coinbaseTxGenerated += uint64(out.Amount.Value)
 	}
-	return fmt.Sprintf("Block submitted accepted hash:%s order:%s height:%d amount:%d miner:%s", block.Hash(),
-		meerdag.GetOrderLogStr(uint(block.Order())), block.Height(), coinbaseTxGenerated, m.worker.GetType()), nil
+	return json.SubmitBlockResult{
+		BlockHash:      block.Hash().String(),
+		CoinbaseTxID:   block.Transactions()[0].Hash().String(),
+		Order:          meerdag.GetOrderLogStr(uint(block.Order())),
+		Height:         int64(block.Height()),
+		CoinbaseAmount: coinbaseTxGenerated,
+		MinerType:      m.worker.GetType(),
+	}, nil
 }
 
 func (m *Miner) submitBlockHeader(header *types.BlockHeader) (interface{}, error) {
