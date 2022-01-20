@@ -6,15 +6,15 @@ import (
 	"github.com/Qitmeer/qng-core/common/roughtime"
 	"github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/core/address"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/core/event"
 	"github.com/Qitmeer/qng-core/core/json"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/core/types/pow"
 	"github.com/Qitmeer/qng-core/engine/txscript"
-	"github.com/Qitmeer/qng/node/service"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/mempool"
@@ -391,8 +391,14 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	for _, out := range coinbaseTxOuts {
 		coinbaseTxGenerated += uint64(out.Amount.Value)
 	}
-	return fmt.Sprintf("Block submitted accepted hash:%s order:%s height:%d amount:%d miner:%s", block.Hash(),
-		meerdag.GetOrderLogStr(uint(block.Order())), block.Height(), coinbaseTxGenerated, m.worker.GetType()), nil
+	return json.SubmitBlockResult{
+		BlockHash:      block.Hash().String(),
+		CoinbaseTxID:   block.Transactions()[0].Hash().String(),
+		Order:          meerdag.GetOrderLogStr(uint(block.Order())),
+		Height:         int64(block.Height()),
+		CoinbaseAmount: coinbaseTxGenerated,
+		MinerType:      m.worker.GetType(),
+	}, nil
 }
 
 func (m *Miner) submitBlockHeader(header *types.BlockHeader) (interface{}, error) {
@@ -451,8 +457,8 @@ func (m *Miner) initCoinbase() error {
 		m.coinbaseAddress = mAddrs[rand.Intn(len(mAddrs))]
 	}
 	if m.GetCoinbasePKAddress() != nil {
-		log.Info(fmt.Sprintf("Init Coinbase PK Address:%s    PKH Address:%s", m.GetCoinbasePKAddress().String(),m.GetCoinbasePKAddress().PKHAddress().String()))
-	}else{
+		log.Info(fmt.Sprintf("Init Coinbase PK Address:%s    PKH Address:%s", m.GetCoinbasePKAddress().String(), m.GetCoinbasePKAddress().PKHAddress().String()))
+	} else {
 		log.Info(fmt.Sprintf("Init Coinbase Address:%s", m.coinbaseAddress.String()))
 	}
 
@@ -460,7 +466,7 @@ func (m *Miner) initCoinbase() error {
 }
 
 func (m *Miner) GetCoinbasePKAddress() *address.SecpPubKeyAddress {
-	pka,ok:=m.coinbaseAddress.(*address.SecpPubKeyAddress)
+	pka, ok := m.coinbaseAddress.(*address.SecpPubKeyAddress)
 	if ok {
 		return pka
 	}
