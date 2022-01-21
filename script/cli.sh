@@ -503,6 +503,15 @@ function get_fees(){
   get_result "$data"
 }
 
+function estimate_fee(){
+  local num=$1
+  if [ "$num" == "" ]; then
+      num=5
+  fi
+  local data='{"jsonrpc":"2.0","method":"estimateFee","params":['$num'],"id":null}'
+  get_result "$data"
+}
+
 function time_info(){
   local block_hash=$1
   local data='{"jsonrpc":"2.0","method":"getTimeInfo","id":1}'
@@ -631,6 +640,7 @@ function usage(){
   echo "  tips"
   echo "  coinbase <hash>"
   echo "  fees <hash>"
+  echo "  estimatefee <numblocks>"
   echo "  tokeninfo"
   echo "tx     :"
   echo "  tx <id>"
@@ -946,6 +956,10 @@ elif [ "$1" == "isblue" ]; then
 elif [ "$1" == "fees" ]; then
   shift
   get_fees $@
+
+elif [ "$1" == "estimatefee" ]; then
+  shift
+  estimate_fee $@
 
 elif [ "$1" == "timeinfo" ]; then
   shift
