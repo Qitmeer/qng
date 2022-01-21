@@ -18,3 +18,7 @@ const (
 func GetBlockWeight(blk *Block) int {
 	return blk.SerializeSize()
 }
+
+func GetTransactionWeight(tx *Tx) int64 {
+	return int64(tx.Tx.SerializeSize())
+}

@@ -26,3 +26,8 @@ type TxPool interface {
 
 	ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allowHighFees bool) ([]*types.TxDesc, error)
 }
+
+type FeeEstimator interface {
+	RegisterBlock(block *types.SerializedBlock) error
+	Rollback(hash *hash.Hash) error
+}
