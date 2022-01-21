@@ -99,6 +99,8 @@ type Config struct {
 
 	// meerevm environment
 	EVMEnv string `long:"evmenv" description:"meer EVM environment"`
+
+	Estimatefee bool `long:"estimatefee" description:"Enable estimate fee"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {
