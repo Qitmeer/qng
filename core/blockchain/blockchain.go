@@ -1016,7 +1016,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		return err
 	}
 	b.ChainUnlock()
-	b.sendNotification(BlockConnected, []*types.SerializedBlock{block})
+	b.sendNotification(BlockConnected, []interface{}{block,b.bd.IsOnMainChain(node.GetID())})
 	b.ChainLock()
 	return nil
 }

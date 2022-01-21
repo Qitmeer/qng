@@ -198,18 +198,18 @@ func (b *BlockManager) handleNotifyMsg(notification *blockchain.Notification) {
 	// A block has been connected to the main block chain.
 	case blockchain.BlockConnected:
 		log.Trace("Chain connected notification.")
-		blockSlice, ok := notification.Data.([]*types.SerializedBlock)
+		blockSlice, ok := notification.Data.([]interface{})
 		if !ok {
 			log.Warn("Chain connected notification is not a block slice.")
 			break
 		}
 
-		if len(blockSlice) != 1 {
+		if len(blockSlice) != 2 {
 			log.Warn("Chain connected notification is wrong size slice.")
 			break
 		}
 
-		block := blockSlice[0]
+		block := blockSlice[0].(*types.SerializedBlock)
 		// Remove all of the transactions (except the coinbase) in the
 		// connected block from the transaction pool.  Secondly, remove any
 		// transactions which are now double spends as a result of these
@@ -233,6 +233,18 @@ func (b *BlockManager) handleNotifyMsg(notification *blockchain.Notification) {
 			}
 		*/
 
+		// Register block with the fee estimator, if it exists.
+		if b.txManager.FeeEstimator() != nil && blockSlice[1].(bool) {
+			err := b.txManager.FeeEstimator().RegisterBlock(block)
+
+			// If an error is somehow generated then the fee estimator
+			// has entered an invalid state. Since it doesn't know how
+			// to recover, create a new one.
+			if err != nil {
+				b.txManager.InitDefaultFeeEstimator()
+			}
+		}
+
 		b.zmqNotify.BlockConnected(block)
 
 	// A block has been disconnected from the main block chain.
@@ -242,6 +254,10 @@ func (b *BlockManager) handleNotifyMsg(notification *blockchain.Notification) {
 		if !ok {
 			log.Warn("Chain disconnected notification is not a block slice.")
 			break
+		}
+		// Rollback previous block recorded by the fee estimator.
+		if b.txManager.FeeEstimator() != nil {
+			b.txManager.FeeEstimator().Rollback(block.Hash())
 		}
 		b.zmqNotify.BlockDisconnected(block)
 	// The blockchain is reorganizing.

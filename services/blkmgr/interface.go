@@ -10,4 +10,6 @@ import (
 
 type TxManager interface {
 	MemPool() consensus.TxPool
+	FeeEstimator() consensus.FeeEstimator
+	InitDefaultFeeEstimator()
 }
