@@ -11,11 +11,11 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/common/roughtime"
 	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
+	"github.com/Qitmeer/qng-core/core/event"
+	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng-core/core/event"
 	"github.com/Qitmeer/qng/core/message"
-	"github.com/Qitmeer/qng-core/core/types"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -404,9 +404,9 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 
 		log.Debug(fmt.Sprintf("Accepted import transaction ,txHash:%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
 		return nil, txD, nil
-	}else if types.IsCrossChainVMTx(tx.Tx) {
+	} else if types.IsCrossChainVMTx(tx.Tx) {
 		if opreturn.IsMeerEVMTx(tx.Tx) {
-			vtx := &consensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(tx.Tx.TxIn[0].SignScript)}
+			vtx := &consensus.Tx{Type: types.TxTypeCrossChainVM, Data: []byte(tx.Tx.TxIn[0].SignScript)}
 			fee, err := mp.cfg.BC.VMService.VerifyTx(vtx)
 			if err != nil {
 				return nil, nil, err
@@ -537,8 +537,6 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			txHash, numSigOps, mp.cfg.Policy.MaxSigOpsPerTx)
 		return nil, nil, txRuleError(message.RejectNonstandard, str)
 	}
-
-
 
 	txFee := types.Amount{Id: types.MEERID, Value: 0}
 	if txFees != nil {
