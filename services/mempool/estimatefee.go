@@ -72,9 +72,9 @@ func (rate QitPerByte) ToMeerPerKb() MeerPerKilobyte {
 
 func (rate QitPerByte) Fee(size uint32) types.Amount {
 	if rate == QitPerByte(-1) {
-		return types.Amount{Value:-1}
+		return types.Amount{Value: -1}
 	}
-	return types.Amount{Value:int64(float64(rate) * float64(size))}
+	return types.Amount{Value: int64(float64(rate) * float64(size))}
 }
 
 func NewQitPerByte(fee types.Amount, size uint32) QitPerByte {
@@ -204,7 +204,7 @@ func (ef *FeeEstimator) ObserveTransaction(t *TxDesc) {
 
 		ef.observed[hash] = &observedTransaction{
 			hash:     hash,
-			feeRate:  NewQitPerByte(types.Amount{Value:t.Fee}, size),
+			feeRate:  NewQitPerByte(types.Amount{Value: t.Fee}, size),
 			observed: int32(t.Height),
 			mined:    UnminedHeight,
 		}

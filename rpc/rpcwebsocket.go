@@ -54,17 +54,17 @@ func (s *RpcServer) handleNotifyMsg(notification *blockchain.Notification) {
 		s.ntfnMgr.NotifyBlockAccepted(bnd)
 
 	case blockchain.BlockConnected:
-		blockSlice, ok := notification.Data.([]*types.SerializedBlock)
+		blockSlice, ok := notification.Data.([]interface{})
 		if !ok {
 			log.Warn("Chain connected notification is not a block slice.")
 			break
 		}
 
-		if len(blockSlice) != 1 {
+		if len(blockSlice) != 2 {
 			log.Warn("Chain connected notification is wrong size slice.")
 			break
 		}
-		s.ntfnMgr.NotifyBlockConnected(blockSlice[0])
+		s.ntfnMgr.NotifyBlockConnected(blockSlice[0].(*types.SerializedBlock))
 
 	case blockchain.BlockDisconnected:
 		block, ok := notification.Data.(*types.SerializedBlock)

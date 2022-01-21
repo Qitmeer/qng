@@ -199,6 +199,11 @@ func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
 		mp.cfg.ExistsAddrIndex.AddUnconfirmedTx(msgTx)
 	}
 
+	// Record this tx for fee estimation if enabled.
+	if mp.cfg.FeeEstimator != nil {
+		mp.cfg.FeeEstimator.ObserveTransaction(txD)
+	}
+
 	go mp.cfg.Events.Send(event.New(MempoolTxAdd))
 	return txD
 }
@@ -1110,4 +1115,8 @@ func (mp *TxPool) Count() int {
 	mp.mtx.RUnlock()
 
 	return count
+}
+
+func (mp *TxPool) GetConfig() *Config {
+	return &mp.cfg
 }

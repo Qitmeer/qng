@@ -9,10 +9,6 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/common/roughtime"
 	"github.com/Qitmeer/qng-core/common/util"
-	"github.com/Qitmeer/qng/consensus"
-	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng-core/meerdag"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng-core/core/event"
 	"github.com/Qitmeer/qng-core/core/merkle"
 	"github.com/Qitmeer/qng-core/core/serialization"
@@ -20,7 +16,11 @@ import (
 	"github.com/Qitmeer/qng-core/core/types/pow"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/blockchain/token"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 	"os"
 	"sort"
@@ -122,7 +122,6 @@ type BlockChain struct {
 	unknownRulesWarned bool
 
 	VMService consensus.VMI
-
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.
@@ -196,14 +195,14 @@ type Config struct {
 // However, the returned snapshot must be treated as immutable since it is
 // shared by all callers.
 type BestState struct {
-	Hash         hash.Hash            // The hash of the main chain tip.
-	Bits         uint32               // The difficulty bits of the main chain tip.
-	BlockSize    uint64               // The size of the main chain tip.
-	NumTxns      uint64               // The number of txns in the main chain tip.
-	MedianTime   time.Time            // Median time as per CalcPastMedianTime.
-	TotalTxns    uint64               // The total number of txns in the chain.
-	TotalSubsidy uint64               // The total subsidy for the chain.
-	TokenTipHash *hash.Hash           // The Hash of token state tip for the chain.
+	Hash         hash.Hash           // The hash of the main chain tip.
+	Bits         uint32              // The difficulty bits of the main chain tip.
+	BlockSize    uint64              // The size of the main chain tip.
+	NumTxns      uint64              // The number of txns in the main chain tip.
+	MedianTime   time.Time           // Median time as per CalcPastMedianTime.
+	TotalTxns    uint64              // The total number of txns in the chain.
+	TotalSubsidy uint64              // The total subsidy for the chain.
+	TokenTipHash *hash.Hash          // The Hash of token state tip for the chain.
 	GraphState   *meerdag.GraphState // The graph state of dag
 }
 
@@ -568,7 +567,7 @@ func (b *BlockChain) HaveBlock(hash *hash.Hash) bool {
 
 func (b *BlockChain) HasBlockInDB(h *hash.Hash) bool {
 	err := b.db.View(func(dbTx database.Tx) error {
-		has,er:=dbTx.HasBlock(h)
+		has, er := dbTx.HasBlock(h)
 		if er != nil {
 			return er
 		}
@@ -971,7 +970,7 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
-	err:=b.VMService.ConnectBlock(block)
+	err := b.VMService.ConnectBlock(block)
 	if err != nil {
 		return err
 	}
@@ -1016,7 +1015,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		return err
 	}
 	b.ChainUnlock()
-	b.sendNotification(BlockConnected, []interface{}{block,b.bd.IsOnMainChain(node.GetID())})
+	b.sendNotification(BlockConnected, []interface{}{block, b.bd.IsOnMainChain(node.GetID())})
 	b.ChainLock()
 	return nil
 }
@@ -1026,7 +1025,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
-	err:=b.VMService.DisconnectBlock(block)
+	err := b.VMService.DisconnectBlock(block)
 	if err != nil {
 		return err
 	}
