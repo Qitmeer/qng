@@ -130,7 +130,10 @@ func (tm *TxManager) MemPool() consensus.TxPool {
 }
 
 func (tm *TxManager) FeeEstimator() consensus.FeeEstimator {
-	return tm.feeEstimator
+	if tm.feeEstimator != nil {
+		return tm.feeEstimator
+	}
+	return nil
 }
 
 func (tm *TxManager) InitDefaultFeeEstimator() {
