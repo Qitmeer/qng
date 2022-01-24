@@ -5,12 +5,12 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/consensus"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/core/event"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
+	"github.com/Qitmeer/qng-core/meerdag"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/common"
@@ -39,6 +39,12 @@ type TxManager struct {
 
 	//invalidTx hash->block hash
 	invalidTx map[hash.Hash]*meerdag.HashSet
+
+	// The fee estimator keeps track of how long transactions are left in
+	// the mempool before they are mined into blocks.
+	feeEstimator *mempool.FeeEstimator
+
+	enableFeeEst bool
 }
 
 func (tm *TxManager) Start() error {
@@ -51,6 +57,44 @@ func (tm *TxManager) Start() error {
 	if err != nil {
 		log.Error(err.Error())
 	}
+	return tm.initFeeEstimator()
+}
+
+func (tm *TxManager) initFeeEstimator() error {
+	if !tm.enableFeeEst {
+		return nil
+	}
+	// Search for a FeeEstimator state in the database. If none can be found
+	// or if it cannot be loaded, create a new one.
+	tm.db.Update(func(tx database.Tx) error {
+		metadata := tx.Metadata()
+		feeEstimationData := metadata.Get(mempool.EstimateFeeDatabaseKey)
+		if feeEstimationData != nil {
+			// delete it from the database so that we don't try to restore the
+			// same thing again somehow.
+			metadata.Delete(mempool.EstimateFeeDatabaseKey)
+
+			// If there is an error, log it and make a new fee estimator.
+			var err error
+			tm.feeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
+
+			if err != nil {
+				log.Error(fmt.Sprintf("Failed to restore fee estimator %v", err))
+			}
+		}
+
+		return nil
+	})
+
+	// If no feeEstimator has been found, or if the one that has been found
+	// is behind somehow, create a new one and start over.
+	if tm.feeEstimator == nil || tm.feeEstimator.LastKnownHeight() != int32(tm.bm.GetChain().BestSnapshot().GraphState.GetMainHeight()) {
+		tm.feeEstimator = mempool.NewFeeEstimator(
+			mempool.DefaultEstimateFeeMaxRollback,
+			mempool.DefaultEstimateFeeMinRegisteredBlocks)
+	}
+
+	tm.txMemPool.GetConfig().FeeEstimator = tm.feeEstimator
 	return nil
 }
 
@@ -68,11 +112,34 @@ func (tm *TxManager) Stop() error {
 		}
 	}
 
+	if tm.feeEstimator != nil {
+		// Save fee estimator state in the database.
+		tm.db.Update(func(tx database.Tx) error {
+			metadata := tx.Metadata()
+			metadata.Put(mempool.EstimateFeeDatabaseKey, tm.feeEstimator.Save())
+
+			return nil
+		})
+	}
+
 	return nil
 }
 
 func (tm *TxManager) MemPool() consensus.TxPool {
 	return tm.txMemPool
+}
+
+func (tm *TxManager) FeeEstimator() consensus.FeeEstimator {
+	if tm.feeEstimator != nil {
+		return tm.feeEstimator
+	}
+	return nil
+}
+
+func (tm *TxManager) InitDefaultFeeEstimator() {
+	tm.feeEstimator = mempool.NewFeeEstimator(
+		mempool.DefaultEstimateFeeMaxRollback,
+		mempool.DefaultEstimateFeeMinRegisteredBlocks)
 }
 
 func NewTxManager(bm *blkmgr.BlockManager, txIndex *index.TxIndex,
@@ -114,5 +181,5 @@ func NewTxManager(bm *blkmgr.BlockManager, txIndex *index.TxIndex,
 	}
 	txMemPool := mempool.New(&txC)
 	invalidTx := make(map[hash.Hash]*meerdag.HashSet)
-	return &TxManager{bm: bm, txIndex: txIndex, addrIndex: addrIndex, txMemPool: txMemPool, ntmgr: ntmgr, db: db, invalidTx: invalidTx}, nil
+	return &TxManager{bm: bm, txIndex: txIndex, addrIndex: addrIndex, txMemPool: txMemPool, ntmgr: ntmgr, db: db, invalidTx: invalidTx, enableFeeEst: cfg.Estimatefee}, nil
 }

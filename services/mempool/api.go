@@ -48,3 +48,21 @@ func (api *PublicMempoolAPI) SaveMempool() (interface{}, error) {
 	}
 	return fmt.Sprintf("Mempool persist:%d transactions", num), nil
 }
+
+func (api *PublicMempoolAPI) EstimateFee(numBlocks int64) (interface{}, error) {
+
+	if api.txPool.cfg.FeeEstimator == nil {
+		return nil, fmt.Errorf("Fee estimation disabled: --estimatefee")
+	}
+
+	if numBlocks <= 0 {
+		return -1.0, fmt.Errorf("Parameter NumBlocks must be positive")
+	}
+
+	feeRate, err := api.txPool.cfg.FeeEstimator.EstimateFee(uint32(numBlocks))
+
+	if err != nil {
+		return -1.0, err
+	}
+	return float64(feeRate), nil
+}
