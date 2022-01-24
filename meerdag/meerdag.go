@@ -278,7 +278,7 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 	}
 	// Must keep no block in outside.
 	if bd.hasBlock(b.GetHash()) {
-		return nil,nil,nil,false
+		return nil, nil, nil, false
 	}
 	parents := []IBlock{}
 	if bd.blockTotal > 0 {
@@ -769,33 +769,6 @@ func (bd *MeerDAG) GetConfirmations(id uint) uint {
 	return 0
 }
 
-func (bd *MeerDAG) GetValidTips(expectPriority int) []*hash.Hash {
-	bd.stateLock.Lock()
-	defer bd.stateLock.Unlock()
-	tips := bd.getValidTips(true)
-
-	result := []*hash.Hash{tips[0].GetHash()}
-	epNum := expectPriority
-	for k, v := range tips {
-		if k == 0 {
-			if v.GetData().GetPriority() <= 1 {
-				epNum--
-			}
-			continue
-		}
-		if v.GetData().GetPriority() > 1 {
-			result = append(result, v.GetHash())
-			continue
-		}
-		if epNum <= 0 {
-			break
-		}
-		result = append(result, v.GetHash())
-		epNum--
-	}
-	return result
-}
-
 // Checking the layer grap of block
 func (bd *MeerDAG) checkLayerGap(parentsNode []IBlock) bool {
 	if len(parentsNode) == 0 {
@@ -1181,7 +1154,7 @@ func (bd *MeerDAG) commit() error {
 				continue
 			}
 			err := bd.db.Update(func(dbTx database.Tx) error {
-				return DBPutDAGTip(dbTx, k,k == bd.instance.GetMainChainTipId())
+				return DBPutDAGTip(dbTx, k, k == bd.instance.GetMainChainTipId())
 			})
 			if err != nil {
 				return err
@@ -1244,7 +1217,7 @@ func (bd *MeerDAG) commit() error {
 	if !ok {
 		return nil
 	}
-	err:=ph.mainChain.commit()
+	err := ph.mainChain.commit()
 	if err != nil {
 		return err
 	}

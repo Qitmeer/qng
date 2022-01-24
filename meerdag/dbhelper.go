@@ -162,12 +162,12 @@ func DBDelBlockIdByHash(dbTx database.Tx, h *hash.Hash) error {
 }
 
 // tips
-func DBPutDAGTip(dbTx database.Tx, id uint,isMain bool) error {
+func DBPutDAGTip(dbTx database.Tx, id uint, isMain bool) error {
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
 
 	bucket := dbTx.Metadata().Bucket(DAGTipsBucketName)
-	main:=byte(0)
+	main := byte(0)
 	if isMain {
 		main = byte(1)
 	}
@@ -177,30 +177,30 @@ func DBPutDAGTip(dbTx database.Tx, id uint,isMain bool) error {
 func DBGetDAGTips(dbTx database.Tx) ([]uint, error) {
 	bucket := dbTx.Metadata().Bucket(DAGTipsBucketName)
 	cursor := bucket.Cursor()
-	mainTip:=MaxId
-	tips:=[]uint{}
+	mainTip := MaxId
+	tips := []uint{}
 	for cok := cursor.First(); cok; cok = cursor.Next() {
 		id := uint(ByteOrder.Uint32(cursor.Key()))
-		main:= cursor.Value()
+		main := cursor.Value()
 		if len(main) > 0 {
 			if main[0] > 0 {
 				if mainTip != MaxId {
-					return nil,fmt.Errorf("Too many main tip")
+					return nil, fmt.Errorf("Too many main tip:cur(%d) => next(%d)", mainTip, id)
 				}
 				mainTip = id
 				continue
 			}
 		}
-		tips=append(tips,id)
+		tips = append(tips, id)
 	}
 	if mainTip == MaxId {
-		return nil,fmt.Errorf("Can't find main tip")
+		return nil, fmt.Errorf("Can't find main tip")
 	}
-	result:=[]uint{mainTip}
+	result := []uint{mainTip}
 	if len(tips) > 0 {
-		result=append(result,tips...)
+		result = append(result, tips...)
 	}
-	return result,nil
+	return result, nil
 }
 
 func DBDelDAGTip(dbTx database.Tx, id uint) error {

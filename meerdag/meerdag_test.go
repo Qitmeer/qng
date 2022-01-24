@@ -141,7 +141,7 @@ func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
 	blockdaglogger := l.New(l.Ctx{"module": "blockdag"})
 	UseLogger(blockdaglogger)
 	l.PrintOrigins(true)
-	params.ActiveNetParams=&params.PrivNetParam
+	params.ActiveNetParams = &params.PrivNetParam
 
 	testData = &TestData{}
 	err := loadTestData(testDataFilePath, testData)
@@ -182,7 +182,7 @@ func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
 		for _, parent := range tbd[i].Parents {
 			parents = append(parents, tbMap[parent].GetHash())
 		}
-		_,err := buildBlock(tbd[i].Tag,parents)
+		_, err := buildBlock(tbd[i].Tag, parents)
 		if err != nil {
 			fmt.Println(err)
 			return nil
@@ -192,40 +192,39 @@ func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
 	return instance
 }
 
-func buildBlock(tag string,parents []*hash.Hash) (*TestBlock,error) {
-	block,ib,err:=addBlock(tag,parents)
+func buildBlock(tag string, parents []*hash.Hash) (*TestBlock, error) {
+	block, ib, err := addBlock(tag, parents)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	err = commitBlock(tag,block,ib)
+	err = commitBlock(tag, block, ib)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	return block,nil
+	return block, nil
 }
 
-func addBlock(tag string,parents []*hash.Hash) (*TestBlock,IBlock,error) {
-	b:=&types.Block{
-		Header:types.BlockHeader{
-			Pow:pow.GetInstance(pow.MEERXKECCAKV1, 0, []byte{}),
-			Timestamp:time.Unix(int64(len(tbMap)),0),
-			Difficulty:uint32(len(tbMap)),
+func addBlock(tag string, parents []*hash.Hash) (*TestBlock, IBlock, error) {
+	b := &types.Block{
+		Header: types.BlockHeader{
+			Pow:        pow.GetInstance(pow.MEERXKECCAKV1, 0, []byte{}),
+			Timestamp:  time.Unix(int64(len(tbMap)), 0),
+			Difficulty: uint32(len(tbMap)),
 		},
-		Parents:parents,
-		Transactions:[]*types.Transaction{},
+		Parents:      parents,
+		Transactions: []*types.Transaction{},
 	}
-	block := &TestBlock{block:types.NewBlock(b)}
-
+	block := &TestBlock{block: types.NewBlock(b)}
 
 	l, _, ib, _ := bd.AddBlock(block)
 	if l != nil && l.Len() > 0 {
-		return block,ib,nil
+		return block, ib, nil
 	} else {
-		return nil,nil,fmt.Errorf("Error: %s\n", tag)
+		return nil, nil, fmt.Errorf("Error: %s\n", tag)
 	}
 }
 
-func commitBlock(tag string,block *TestBlock,ib IBlock) error {
+func commitBlock(tag string, block *TestBlock, ib IBlock) error {
 	tbMap[tag] = ib
 	err := bd.Commit()
 	if err != nil {
@@ -398,9 +397,9 @@ func storeBlock(block *TestBlock) error {
 	})
 }
 
-func fetchBlock(h *hash.Hash) (*TestBlock,error) {
-	tb:=&TestBlock{}
-	err:=bd.db.View(func(dbTx database.Tx) error {
+func fetchBlock(h *hash.Hash) (*TestBlock, error) {
+	tb := &TestBlock{}
+	err := bd.db.View(func(dbTx database.Tx) error {
 		blockBytes, err := dbTx.FetchBlock(h)
 		if err != nil {
 			return err
@@ -410,13 +409,13 @@ func fetchBlock(h *hash.Hash) (*TestBlock,error) {
 		if err != nil {
 			return err
 		}
-		tb.block=block
+		tb.block = block
 		return nil
 	})
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	return tb,nil
+	return tb, nil
 }
 
 func dbPutTotal(total uint) error {
@@ -428,10 +427,10 @@ func dbPutTotal(total uint) error {
 	})
 }
 
-func dbGetTotal() (uint32,error) {
-	total:=uint32(0)
-	err:=bd.db.View(func(dbTx database.Tx) error {
-		serializedTotal:=dbTx.Metadata().Get([]byte("blocktotal"))
+func dbGetTotal() (uint32, error) {
+	total := uint32(0)
+	err := bd.db.View(func(dbTx database.Tx) error {
+		serializedTotal := dbTx.Metadata().Get([]byte("blocktotal"))
 		if serializedTotal == nil {
 			return fmt.Errorf("No data")
 		}
@@ -439,19 +438,19 @@ func dbGetTotal() (uint32,error) {
 		return nil
 	})
 	if err != nil {
-		return total,err
+		return total, err
 	}
-	return total,nil
+	return total, nil
 }
 
-func dbGetGenesis() (*hash.Hash,error) {
+func dbGetGenesis() (*hash.Hash, error) {
 	block := Block{id: 0}
 	ib := &PhantomBlock{&block, 0, NewIdSet(), NewIdSet()}
-	err:=bd.db.View(func(dbTx database.Tx) error {
+	err := bd.db.View(func(dbTx database.Tx) error {
 		return DBGetDAGBlock(dbTx, ib)
 	})
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	return ib.GetHash(),nil
+	return ib.GetHash(), nil
 }

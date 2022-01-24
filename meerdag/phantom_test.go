@@ -229,7 +229,7 @@ func Test_IsDAG(t *testing.T) {
 	for _, parent := range parentsTag {
 		parents = append(parents, tbMap[parent].GetHash())
 	}
-	_,err := buildBlock("L",parents)
+	_, err := buildBlock("L", parents)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +320,7 @@ func Test_Rollback(t *testing.T) {
 	parents = append(parents, tbMap["I"].GetHash())
 	parents = append(parents, tbMap["G"].GetHash())
 
-	_,_,err := addBlock("L",parents)
+	_, _, err := addBlock("L", parents)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -347,7 +347,6 @@ func Test_Rollback(t *testing.T) {
 	}
 }
 
-
 func Test_tips(t *testing.T) {
 	ibd := InitBlockDAG(phantom, "PH_fig2-blocks")
 	if ibd == nil {
@@ -360,7 +359,7 @@ func Test_tips(t *testing.T) {
 	parents := []*hash.Hash{}
 	parents = append(parents, tbMap["J"].GetHash())
 
-	_,err := buildBlock("L",parents)
+	_, err := buildBlock("L", parents)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -368,7 +367,7 @@ func Test_tips(t *testing.T) {
 	parents = []*hash.Hash{}
 	parents = append(parents, tbMap["L"].GetHash())
 
-	_,err = buildBlock("M",parents)
+	_, err = buildBlock("M", parents)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -376,7 +375,7 @@ func Test_tips(t *testing.T) {
 	parents = []*hash.Hash{}
 	parents = append(parents, tbMap["M"].GetHash())
 
-	_,err = buildBlock("N",parents)
+	_, err = buildBlock("N", parents)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -387,7 +386,7 @@ func Test_tips(t *testing.T) {
 }
 
 func checkLoad(t *testing.T) {
-	openBlockDB:=func(cfg *config.Config) (database.DB, error) {
+	openBlockDB := func(cfg *config.Config) (database.DB, error) {
 		dbName := "blocks_" + cfg.DbType
 		dbPath := filepath.Join(cfg.DataDir, dbName)
 		db, err := database.Open(cfg.DbType, dbPath, params.ActiveNetParams.Net)
@@ -402,25 +401,25 @@ func checkLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	getBlockData:=func(h *hash.Hash) IBlockData {
-		tb,err:=fetchBlock(h)
+	getBlockData := func(h *hash.Hash) IBlockData {
+		tb, err := fetchBlock(h)
 		if err != nil {
 			t.Fatal(err)
 		}
 		return tb
 	}
 	bd.Init(phantom, CalcBlockWeight, -1, db, getBlockData)
-	total,err:=dbGetTotal()
+	total, err := dbGetTotal()
 	if err != nil {
 		t.Fatal(err)
 	}
-	geneis,err:=dbGetGenesis()
+	geneis, err := dbGetGenesis()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	err = db.View(func(dbTx database.Tx) error {
-		return bd.Load(dbTx,uint(total),geneis)
+		return bd.Load(dbTx, uint(total), geneis)
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -3,12 +3,12 @@ package meerdag
 import (
 	"container/list"
 	"fmt"
-	"github.com/Qitmeer/qng-core/meerdag/anticone"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/common/math"
 	s "github.com/Qitmeer/qng-core/core/serialization"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
+	"github.com/Qitmeer/qng-core/meerdag/anticone"
 	"io"
 )
 
@@ -544,7 +544,7 @@ func (ph *Phantom) GetMainParent(parents *IdSet) IBlock {
 		return nil
 	}
 	if parents.Size() == 1 {
-		ib:= ph.getBlock(parents.List()[0])
+		ib := ph.getBlock(parents.List()[0])
 		if ib == nil {
 			return nil
 		}
@@ -589,7 +589,7 @@ func (ph *Phantom) Decode(r io.Reader) error {
 
 // load
 func (ph *Phantom) Load(dbTx database.Tx) error {
-	tips,err:=DBGetDAGTips(dbTx)
+	tips, err := DBGetDAGTips(dbTx)
 	if err != nil {
 		return err
 	}
@@ -638,12 +638,15 @@ func (ph *Phantom) Load(dbTx database.Tx) error {
 		block.data = ph.bd.getBlockData(ib.GetHash())
 	}
 	// load tips
-	for _,v:=range tips {
-		tip:=ph.getBlock(v)
+	for _, v := range tips {
+		tip := ph.getBlock(v)
 		if tip == nil {
-			return fmt.Errorf("Can't find tip:%d\n",v)
+			return fmt.Errorf("Can't find tip:%d\n", v)
 		}
 		ph.bd.updateTips(tip)
+	}
+	if !ph.bd.tips.Has(ph.mainChain.tip) {
+		return fmt.Errorf("Main chain tip and tips is mismatch")
 	}
 	ph.bd.optimizeTips(dbTx)
 
