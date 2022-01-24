@@ -94,3 +94,27 @@ func (c *Client) GetBlock(h *hash.Hash) (*json.BlockVerboseResult, error) {
 	}
 	return &result, nil
 }
+
+func (c *Client) CreateExportRawTx(txid, pkaddress string, vout uint32, amount int64) (string, error) {
+	var rawstring string
+	if err := c.Call(&rawstring, "createExportRawTransaction", txid, vout, pkaddress, amount); err != nil {
+		return "", err
+	}
+	return rawstring, nil
+}
+
+func (c *Client) TestSign(privateKey, rawStr, tokenPrivateKey string) (string, error) {
+	var hexbalance string
+	if err := c.Call(&hexbalance, "test_txSign", privateKey, rawStr, tokenPrivateKey); err != nil {
+		return "", err
+	}
+	return hexbalance, nil
+}
+
+func (c *Client) GetEthBalance(addr string) (string, error) {
+	var rawstring string
+	if err := c.Call(&rawstring, "eth_getBalance", addr, "latest"); err != nil {
+		return "", err
+	}
+	return rawstring, nil
+}

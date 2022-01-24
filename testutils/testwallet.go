@@ -9,17 +9,20 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/meerevm/common"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/core/address"
 	j "github.com/Qitmeer/qng-core/core/json"
 	s "github.com/Qitmeer/qng-core/core/serialization"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/crypto/bip32"
+	"github.com/Qitmeer/qng-core/crypto/ecc"
 	"github.com/Qitmeer/qng-core/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng-core/params"
 	"github.com/Qitmeer/qng/rpc/client"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
+	common2 "github.com/ethereum/go-ethereum/common"
 	"strconv"
 	"strings"
 	"sync"
@@ -77,7 +80,9 @@ type testWallet struct {
 	hdChildNumer uint32
 	// addrs are all addresses which belong to the master private key.
 	// the keys of address map are their hd child numbers.
-	addrs map[uint32]types.Address
+	addrs    map[uint32]types.Address
+	pkAddrs  map[uint32]*address.SecpPubKeyAddress
+	ethAddrs map[uint32]common2.Address
 	// privkeys cached all private keys which derived from the master private key.
 	// the keys of the private key map are their hd child number.
 	privkeys map[uint32][]byte
@@ -100,6 +105,7 @@ type testWallet struct {
 	netParams        *params.Params
 	t                *testing.T
 	client           *Client
+	evmClient        *Client
 	maxRescanOrder   uint64
 	ScanCount        uint64
 	OnRescanComplete func()
@@ -109,8 +115,52 @@ func (w *testWallet) setRpcClient(client *Client) {
 	w.client = client
 }
 
+func (w *testWallet) setEVMClient(client *Client) {
+	w.evmClient = client
+}
+
 func newTestWallet(t *testing.T, params *params.Params, nodeId uint32) (*testWallet, error) {
 	return newTestWalletWithSeed(t, params, &defaultSeed, nodeId)
+}
+
+func PrivateKeyToPkAddress(privB []byte, p *params.Params) (*address.SecpPubKeyAddress, error) {
+	pub, err := PrivateKeyToPubK(privB, false)
+	if err != nil {
+		return nil, err
+	}
+	pubKey, err := ecc.Secp256k1.ParsePubKey(pub)
+	if err != nil {
+		return nil, err
+	}
+	addr, err := address.NewSecpPubKeyAddress(pubKey.SerializeCompressed(), p)
+	if err != nil {
+		return nil, err
+	}
+	return addr, nil
+}
+
+func PrivateKeyToETHAddress(privB []byte) (common2.Address, error) {
+	pubkey, err := PrivateKeyToPubK(privB, false)
+	if err != nil {
+		return common2.Address{}, err
+	}
+	addr, err := common.NewMeerEVMAddress(hex.EncodeToString(pubkey))
+
+	if err != nil {
+		return common2.Address{}, err
+	}
+	return addr, nil
+}
+
+func PrivateKeyToPubK(privB []byte, uncompressed bool) ([]byte, error) {
+	_, pubKey := ecc.Secp256k1.PrivKeyFromBytes(privB)
+	var key []byte
+	if uncompressed {
+		key = pubKey.SerializeUncompressed()
+	} else {
+		key = pubKey.SerializeCompressed()
+	}
+	return key, nil
 }
 
 func newTestWalletWithSeed(t *testing.T, params *params.Params, seed *[hash.HashSize]byte, nodeId uint32) (*testWallet, error) {
@@ -141,14 +191,28 @@ func newTestWalletWithSeed(t *testing.T, params *params.Params, seed *[hash.Hash
 	if err != nil {
 		return nil, err
 	}
+	pkAddr0, err := PrivateKeyToPkAddress(key0, params)
+	if err != nil {
+		return nil, err
+	}
+	ethAddr0, err := PrivateKeyToETHAddress(key0)
+	if err != nil {
+		return nil, err
+	}
 	addrs := make(map[uint32]types.Address)
+	pkAddrs := make(map[uint32]*address.SecpPubKeyAddress)
+	ethAddrs := make(map[uint32]common2.Address)
 	addrs[0] = addr0
+	pkAddrs[0] = pkAddr0
+	ethAddrs[0] = ethAddr0
 	return &testWallet{
 		nodeId:        nodeId,
 		hdMaster:      hdMaster,
 		hdChildNumer:  1,
 		privkeys:      privkeys,
 		addrs:         addrs,
+		ethAddrs:      ethAddrs,
+		pkAddrs:       pkAddrs,
 		utxos:         make(map[types.TxOutPoint]*utxo),
 		undoes:        make(map[*hash.Hash]*undo),
 		updateArrived: make(chan struct{}),
@@ -169,7 +233,17 @@ func (w *testWallet) newAddress() (types.Address, error) {
 	if err != nil {
 		return nil, err
 	}
+	pkAddrx, err := PrivateKeyToPkAddress(childx.Key, w.netParams)
+	if err != nil {
+		return nil, err
+	}
+	ethAddrx, err := PrivateKeyToETHAddress(childx.Key)
+	if err != nil {
+		return nil, err
+	}
 	w.addrs[num] = addrx
+	w.pkAddrs[num] = pkAddrx
+	w.ethAddrs[num] = ethAddrx
 	w.hdChildNumer++
 	return addrx, nil
 }
@@ -195,6 +269,10 @@ func privKeyToAddr(privKey []byte, params *params.Params) (types.Address, error)
 
 func (w *testWallet) coinBaseAddr() types.Address {
 	return w.addrs[0]
+}
+
+func (w *testWallet) miningAddr() string {
+	return w.pkAddrs[0].String()
 }
 
 func (w *testWallet) coinBasePrivKey() []byte {
