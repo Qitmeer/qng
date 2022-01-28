@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/engine/txscript"
+	"math/big"
 	"sync"
 	"testing"
 	"time"
@@ -82,6 +83,22 @@ func Spend(t *testing.T, h *Harness, amt types.Amount, preOutpoint *types.TxOutP
 		t.Fatalf("failed to pay the output: %v", err)
 	}
 	return txId, addr
+}
+
+// Spend amount from the wallet of the test harness and return tx hash
+func SendSelf(t *testing.T, h *Harness, amt types.Amount, preOutpoint *types.TxOutPoint, lockTime *int64) *hash.Hash {
+	addrScript, err := txscript.PayToAddrScript(h.Wallet.addrs[0])
+	if err != nil {
+		t.Fatalf("failed to generated addr script: %v", err)
+	}
+	output := types.NewTxOutput(amt, addrScript)
+
+	feeRate := types.Amount{Value: 10, Id: amt.Id}
+	txId, err := h.Wallet.PayAndSend([]*types.TxOutput{output}, feeRate, preOutpoint, lockTime)
+	if err != nil {
+		t.Fatalf("failed to pay the output: %v", err)
+	}
+	return txId
 }
 
 // Spend amount from the wallet of the test harness and return tx hash
@@ -222,4 +239,14 @@ func TimeoutFunc(t *testing.T, f func() bool, timeout int) {
 	}()
 	wg.Wait()
 	t.Logf("time use:%.4f ms", float64(time.Now().UnixNano())/float64(start))
+}
+
+func ConvertEthToMeer(ba string) *big.Int {
+	amount, ok := new(big.Int).SetString(ba[2:], 16)
+	if !ok {
+		return nil
+	}
+	// wei 1e18  meer 1e8
+	amount = amount.Div(amount, big.NewInt(1e10))
+	return amount
 }

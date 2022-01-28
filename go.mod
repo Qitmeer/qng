@@ -4,11 +4,12 @@ go 1.14
 
 require (
 	github.com/Qitmeer/meerevm v0.0.0-20220105083239-9c42f85955b8
-	github.com/Qitmeer/qng-core v1.2.9
+	github.com/Qitmeer/qng-core v1.2.10
 	github.com/davecgh/go-spew v1.1.1
 	github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f // indirect
 	github.com/deckarep/golang-set v1.7.1
 	github.com/dgraph-io/ristretto v0.0.2
+	github.com/ethereum/go-ethereum v1.10.9 // indirect
 	github.com/ferranbt/fastssz v0.0.0-20200514094935-99fccaf93472
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2

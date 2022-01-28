@@ -49,6 +49,8 @@ type Harness struct {
 	Node *node
 	// the rpc client to the qitmeer node in the Harness instance.
 	Client *Client
+	// the rpc client to the qng evm node in the Harness instance.
+	EVMClient *Client
 	// the maximized attempts try to establish the rpc connection
 	maxRpcConnRetries int
 	// Notifier use rpc/client with web-socket notification support
@@ -100,6 +102,7 @@ func (h *Harness) Setup() error {
 // this function returns with an error if all retries failed.
 func (h *Harness) connectRPCClient() error {
 	var client *Client
+	var evmClient *Client
 	var err error
 
 	url, user, pass := h.Node.config.rpclisten, h.Node.config.rpcuser, h.Node.config.rpcpass
@@ -115,8 +118,21 @@ func (h *Harness) connectRPCClient() error {
 		return fmt.Errorf("failed to establish rpc client connection: %v", err)
 	}
 
+	for i := 0; i < h.maxRpcConnRetries; i++ {
+		if evmClient, err = Dial("http://"+h.Node.config.evmlisten, user, pass, certs); err != nil {
+			time.Sleep(time.Duration(i) * time.Second)
+			continue
+		}
+		break
+	}
+	if evmClient == nil || err != nil {
+		return fmt.Errorf("failed to establish evm client connection: %v", err)
+	}
+
 	h.Client = client
+	h.EVMClient = evmClient
 	h.Wallet.setRpcClient(client)
+	h.Wallet.setEVMClient(evmClient)
 	return nil
 }
 
@@ -245,7 +261,7 @@ func NewHarness(t *testing.T, params *params.Params, args ...string) (*Harness, 
 	if err != nil {
 		return nil, err
 	}
-	coinbaseAddr := wallet.coinBaseAddr().Encode()
+	coinbaseAddr := wallet.miningAddr()
 	t.Logf("node [%v] wallet coinbase addr: %s", id, coinbaseAddr)
 	extraArgs = append(extraArgs, fmt.Sprintf("--miningaddr=%s", coinbaseAddr))
 	extraArgs = append(extraArgs, "--miner")
