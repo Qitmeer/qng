@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/Qitmeer/meerevm v0.0.0-20220105083239-9c42f85955b8
-	github.com/Qitmeer/qng-core v1.2.8
+	github.com/Qitmeer/qng-core v1.2.9
 	github.com/davecgh/go-spew v1.1.1
 	github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f // indirect
 	github.com/deckarep/golang-set v1.7.1
@@ -13,6 +13,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.4
+	github.com/graph-gophers/graphql-go v1.3.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/ipfs/go-ds-leveldb v0.4.2
 	github.com/ipfs/go-ipfs-addr v0.0.1

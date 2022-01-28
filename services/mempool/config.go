@@ -94,4 +94,8 @@ type Config struct {
 	NoMempoolBar bool
 
 	Events *event.Feed
+
+	// FeeEstimatator provides a feeEstimator. If it is not nil, the mempool
+	// records all new transactions it observes into the feeEstimator.
+	FeeEstimator *FeeEstimator
 }
