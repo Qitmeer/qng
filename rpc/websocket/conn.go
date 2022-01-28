@@ -6,11 +6,13 @@ package websocket
 
 import (
 	"bufio"
+	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"io"
 	"io/ioutil"
-	"math/rand"
+	"math"
+	"math/big"
 	"net"
 	"strconv"
 	"time"
@@ -130,7 +132,11 @@ func maskBytes(key [4]byte, pos int, b []byte) int {
 }
 
 func newMaskKey() [4]byte {
-	n := rand.Uint32()
+	nb, err := rand.Int(rand.Reader, big.NewInt(int64(math.MaxUint32)))
+	if err != nil {
+		panic(err.Error())
+	}
+	n := nb.Int64()
 	return [4]byte{byte(n), byte(n >> 8), byte(n >> 16), byte(n >> 24)}
 }
 
