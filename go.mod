@@ -13,6 +13,7 @@ require (
 	github.com/magiconair/properties v1.8.5 // indirect
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
 	gopkg.in/urfave/cli.v1 v1.20.0
+	github.com/graph-gophers/graphql-go v1.3.0 // indirect
 )
 
 replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-3
