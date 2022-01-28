@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"github.com/Qitmeer/qng/cmd/miner/common/socks"
+	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -80,18 +81,17 @@ func (rpc *RpcClient) RpcResult(method string, params []interface{}, id string) 
 	if !rpc.Cfg.SoloConfig.NoTLS {
 		protocol = "https"
 	}
-	paramStr, err := json.Marshal(params)
-	if err != nil {
-		MinerLoger.Error("rpc params error", "error", err)
-		return nil
-	}
+	req, err := cmds.NewRequest(id, method, params)
 	url := rpc.Cfg.SoloConfig.RPCServer
 	if !strings.Contains(rpc.Cfg.SoloConfig.RPCServer, "://") {
 		url = protocol + "://" + url
 	}
-	jsonStr := []byte(`{"jsonrpc": "2.0", "method": "` + method +
-		`", "params": ` + string(paramStr) + `, "id": "` + id + `"}`)
-	bodyBuff := bytes.NewBuffer(jsonStr)
+	bodyB, err := json.Marshal(req)
+	if err != nil {
+		MinerLoger.Error("request failed ", "error", err)
+		return nil
+	}
+	bodyBuff := bytes.NewBuffer(bodyB)
 	httpRequest, err := http.NewRequest("POST", url, bodyBuff)
 	if err != nil {
 		MinerLoger.Error("rpc connect failed ", "error", err)
