@@ -60,10 +60,8 @@ github.com/Qitmeer/go-ethereum v1.10.9-3 h1:TtbYnrkrd8Z/sjGdAxHpRLBoRF/c/DbEvGfg
 github.com/Qitmeer/go-ethereum v1.10.9-3/go.mod h1:c5mdg+S/A4faGVSyjul+xYkXdBVg3edy3DpsGhdzBmU=
 github.com/Qitmeer/go-ethereum v1.10.9-q.2 h1:60fEOiCZ/L/opJ62dnHyql0ZNBkwpTm43owguOQeMbI=
 github.com/Qitmeer/go-ethereum v1.10.9-q.2/go.mod h1:c5mdg+S/A4faGVSyjul+xYkXdBVg3edy3DpsGhdzBmU=
-github.com/Qitmeer/qng-core v1.2.6 h1:0zpRxhROqK8+/kKbaCXCcS6kftKXUc0NT5wp9ri41iU=
-github.com/Qitmeer/qng-core v1.2.6/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
-github.com/Qitmeer/qng-core v1.2.7 h1:tWQAlXMh9/1DXumPEOBUumprnM15lSlwSq+MfL+qjNU=
-github.com/Qitmeer/qng-core v1.2.7/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
+github.com/Qitmeer/qng-core v1.2.10 h1:Iz3VGHDNl6zZuU9YOGkCslt77NupRYqe/l5pNSGgqq4=
+github.com/Qitmeer/qng-core v1.2.10/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
 github.com/Shopify/sarama v1.29.1/go.mod h1:mdtqvCSg8JOxk8PmpTNGyo6wzd4BMm4QXSfDnTXmgkE=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 h1:fLjPD/aNc3UIOA6tDi6QXUemppXK3P9BI7mr2hd6gx8=
@@ -290,8 +288,8 @@ github.com/gorilla/securecookie v1.1.1/go.mod h1:ra0sb63/xPlUeL+yeDciTfxMRAA+MP+
 github.com/gorilla/sessions v1.2.1/go.mod h1:dk2InVEVJ0sfLlnXv9EAgkf6ecYs/i80K/zI+bUmuGM=
 github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0Ufc=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
-github.com/graph-gophers/graphql-go v0.0.0-20201113091052-beb923fada29 h1:sezaKhEfPFg8W0Enm61B9Gs911H8iesGY5R8NDPtd1M=
-github.com/graph-gophers/graphql-go v0.0.0-20201113091052-beb923fada29/go.mod h1:9CQHMSxwO4MprSdzoIEobiHpoLtHm77vfxsvsIN5Vuc=
+github.com/graph-gophers/graphql-go v1.3.0 h1:Eb9x/q6MFpCLz7jBCiP/WTxjSDrYLR1QY41SORZyNJ0=
+github.com/graph-gophers/graphql-go v1.3.0/go.mod h1:9CQHMSxwO4MprSdzoIEobiHpoLtHm77vfxsvsIN5Vuc=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/hashicorp/go-bexpr v0.1.10 h1:9kuI5PFotCboP3dkDYFr/wi0gg0QVbSNz5oFRpxn4uE=
 github.com/hashicorp/go-bexpr v0.1.10/go.mod h1:oxlubA2vC/gFVfX1A6JGp7ls7uCDlfJn732ehYYg+g0=
