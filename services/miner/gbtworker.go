@@ -4,12 +4,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/json"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/core/types/pow"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/mining"
 	"github.com/Qitmeer/qng/version"
@@ -48,7 +48,7 @@ func (w *GBTWorker) Start() error {
 	log.Info("Start GBT Worker...")
 	err := w.miner.initCoinbase()
 	if err != nil {
-		return err
+		log.Warn(fmt.Sprintf("You will not be allowed to use <coinbasetxn> :%s", err.Error()))
 	}
 	w.miner.updateBlockTemplate(false)
 	return nil
@@ -74,7 +74,7 @@ func (w *GBTWorker) Update() {
 
 func (w *GBTWorker) GetRequest(request *json.TemplateRequest, reply chan *gbtResponse) {
 	if atomic.LoadInt32(&w.shutdown) != 0 {
-		close(reply)
+		reply <- &gbtResponse{nil, fmt.Errorf("GBTWorker is not running ")}
 		return
 	}
 
