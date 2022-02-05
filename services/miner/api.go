@@ -12,7 +12,7 @@ import (
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/core/types/pow"
 	"github.com/Qitmeer/qng/rpc"
-	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng-core/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 )
 

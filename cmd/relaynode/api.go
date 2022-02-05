@@ -10,7 +10,7 @@ import (
 	"github.com/Qitmeer/qng-core/core/protocol"
 	"github.com/Qitmeer/qng/node"
 	"github.com/Qitmeer/qng-core/params"
-	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng-core/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/version"
 	"time"
