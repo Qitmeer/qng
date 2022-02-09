@@ -16,6 +16,7 @@ import (
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/version"
 	"github.com/jessevdk/go-flags"
+	"github.com/urfave/cli/v2"
 	"net"
 	"os"
 	"path/filepath"
@@ -65,12 +66,8 @@ var (
 	defaultDAGType     = "phantom"
 )
 
-// loadConfig initializes and parses the config using a config file and command
-// line options.
-func LoadConfig() (*config.Config, []string, error) {
-
-	// Default config.
-	cfg := config.Config{
+var (
+	cfg = config.Config{
 		HomeDir:              defaultHomeDir,
 		ConfigFile:           defaultConfigFile,
 		DebugLevel:           defaultLogLevel,
@@ -97,26 +94,486 @@ func LoadConfig() (*config.Config, []string, error) {
 		NTP:                  false,
 		MempoolExpiry:        defaultMempoolExpiry,
 		AcceptNonStd:         true,
-		RPCUser:			  defaultRPCUser,
+		RPCUser:              defaultRPCUser,
 		RPCPass:              defaultRPCPass,
 	}
+
+	RPCListeners      cli.StringSlice
+	Modules           cli.StringSlice
+	MiningAddrs       cli.StringSlice
+	BlockMinSize      uint
+	BlockMaxSize      uint
+	BlockPrioritySize uint
+	AddPeers          cli.StringSlice
+	BootstrapNodes    cli.StringSlice
+	Whitelist         cli.StringSlice
+	Blacklist         cli.StringSlice
+
+	Flags = []cli.Flag{
+		&cli.StringFlag{
+			Name:        "appdata",
+			Aliases:     []string{"A"},
+			Usage:       "Path to application home directory",
+			Value:       defaultHomeDir,
+			Destination: &cfg.HomeDir,
+		},
+		&cli.BoolFlag{
+			Name:        "ShowVersion",
+			Aliases:     []string{"V"},
+			Usage:       "Display version information and exit",
+			Value:       false,
+			Destination: &cfg.ShowVersion,
+		},
+		&cli.StringFlag{
+			Name:        "configfile",
+			Aliases:     []string{"C"},
+			Usage:       "Path to configuration file",
+			Value:       defaultConfigFile,
+			Destination: &cfg.ConfigFile,
+		},
+		&cli.StringFlag{
+			Name:        "datadir",
+			Aliases:     []string{"b"},
+			Usage:       "Directory to store data",
+			Value:       defaultDataDir,
+			Destination: &cfg.DataDir,
+		},
+		&cli.StringFlag{
+			Name:        "logdir",
+			Usage:       "Directory to log output.",
+			Value:       defaultLogDir,
+			Destination: &cfg.LogDir,
+		},
+		&cli.BoolFlag{
+			Name:        "nofilelogging",
+			Usage:       "Disable file logging.",
+			Value:       false,
+			Destination: &cfg.NoFileLogging,
+		},
+		&cli.StringFlag{
+			Name:        "listen",
+			Usage:       "Add an IP to listen for connections",
+			Destination: &cfg.Listener,
+		},
+		&cli.StringFlag{
+			Name:        "port",
+			Usage:       "Default p2p port.",
+			Destination: &cfg.DefaultPort,
+		},
+		&cli.StringSliceFlag{
+			Name:        "rpclisten",
+			Usage:       "Add an interface/port to listen for RPC connections",
+			Destination: &RPCListeners,
+		},
+		&cli.IntFlag{
+			Name:        "maxpeers",
+			Usage:       "Max number of inbound and outbound peers",
+			Value:       defaultMaxPeers,
+			Destination: &cfg.MaxPeers,
+		},
+		&cli.BoolFlag{
+			Name:        "nolisten",
+			Usage:       "Disable listening for incoming connections",
+			Value:       false,
+			Destination: &cfg.DisableListen,
+		},
+		&cli.StringFlag{
+			Name:        "rpcuser",
+			Aliases:     []string{"u"},
+			Usage:       "Username for RPC connections",
+			Value:       defaultRPCUser,
+			Destination: &cfg.RPCUser,
+		},
+		&cli.StringFlag{
+			Name:        "rpcpass",
+			Aliases:     []string{"P"},
+			Usage:       "Password for RPC connections",
+			Value:       defaultRPCPass,
+			Destination: &cfg.RPCPass,
+		},
+		&cli.StringFlag{
+			Name:        "rpccert",
+			Usage:       "File containing the certificate file",
+			Value:       defaultRPCCertFile,
+			Destination: &cfg.RPCCert,
+		},
+		&cli.StringFlag{
+			Name:        "rpckey",
+			Usage:       "File containing the certificate key",
+			Value:       defaultRPCKeyFile,
+			Destination: &cfg.RPCKey,
+		},
+		&cli.IntFlag{
+			Name:        "rpcmaxclients",
+			Usage:       "Max number of RPC clients for standard connections",
+			Value:       defaultMaxRPCClients,
+			Destination: &cfg.RPCMaxClients,
+		},
+		&cli.BoolFlag{
+			Name:        "norpc",
+			Usage:       "Disable built-in RPC server -- NOTE: The RPC server is disabled by default if no rpcuser/rpcpass or rpclimituser/rpclimitpass is specified",
+			Value:       false,
+			Destination: &cfg.DisableRPC,
+		},
+		&cli.BoolFlag{
+			Name:        "notls",
+			Usage:       "Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost",
+			Value:       false,
+			Destination: &cfg.DisableTLS,
+		},
+		&cli.StringSliceFlag{
+			Name:        "modules",
+			Usage:       "Modules is a list of API modules(See GetNodeInfo) to expose via the HTTP RPC interface. If the module list is empty, all RPC API endpoints designated public will be exposed.",
+			Destination: &Modules,
+		},
+		&cli.BoolFlag{
+			Name:        "nocheckpoints",
+			Usage:       "Disable built-in checkpoints.  Don't do this unless you know what you're doing.",
+			Destination: &cfg.DisableCheckpoints,
+		},
+		&cli.BoolFlag{
+			Name:        "droptxindex",
+			Usage:       "Deletes the hash-based transaction index from the database on start up and then exits",
+			Destination: &cfg.DropTxIndex,
+		},
+		&cli.BoolFlag{
+			Name:        "addrindex",
+			Usage:       "Maintain a full address-based transaction index which makes the getrawtransactions RPC available",
+			Destination: &cfg.AddrIndex,
+		},
+		&cli.BoolFlag{
+			Name:        "dropaddrindex",
+			Usage:       "Deletes the address-based transaction index from the database on start up and then exits.",
+			Destination: &cfg.DropAddrIndex,
+		},
+		&cli.BoolFlag{
+			Name:        "light",
+			Usage:       "start as a qitmeer light node",
+			Destination: &cfg.LightNode,
+		},
+		&cli.UintFlag{
+			Name:        "sigcachemaxsize",
+			Usage:       "The maximum number of entries in the signature verification cache",
+			Value:       defaultSigCacheMaxSize,
+			Destination: &cfg.SigCacheMaxSize,
+		},
+		&cli.StringFlag{
+			Name:        "dumpblockchain",
+			Usage:       "Write blockchain as a flat file of blocks for use with addblock, to the specified filename",
+			Destination: &cfg.DumpBlockchain,
+		},
+		&cli.BoolFlag{
+			Name:        "testnet",
+			Usage:       "Use the test network",
+			Value:       false,
+			Destination: &cfg.TestNet,
+		},
+		&cli.BoolFlag{
+			Name:        "mixnet",
+			Usage:       "Use the test mix pow network",
+			Value:       false,
+			Destination: &cfg.MixNet,
+		},
+		&cli.BoolFlag{
+			Name:        "privnet",
+			Usage:       "Use the private network",
+			Value:       false,
+			Destination: &cfg.PrivNet,
+		},
+		&cli.StringFlag{
+			Name:        "dbtype",
+			Usage:       "Database backend to use for the Block Chain",
+			Value:       defaultDbType,
+			Destination: &cfg.DbType,
+		},
+		&cli.StringFlag{
+			Name:        "profile",
+			Usage:       "Enable HTTP profiling on given [addr:]port -- NOTE port must be between 1024 and 65536",
+			Destination: &cfg.Profile,
+		},
+		&cli.StringFlag{
+			Name:        "debuglevel",
+			Aliases:     []string{"d"},
+			Usage:       "Logging level {trace, debug, info, warn, error, critical}",
+			Value:       defaultLogLevel,
+			Destination: &cfg.DebugLevel,
+		},
+		&cli.BoolFlag{
+			Name:        "printorigin",
+			Usage:       "Print log debug location (file:line)",
+			Value:       defaultDebugPrintOrigins,
+			Destination: &cfg.DebugPrintOrigins,
+		},
+		&cli.BoolFlag{
+			Name:        "norelaypriority",
+			Usage:       "Do not require free or low-fee transactions to have high priority for relaying",
+			Destination: &cfg.NoRelayPriority,
+		},
+		&cli.Float64Flag{
+			Name:        "limitfreerelay",
+			Usage:       "Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute",
+			Destination: &cfg.FreeTxRelayLimit,
+		},
+		&cli.BoolFlag{
+			Name:        "acceptnonstd",
+			Usage:       "Accept and relay non-standard transactions to the network regardless of the default settings for the active network.",
+			Value:       true,
+			Destination: &cfg.AcceptNonStd,
+		},
+		&cli.IntFlag{
+			Name:        "maxorphantx",
+			Usage:       "Max number of orphan transactions to keep in memory",
+			Destination: &cfg.MaxOrphanTxs,
+		},
+		&cli.Int64Flag{
+			Name:        "mintxfee",
+			Usage:       "The minimum transaction fee in AtomMEER/kB.",
+			Value:       mempool.DefaultMinRelayTxFee,
+			Destination: &cfg.MinTxFee,
+		},
+		&cli.Int64Flag{
+			Name:        "mempoolexpiry",
+			Usage:       "Do not keep transactions in the mempool more than mempoolexpiry",
+			Value:       defaultMempoolExpiry,
+			Destination: &cfg.MempoolExpiry,
+		},
+		&cli.BoolFlag{
+			Name:        "persistmempool",
+			Usage:       "Whether to save the mempool on shutdown and load on restart",
+			Destination: &cfg.Persistmempool,
+		},
+		&cli.BoolFlag{
+			Name:        "nomempoolbar",
+			Usage:       "Whether to show progress bar when load mempool from file",
+			Destination: &cfg.NoMempoolBar,
+		},
+		&cli.BoolFlag{
+			Name:        "miner",
+			Usage:       "Enable miner module",
+			Destination: &cfg.Miner,
+		},
+		&cli.BoolFlag{
+			Name:        "generate",
+			Usage:       "Generate (mine) coins using the CPU",
+			Value:       defaultGenerate,
+			Destination: &cfg.Generate,
+		},
+		&cli.StringSliceFlag{
+			Name:        "miningaddr",
+			Usage:       "Add the specified payment address to the list of addresses to use for generated blocks -- At least one address is required if the generate option is set",
+			Destination: &MiningAddrs,
+		},
+		&cli.IntFlag{
+			Name:        "miningtimeoffset",
+			Usage:       "Offset the mining timestamp of a block by this many seconds (positive values are in the past)",
+			Destination: &cfg.MiningTimeOffset,
+		},
+		&cli.UintFlag{
+			Name:        "blockminsize",
+			Usage:       "Mininum block size in bytes to be used when creating a block",
+			Value:       defaultBlockMinSize,
+			Destination: &BlockMinSize,
+		},
+		&cli.UintFlag{
+			Name:        "blockmaxsize",
+			Usage:       "Maximum block size in bytes to be used when creating a block",
+			Value:       defaultBlockMaxSize,
+			Destination: &BlockMaxSize,
+		},
+		&cli.UintFlag{
+			Name:        "blockprioritysize",
+			Usage:       "Size in bytes for high-priority/low-fee transactions when creating a block",
+			Destination: &BlockPrioritySize,
+		},
+		&cli.IntFlag{
+			Name:        "rpcmaxwebsockets",
+			Usage:       "Max number of RPC websocket connections",
+			Value:       defaultMaxRPCWebsockets,
+			Destination: &cfg.RPCMaxWebsockets,
+		},
+		&cli.IntFlag{
+			Name:        "rpcmaxconcurrentreqs",
+			Usage:       "Max number of concurrent RPC requests that may be processed concurrently",
+			Value:       defaultMaxRPCConcurrentReqs,
+			Destination: &cfg.RPCMaxConcurrentReqs,
+		},
+		&cli.BoolFlag{
+			Name:        "blocksonly",
+			Usage:       "Do not accept transactions from remote peers",
+			Destination: &cfg.BlocksOnly,
+		},
+		&cli.BoolFlag{
+			Name:        "miningstatesync",
+			Usage:       "Synchronizing the mining state with other nodes",
+			Value:       defaultMiningStateSync,
+			Destination: &cfg.MiningStateSync,
+		},
+		&cli.StringSliceFlag{
+			Name:        "addpeer",
+			Aliases:     []string{"a"},
+			Usage:       "Add a peer to connect with at startup",
+			Destination: &AddPeers,
+		},
+		&cli.BoolFlag{
+			Name:        "upnp",
+			Usage:       "Use UPnP to map our listening port outside of NAT",
+			Destination: &cfg.Upnp,
+		},
+		&cli.IntFlag{
+			Name:        "maxinbound",
+			Usage:       "The max total of inbound peer for host",
+			Value:       defaultMaxInboundPeersPerHost,
+			Destination: &cfg.MaxInbound,
+		},
+		&cli.BoolFlag{
+			Name:        "banning",
+			Usage:       "Enable banning of misbehaving peers",
+			Value:       true,
+			Destination: &cfg.Banning,
+		},
+		&cli.StringFlag{
+			Name:        "dagtype",
+			Aliases:     []string{"G"},
+			Usage:       "DAG type {phantom,spectre}",
+			Value:       defaultDAGType,
+			Destination: &cfg.DAGType,
+		},
+		&cli.BoolFlag{
+			Name:        "cleanup",
+			Aliases:     []string{"L"},
+			Usage:       "Cleanup the block database",
+			Destination: &cfg.Cleanup,
+		},
+		&cli.BoolFlag{
+			Name:        "buildledger",
+			Usage:       "Generate the genesis ledger for the next qitmeer version",
+			Destination: &cfg.BuildLedger,
+		},
+		&cli.StringFlag{
+			Name:        "zmqpubhashblock",
+			Usage:       "Enable publish hash block  in <address>",
+			Destination: &cfg.Zmqpubhashblock,
+		},
+		&cli.StringFlag{
+			Name:        "zmqpubrawblock",
+			Usage:       "Enable publish raw block in <address>",
+			Destination: &cfg.Zmqpubrawblock,
+		},
+		&cli.StringFlag{
+			Name:        "zmqpubhashtx",
+			Usage:       "Enable publish hash transaction in <address>",
+			Destination: &cfg.Zmqpubhashtx,
+		},
+		&cli.StringFlag{
+			Name:        "zmqpubrawtx",
+			Usage:       "Enable publish raw transaction in <address>",
+			Destination: &cfg.Zmqpubrawtx,
+		},
+		&cli.BoolFlag{
+			Name:        "cacheinvalidtx",
+			Usage:       "Cache invalid transactions.",
+			Value:       defaultCacheInvalidTx,
+			Destination: &cfg.CacheInvalidTx,
+		},
+		&cli.BoolFlag{
+			Name:        "ntp",
+			Usage:       "Auto sync time.",
+			Value:       false,
+			Destination: &cfg.NTP,
+		},
+		&cli.StringSliceFlag{
+			Name:        "bootstrapnode",
+			Usage:       "The address of bootstrap node.",
+			Destination: &BootstrapNodes,
+		},
+		&cli.BoolFlag{
+			Name:        "nodiscovery",
+			Usage:       "Enable only local network p2p and do not connect to cloud bootstrap nodes.",
+			Destination: &cfg.NoDiscovery,
+		},
+		&cli.StringFlag{
+			Name:        "metadatadir",
+			Usage:       "meta data dir for p2p",
+			Destination: &cfg.MetaDataDir,
+		},
+		&cli.IntFlag{
+			Name:        "p2pudpport",
+			Usage:       "The udp port used by P2P",
+			Destination: &cfg.P2PUDPPort,
+		},
+		&cli.IntFlag{
+			Name:        "p2ptcpport",
+			Usage:       "The tcp port used by P2P.",
+			Destination: &cfg.P2PTCPPort,
+		},
+		&cli.StringFlag{
+			Name:        "externalip",
+			Usage:       "The IP address advertised by libp2p. This may be used to advertise an external IP.",
+			Destination: &cfg.HostIP,
+		},
+		&cli.StringFlag{
+			Name:        "externaldns",
+			Usage:       "The DNS address advertised by libp2p. This may be used to advertise an external DNS.",
+			Destination: &cfg.HostDNS,
+		},
+		&cli.StringFlag{
+			Name:        "relaynode",
+			Usage:       "The address of relay node that routes traffic between two peers over a qitmeer “relay” peer.",
+			Destination: &cfg.RelayNode,
+		},
+		&cli.StringSliceFlag{
+			Name:        "whitelist",
+			Usage:       "Add an IP network or IP,PeerID that will not be banned or ignore dual channel mode detection. (eg. 192.168.1.0/24 or ::1 or [peer id])",
+			Destination: &Whitelist,
+		},
+		&cli.StringSliceFlag{
+			Name:        "blacklist",
+			Usage:       "Add some IP network or IP that will be banned. (eg. 192.168.1.0/24 or ::1)",
+			Destination: &Blacklist,
+		},
+		&cli.IntFlag{
+			Name:        "maxbadresp",
+			Usage:       "maxbadresp is the maximum number of bad responses from a peer before we stop talking to it.",
+			Destination: &cfg.MaxBadResp,
+		},
+		&cli.BoolFlag{
+			Name:        "circuit",
+			Usage:       "All peers will ignore dual channel mode detection",
+			Destination: &cfg.Circuit,
+		},
+		&cli.StringFlag{
+			Name:        "evmenv",
+			Usage:       "meer EVM environment",
+			Destination: &cfg.EVMEnv,
+		},
+		&cli.BoolFlag{
+			Name:        "estimatefee",
+			Usage:       "Enable estimate fee",
+			Destination: &cfg.Estimatefee,
+		},
+	}
+)
+
+// loadConfig initializes and parses the config using a config file and command
+// line options.
+func LoadConfig() (*config.Config, []string, error) {
+	cfg.RPCListeners = RPCListeners.Value()
+	cfg.Modules = Modules.Value()
+	cfg.MiningAddrs = MiningAddrs.Value()
+	cfg.BlockMinSize = uint32(BlockMinSize)
+	cfg.BlockMaxSize = uint32(BlockMaxSize)
+	cfg.BlockPrioritySize = uint32(BlockPrioritySize)
+	cfg.AddPeers = AddPeers.Value()
+	cfg.BootstrapNodes = BootstrapNodes.Value()
+	cfg.Whitelist = Whitelist.Value()
+	cfg.Blacklist = Blacklist.Value()
 
 	// Pre-parse the command line options to see if an alternative config
 	// file or the version flag was specified.  Any errors aside from the
 	// help message error can be ignored here since they will be caught by
 	// the final parse below.
 	preCfg := cfg
-	preParser := newConfigParser(&preCfg, flags.HelpFlag)
-	_, err := preParser.Parse()
-	if err != nil {
-		if e, ok := err.(*flags.Error); ok && e.Type != flags.ErrHelp {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		} else if ok && e.Type == flags.ErrHelp {
-			fmt.Fprintln(os.Stdout, err)
-			os.Exit(0)
-		}
-	}
+
 	// Show the version and exit if the version flag was specified.
 	appName := filepath.Base(os.Args[0])
 	appName = strings.TrimSuffix(appName, filepath.Ext(appName))
@@ -444,7 +901,7 @@ func newConfigParser(cfg *config.Config, options flags.Options) *flags.Parser {
 // the levels accordingly.  An appropriate error is returned if anything is
 // invalid.
 func ParseAndSetDebugLevels(debugLevel string) error {
-	log.LocationTrims=append(log.LocationTrims,"github.com/Qitmeer/qng")
+	log.LocationTrims = append(log.LocationTrims, "github.com/Qitmeer/qng")
 	// When the specified string doesn't have any delimters, treat it as
 	// the log level for all subsystems.
 	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {

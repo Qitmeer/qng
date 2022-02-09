@@ -6,14 +6,16 @@ package main
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng-core/common/roughtime"
 	"github.com/Qitmeer/qng-core/config"
-	"github.com/Qitmeer/qng-core/log"
 	_ "github.com/Qitmeer/qng-core/database/ffldb"
-	"github.com/Qitmeer/qng/node"
+	"github.com/Qitmeer/qng-core/log"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/node"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/version"
+	"github.com/urfave/cli/v2"
 	"os"
 	"runtime"
 	"runtime/debug"
@@ -30,10 +32,40 @@ func main() {
 	debug.SetGCPercent(20)
 
 	// Work around defer not working after os.Exit()
-	if err := qitmeerdMain(nil); err != nil {
+	if err := qng(); err != nil {
 		log.Error(err.Error())
 		os.Exit(1)
 	}
+}
+
+func qng() error {
+	app := &cli.App{
+		Name:     "QNG",
+		Version:  version.String(),
+		Compiled: roughtime.Now(),
+		Authors: []*cli.Author{
+			&cli.Author{
+				Name: "Qitmeer",
+			},
+		},
+		Copyright:            "(c) 2022 Qitmeer",
+		Usage:                "The next generation of the Qitmeer network implementation with the plug-able VMs under the MeerDAG consensus.",
+		Commands:             []*cli.Command{},
+		Flags:                common.Flags,
+		EnableBashCompletion: true,
+		Before: func(ctx *cli.Context) error {
+			// Load configuration and parse command line.  This function also
+			// initializes logging and configures it accordingly.
+			cfg, _, err := common.LoadConfig()
+			if err != nil {
+				return err
+			}
+			config.Cfg = cfg
+			return nil
+		},
+		Action: qitmeerd,
+	}
+	return app.Run(os.Args)
 }
 
 // qitmeerdMain is the real main function for qitmeerd.  It is necessary to work around
@@ -41,14 +73,9 @@ func main() {
 // optional nodeChan parameter is mainly used by the service code to be
 // notified with the node once it is setup so it can gracefully stop it when
 // requested from the service control manager.
-func qitmeerdMain(nodeChan chan<- *node.Node) error {
-	// Load configuration and parse command line.  This function also
-	// initializes logging and configures it accordingly.
-	cfg, _, err := common.LoadConfig()
-	if err != nil {
-		return err
-	}
-
+func qitmeerd(ctx *cli.Context) error {
+	var nodeChan chan<- *node.Node
+	cfg := config.Cfg
 	defer func() {
 		if log.LogWrite() != nil {
 			log.LogWrite().Close()
