@@ -4,14 +4,14 @@ package node
 import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/consensus"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
+	"github.com/Qitmeer/qng-core/rpc/api"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/rpc"
-	"github.com/Qitmeer/qng-core/rpc/api"
 	"github.com/Qitmeer/qng/services/acct"
 	"github.com/Qitmeer/qng/services/address"
 	"github.com/Qitmeer/qng/services/blkmgr"
@@ -83,6 +83,7 @@ func (qm *QitmeerFull) RegisterRpcService() error {
 		whitelist[module] = true
 	}
 
+	retApis := []api.API{}
 	// Register all the APIs exposed by the services
 	for _, api := range apis {
 		if whitelist[api.NameSpace] || (len(whitelist) == 0 && api.Public) {
@@ -90,8 +91,10 @@ func (qm *QitmeerFull) RegisterRpcService() error {
 				return err
 			}
 			log.Debug(fmt.Sprintf("RPC Service API registered. NameSpace:%s     %s", api.NameSpace, reflect.TypeOf(api.Service)))
+			retApis = append(retApis, api)
 		}
 	}
+	qm.GetVMService().RegisterAPIs(retApis)
 	return nil
 }
 
@@ -151,7 +154,7 @@ func (qm *QitmeerFull) RegisterAccountService() error {
 }
 
 func (qm *QitmeerFull) RegisterVMService(tp consensus.TxPool) error {
-	vmServer, err := vm.NewService(qm.node.Config, &qm.node.events,tp,qm.nfManager)
+	vmServer, err := vm.NewService(qm.node.Config, &qm.node.events, tp, qm.nfManager)
 	if err != nil {
 		return err
 	}

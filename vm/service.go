@@ -4,18 +4,19 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/meerevm/evm"
+	"github.com/Qitmeer/qng-core/config"
 	qconfig "github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/consensus"
-	"github.com/Qitmeer/qng-core/config"
-	qconsensus "github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng-core/core/address"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng-core/core/event"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/engine/txscript"
-	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng-core/rpc/api"
+	qconsensus "github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/node/service"
 )
 
 type Factory interface {
@@ -36,6 +37,8 @@ type Service struct {
 	tp consensus.TxPool
 
 	Notify consensus.Notify
+
+	apis []api.API
 }
 
 func (s *Service) Start() error {
@@ -48,6 +51,7 @@ func (s *Service) Start() error {
 		if err != nil {
 			return err
 		}
+		vm.RegisterAPIs(s.apis)
 		err = vm.Bootstrapping()
 		if err != nil {
 			return err
@@ -119,10 +123,10 @@ func (s *Service) GetVMContext() consensus.Context {
 			DataDir:           s.cfg.DataDir,
 			DebugLevel:        s.cfg.DebugLevel,
 			DebugPrintOrigins: s.cfg.DebugPrintOrigins,
-			EVMEnv:s.cfg.EVMEnv,
+			EVMEnv:            s.cfg.EVMEnv,
 		},
-		Tp:s.tp,
-		Notify:s.Notify,
+		Tp:     s.tp,
+		Notify: s.Notify,
 	}
 }
 
@@ -174,7 +178,7 @@ func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 	}
 
 	if tx.GetTxType() != types.TxTypeCrossChainImport {
-		return 0,fmt.Errorf("Not support:%s\n",tx.GetTxType().String())
+		return 0, fmt.Errorf("Not support:%s\n", tx.GetTxType().String())
 	}
 
 	itx, ok := tx.(*qconsensus.ImportTx)
@@ -196,7 +200,7 @@ func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 	if ba < itx.Transaction.TxOut[0].Amount.Value {
 		return 0, fmt.Errorf("Balance (%s)  %d < output %d", pka.String(), ba, itx.Transaction.TxOut[0].Amount.Value)
 	}
-	return ba-itx.Transaction.TxOut[0].Amount.Value, nil
+	return ba - itx.Transaction.TxOut[0].Amount.Value, nil
 }
 
 func (s *Service) ConnectBlock(block *types.SerializedBlock) error {
@@ -204,7 +208,7 @@ func (s *Service) ConnectBlock(block *types.SerializedBlock) error {
 	if err != nil {
 		return err
 	}
-	b,err:=s.normalizeBlock(block)
+	b, err := s.normalizeBlock(block)
 	if err != nil {
 		return err
 	}
@@ -220,7 +224,7 @@ func (s *Service) DisconnectBlock(block *types.SerializedBlock) error {
 	if err != nil {
 		return err
 	}
-	b,err:=s.normalizeBlock(block)
+	b, err := s.normalizeBlock(block)
 	if err != nil {
 		return err
 	}
@@ -231,8 +235,8 @@ func (s *Service) DisconnectBlock(block *types.SerializedBlock) error {
 	return vm.DisconnectBlock(b)
 }
 
-func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Block,error) {
-	result:=&qconsensus.Block{Id:block.Hash(),Txs:[]consensus.Tx{}}
+func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Block, error) {
+	result := &qconsensus.Block{Id: block.Hash(), Txs: []consensus.Tx{}}
 
 	for idx, tx := range block.Transactions() {
 		if idx == 0 {
@@ -243,55 +247,60 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Bloc
 			ctx := &qconsensus.Tx{Type: types.TxTypeCrossChainExport}
 			_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
 			if err != nil {
-				return nil,err
+				return nil, err
 			}
 
 			if len(pksAddrs) > 0 {
 				secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
 				if !ok {
-					return nil,fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
+					return nil, fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
 				}
 				ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
 				ctx.Value = uint64(tx.Tx.TxOut[0].Amount.Value)
 				result.Txs = append(result.Txs, ctx)
-			}else{
-				return nil,fmt.Errorf("tx format error :TxTypeCrossChainExport")
+			} else {
+				return nil, fmt.Errorf("tx format error :TxTypeCrossChainExport")
 			}
 
 		} else if types.IsCrossChainImportTx(tx.Tx) {
 			ctx, err := qconsensus.NewImportTx(tx.Tx)
 			if err != nil {
-				return nil,err
+				return nil, err
 			}
 			result.Txs = append(result.Txs, ctx)
 		} else if opreturn.IsMeerEVMTx(tx.Tx) {
-			ctx := &qconsensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(tx.Tx.TxIn[0].SignScript)}
+			ctx := &qconsensus.Tx{Type: types.TxTypeCrossChainVM, Data: []byte(tx.Tx.TxIn[0].SignScript)}
 			_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(block.Transactions()[0].Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
 			if err != nil {
-				return nil,err
+				return nil, err
 			}
 			if len(pksAddrs) > 0 {
 				secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
 				if !ok {
-					return nil,fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
+					return nil, fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
 				}
 				ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
 				result.Txs = append(result.Txs, ctx)
-			}else{
-				return nil,fmt.Errorf("tx format error :TxTypeCrossChainVM")
+			} else {
+				return nil, fmt.Errorf("tx format error :TxTypeCrossChainVM")
 			}
 		}
 	}
-	return result,nil
+	return result, nil
 }
 
-func NewService(cfg *config.Config, events *event.Feed,tp consensus.TxPool,Notify consensus.Notify) (*Service, error) {
+func (s *Service) RegisterAPIs(apis []api.API) {
+	s.apis = append(s.apis, apis...)
+}
+
+func NewService(cfg *config.Config, events *event.Feed, tp consensus.TxPool, Notify consensus.Notify) (*Service, error) {
 	ser := Service{
 		events: events,
 		vms:    make(map[string]consensus.ChainVM),
 		cfg:    cfg,
-		tp:tp,
-		Notify:Notify,
+		tp:     tp,
+		Notify: Notify,
+		apis:   []api.API{},
 	}
 	if err := ser.registerVMs(); err != nil {
 		log.Error(err.Error())
