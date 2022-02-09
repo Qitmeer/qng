@@ -110,3 +110,5 @@ func (c *Config) GetMinningAddrs() []types.Address {
 func (c *Config) SetMiningAddrs(addr types.Address) {
 	c.miningAddrs = append(c.miningAddrs, addr)
 }
+
+var Cfg *Config
