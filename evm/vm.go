@@ -15,6 +15,7 @@ import (
 	"github.com/Qitmeer/qng-core/core/address"
 	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
 	qtypes "github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng-core/rpc/api"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
@@ -358,6 +359,10 @@ cleanup:
 
 	vm.shutdownWg.Done()
 	log.Debug("Meerevm handler done")
+}
+
+func (vm *VM) RegisterAPIs(apis []api.API) {
+	vm.mchain.RegisterAPIs(apis)
 }
 
 func New() *VM {
