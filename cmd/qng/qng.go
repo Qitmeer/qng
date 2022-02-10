@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/Qitmeer/meerevm/cmd"
 	"github.com/Qitmeer/qng-core/common/roughtime"
 	"github.com/Qitmeer/qng-core/config"
 	_ "github.com/Qitmeer/qng-core/database/ffldb"
@@ -15,7 +16,7 @@ import (
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/version"
-	"github.com/urfave/cli/v2"
+	"gopkg.in/urfave/cli.v1"
 	"os"
 	"runtime"
 	"runtime/debug"
@@ -43,20 +44,20 @@ func qng() error {
 		Name:     "QNG",
 		Version:  version.String(),
 		Compiled: roughtime.Now(),
-		Authors: []*cli.Author{
-			&cli.Author{
+		Authors: []cli.Author{
+			cli.Author{
 				Name: "Qitmeer",
 			},
 		},
 		Copyright:            "(c) 2022 Qitmeer",
 		Usage:                "The next generation of the Qitmeer network implementation with the plug-able VMs under the MeerDAG consensus.",
-		Commands:             []*cli.Command{},
+		Commands:             cmd.Commands,
 		Flags:                common.Flags,
 		EnableBashCompletion: true,
 		Before: func(ctx *cli.Context) error {
 			// Load configuration and parse command line.  This function also
 			// initializes logging and configures it accordingly.
-			cfg, _, err := common.LoadConfig()
+			cfg, err := common.LoadConfig(ctx)
 			if err != nil {
 				return err
 			}

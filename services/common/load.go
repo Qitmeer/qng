@@ -16,7 +16,7 @@ import (
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/version"
 	"github.com/jessevdk/go-flags"
-	"github.com/urfave/cli/v2"
+	"gopkg.in/urfave/cli.v1"
 	"net"
 	"os"
 	"path/filepath"
@@ -111,29 +111,24 @@ var (
 
 	Flags = []cli.Flag{
 		&cli.StringFlag{
-			Name:        "appdata",
-			Aliases:     []string{"A"},
+			Name:        "appdata, A",
 			Usage:       "Path to application home directory",
 			Value:       defaultHomeDir,
 			Destination: &cfg.HomeDir,
 		},
 		&cli.BoolFlag{
-			Name:        "ShowVersion",
-			Aliases:     []string{"V"},
+			Name:        "ShowVersion, V",
 			Usage:       "Display version information and exit",
-			Value:       false,
 			Destination: &cfg.ShowVersion,
 		},
 		&cli.StringFlag{
-			Name:        "configfile",
-			Aliases:     []string{"C"},
+			Name:        "configfile, C",
 			Usage:       "Path to configuration file",
 			Value:       defaultConfigFile,
 			Destination: &cfg.ConfigFile,
 		},
 		&cli.StringFlag{
-			Name:        "datadir",
-			Aliases:     []string{"b"},
+			Name:        "datadir, b",
 			Usage:       "Directory to store data",
 			Value:       defaultDataDir,
 			Destination: &cfg.DataDir,
@@ -147,7 +142,6 @@ var (
 		&cli.BoolFlag{
 			Name:        "nofilelogging",
 			Usage:       "Disable file logging.",
-			Value:       false,
 			Destination: &cfg.NoFileLogging,
 		},
 		&cli.StringFlag{
@@ -161,9 +155,9 @@ var (
 			Destination: &cfg.DefaultPort,
 		},
 		&cli.StringSliceFlag{
-			Name:        "rpclisten",
-			Usage:       "Add an interface/port to listen for RPC connections",
-			Destination: &RPCListeners,
+			Name:  "rpclisten",
+			Usage: "Add an interface/port to listen for RPC connections",
+			Value: &RPCListeners,
 		},
 		&cli.IntFlag{
 			Name:        "maxpeers",
@@ -174,19 +168,16 @@ var (
 		&cli.BoolFlag{
 			Name:        "nolisten",
 			Usage:       "Disable listening for incoming connections",
-			Value:       false,
 			Destination: &cfg.DisableListen,
 		},
 		&cli.StringFlag{
-			Name:        "rpcuser",
-			Aliases:     []string{"u"},
+			Name:        "rpcuser, u",
 			Usage:       "Username for RPC connections",
 			Value:       defaultRPCUser,
 			Destination: &cfg.RPCUser,
 		},
 		&cli.StringFlag{
-			Name:        "rpcpass",
-			Aliases:     []string{"P"},
+			Name:        "rpcpass, P",
 			Usage:       "Password for RPC connections",
 			Value:       defaultRPCPass,
 			Destination: &cfg.RPCPass,
@@ -212,19 +203,17 @@ var (
 		&cli.BoolFlag{
 			Name:        "norpc",
 			Usage:       "Disable built-in RPC server -- NOTE: The RPC server is disabled by default if no rpcuser/rpcpass or rpclimituser/rpclimitpass is specified",
-			Value:       false,
 			Destination: &cfg.DisableRPC,
 		},
 		&cli.BoolFlag{
 			Name:        "notls",
 			Usage:       "Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost",
-			Value:       false,
 			Destination: &cfg.DisableTLS,
 		},
 		&cli.StringSliceFlag{
-			Name:        "modules",
-			Usage:       "Modules is a list of API modules(See GetNodeInfo) to expose via the HTTP RPC interface. If the module list is empty, all RPC API endpoints designated public will be exposed.",
-			Destination: &Modules,
+			Name:  "modules",
+			Usage: "Modules is a list of API modules(See GetNodeInfo) to expose via the HTTP RPC interface. If the module list is empty, all RPC API endpoints designated public will be exposed.",
+			Value: &Modules,
 		},
 		&cli.BoolFlag{
 			Name:        "nocheckpoints",
@@ -265,19 +254,16 @@ var (
 		&cli.BoolFlag{
 			Name:        "testnet",
 			Usage:       "Use the test network",
-			Value:       false,
 			Destination: &cfg.TestNet,
 		},
 		&cli.BoolFlag{
 			Name:        "mixnet",
 			Usage:       "Use the test mix pow network",
-			Value:       false,
 			Destination: &cfg.MixNet,
 		},
 		&cli.BoolFlag{
 			Name:        "privnet",
 			Usage:       "Use the private network",
-			Value:       false,
 			Destination: &cfg.PrivNet,
 		},
 		&cli.StringFlag{
@@ -292,8 +278,7 @@ var (
 			Destination: &cfg.Profile,
 		},
 		&cli.StringFlag{
-			Name:        "debuglevel",
-			Aliases:     []string{"d"},
+			Name:        "debuglevel, d",
 			Usage:       "Logging level {trace, debug, info, warn, error, critical}",
 			Value:       defaultLogLevel,
 			Destination: &cfg.DebugLevel,
@@ -301,7 +286,6 @@ var (
 		&cli.BoolFlag{
 			Name:        "printorigin",
 			Usage:       "Print log debug location (file:line)",
-			Value:       defaultDebugPrintOrigins,
 			Destination: &cfg.DebugPrintOrigins,
 		},
 		&cli.BoolFlag{
@@ -317,7 +301,6 @@ var (
 		&cli.BoolFlag{
 			Name:        "acceptnonstd",
 			Usage:       "Accept and relay non-standard transactions to the network regardless of the default settings for the active network.",
-			Value:       true,
 			Destination: &cfg.AcceptNonStd,
 		},
 		&cli.IntFlag{
@@ -355,13 +338,12 @@ var (
 		&cli.BoolFlag{
 			Name:        "generate",
 			Usage:       "Generate (mine) coins using the CPU",
-			Value:       defaultGenerate,
 			Destination: &cfg.Generate,
 		},
 		&cli.StringSliceFlag{
-			Name:        "miningaddr",
-			Usage:       "Add the specified payment address to the list of addresses to use for generated blocks -- At least one address is required if the generate option is set",
-			Destination: &MiningAddrs,
+			Name:  "miningaddr",
+			Usage: "Add the specified payment address to the list of addresses to use for generated blocks -- At least one address is required if the generate option is set",
+			Value: &MiningAddrs,
 		},
 		&cli.IntFlag{
 			Name:        "miningtimeoffset",
@@ -405,14 +387,12 @@ var (
 		&cli.BoolFlag{
 			Name:        "miningstatesync",
 			Usage:       "Synchronizing the mining state with other nodes",
-			Value:       defaultMiningStateSync,
 			Destination: &cfg.MiningStateSync,
 		},
 		&cli.StringSliceFlag{
-			Name:        "addpeer",
-			Aliases:     []string{"a"},
-			Usage:       "Add a peer to connect with at startup",
-			Destination: &AddPeers,
+			Name:  "addpeer, a",
+			Usage: "Add a peer to connect with at startup",
+			Value: &AddPeers,
 		},
 		&cli.BoolFlag{
 			Name:        "upnp",
@@ -428,19 +408,16 @@ var (
 		&cli.BoolFlag{
 			Name:        "banning",
 			Usage:       "Enable banning of misbehaving peers",
-			Value:       true,
 			Destination: &cfg.Banning,
 		},
 		&cli.StringFlag{
-			Name:        "dagtype",
-			Aliases:     []string{"G"},
+			Name:        "dagtype, G",
 			Usage:       "DAG type {phantom,spectre}",
 			Value:       defaultDAGType,
 			Destination: &cfg.DAGType,
 		},
 		&cli.BoolFlag{
-			Name:        "cleanup",
-			Aliases:     []string{"L"},
+			Name:        "cleanup, L",
 			Usage:       "Cleanup the block database",
 			Destination: &cfg.Cleanup,
 		},
@@ -472,19 +449,17 @@ var (
 		&cli.BoolFlag{
 			Name:        "cacheinvalidtx",
 			Usage:       "Cache invalid transactions.",
-			Value:       defaultCacheInvalidTx,
 			Destination: &cfg.CacheInvalidTx,
 		},
 		&cli.BoolFlag{
 			Name:        "ntp",
 			Usage:       "Auto sync time.",
-			Value:       false,
 			Destination: &cfg.NTP,
 		},
 		&cli.StringSliceFlag{
-			Name:        "bootstrapnode",
-			Usage:       "The address of bootstrap node.",
-			Destination: &BootstrapNodes,
+			Name:  "bootstrapnode",
+			Usage: "The address of bootstrap node.",
+			Value: &BootstrapNodes,
 		},
 		&cli.BoolFlag{
 			Name:        "nodiscovery",
@@ -522,14 +497,14 @@ var (
 			Destination: &cfg.RelayNode,
 		},
 		&cli.StringSliceFlag{
-			Name:        "whitelist",
-			Usage:       "Add an IP network or IP,PeerID that will not be banned or ignore dual channel mode detection. (eg. 192.168.1.0/24 or ::1 or [peer id])",
-			Destination: &Whitelist,
+			Name:  "whitelist",
+			Usage: "Add an IP network or IP,PeerID that will not be banned or ignore dual channel mode detection. (eg. 192.168.1.0/24 or ::1 or [peer id])",
+			Value: &Whitelist,
 		},
 		&cli.StringSliceFlag{
-			Name:        "blacklist",
-			Usage:       "Add some IP network or IP that will be banned. (eg. 192.168.1.0/24 or ::1)",
-			Destination: &Blacklist,
+			Name:  "blacklist",
+			Usage: "Add some IP network or IP that will be banned. (eg. 192.168.1.0/24 or ::1)",
+			Value: &Blacklist,
 		},
 		&cli.IntFlag{
 			Name:        "maxbadresp",
@@ -556,7 +531,7 @@ var (
 
 // loadConfig initializes and parses the config using a config file and command
 // line options.
-func LoadConfig() (*config.Config, []string, error) {
+func LoadConfig(ctx *cli.Context) (*config.Config, error) {
 	cfg.RPCListeners = RPCListeners.Value()
 	cfg.Modules = Modules.Value()
 	cfg.MiningAddrs = MiningAddrs.Value()
@@ -568,16 +543,10 @@ func LoadConfig() (*config.Config, []string, error) {
 	cfg.Whitelist = Whitelist.Value()
 	cfg.Blacklist = Blacklist.Value()
 
-	// Pre-parse the command line options to see if an alternative config
-	// file or the version flag was specified.  Any errors aside from the
-	// help message error can be ignored here since they will be caught by
-	// the final parse below.
-	preCfg := cfg
-
 	// Show the version and exit if the version flag was specified.
 	appName := filepath.Base(os.Args[0])
 	appName = strings.TrimSuffix(appName, filepath.Ext(appName))
-	if preCfg.ShowVersion {
+	if cfg.ShowVersion {
 		fmt.Printf("%s version %s (Go version %s)\n", appName, version.String(), runtime.Version())
 		os.Exit(0)
 	}
@@ -593,36 +562,25 @@ func LoadConfig() (*config.Config, []string, error) {
 	// Update the home directory for qitmeerd if specified. Since the home
 	// directory is updated, other variables need to be updated to
 	// reflect the new changes.
-	if preCfg.HomeDir != "" {
-		cfg.HomeDir, _ = filepath.Abs(preCfg.HomeDir)
+	if cfg.HomeDir != defaultHomeDir {
+		cfg.HomeDir, _ = filepath.Abs(cfg.HomeDir)
 
-		if preCfg.ConfigFile == defaultConfigFile {
+		if cfg.ConfigFile == defaultConfigFile {
 			defaultConfigFile = filepath.Join(cfg.HomeDir,
 				defaultConfigFilename)
-			preCfg.ConfigFile = defaultConfigFile
 			cfg.ConfigFile = defaultConfigFile
-		} else {
-			cfg.ConfigFile = preCfg.ConfigFile
 		}
-		if preCfg.DataDir == defaultDataDir {
+		if cfg.DataDir == defaultDataDir {
 			cfg.DataDir = filepath.Join(cfg.HomeDir, defaultDataDirname)
-		} else {
-			cfg.DataDir = preCfg.DataDir
 		}
-		if preCfg.RPCKey == defaultRPCKeyFile {
+		if cfg.RPCKey == defaultRPCKeyFile {
 			cfg.RPCKey = filepath.Join(cfg.HomeDir, "rpc.key")
-		} else {
-			cfg.RPCKey = preCfg.RPCKey
 		}
-		if preCfg.RPCCert == defaultRPCCertFile {
+		if cfg.RPCCert == defaultRPCCertFile {
 			cfg.RPCCert = filepath.Join(cfg.HomeDir, "rpc.cert")
-		} else {
-			cfg.RPCCert = preCfg.RPCCert
 		}
-		if preCfg.LogDir == defaultLogDir {
+		if cfg.LogDir == defaultLogDir {
 			cfg.LogDir = filepath.Join(cfg.HomeDir, defaultLogDirname)
-		} else {
-			cfg.LogDir = preCfg.LogDir
 		}
 	}
 
@@ -631,34 +589,33 @@ func LoadConfig() (*config.Config, []string, error) {
 	// not specify an override.
 	// TODO
 
-	// Load additional config from file.
-	var configFileError error
-	parser := newConfigParser(&cfg, flags.Default)
-	if !cfg.PrivNet || preCfg.ConfigFile != defaultConfigFile {
-		err := flags.NewIniParser(parser).ParseFile(preCfg.ConfigFile)
+	if ctx.GlobalIsSet("configfile") {
+		// Load additional config from file.
+		parser := newConfigParser(&cfg, flags.Default)
+		err := flags.NewIniParser(parser).ParseFile(cfg.ConfigFile)
 		if err != nil {
 			if _, ok := err.(*os.PathError); !ok {
 				fmt.Fprintf(os.Stderr, "Error parsing config "+
 					"file: %v\n", err)
 				fmt.Fprintln(os.Stderr, usageMessage)
-				return nil, nil, err
+				return nil, err
 			}
-			configFileError = err
+			log.Warn(fmt.Sprintf("missing config file error:%s", err))
 		}
-	}
 
-	// Parse command line options again to ensure they take precedence.
-	remainingArgs, err := parser.Parse()
-	if err != nil {
-		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
-			fmt.Fprintln(os.Stderr, usageMessage)
+		// Parse command line options again to ensure they take precedence.
+		_, err = parser.Parse()
+		if err != nil {
+			if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
+				fmt.Fprintln(os.Stderr, usageMessage)
+			}
+			return nil, err
 		}
-		return nil, nil, err
 	}
 
 	// Create the home directory if it doesn't already exist.
 	funcName := "loadConfig"
-	err = os.MkdirAll(cfg.HomeDir, 0700)
+	err := os.MkdirAll(cfg.HomeDir, 0700)
 	if err != nil {
 		// Show a nicer error message if it's because a symlink is
 		// linked to a directory that does not exist (probably because
@@ -672,7 +629,7 @@ func LoadConfig() (*config.Config, []string, error) {
 		str := "%s: failed to create home directory: %v"
 		err := fmt.Errorf(str, funcName, err)
 		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
+		return nil, err
 	}
 
 	// assign active network params while we're at it
@@ -697,7 +654,7 @@ func LoadConfig() (*config.Config, []string, error) {
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
+		return nil, err
 	}
 
 	// default p2p port
@@ -708,7 +665,7 @@ func LoadConfig() (*config.Config, []string, error) {
 	if cfg.P2PTCPPort <= 0 {
 		P2PTCPPort, err := strconv.Atoi(params.ActiveNetParams.DefaultPort)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		cfg.P2PTCPPort = P2PTCPPort
 	}
@@ -719,7 +676,7 @@ func LoadConfig() (*config.Config, []string, error) {
 	//
 	if err := params.ActiveNetParams.PowConfig.Check(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Add default port to all rpc listener addresses if needed and remove
@@ -744,7 +701,7 @@ func LoadConfig() (*config.Config, []string, error) {
 				err := fmt.Errorf(str, funcName, addr, err)
 				fmt.Fprintln(os.Stderr, err)
 				fmt.Fprintln(os.Stderr, usageMessage)
-				return nil, nil, err
+				return nil, err
 			}
 			if _, ok := allowedTLSListeners[host]; !ok {
 				str := "%s: the --notls option may not be used " +
@@ -753,7 +710,7 @@ func LoadConfig() (*config.Config, []string, error) {
 				err := fmt.Errorf(str, funcName, addr)
 				fmt.Fprintln(os.Stderr, err)
 				fmt.Fprintln(os.Stderr, usageMessage)
-				return nil, nil, err
+				return nil, err
 			}
 		}
 	}
@@ -762,7 +719,7 @@ func LoadConfig() (*config.Config, []string, error) {
 	if !cfg.DisableRPC && len(cfg.RPCListeners) == 0 {
 		addrs, err := net.LookupHost("localhost")
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		cfg.RPCListeners = make([]string, 0, len(addrs))
 		for _, addr := range addrs {
@@ -777,7 +734,7 @@ func LoadConfig() (*config.Config, []string, error) {
 		err := fmt.Errorf(str, funcName, cfg.RPCMaxConcurrentReqs)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Append the network type to the data directory so it is "namespaced"
@@ -806,7 +763,7 @@ func LoadConfig() (*config.Config, []string, error) {
 		err := fmt.Errorf("%s: %v", funcName, err.Error())
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
+		return nil, err
 	}
 
 	// DebugPrintOrigins
@@ -821,7 +778,7 @@ func LoadConfig() (*config.Config, []string, error) {
 			funcName)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
+		return nil, err
 	}
 
 	// --addrindex and --droptxindex do not mix.
@@ -833,7 +790,7 @@ func LoadConfig() (*config.Config, []string, error) {
 			funcName)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Check mining addresses are valid and saved parsed versions.
@@ -844,7 +801,7 @@ func LoadConfig() (*config.Config, []string, error) {
 			err := fmt.Errorf(str, funcName, strAddr, err)
 			fmt.Fprintln(os.Stderr, err)
 			fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
+			return nil, err
 		}
 		// TODO, check network by using IsForNetwork()
 
@@ -853,7 +810,7 @@ func LoadConfig() (*config.Config, []string, error) {
 			err := fmt.Errorf(str, funcName, strAddr)
 			fmt.Fprintln(os.Stderr, err)
 			fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
+			return nil, err
 		}
 		cfg.SetMiningAddrs(addr)
 	}
@@ -873,7 +830,7 @@ func LoadConfig() (*config.Config, []string, error) {
 			err := fmt.Errorf(str, funcName)
 			fmt.Fprintln(os.Stderr, err)
 			fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -881,14 +838,7 @@ func LoadConfig() (*config.Config, []string, error) {
 		roughtime.Init()
 	}
 
-	// Warn about missing config file only after all other configuration is
-	// done.  This prevents the warning on help messages and invalid
-	// options.  Note this should go directly before the return.
-	if configFileError != nil {
-		log.Warn("missing config file", "error", configFileError)
-	}
-
-	return &cfg, remainingArgs, nil
+	return &cfg, nil
 }
 
 // newConfigParser returns a new command line flags parser.
