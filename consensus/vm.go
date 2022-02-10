@@ -4,6 +4,8 @@
 
 package consensus
 
+import "github.com/Qitmeer/qng-core/rpc/api"
+
 type VM interface {
 	GetID() string
 	Initialize(ctx Context) error
@@ -11,4 +13,5 @@ type VM interface {
 	Bootstrapped() error
 	Shutdown() error
 	Version() string
+	RegisterAPIs(apis []api.API)
 }
