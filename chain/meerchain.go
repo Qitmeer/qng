@@ -7,20 +7,22 @@ package chain
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/crypto"
-	"math/big"
-
 	qcommon "github.com/Qitmeer/meerevm/common"
 	qconsensus "github.com/Qitmeer/qng-core/consensus"
 	qtypes "github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng-core/rpc/api"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rpc"
+	"math/big"
+	"reflect"
 )
 
 type MeerChain struct {
@@ -249,6 +251,23 @@ func (b *MeerChain) addTx(tx *types.Transaction, header *types.Header, statedb *
 	*receipts = append(*receipts, receipt)
 
 	return nil
+}
+
+func (b *MeerChain) RegisterAPIs(apis []api.API) {
+	eapis := []rpc.API{}
+
+	for _, api := range apis {
+		eapi := rpc.API{
+			Namespace: "qng",
+			Version:   "1.0",
+			Service:   api.Service,
+			Public:    api.Public,
+		}
+		eapis = append(eapis, eapi)
+
+		log.Trace(fmt.Sprintf("Bridging API:%s.%s in QNG => qng.%s in MeerEVM", api.NameSpace, reflect.TypeOf(api.Service).Elem(), reflect.TypeOf(api.Service).Elem()))
+	}
+	b.chain.Node().RegisterAPIs(eapis)
 }
 
 func NewMeerChain(chain *ETHChain) *MeerChain {

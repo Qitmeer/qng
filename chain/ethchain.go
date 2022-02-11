@@ -44,6 +44,134 @@ var (
 
 	MeerethChainID int64    = 223
 	Args           []string = []string{ClientIdentifier}
+
+	//
+
+	NodeFlags = []cli.Flag{
+		utils.IdentityFlag,
+		utils.UnlockedAccountFlag,
+		utils.PasswordFileFlag,
+		utils.BootnodesFlag,
+		utils.DataDirFlag,
+		utils.AncientFlag,
+		utils.MinFreeDiskSpaceFlag,
+		utils.KeyStoreDirFlag,
+		utils.ExternalSignerFlag,
+		utils.NoUSBFlag,
+		utils.USBFlag,
+		utils.SmartCardDaemonPathFlag,
+		utils.OverrideLondonFlag,
+		utils.EthashCacheDirFlag,
+		utils.EthashCachesInMemoryFlag,
+		utils.EthashCachesOnDiskFlag,
+		utils.EthashCachesLockMmapFlag,
+		utils.EthashDatasetDirFlag,
+		utils.EthashDatasetsInMemoryFlag,
+		utils.EthashDatasetsOnDiskFlag,
+		utils.EthashDatasetsLockMmapFlag,
+		utils.TxPoolJournalFlag,
+		utils.TxPoolRejournalFlag,
+		utils.TxPoolPriceLimitFlag,
+		utils.TxPoolPriceBumpFlag,
+		utils.TxPoolAccountSlotsFlag,
+		utils.TxPoolGlobalSlotsFlag,
+		utils.TxPoolAccountQueueFlag,
+		utils.TxPoolGlobalQueueFlag,
+		utils.TxPoolLifetimeFlag,
+		utils.SyncModeFlag,
+		utils.ExitWhenSyncedFlag,
+		utils.GCModeFlag,
+		utils.SnapshotFlag,
+		utils.TxLookupLimitFlag,
+		utils.LightServeFlag,
+		utils.LightIngressFlag,
+		utils.LightEgressFlag,
+		utils.LightMaxPeersFlag,
+		utils.LightNoPruneFlag,
+		utils.LightKDFFlag,
+		utils.UltraLightServersFlag,
+		utils.UltraLightFractionFlag,
+		utils.UltraLightOnlyAnnounceFlag,
+		utils.LightNoSyncServeFlag,
+		utils.WhitelistFlag,
+		utils.BloomFilterSizeFlag,
+		utils.CacheFlag,
+		utils.CacheDatabaseFlag,
+		utils.CacheTrieFlag,
+		utils.CacheTrieJournalFlag,
+		utils.CacheTrieRejournalFlag,
+		utils.CacheGCFlag,
+		utils.CacheSnapshotFlag,
+		utils.CacheNoPrefetchFlag,
+		utils.CachePreimagesFlag,
+		utils.ListenPortFlag,
+		utils.MaxPeersFlag,
+		utils.MaxPendingPeersFlag,
+		utils.LegacyMinerGasTargetFlag,
+		utils.MinerGasLimitFlag,
+		utils.MinerGasPriceFlag,
+		utils.MinerExtraDataFlag,
+		utils.MinerRecommitIntervalFlag,
+		utils.MinerNoVerifyFlag,
+		utils.NodeKeyFileFlag,
+		utils.NodeKeyHexFlag,
+		utils.MainnetFlag,
+		utils.RopstenFlag,
+		utils.RinkebyFlag,
+		utils.GoerliFlag,
+		utils.VMEnableDebugFlag,
+		utils.NetworkIdFlag,
+		utils.EthStatsURLFlag,
+		utils.FakePoWFlag,
+		utils.NoCompactionFlag,
+		utils.GpoBlocksFlag,
+		utils.GpoPercentileFlag,
+		utils.GpoMaxGasPriceFlag,
+		utils.GpoIgnoreGasPriceFlag,
+		utils.MinerNotifyFullFlag,
+	}
+
+	RpcFlags = []cli.Flag{
+		utils.HTTPEnabledFlag,
+		utils.HTTPListenAddrFlag,
+		utils.HTTPPortFlag,
+		utils.HTTPCORSDomainFlag,
+		utils.HTTPVirtualHostsFlag,
+		utils.GraphQLEnabledFlag,
+		utils.GraphQLCORSDomainFlag,
+		utils.GraphQLVirtualHostsFlag,
+		utils.HTTPApiFlag,
+		utils.HTTPPathPrefixFlag,
+		utils.WSEnabledFlag,
+		utils.WSListenAddrFlag,
+		utils.WSPortFlag,
+		utils.WSApiFlag,
+		utils.WSAllowedOriginsFlag,
+		utils.WSPathPrefixFlag,
+		utils.IPCDisabledFlag,
+		utils.IPCPathFlag,
+		utils.InsecureUnlockAllowedFlag,
+		utils.RPCGlobalGasCapFlag,
+		utils.RPCGlobalTxFeeCapFlag,
+		utils.AllowUnprotectedTxs,
+	}
+
+	MetricsFlags = []cli.Flag{
+		utils.MetricsEnabledFlag,
+		utils.MetricsEnabledExpensiveFlag,
+		utils.MetricsHTTPFlag,
+		utils.MetricsPortFlag,
+		utils.MetricsEnableInfluxDBFlag,
+		utils.MetricsInfluxDBEndpointFlag,
+		utils.MetricsInfluxDBDatabaseFlag,
+		utils.MetricsInfluxDBUsernameFlag,
+		utils.MetricsInfluxDBPasswordFlag,
+		utils.MetricsInfluxDBTagsFlag,
+		utils.MetricsEnableInfluxDBV2Flag,
+		utils.MetricsInfluxDBTokenFlag,
+		utils.MetricsInfluxDBBucketFlag,
+		utils.MetricsInfluxDBOrganizationFlag,
+	}
 )
 
 type ETHChain struct {
@@ -216,7 +344,7 @@ func (ec *ETHChain) unlockAccounts() {
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	passwords := utils.MakePasswordList(ec.ctx)
 	for i, account := range unlocks {
-		unlockAccount(ks, account, i, passwords)
+		UnlockAccount(ks, account, i, passwords)
 	}
 }
 
@@ -235,143 +363,16 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain, error) {
 
 	utils.CacheFlag.Value = 4096
 
-	nodeFlags := []cli.Flag{
-		utils.IdentityFlag,
-		utils.UnlockedAccountFlag,
-		utils.PasswordFileFlag,
-		utils.BootnodesFlag,
-		utils.DataDirFlag,
-		utils.AncientFlag,
-		utils.MinFreeDiskSpaceFlag,
-		utils.KeyStoreDirFlag,
-		utils.ExternalSignerFlag,
-		utils.NoUSBFlag,
-		utils.USBFlag,
-		utils.SmartCardDaemonPathFlag,
-		utils.OverrideLondonFlag,
-		utils.EthashCacheDirFlag,
-		utils.EthashCachesInMemoryFlag,
-		utils.EthashCachesOnDiskFlag,
-		utils.EthashCachesLockMmapFlag,
-		utils.EthashDatasetDirFlag,
-		utils.EthashDatasetsInMemoryFlag,
-		utils.EthashDatasetsOnDiskFlag,
-		utils.EthashDatasetsLockMmapFlag,
-		utils.TxPoolJournalFlag,
-		utils.TxPoolRejournalFlag,
-		utils.TxPoolPriceLimitFlag,
-		utils.TxPoolPriceBumpFlag,
-		utils.TxPoolAccountSlotsFlag,
-		utils.TxPoolGlobalSlotsFlag,
-		utils.TxPoolAccountQueueFlag,
-		utils.TxPoolGlobalQueueFlag,
-		utils.TxPoolLifetimeFlag,
-		utils.SyncModeFlag,
-		utils.ExitWhenSyncedFlag,
-		utils.GCModeFlag,
-		utils.SnapshotFlag,
-		utils.TxLookupLimitFlag,
-		utils.LightServeFlag,
-		utils.LightIngressFlag,
-		utils.LightEgressFlag,
-		utils.LightMaxPeersFlag,
-		utils.LightNoPruneFlag,
-		utils.LightKDFFlag,
-		utils.UltraLightServersFlag,
-		utils.UltraLightFractionFlag,
-		utils.UltraLightOnlyAnnounceFlag,
-		utils.LightNoSyncServeFlag,
-		utils.WhitelistFlag,
-		utils.BloomFilterSizeFlag,
-		utils.CacheFlag,
-		utils.CacheDatabaseFlag,
-		utils.CacheTrieFlag,
-		utils.CacheTrieJournalFlag,
-		utils.CacheTrieRejournalFlag,
-		utils.CacheGCFlag,
-		utils.CacheSnapshotFlag,
-		utils.CacheNoPrefetchFlag,
-		utils.CachePreimagesFlag,
-		utils.ListenPortFlag,
-		utils.MaxPeersFlag,
-		utils.MaxPendingPeersFlag,
-		utils.LegacyMinerGasTargetFlag,
-		utils.MinerGasLimitFlag,
-		utils.MinerGasPriceFlag,
-		utils.MinerExtraDataFlag,
-		utils.MinerRecommitIntervalFlag,
-		utils.MinerNoVerifyFlag,
-		utils.NodeKeyFileFlag,
-		utils.NodeKeyHexFlag,
-		utils.MainnetFlag,
-		utils.RopstenFlag,
-		utils.RinkebyFlag,
-		utils.GoerliFlag,
-		utils.VMEnableDebugFlag,
-		utils.NetworkIdFlag,
-		utils.EthStatsURLFlag,
-		utils.FakePoWFlag,
-		utils.NoCompactionFlag,
-		utils.GpoBlocksFlag,
-		utils.GpoPercentileFlag,
-		utils.GpoMaxGasPriceFlag,
-		utils.GpoIgnoreGasPriceFlag,
-		utils.MinerNotifyFullFlag,
-	}
-
-	rpcFlags := []cli.Flag{
-		utils.HTTPEnabledFlag,
-		utils.HTTPListenAddrFlag,
-		utils.HTTPPortFlag,
-		utils.HTTPCORSDomainFlag,
-		utils.HTTPVirtualHostsFlag,
-		utils.GraphQLEnabledFlag,
-		utils.GraphQLCORSDomainFlag,
-		utils.GraphQLVirtualHostsFlag,
-		utils.HTTPApiFlag,
-		utils.HTTPPathPrefixFlag,
-		utils.WSEnabledFlag,
-		utils.WSListenAddrFlag,
-		utils.WSPortFlag,
-		utils.WSApiFlag,
-		utils.WSAllowedOriginsFlag,
-		utils.WSPathPrefixFlag,
-		utils.IPCDisabledFlag,
-		utils.IPCPathFlag,
-		utils.InsecureUnlockAllowedFlag,
-		utils.RPCGlobalGasCapFlag,
-		utils.RPCGlobalTxFeeCapFlag,
-		utils.AllowUnprotectedTxs,
-	}
-
-	metricsFlags := []cli.Flag{
-		utils.MetricsEnabledFlag,
-		utils.MetricsEnabledExpensiveFlag,
-		utils.MetricsHTTPFlag,
-		utils.MetricsPortFlag,
-		utils.MetricsEnableInfluxDBFlag,
-		utils.MetricsInfluxDBEndpointFlag,
-		utils.MetricsInfluxDBDatabaseFlag,
-		utils.MetricsInfluxDBUsernameFlag,
-		utils.MetricsInfluxDBPasswordFlag,
-		utils.MetricsInfluxDBTagsFlag,
-		utils.MetricsEnableInfluxDBV2Flag,
-		utils.MetricsInfluxDBTokenFlag,
-		utils.MetricsInfluxDBBucketFlag,
-		utils.MetricsInfluxDBOrganizationFlag,
-	}
-
 	app.Action = func(ctx *cli.Context) {
 		ec.ctx = ctx
-		filterConfig(ctx)
 		ec.node, ec.backend, ec.ether = makeFullNode(ec.ctx, ec.config)
 	}
 	app.HideVersion = true
 	app.Copyright = ClientIdentifier
 
-	app.Flags = append(app.Flags, nodeFlags...)
-	app.Flags = append(app.Flags, rpcFlags...)
-	app.Flags = append(app.Flags, metricsFlags...)
+	app.Flags = append(app.Flags, NodeFlags...)
+	app.Flags = append(app.Flags, RpcFlags...)
+	app.Flags = append(app.Flags, MetricsFlags...)
 
 	err := app.Run(Args)
 	if err != nil {
@@ -382,14 +383,14 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain, error) {
 }
 
 func NewETHChain(datadir string) (*ETHChain, error) {
-	config, err := makeMeerethConfig(datadir)
+	config, err := MakeMeerethConfig(datadir)
 	if err != nil {
 		return nil, err
 	}
 	return NewETHChainByCfg(config)
 }
 
-func makeMeerethConfig(datadir string) (*MeerethConfig, error) {
+func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
 	chainConfig := &params.ChainConfig{
 		ChainID:             big.NewInt(MeerethChainID),
 		HomesteadBlock:      big.NewInt(0),
@@ -495,6 +496,7 @@ func makeFullNode(ctx *cli.Context, cfg *MeerethConfig) (*node.Node, *eth.EthAPI
 }
 
 func makeConfigNode(ctx *cli.Context, cfg *MeerethConfig) *node.Node {
+	filterConfig(ctx)
 	utils.SetNodeConfig(ctx, &cfg.Node)
 	stack, err := node.New(&cfg.Node)
 	if err != nil {
@@ -511,6 +513,15 @@ func makeConfigNode(ctx *cli.Context, cfg *MeerethConfig) *node.Node {
 	applyMetricConfig(ctx, cfg)
 
 	return stack
+}
+
+func MakeMeerethConfigNode(ctx *cli.Context, datadir string) (*node.Node, *MeerethConfig) {
+	config, err := MakeMeerethConfig(datadir)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, nil
+	}
+	return makeConfigNode(ctx, config), config
 }
 
 func setAccountManagerBackends(stack *node.Node) error {
@@ -608,7 +619,7 @@ func applyMetricConfig(ctx *cli.Context, cfg *MeerethConfig) {
 	}
 }
 
-func unlockAccount(ks *keystore.KeyStore, address string, i int, passwords []string) (accounts.Account, string) {
+func UnlockAccount(ks *keystore.KeyStore, address string, i int, passwords []string) (accounts.Account, string) {
 	account, err := utils.MakeAddress(ks, address)
 	if err != nil {
 		utils.Fatalf("Could not list accounts: %v", err)
