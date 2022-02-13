@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng-core/rpc/api"
 	"reflect"
 	"sync/atomic"
 )

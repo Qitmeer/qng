@@ -22,7 +22,7 @@ import (
 	"github.com/Qitmeer/qng/p2p/qnode"
 	"github.com/Qitmeer/qng/p2p/synch"
 	"github.com/Qitmeer/qng-core/params"
-	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng-core/rpc/api"
 	iaddr "github.com/ipfs/go-ipfs-addr"
 	"github.com/libp2p/go-libp2p"
 	libp2pcore "github.com/libp2p/go-libp2p-core"

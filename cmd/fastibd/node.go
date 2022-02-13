@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/config"
+	"github.com/Qitmeer/qng-core/core/event"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng/core/dbnamespace"
@@ -21,6 +22,7 @@ import (
 	"github.com/Qitmeer/qng-core/params"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
+	"github.com/Qitmeer/qng/vm"
 	"github.com/schollz/progressbar/v3"
 	"os"
 	"path"
@@ -33,6 +35,8 @@ type Node struct {
 	bc   *blockchain.BlockChain
 	db   database.DB
 	cfg  *Config
+	// event system
+	events event.Feed
 }
 
 func (node *Node) init(cfg *Config) error {
@@ -74,13 +78,31 @@ func (node *Node) init(cfg *Config) error {
 
 	log.Info(fmt.Sprintf("Load Data:%s", cfg.DataDir))
 
-	return nil
+	// vm
+	vmServer, err := vm.NewService(&config.Config{
+		DataDir:cfg.DataDir,
+		DebugLevel:"info",
+		DebugPrintOrigins:false,
+		EVMEnv:"",
+	}, &node.events, nil, nil)
+	if err != nil {
+		return err
+	}
+	node.bc.VMService=vmServer
+	return vmServer.Start()
 }
 
 func (node *Node) exit() error {
+	err := node.bc.VMService.(*vm.Service).Stop()
+	if err != nil {
+		return nil
+	}
 	if node.db != nil {
 		log.Info(fmt.Sprintf("Gracefully shutting down the database:%s", node.name))
-		node.db.Close()
+		err := node.db.Close()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -87,3 +87,22 @@ or
 ~ ./cli.sh sendRawTx [signRawTx]
 ``` 
 * Finally, wait for the miner to pack your transaction into the block. 
+
+### How to call QNG's RPC in the JavaScript runtime environment of meerevm ?
+```
+~ ./qng --testnet --evmenv="--http --http.port=18545 --http.api=net,web3,eth,qng"
+~ ./qng attach http://127.0.0.1:18545
+
+Welcome to the Geth JavaScript console!
+
+instance: meereth/v1.10.9-stable/darwin-amd64/go1.16.2
+at block: 0 (Thu Jan 01 1970 08:00:00 GMT+0800 (CST))
+ datadir: /bin/data/testnet
+ modules: eth:1.0 net:1.0 qng:1.0 rpc:1.0 web3:1.0
+
+To exit, press ctrl-d or type exit
+> qng.getNodeInfo
+...
+...
+
+``` 

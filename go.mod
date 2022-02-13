@@ -3,8 +3,8 @@ module github.com/Qitmeer/qng
 go 1.14
 
 require (
-	github.com/Qitmeer/meerevm v0.0.0-20220105083239-9c42f85955b8
-	github.com/Qitmeer/qng-core v1.2.10
+	github.com/Qitmeer/meerevm v0.0.0-20220211144945-fd9fa035c7f7
+	github.com/Qitmeer/qng-core v1.2.11
 	github.com/davecgh/go-spew v1.1.1
 	github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f // indirect
 	github.com/deckarep/golang-set v1.7.1
@@ -44,6 +44,7 @@ require (
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
 	golang.org/x/tools v0.1.6
+	gopkg.in/urfave/cli.v1 v1.20.0
 	// indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -55,4 +56,4 @@ replace (
 	golang.org/x/tools v0.0.0-20181006002542-f60d9635b16a => github.com/golang/tools v0.0.0-20181006002542-f60d9635b16a
 )
 
-replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-3
+replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-q.4
