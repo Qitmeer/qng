@@ -826,6 +826,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 		stxos := []SpentTxOut{}
 		err := b.checkConnectBlock(ib, block, view, &stxos)
 		if err != nil {
+			log.Trace(err.Error())
 			b.bd.InvalidBlock(ib)
 			stxos = []SpentTxOut{}
 			view.Clean()
@@ -970,50 +971,67 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
-	err := b.VMService.ConnectBlock(block)
-	if err != nil {
-		return err
-	}
-
-	// Atomically insert info into the database.
-	err = b.db.Update(func(dbTx database.Tx) error {
-		// Update the utxo set using the state of the utxo view.  This
-		// entails removing all of the utxos spent and adding the new
-		// ones created by the block.
-		err := dbPutUtxoView(dbTx, view)
+	if !node.GetStatus().KnownInvalid() {
+		err := b.VMService.ConnectBlock(block)
 		if err != nil {
 			return err
 		}
 
-		// Update the transaction spend journal by adding a record for
-		// the block that contains all txos spent by it.
-		err = dbPutSpendJournalEntry(dbTx, block.Hash(), stxos)
-		if err != nil {
-			return err
-		}
-		// Allow the index manager to call each of the currently active
-		// optional indexes with the block being connected so they can
-		// update themselves accordingly.
-		if b.indexManager != nil {
-			err := b.indexManager.ConnectBlock(dbTx, block, stxos)
+		// Atomically insert info into the database.
+		err = b.db.Update(func(dbTx database.Tx) error {
+			// Update the utxo set using the state of the utxo view.  This
+			// entails removing all of the utxos spent and adding the new
+			// ones created by the block.
+			err := dbPutUtxoView(dbTx, view)
 			if err != nil {
 				return err
 			}
+
+			// Update the transaction spend journal by adding a record for
+			// the block that contains all txos spent by it.
+			err = dbPutSpendJournalEntry(dbTx, block.Hash(), stxos)
+			if err != nil {
+				return err
+			}
+			// Allow the index manager to call each of the currently active
+			// optional indexes with the block being connected so they can
+			// update themselves accordingly.
+			if b.indexManager != nil {
+				err := b.indexManager.ConnectBlock(dbTx, block, stxos)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return err
 		}
-		return nil
-	})
-	if err != nil {
-		return err
+
+		// Prune fully spent entries and mark all entries in the view unmodified
+		// now that the modifications have been committed to the database.
+		view.commit()
+
+		err = b.updateTokenState(node, block, false)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Atomically insert info into the database.
+		err := b.db.Update(func(dbTx database.Tx) error {
+			if b.indexManager != nil {
+				err := b.indexManager.ConnectBlock(dbTx, block, stxos)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 	}
 
-	// Prune fully spent entries and mark all entries in the view unmodified
-	// now that the modifications have been committed to the database.
-	view.commit()
-
-	err = b.updateTokenState(node, block, false)
-	if err != nil {
-		return err
-	}
 	b.ChainUnlock()
 	b.sendNotification(BlockConnected, []interface{}{block, b.bd.IsOnMainChain(node.GetID())})
 	b.ChainLock()
