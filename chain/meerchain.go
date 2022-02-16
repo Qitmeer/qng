@@ -146,7 +146,7 @@ func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx) (*types.Block, types.Receip
 
 	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts)
 	if err != nil {
-		return nil,nil,err
+		return nil, nil, err
 	}
 
 	root, err := statedb.Commit(config.IsEIP158(header.Number))
