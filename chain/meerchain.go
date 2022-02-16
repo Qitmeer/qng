@@ -31,6 +31,23 @@ type MeerChain struct {
 	parent *types.Block
 }
 
+func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
+	mblock, _, err := b.buildBlock(block.Transactions())
+
+	if err != nil {
+		return err
+	}
+
+	num, err := b.chain.Ether().BlockChain().InsertChainWithoutSealVerification(mblock)
+	if err != nil {
+		return err
+	}
+	if num != 1 {
+		return fmt.Errorf("BuildBlock error")
+	}
+	return nil
+}
+
 func (b *MeerChain) ConnectBlock(block qconsensus.Block) error {
 
 	mblock, _, err := b.buildBlock(block.Transactions())
@@ -87,6 +104,7 @@ func (b *MeerChain) DisconnectBlock(block qconsensus.Block) error {
 
 	} else {
 		newParent = b.chain.Ether().BlockChain().GetBlockByNumber(*bn)
+		newParent = b.chain.Ether().BlockChain().GetBlockByHash(newParent.ParentHash())
 	}
 
 	if newParent == nil {
@@ -126,7 +144,10 @@ func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx) (*types.Block, types.Receip
 		return nil, nil, err
 	}
 
-	block, _ := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts)
+	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts)
+	if err != nil {
+		return nil,nil,err
+	}
 
 	root, err := statedb.Commit(config.IsEIP158(header.Number))
 	if err != nil {
