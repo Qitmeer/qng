@@ -61,6 +61,9 @@ func (n *nodeConfig) args() []string {
 	if n.rpclisten != "" {
 		args = append(args, fmt.Sprintf("--rpclisten=%s", n.rpclisten))
 	}
+	if n.evmlisten != "" {
+		args = append(args, fmt.Sprintf(`--evmenv="--http --http.port=%s"`, n.evmlisten))
+	}
 	if n.rpcuser != "" {
 		args = append(args, fmt.Sprintf("--rpcuser=%s", n.rpcuser))
 	}
@@ -77,6 +80,7 @@ func (n *nodeConfig) args() []string {
 		args = append(args, fmt.Sprintf("--logdir=%s", n.logDir))
 	}
 	args = append(args, n.extraArgs...)
+	fmt.Println(args)
 	return args
 }
 

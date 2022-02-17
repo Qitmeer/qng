@@ -15,8 +15,7 @@ import (
 
 func TestEVM(t *testing.T) {
 	args := []string{"--modules=miner", "--modules=qitmeer",
-		"--modules=test",
-		`--evmenv="--http --http.port=18545 --ws --ws.port=18546"`}
+		"--modules=test"}
 	h, err := NewHarness(t, params.PrivNetParam.Params, args...)
 	defer h.Teardown()
 	if err != nil {

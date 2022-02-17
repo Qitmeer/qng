@@ -30,6 +30,7 @@ func TestNewNodeCmdArgs(t *testing.T) {
 		"qng",
 		"--listen=127.0.0.1:38130",
 		"--rpclisten=127.0.0.1:38131",
+		`--evmenv="--http --http.port=127.0.0.1:18545"`,
 		"--rpcuser=testuser",
 		"--rpcpass=testpass",
 		"--appdata=.*/test.*$",
@@ -80,11 +81,12 @@ func TestNodeStartStop(t *testing.T) {
 
 func TestGenListenArgs(t *testing.T) {
 	c := newNodeConfig("test", nil)
-	a1, a2 := genListenArgs()
+	a1, a2, _ := genListenArgs()
 	c.listen, c.rpclisten = a1, a2
 	args := []string{
 		"--listen=" + a1,
 		"--rpclisten=" + a2,
+		`--evmenv="--http --http.port=127.0.0.1:18545"`,
 		"--rpcuser=testuser",
 		"--rpcpass=testpass",
 		"--appdata=test",
