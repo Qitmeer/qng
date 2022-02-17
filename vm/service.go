@@ -252,7 +252,7 @@ func (s *Service) DisconnectBlock(block *types.SerializedBlock) error {
 }
 
 func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Block, error) {
-	result := &qconsensus.Block{Id: block.Hash(), Txs: []consensus.Tx{}}
+	result := &qconsensus.Block{Id: block.Hash(), Txs: []consensus.Tx{}, Time: block.Block().Header.Timestamp}
 
 	for idx, tx := range block.Transactions() {
 		if idx == 0 {

@@ -16,6 +16,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"golang.org/x/net/context"
+	"time"
 )
 
 // NewBlockTemplate returns a new block template that is ready to be solved
@@ -204,7 +205,10 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 					continue
 				}
 
-				block := &types.Block{}
+				block := &types.Block{
+					Header:  types.BlockHeader{Timestamp: time.Now(), Pow: pow.GetInstance(powType, 0, []byte{})},
+					Parents: []*hash.Hash{},
+				}
 				for _, tx := range blockTxns {
 					block.AddTransaction(tx.Tx)
 				}
