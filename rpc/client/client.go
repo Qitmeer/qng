@@ -177,7 +177,7 @@ out:
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if c.shouldLogReadError(err) {
-				log.Error(fmt.Sprintf("Websocket receive error from "+
+				log.Warn(fmt.Sprintf("Websocket receive error from "+
 					"%s: %v", c.config.Host, err))
 			}
 			break out
