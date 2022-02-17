@@ -11,16 +11,16 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
-	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng-core/meerdag"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng-core/core/merkle"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/core/types/pow"
 	"github.com/Qitmeer/qng-core/engine/txscript"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/blockchain/token"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"math"
 	"time"
 )
@@ -321,7 +321,7 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params) error 
 			return err
 		}
 		return update.CheckSanity()
-	}else if types.IsCrossChainVMTx(tx) {
+	} else if types.IsCrossChainVMTx(tx) {
 		if opreturn.IsMeerEVMTx(tx) {
 			me, err := opreturn.NewOPReturnFrom(tx.TxOut[0].PkScript)
 			if err != nil {
@@ -329,7 +329,7 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params) error 
 			}
 			return me.Verify(tx)
 		}
-		return fmt.Errorf("Not support cross chain tx:%s",types.DetermineTxType(tx))
+		return fmt.Errorf("Not support cross chain tx:%s", types.DetermineTxType(tx))
 	}
 
 	// Ensure the transaction amounts are in range.  Each transaction
@@ -402,9 +402,9 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params) error 
 			return err
 		}
 		return itx.CheckSanity()
-	}else if types.IsCrossChainExportTx(tx) {
+	} else if types.IsCrossChainExportTx(tx) {
 		if len(tx.TxOut[0].PkScript) <= 0 {
-			return fmt.Errorf("Tx output is error:%s",types.DetermineTxType(tx))
+			return fmt.Errorf("Tx output is error:%s", types.DetermineTxType(tx))
 		}
 	}
 	return nil
@@ -924,7 +924,11 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 		}
 	}
 
-	return b.CheckTokenState(block)
+	err = b.CheckTokenState(block)
+	if err != nil {
+		return err
+	}
+	return b.VMService.CheckConnectBlock(block)
 }
 
 // consensusScriptVerifyFlags returns the script flags that must be used when
@@ -997,7 +1001,7 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			if err != nil {
 				return err
 			}
-			err = utxoView.connectImportTransaction(tx, node, uint32(idx), stxos, b,fee+int64(itx.Value))
+			err = utxoView.connectImportTransaction(tx, node, uint32(idx), stxos, b, fee+int64(itx.Value))
 			if err != nil {
 				return err
 			}
@@ -1005,14 +1009,14 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 		}
 		if types.IsCrossChainVMTx(tx.Tx) {
 			if opreturn.IsMeerEVMTx(tx.Tx) {
-				vtx := &consensus.Tx{Type:types.TxTypeCrossChainVM,Data: []byte(tx.Tx.TxIn[0].SignScript)}
+				vtx := &consensus.Tx{Type: types.TxTypeCrossChainVM, Data: []byte(tx.Tx.TxIn[0].SignScript)}
 				_, err := b.VMService.VerifyTx(vtx)
 				if err != nil {
 					return err
 				}
 				continue
 			}
-			return fmt.Errorf("Not support:%s",types.DetermineTxType(tx.Tx))
+			return fmt.Errorf("Not support:%s", types.DetermineTxType(tx.Tx))
 		}
 		txFee, err := b.CheckTransactionInputs(tx, utxoView)
 		if err != nil {

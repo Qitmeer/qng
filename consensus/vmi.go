@@ -8,6 +8,7 @@ import (
 type VMI interface {
 	VerifyTx(tx consensus.Tx) (int64, error)
 	GetVM(id string) (consensus.ChainVM, error)
+	CheckConnectBlock(block *types.SerializedBlock) error
 	ConnectBlock(block *types.SerializedBlock) error
 	DisconnectBlock(block *types.SerializedBlock) error
 }

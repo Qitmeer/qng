@@ -3,8 +3,8 @@ module github.com/Qitmeer/qng
 go 1.14
 
 require (
-	github.com/Qitmeer/meerevm v0.0.0-20220211144945-fd9fa035c7f7
-	github.com/Qitmeer/qng-core v1.2.11
+	github.com/Qitmeer/meerevm v0.0.0-20220217030149-dda74170532e
+	github.com/Qitmeer/qng-core v1.2.12
 	github.com/davecgh/go-spew v1.1.1
 	github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f // indirect
 	github.com/deckarep/golang-set v1.7.1
@@ -48,9 +48,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-// Security Dependabot alerts
-require github.com/docker/docker v1.6.1 // indirect
-
 replace (
 	golang.org/x/crypto v0.0.0-20181001203147-e3636079e1a4 => github.com/golang/crypto v0.0.0-20181001203147-e3636079e1a4
 	golang.org/x/net v0.0.0-20180906233101-161cd47e91fd => github.com/golang/net v0.0.0-20180906233101-161cd47e91fd
@@ -58,4 +55,4 @@ replace (
 	golang.org/x/tools v0.0.0-20181006002542-f60d9635b16a => github.com/golang/tools v0.0.0-20181006002542-f60d9635b16a
 )
 
-replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-q.4
+replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-q.5

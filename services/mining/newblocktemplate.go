@@ -5,17 +5,18 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/core/address"
 	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/core/merkle"
 	s "github.com/Qitmeer/qng-core/core/serialization"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/core/types/pow"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng-core/log"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"golang.org/x/net/context"
+	"time"
 )
 
 // NewBlockTemplate returns a new block template that is ready to be solved
@@ -196,11 +197,28 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 			tokenSigOpCost += tokenSOC
 			tokenSize += uint32(tx.Transaction().SerializeSize())
 			continue
-		}else if types.IsCrossChainImportTx(tx.Tx) || types.IsCrossChainVMTx(tx.Tx) {
-			if opreturn.IsMeerEVMTx(tx.Tx)  {
-				_,ok:=payToAddress.(*address.SecpPubKeyAddress)
+		} else if types.IsCrossChainImportTx(tx.Tx) || types.IsCrossChainVMTx(tx.Tx) {
+			if opreturn.IsMeerEVMTx(tx.Tx) {
+				_, ok := payToAddress.(*address.SecpPubKeyAddress)
 				if !ok {
 					log.Info(fmt.Sprintf("Ignore meerevm tx:Your miner address is not supported, please use PKAddress by (./qx ec-to-pkaddr) for --miningaddr"))
+					continue
+				}
+
+				block := &types.Block{
+					Header:  types.BlockHeader{Timestamp: time.Now(), Pow: pow.GetInstance(powType, 0, []byte{})},
+					Parents: []*hash.Hash{},
+				}
+				for _, tx := range blockTxns {
+					block.AddTransaction(tx.Tx)
+				}
+				block.AddTransaction(tx.Tx)
+				sblock := types.NewBlock(block)
+
+				err := blockManager.GetChain().VMService.CheckConnectBlock(sblock)
+				if err != nil {
+					log.Info(fmt.Sprintf("Ignore evm tx:%s", tx.Hash()))
+					blockManager.GetTxManager().MemPool().RemoveTransaction(tx, false)
 					continue
 				}
 			}

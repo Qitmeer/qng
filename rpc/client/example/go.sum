@@ -60,15 +60,8 @@ github.com/Qitmeer/crypto v0.0.0-20200516043559-dd457edff06c/go.mod h1:gbGKdXSJn
 github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:gbGKdXSJn71Mc2xcKJHqC/waPiX0byZae67zarj83m4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a h1:O2Erw/YvYAkIqkc2uvP/WwuWf0V8S0+pjU/FKHmjFU4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:KiA7g46zc6dkgf/3NbEpJirY75v656WYlmSQNR1wTVk=
-github.com/Qitmeer/meerevm v0.0.0-20211130062744-a8d9b69dc8c0/go.mod h1:jsrbmuE4h26nEq4Y8zk1c9Zqq0P3asmAY4dQK51Me+s=
-github.com/Qitmeer/meerevm v0.0.0-20211211040358-dbeb32a65910/go.mod h1:GxEU9QgwjS4NCdD2novyb3Ih+qkMwtRaChCwJJIaBeA=
-github.com/Qitmeer/meerevm v0.0.0-20211221024755-1ccbf164c66c/go.mod h1:GveBza+j9twzRrfS0Tq976eZi6yQ1VFKs4c+vM4xEfE=
-github.com/Qitmeer/meerevm v0.0.0-20211225063000-5303685263c4/go.mod h1:U6z1GfSnQvjQhzaHT45Qr8T1F8PyuQ4TJRPB91gUx4w=
-github.com/Qitmeer/meerevm v0.0.0-20211231010647-a21b05151b1d/go.mod h1:VVmeKxUd8EQGcgER5v62GZbrw2JP5sWPM1N3+uJn0ZI=
-github.com/Qitmeer/meerevm v0.0.0-20220103055737-300cb6eb3fc8/go.mod h1:IBsFUNltSxTvPBeAcYjlQFQySdcZ6XgYN2KDfsbLTXA=
-github.com/Qitmeer/meerevm v0.0.0-20220103092335-1b350b5fe768/go.mod h1:IBsFUNltSxTvPBeAcYjlQFQySdcZ6XgYN2KDfsbLTXA=
-github.com/Qitmeer/meerevm v0.0.0-20220105083239-9c42f85955b8/go.mod h1:9VY9ahc8xMcbgOU3zf1Zi/fsjHVVOzvYV8kAdhc5xB8=
-github.com/Qitmeer/qng-core v1.2.10/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
+github.com/Qitmeer/meerevm v0.0.0-20220217030149-dda74170532e/go.mod h1:0SjFNfbI7l2I1CLpRa5z3Oy0FDYyk0jz0EMf7I2XecQ=
+github.com/Qitmeer/qng-core v1.2.12/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
 github.com/Shopify/sarama v1.26.1/go.mod h1:NbSGBSSndYaIhRcBtY9V0U7AyH+x71bG668AuWys/yU=
 github.com/Shopify/sarama v1.29.1/go.mod h1:mdtqvCSg8JOxk8PmpTNGyo6wzd4BMm4QXSfDnTXmgkE=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
@@ -178,7 +171,6 @@ github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2/go.mod h1:SqUrOPUn
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
 github.com/dindinw/go-duktape v0.0.0-20211014112850-ba2007c86288/go.mod h1:2tBqBHv6UMUEDS9cXrAOJv6A+okIYUNoc910JjZvf3Q=
 github.com/dlclark/regexp2 v1.2.0/go.mod h1:2pZnwuY/m+8K6iRw6wQdMtk+rH5tNGR1i55kozfMjCc=
-github.com/docker/docker v1.4.2-0.20180625184442-8e610b2b55bf/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/dop251/goja v0.0.0-20200721192441-a695b0cdd498/go.mod h1:Mw6PkjjMXWbTj+nnj4s3QPXq1jaT0s5pC0iFD4+BOAA=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/eapache/go-resiliency v1.2.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
@@ -309,6 +301,7 @@ github.com/gorilla/securecookie v1.1.1/go.mod h1:ra0sb63/xPlUeL+yeDciTfxMRAA+MP+
 github.com/gorilla/sessions v1.2.1/go.mod h1:dk2InVEVJ0sfLlnXv9EAgkf6ecYs/i80K/zI+bUmuGM=
 github.com/gorilla/websocket v1.4.1/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
+github.com/graph-gophers/graphql-go v0.0.0-20201113091052-beb923fada29/go.mod h1:9CQHMSxwO4MprSdzoIEobiHpoLtHm77vfxsvsIN5Vuc=
 github.com/graph-gophers/graphql-go v1.3.0/go.mod h1:9CQHMSxwO4MprSdzoIEobiHpoLtHm77vfxsvsIN5Vuc=
 github.com/grpc-ecosystem/grpc-gateway v1.13.0/go.mod h1:8XEsbTttt/W+VvjtQhLACqCisSPWTxCZ7sBRjU6iH9c=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=

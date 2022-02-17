@@ -203,6 +203,22 @@ func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 	return ba - itx.Transaction.TxOut[0].Amount.Value, nil
 }
 
+func (s *Service) CheckConnectBlock(block *types.SerializedBlock) error {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return err
+	}
+	b, err := s.normalizeBlock(block)
+	if err != nil {
+		return err
+	}
+
+	if len(b.Txs) <= 0 {
+		return nil
+	}
+	return vm.CheckConnectBlock(b)
+}
+
 func (s *Service) ConnectBlock(block *types.SerializedBlock) error {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
@@ -236,7 +252,7 @@ func (s *Service) DisconnectBlock(block *types.SerializedBlock) error {
 }
 
 func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Block, error) {
-	result := &qconsensus.Block{Id: block.Hash(), Txs: []consensus.Tx{}}
+	result := &qconsensus.Block{Id: block.Hash(), Txs: []consensus.Tx{}, Time: block.Block().Header.Timestamp}
 
 	for idx, tx := range block.Transactions() {
 		if idx == 0 {

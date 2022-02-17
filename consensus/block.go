@@ -12,8 +12,9 @@ import (
 )
 
 type Block struct {
-	Id *hash.Hash
-	Txs []consensus.Tx
+	Id   *hash.Hash
+	Txs  []consensus.Tx
+	Time time.Time
 }
 
 func (b *Block) ID() *hash.Hash {
@@ -45,7 +46,7 @@ func (b *Block) Height() uint64 {
 }
 
 func (b *Block) Timestamp() time.Time {
-	return time.Now()
+	return b.Time
 }
 
 func (b *Block) Verify() error {
