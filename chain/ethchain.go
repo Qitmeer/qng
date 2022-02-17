@@ -422,6 +422,7 @@ func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
 		GasLimit:   100000000,
 		Difficulty: big.NewInt(0),
 		Alloc:      core.GenesisAlloc{genAddress: {Balance: genBalance}},
+		Timestamp:  uint64(qparams.ActiveNetParams.GenesisBlock.Header.Timestamp.Unix()),
 	}
 
 	etherbase := common.Address{}
