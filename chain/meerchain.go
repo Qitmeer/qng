@@ -31,9 +31,17 @@ type MeerChain struct {
 	parent *types.Block
 }
 
+func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
+	_, _, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (b *MeerChain) ConnectBlock(block qconsensus.Block) error {
 
-	mblock, _, err := b.buildBlock(block.Transactions())
+	mblock, _, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
 
 	if err != nil {
 		return err
@@ -87,6 +95,7 @@ func (b *MeerChain) DisconnectBlock(block qconsensus.Block) error {
 
 	} else {
 		newParent = b.chain.Ether().BlockChain().GetBlockByNumber(*bn)
+		newParent = b.chain.Ether().BlockChain().GetBlockByHash(newParent.ParentHash())
 	}
 
 	if newParent == nil {
@@ -98,7 +107,7 @@ func (b *MeerChain) DisconnectBlock(block qconsensus.Block) error {
 	return nil
 }
 
-func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx) (*types.Block, types.Receipts, error) {
+func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx, timestamp int64) (*types.Block, types.Receipts, error) {
 	config := b.chain.Config().Eth.Genesis.Config
 	engine := b.chain.Ether().Engine()
 	db := b.chain.Ether().ChainDb()
@@ -116,7 +125,7 @@ func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx) (*types.Block, types.Receip
 		return nil, nil, err
 	}
 
-	header := makeHeader(chainreader, b.parent, statedb, engine)
+	header := makeHeader(chainreader, b.parent, statedb, engine, timestamp)
 
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(statedb)
@@ -126,7 +135,10 @@ func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx) (*types.Block, types.Receip
 		return nil, nil, err
 	}
 
-	block, _ := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts)
+	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	root, err := statedb.Commit(config.IsEIP158(header.Number))
 	if err != nil {
@@ -275,26 +287,20 @@ func NewMeerChain(chain *ETHChain) *MeerChain {
 	return mc
 }
 
-func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.StateDB, engine consensus.Engine) *types.Header {
-	var time uint64
-	if parent.Time() == 0 {
-		time = 10
-	} else {
-		time = parent.Time() + 10 // block time is fixed at 10 seconds
-	}
+func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.StateDB, engine consensus.Engine, timestamp int64) *types.Header {
 	header := &types.Header{
 		Root:       state.IntermediateRoot(chain.Config().IsEIP158(parent.Number())),
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
-		Difficulty: engine.CalcDifficulty(chain, time, &types.Header{
+		Difficulty: engine.CalcDifficulty(chain, uint64(timestamp), &types.Header{
 			Number:     parent.Number(),
-			Time:       time - 10,
+			Time:       parent.Time(),
 			Difficulty: parent.Difficulty(),
 			UncleHash:  parent.UncleHash(),
 		}),
 		GasLimit: parent.GasLimit(),
 		Number:   new(big.Int).Add(parent.Number(), common.Big1),
-		Time:     time,
+		Time:     uint64(timestamp),
 	}
 	if chain.Config().IsLondon(header.Number) {
 		header.BaseFee = misc.CalcBaseFee(chain.Config(), parent.Header())
