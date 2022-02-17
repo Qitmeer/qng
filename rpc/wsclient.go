@@ -123,7 +123,7 @@ out:
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if err != io.EOF && !c.Disconnected() {
-				log.Error(fmt.Sprintf("Websocket receive error from "+
+				log.Warn(fmt.Sprintf("Websocket receive error from "+
 					"%s: %v", c.addr, err))
 			}
 			break out
