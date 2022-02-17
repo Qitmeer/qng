@@ -23,6 +23,8 @@ type ChainVM interface {
 
 	VerifyTx(tx Tx) (int64, error)
 
+	CheckConnectBlock(block Block) error
+
 	ConnectBlock(block Block) error
 
 	DisconnectBlock(block Block) error
