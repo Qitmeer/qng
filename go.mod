@@ -3,18 +3,17 @@ module github.com/Qitmeer/qng
 go 1.14
 
 require (
-	github.com/Qitmeer/meerevm v0.0.0-20220211144945-fd9fa035c7f7
-	github.com/Qitmeer/qng-core v1.2.11
+	github.com/Qitmeer/meerevm v0.0.0-20220217030149-dda74170532e
+	github.com/Qitmeer/qng-core v1.2.12
 	github.com/davecgh/go-spew v1.1.1
 	github.com/davidlazar/go-crypto v0.0.0-20190912175916-7055855a373f // indirect
 	github.com/deckarep/golang-set v1.7.1
 	github.com/dgraph-io/ristretto v0.0.2
-	github.com/ethereum/go-ethereum v1.10.9 // indirect
+	github.com/ethereum/go-ethereum v1.10.9
 	github.com/ferranbt/fastssz v0.0.0-20200514094935-99fccaf93472
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.4
-	github.com/graph-gophers/graphql-go v1.3.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/ipfs/go-ds-leveldb v0.4.2
 	github.com/ipfs/go-ipfs-addr v0.0.1
@@ -56,4 +55,4 @@ replace (
 	golang.org/x/tools v0.0.0-20181006002542-f60d9635b16a => github.com/golang/tools v0.0.0-20181006002542-f60d9635b16a
 )
 
-replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-q.4
+replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-q.5
