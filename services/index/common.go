@@ -10,9 +10,9 @@ package index
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
+	"github.com/Qitmeer/qng/core/blockchain"
 )
 
 var (

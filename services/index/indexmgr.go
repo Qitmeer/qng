@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/common/math"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/log"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 )
 

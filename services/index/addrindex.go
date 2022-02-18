@@ -13,12 +13,12 @@ import (
 
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/core/address"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/crypto/ecc"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
 )
 
 const (

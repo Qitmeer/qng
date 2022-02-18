@@ -9,10 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/log"
+	"github.com/Qitmeer/qng/core/blockchain"
 )
 
 const (
@@ -347,7 +347,7 @@ func dbRemoveTxIdByHash(dbTx database.Tx, txhash hash.Hash) error {
 // TxIndex implements a transaction by hash index.  That is to say, it supports
 // querying all transactions by their hash.
 type TxIndex struct {
-	db         database.DB
+	db       database.DB
 	curOrder uint32
 
 	chain *blockchain.BlockChain

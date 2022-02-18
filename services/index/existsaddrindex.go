@@ -8,11 +8,11 @@ package index
 import (
 	"sync"
 
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
 )
 
 var (
