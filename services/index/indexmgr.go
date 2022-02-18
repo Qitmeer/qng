@@ -86,7 +86,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		if indexer.Name() == txIndexName {
 			indexer.(*TxIndex).chain = chain
 			if chain.CacheInvalidTx {
-				if indexer.(*TxIndex).curBlockID == 0 {
+				if indexer.(*TxIndex).curOrder == 0 {
 					m.db.Update(func(dbTx database.Tx) error {
 						dbTx.Metadata().Put(dbnamespace.CacheInvalidTxName, []byte{byte(0)})
 						return nil
@@ -492,7 +492,7 @@ func (m *Manager) dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, bloc
 		prevHash = &hash.ZeroHash
 		preOrder = math.MaxUint32
 	} else {
-		prevHash, err = dbFetchBlockHashByID(dbTx, order)
+		prevHash, err = dbFetchBlockHashByOrder(dbTx, order)
 		if err != nil {
 			return err
 		}

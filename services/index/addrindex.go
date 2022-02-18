@@ -755,7 +755,7 @@ func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBloc
 	}
 	// Get the internal block ID associated with the block.
 	blockHash := block.Hash()
-	blockID, err := dbFetchBlockIDByHash(dbTx, blockHash)
+	blockID, err := dbFetchOrderByHash(dbTx, blockHash)
 	if err != nil {
 		return err
 	}
