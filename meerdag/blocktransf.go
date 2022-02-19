@@ -122,13 +122,13 @@ func (bd *MeerDAG) GetBlockByOrder(order uint) IBlock {
 	return bd.getBlockByOrder(order)
 }
 
-func (bd *MeerDAG) GetBlockByOrderWithTx(dbTx database.Tx, order uint) *hash.Hash {
+func (bd *MeerDAG) GetBlockByOrderWithTx(dbTx database.Tx, order uint) IBlock {
 	bd.stateLock.Lock()
 	defer bd.stateLock.Unlock()
 
 	ib := bd.doGetBlockByOrder(dbTx, order)
 	if ib != nil {
-		return ib.GetHash()
+		return ib
 	}
 	return nil
 }
