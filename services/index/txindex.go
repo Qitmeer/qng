@@ -14,6 +14,7 @@ import (
 	"github.com/Qitmeer/qng-core/log"
 	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 )
 
 const (
@@ -362,7 +363,8 @@ var _ Indexer = (*TxIndex)(nil)
 // disconnecting blocks.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) Init() error {
+func (idx *TxIndex) Init(chain *blockchain.BlockChain) error {
+	idx.chain = chain
 	// Find the latest known block id field for the internal block id
 	// index and initialize it.  This is done because it's a lot more
 	// efficient to do a single search at initialize time than it is to
@@ -418,6 +420,20 @@ func (idx *TxIndex) Init() error {
 	})
 	if err != nil {
 		return err
+	}
+
+	if chain.CacheInvalidTx {
+		if idx.curOrder == -1 {
+			idx.db.Update(func(dbTx database.Tx) error {
+				dbTx.Metadata().Put(dbnamespace.CacheInvalidTxName, []byte{byte(0)})
+				return nil
+			})
+		}
+	} else {
+		idx.db.Update(func(dbTx database.Tx) error {
+			dbTx.Metadata().Delete(dbnamespace.CacheInvalidTxName)
+			return nil
+		})
 	}
 
 	log.Debug("Current internal block ", "block order", idx.curOrder)

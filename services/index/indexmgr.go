@@ -81,25 +81,8 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 
 	// Initialize each of the enabled indexes.
 	for _, indexer := range m.enabledIndexes {
-		if err := indexer.Init(); err != nil {
+		if err := indexer.Init(chain); err != nil {
 			return err
-		}
-		if indexer.Name() == txIndexName {
-			indexer.(*TxIndex).chain = chain
-			if chain.CacheInvalidTx {
-				if indexer.(*TxIndex).curOrder == 0 {
-					m.db.Update(func(dbTx database.Tx) error {
-						dbTx.Metadata().Put(dbnamespace.CacheInvalidTxName, []byte{byte(0)})
-						return nil
-					})
-				}
-			} else {
-				m.db.Update(func(dbTx database.Tx) error {
-					dbTx.Metadata().Delete(dbnamespace.CacheInvalidTxName)
-					return nil
-				})
-			}
-
 		}
 	}
 

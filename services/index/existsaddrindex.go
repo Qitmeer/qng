@@ -80,7 +80,7 @@ var _ Indexer = (*ExistsAddrIndex)(nil)
 // initialize for this index.
 //
 // This is part of the Indexer interface.
-func (idx *ExistsAddrIndex) Init() error {
+func (idx *ExistsAddrIndex) Init(chain *blockchain.BlockChain) error {
 	// Nothing to do.
 	return nil
 }
