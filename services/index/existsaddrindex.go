@@ -6,6 +6,7 @@
 package index
 
 import (
+	"github.com/Qitmeer/qng-core/meerdag"
 	"sync"
 
 	"github.com/Qitmeer/qng-core/core/types"
@@ -201,7 +202,10 @@ func (idx *ExistsAddrIndex) ExistsAddresses(addrs []types.Address) ([]bool, erro
 // the transactions in the block involve.
 //
 // This is part of the Indexer interface.
-func (idx *ExistsAddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
+func (idx *ExistsAddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
+	if ib.GetStatus().KnownInvalid() {
+		return nil
+	}
 	var allTxns []*types.Tx
 	if block.Order() > 1 {
 		allTxns = block.Transactions()

@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/log"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/params"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/dbnamespace"
@@ -132,7 +133,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			err = m.db.Update(func(dbTx database.Tx) error {
 				// Load the block for the height since it is required to index
 				// it.
-				block, err = chain.DBFetchBlockByOrder(dbTx, uint64(order))
+				block, _, err = chain.DBFetchBlockByOrder(dbTx, uint64(order))
 				if err != nil {
 					return err
 				}
@@ -179,8 +180,10 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 				lowestOrder = -1
 				indexerOrders[i] = -1
 				orderShow = -1
-			} else if int64(order) < lowestOrder {
-				lowestOrder = int64(order)
+			} else {
+				if int64(order) < lowestOrder {
+					lowestOrder = int64(order)
+				}
 				indexerOrders[i] = int64(order)
 			}
 			log.Debug(fmt.Sprintf("Current %s tip", indexer.Name()),
@@ -212,10 +215,11 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		}
 
 		var block *types.SerializedBlock
+		var ib meerdag.IBlock
 		err = m.db.Update(func(dbTx database.Tx) error {
 			// Load the block for the height since it is required to index
 			// it.
-			block, err = chain.DBFetchBlockByOrder(dbTx, uint64(order))
+			block, ib, err = chain.DBFetchBlockByOrder(dbTx, uint64(order))
 			if err != nil {
 				return err
 			}
@@ -231,6 +235,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		chain.CalculateDAGDuplicateTxs(block)
 		// Connect the block for all indexes that need it.
 		spentTxos = nil
+
 		for i, indexer := range m.enabledIndexes {
 			// Skip indexes that don't need to be updated with this
 			// block.
@@ -249,7 +254,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 				}
 			}
 			err = m.db.Update(func(dbTx database.Tx) error {
-				return dbIndexConnectBlock(dbTx, indexer, block, spentTxos)
+				return dbIndexConnectBlock(dbTx, indexer, block, spentTxos, ib)
 			})
 			if err != nil {
 				return err
@@ -357,11 +362,11 @@ func (m *Manager) maybeCreateIndexes(dbTx database.Tx) error {
 // checks, and invokes each indexer.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
+func (m *Manager) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
 	// Call each of the currently active optional indexes with the block
 	// being connected so they can update accordingly.
 	for _, index := range m.enabledIndexes {
-		err := dbIndexConnectBlock(dbTx, index, block, stxos)
+		err := dbIndexConnectBlock(dbTx, index, block, stxos, ib)
 		if err != nil {
 			return err
 		}
@@ -469,15 +474,13 @@ func (m *Manager) dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, bloc
 		return err
 	}
 	if !curTipHash.IsEqual(block.Hash()) {
-		log.Warn(fmt.Sprintf("dbIndexDisconnectBlock must "+
+		return fmt.Errorf("dbIndexDisconnectBlock must "+
 			"be called with the block at the current index tip "+
 			"(%s, tip %s, block %s)", indexer.Name(),
-			curTipHash, block.Hash()))
-		return nil
+			curTipHash, block.Hash())
 	}
 	if order == math.MaxUint32 {
-		log.Warn(fmt.Sprintf("Can't disconnect root index tip"))
-		return nil
+		return fmt.Errorf("Can't disconnect root index tip")
 	}
 	// Notify the indexer with the disconnected block so it can remove all
 	// of the appropriate entries.
@@ -492,11 +495,12 @@ func (m *Manager) dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, bloc
 		prevHash = &hash.ZeroHash
 		preOrder = math.MaxUint32
 	} else {
-		prevHash, err = dbFetchBlockHashByOrder(dbTx, order)
+		preOrder = uint32(order - 1)
+
+		prevHash, err = dbFetchBlockHashByOrder(dbTx, preOrder)
 		if err != nil {
 			return err
 		}
-		preOrder = uint32(order - 1)
 	}
 
 	return dbPutIndexerTip(dbTx, idxKey, prevHash, preOrder)
@@ -506,7 +510,7 @@ func (m *Manager) dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, bloc
 // given block using the provided indexer and updates the tip of the indexer
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the previous block for the passed block.
-func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
+func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
 	// Assert that the block being connected properly connects to the
 	// current tip of the index.
 	idxKey := indexer.Key()
@@ -516,16 +520,13 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *types.Seriali
 	}
 	if order != math.MaxUint32 && order+1 != uint32(block.Order()) ||
 		order == math.MaxUint32 && block.Order() != 0 {
-
-		log.Warn(fmt.Sprintf("dbIndexConnectBlock must be "+
+		return fmt.Errorf("dbIndexConnectBlock must be "+
 			"called with a block that extends the current index "+
 			"tip (%s, tip %d, block %d)", indexer.Name(),
-			order, block.Order()))
-		return nil
+			order, block.Order())
 	}
-
 	// Notify the indexer with the connected block so it can index it.
-	if err := indexer.ConnectBlock(dbTx, block, stxos); err != nil {
+	if err := indexer.ConnectBlock(dbTx, block, stxos, ib); err != nil {
 		return err
 	}
 

@@ -9,6 +9,7 @@ package index
 import (
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"sync"
 
 	"github.com/Qitmeer/qng-core/common/hash"
@@ -745,8 +746,10 @@ func (idx *AddrIndex) indexBlock(data writeIndexData, block *types.SerializedBlo
 // the transactions in the block involve.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
-
+func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
+	if ib.GetStatus().KnownInvalid() {
+		return nil
+	}
 	// The offset and length of the transactions within the serialized
 	// block.
 	txLocs, err := block.TxLoc()

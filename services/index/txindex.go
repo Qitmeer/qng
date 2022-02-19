@@ -12,6 +12,7 @@ import (
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/log"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng/core/blockchain"
 )
 
@@ -102,26 +103,26 @@ var (
 // dbPutBlockIDIndexEntry uses an existing database transaction to update or add
 // the index entries for the hash to id and id to hash mappings for the provided
 // values.
-func dbPutBlockIDIndexEntry(dbTx database.Tx, hash *hash.Hash, id uint32) error {
+func dbPutBlockOrderIndexEntry(dbTx database.Tx, hash *hash.Hash, order uint32) error {
 	// Serialize the height for use in the index entries.
-	var serializedID [4]byte
-	byteOrder.PutUint32(serializedID[:], id)
+	var serializedOrder [4]byte
+	byteOrder.PutUint32(serializedOrder[:], order)
 
 	// Add the block hash to ID mapping to the index.
 	meta := dbTx.Metadata()
 	hashIndex := meta.Bucket(orderByHashIndexBucketName)
-	if err := hashIndex.Put(hash[:], serializedID[:]); err != nil {
+	if err := hashIndex.Put(hash[:], serializedOrder[:]); err != nil {
 		return err
 	}
 
 	// Add the block ID to hash mapping to the index.
 	idIndex := meta.Bucket(hashByOrderIndexBucketName)
-	return idIndex.Put(serializedID[:], hash[:])
+	return idIndex.Put(serializedOrder[:], hash[:])
 }
 
 // dbRemoveBlockIDIndexEntry uses an existing database transaction remove index
 // entries from the hash to id and id to hash mappings for the provided hash.
-func dbRemoveBlockIDIndexEntry(dbTx database.Tx, hash *hash.Hash) error {
+func dbRemoveBlockOrderIndexEntry(dbTx database.Tx, hash *hash.Hash) error {
 	// Remove the block hash to ID mapping.
 	meta := dbTx.Metadata()
 	hashIndex := meta.Bucket(orderByHashIndexBucketName)
@@ -348,7 +349,7 @@ func dbRemoveTxIdByHash(dbTx database.Tx, txhash hash.Hash) error {
 // querying all transactions by their hash.
 type TxIndex struct {
 	db       database.DB
-	curOrder uint32
+	curOrder int64
 
 	chain *blockchain.BlockChain
 }
@@ -370,11 +371,17 @@ func (idx *TxIndex) Init() error {
 		// Scan forward in large gaps to find a block id that doesn't
 		// exist yet to serve as an upper bound for the binary search
 		// below.
-		var highestKnown, nextUnknown uint32
-		testBlockOrder := uint32(1)
-		increment := uint32(100000)
+		highestKnown := int64(-1)
+		nextUnknown := int64(0)
+		testBlockOrder := int64(0)
+		increment := int64(100000)
+
+		defer func() {
+			idx.curOrder = highestKnown
+		}()
+
 		for {
-			_, err := dbFetchBlockHashByOrder(dbTx, testBlockOrder)
+			_, err := dbFetchBlockHashByOrder(dbTx, uint32(testBlockOrder))
 			if err != nil {
 				nextUnknown = testBlockOrder
 				break
@@ -387,7 +394,7 @@ func (idx *TxIndex) Init() error {
 			"highest known", highestKnown, "next unknown", nextUnknown)
 
 		// No used block IDs due to new database.
-		if nextUnknown == 1 {
+		if nextUnknown == 0 {
 			return nil
 		}
 
@@ -395,7 +402,7 @@ func (idx *TxIndex) Init() error {
 		// This will take at most ceil(log_2(increment)) attempts.
 		for {
 			testBlockOrder = (highestKnown + nextUnknown) / 2
-			_, err := dbFetchBlockHashByOrder(dbTx, testBlockOrder)
+			_, err := dbFetchBlockHashByOrder(dbTx, uint32(testBlockOrder))
 			if err != nil {
 				nextUnknown = testBlockOrder
 			} else {
@@ -407,8 +414,6 @@ func (idx *TxIndex) Init() error {
 				break
 			}
 		}
-
-		idx.curOrder = highestKnown
 		return nil
 	})
 	if err != nil {
@@ -479,22 +484,24 @@ func (idx *TxIndex) Create(dbTx database.Tx) error {
 // for every transaction in the passed block.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
+func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
 	// Increment the internal block ID to use for the block being connected
 	// and add all of the transactions in the block to the index.
 	newOrder := idx.curOrder + 1
-	node := idx.chain.BlockDAG().GetBlock(block.Hash())
-	if node == nil {
+	if ib == nil {
 		return fmt.Errorf("no node %s", block.Hash())
 	}
+	if block.Order() != uint64(newOrder) {
+		return fmt.Errorf("TxIndex.curOrder != block(%s).order(%d)", block.Hash(), block.Order())
+	}
 
-	if !node.GetStatus().KnownInvalid() {
-		if err := dbAddTxIndexEntries(dbTx, block, newOrder); err != nil {
+	if !ib.GetStatus().KnownInvalid() {
+		if err := dbAddTxIndexEntries(dbTx, block, uint32(newOrder)); err != nil {
 			return err
 		}
 	} else {
 		if idx.chain.CacheInvalidTx {
-			if err := dbAddInvalidTxIndexEntries(dbTx, block, newOrder); err != nil {
+			if err := dbAddInvalidTxIndexEntries(dbTx, block, uint32(newOrder)); err != nil {
 				return err
 			}
 		}
@@ -502,7 +509,7 @@ func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock,
 
 	// Add the new block ID index entry for the block being connected and
 	// update the current internal block ID accordingly.
-	err := dbPutBlockIDIndexEntry(dbTx, block.Hash(), newOrder)
+	err := dbPutBlockOrderIndexEntry(dbTx, block.Hash(), uint32(newOrder))
 	if err != nil {
 		return err
 	}
@@ -528,7 +535,7 @@ func (idx *TxIndex) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlo
 
 	// Remove the block ID index entry for the block being disconnected and
 	// decrement the current internal block ID to account for it.
-	if err := dbRemoveBlockIDIndexEntry(dbTx, block.Hash()); err != nil {
+	if err := dbRemoveBlockOrderIndexEntry(dbTx, block.Hash()); err != nil {
 		return err
 	}
 	idx.curOrder--

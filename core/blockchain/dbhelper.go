@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/common/roughtime"
-	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng-core/meerdag"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng-core/core/serialization"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/core/types/pow"
 	"github.com/Qitmeer/qng-core/database"
+	"github.com/Qitmeer/qng-core/meerdag"
+	"github.com/Qitmeer/qng/core/blockchain/token"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"math/big"
 	"time"
 )
@@ -92,26 +92,27 @@ func (bcs *bestChainState) GetTotal() uint64 {
 // dbFetchBlockByOrder uses an existing database transaction to retrieve the
 // raw block for the provided order, deserialize it, and return a Block
 // with the height set.
-func (b *BlockChain) DBFetchBlockByOrder(dbTx database.Tx, order uint64) (*types.SerializedBlock, error) {
+func (b *BlockChain) DBFetchBlockByOrder(dbTx database.Tx, order uint64) (*types.SerializedBlock, meerdag.IBlock, error) {
 	// First find the hash associated with the provided order in the index.
-	h := b.bd.GetBlockByOrderWithTx(dbTx, uint(order))
-	if h == nil {
-		return nil, fmt.Errorf("No block\n")
+	ib := b.bd.GetBlockByOrderWithTx(dbTx, uint(order))
+	if ib == nil {
+		return nil, nil, fmt.Errorf("No block\n")
 	}
 
 	// Load the raw block bytes from the database.
-	blockBytes, err := dbTx.FetchBlock(h)
+	blockBytes, err := dbTx.FetchBlock(ib.GetHash())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Create the encapsulated block and set the order appropriately.
 	block, err := types.NewBlockFromBytes(blockBytes)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	block.SetOrder(order)
-	return block, nil
+	block.SetHeight(ib.GetHeight())
+	return block, ib, nil
 }
 
 // BlockByHeight returns the block at the given height in the main chain.
@@ -121,7 +122,7 @@ func (b *BlockChain) BlockByOrder(blockOrder uint64) (*types.SerializedBlock, er
 	var block *types.SerializedBlock
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		block, err = b.DBFetchBlockByOrder(dbTx, blockOrder)
+		block, _, err = b.DBFetchBlockByOrder(dbTx, blockOrder)
 		return err
 	})
 	return block, err
