@@ -33,6 +33,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -694,11 +695,14 @@ func InitEnv(env string) {
 	if len(env) <= 0 {
 		return
 	}
+	if e, err := strconv.Unquote(env); err == nil {
+		env = e;
+	}
 	args := strings.Split(env, " ")
 	if len(args) <= 0 {
 		return
 	}
-	log.Debug(fmt.Sprintf("Initialize meerevm environment:%v", args))
+	log.Debug(fmt.Sprintf("Initialize meerevm environment: %v %v ", len(args), args))
 	Args = append(Args, args...)
 }
 
