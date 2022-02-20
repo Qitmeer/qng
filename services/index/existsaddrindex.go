@@ -6,13 +6,14 @@
 package index
 
 import (
+	"github.com/Qitmeer/qng-core/meerdag"
 	"sync"
 
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
 )
 
 var (
@@ -79,7 +80,7 @@ var _ Indexer = (*ExistsAddrIndex)(nil)
 // initialize for this index.
 //
 // This is part of the Indexer interface.
-func (idx *ExistsAddrIndex) Init() error {
+func (idx *ExistsAddrIndex) Init(chain *blockchain.BlockChain) error {
 	// Nothing to do.
 	return nil
 }
@@ -201,7 +202,10 @@ func (idx *ExistsAddrIndex) ExistsAddresses(addrs []types.Address) ([]bool, erro
 // the transactions in the block involve.
 //
 // This is part of the Indexer interface.
-func (idx *ExistsAddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
+func (idx *ExistsAddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
+	if ib.GetStatus().KnownInvalid() {
+		return nil
+	}
 	var allTxns []*types.Tx
 	if block.Order() > 1 {
 		allTxns = block.Transactions()

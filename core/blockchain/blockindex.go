@@ -3,9 +3,9 @@ package blockchain
 
 import (
 	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
+	"github.com/Qitmeer/qng-core/meerdag"
 )
 
 // IndexManager provides a generic interface that the is called when blocks are
@@ -21,7 +21,7 @@ type IndexManager interface {
 
 	// ConnectBlock is invoked when a new block has been connected to the
 	// main chain.
-	ConnectBlock(tx database.Tx, block *types.SerializedBlock, stxos []SpentTxOut) error
+	ConnectBlock(tx database.Tx, block *types.SerializedBlock, stxos []SpentTxOut, ib meerdag.IBlock) error
 
 	// DisconnectBlock is invoked when a block has been disconnected from
 	// the main chain.

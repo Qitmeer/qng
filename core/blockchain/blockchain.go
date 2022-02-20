@@ -997,7 +997,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 			// optional indexes with the block being connected so they can
 			// update themselves accordingly.
 			if b.indexManager != nil {
-				err := b.indexManager.ConnectBlock(dbTx, block, stxos)
+				err := b.indexManager.ConnectBlock(dbTx, block, stxos, node)
 				if err != nil {
 					return err
 				}
@@ -1020,7 +1020,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		// Atomically insert info into the database.
 		err := b.db.Update(func(dbTx database.Tx) error {
 			if b.indexManager != nil {
-				err := b.indexManager.ConnectBlock(dbTx, block, stxos)
+				err := b.indexManager.ConnectBlock(dbTx, block, stxos, node)
 				if err != nil {
 					return err
 				}
@@ -1209,8 +1209,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		err = b.connectBlock(nodeBlock, block, view, stxos)
 		if err != nil {
 			b.bd.InvalidBlock(nodeBlock)
-			log.Info(fmt.Sprintf("%s", err))
-			continue
+			return err
 		}
 		if !nodeBlock.GetStatus().KnownInvalid() {
 			b.bd.ValidBlock(nodeBlock)

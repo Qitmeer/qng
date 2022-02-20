@@ -9,10 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/log"
+	"github.com/Qitmeer/qng-core/meerdag"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 )
 
 const (
@@ -25,21 +27,21 @@ var (
 	// to house it.
 	txIndexKey = []byte("txbyhashidx")
 
-	// idByHashIndexBucketName is the name of the db bucket used to house
-	// the block id -> block hash index.
-	idByHashIndexBucketName = []byte("idbyhashidx")
+	// orderByHashIndexBucketName is the name of the db bucket used to house
+	// the block order -> block hash index.
+	orderByHashIndexBucketName = []byte("idbyhashidx")
 
-	// hashByIDIndexBucketName is the name of the db bucket used to house
-	// the block hash -> block id index.
-	hashByIDIndexBucketName = []byte("hashbyididx")
+	// hashByOrderIndexBucketName is the name of the db bucket used to house
+	// the block hash -> block order index.
+	hashByOrderIndexBucketName = []byte("hashbyididx")
 
 	// txidByTxhashBucketName is the name of the db bucket used to house
 	// the tx hash -> tx id.
 	txidByTxhashBucketName = []byte("txidbytxhash")
 
-	// errNoBlockIDEntry is an error that indicates a requested entry does
-	// not exist in the block ID index.
-	errNoBlockIDEntry = errors.New("no entry in the block ID index")
+	// errNoBlockOrderEntry is an error that indicates a requested entry does
+	// not exist in the block order index.
+	errNoBlockOrderEntry = errors.New("no entry in the block order index")
 
 	// errNoTxHashEntry is an error that indicates a requested entry does
 	// not exist in the tx hash
@@ -102,29 +104,29 @@ var (
 // dbPutBlockIDIndexEntry uses an existing database transaction to update or add
 // the index entries for the hash to id and id to hash mappings for the provided
 // values.
-func dbPutBlockIDIndexEntry(dbTx database.Tx, hash *hash.Hash, id uint32) error {
+func dbPutBlockOrderIndexEntry(dbTx database.Tx, hash *hash.Hash, order uint32) error {
 	// Serialize the height for use in the index entries.
-	var serializedID [4]byte
-	byteOrder.PutUint32(serializedID[:], id)
+	var serializedOrder [4]byte
+	byteOrder.PutUint32(serializedOrder[:], order)
 
 	// Add the block hash to ID mapping to the index.
 	meta := dbTx.Metadata()
-	hashIndex := meta.Bucket(idByHashIndexBucketName)
-	if err := hashIndex.Put(hash[:], serializedID[:]); err != nil {
+	hashIndex := meta.Bucket(orderByHashIndexBucketName)
+	if err := hashIndex.Put(hash[:], serializedOrder[:]); err != nil {
 		return err
 	}
 
 	// Add the block ID to hash mapping to the index.
-	idIndex := meta.Bucket(hashByIDIndexBucketName)
-	return idIndex.Put(serializedID[:], hash[:])
+	idIndex := meta.Bucket(hashByOrderIndexBucketName)
+	return idIndex.Put(serializedOrder[:], hash[:])
 }
 
 // dbRemoveBlockIDIndexEntry uses an existing database transaction remove index
 // entries from the hash to id and id to hash mappings for the provided hash.
-func dbRemoveBlockIDIndexEntry(dbTx database.Tx, hash *hash.Hash) error {
+func dbRemoveBlockOrderIndexEntry(dbTx database.Tx, hash *hash.Hash) error {
 	// Remove the block hash to ID mapping.
 	meta := dbTx.Metadata()
-	hashIndex := meta.Bucket(idByHashIndexBucketName)
+	hashIndex := meta.Bucket(orderByHashIndexBucketName)
 	serializedID := hashIndex.Get(hash[:])
 	if serializedID == nil {
 		return nil
@@ -134,17 +136,17 @@ func dbRemoveBlockIDIndexEntry(dbTx database.Tx, hash *hash.Hash) error {
 	}
 
 	// Remove the block ID to hash mapping.
-	idIndex := meta.Bucket(hashByIDIndexBucketName)
+	idIndex := meta.Bucket(hashByOrderIndexBucketName)
 	return idIndex.Delete(serializedID)
 }
 
-// dbFetchBlockIDByHash uses an existing database transaction to retrieve the
-// block id for the provided hash from the index.
-func dbFetchBlockIDByHash(dbTx database.Tx, hash *hash.Hash) (uint32, error) {
-	hashIndex := dbTx.Metadata().Bucket(idByHashIndexBucketName)
+// dbFetchOrderByHash uses an existing database transaction to retrieve the
+// block order for the provided hash from the index.
+func dbFetchOrderByHash(dbTx database.Tx, hash *hash.Hash) (uint32, error) {
+	hashIndex := dbTx.Metadata().Bucket(orderByHashIndexBucketName)
 	serializedID := hashIndex.Get(hash[:])
 	if serializedID == nil {
-		return 0, errNoBlockIDEntry
+		return 0, errNoBlockOrderEntry
 	}
 
 	return byteOrder.Uint32(serializedID), nil
@@ -153,10 +155,10 @@ func dbFetchBlockIDByHash(dbTx database.Tx, hash *hash.Hash) (uint32, error) {
 // dbFetchBlockHashBySerializedID uses an existing database transaction to
 // retrieve the hash for the provided serialized block id from the index.
 func dbFetchBlockHashBySerializedID(dbTx database.Tx, serializedID []byte) (*hash.Hash, error) {
-	idIndex := dbTx.Metadata().Bucket(hashByIDIndexBucketName)
+	idIndex := dbTx.Metadata().Bucket(hashByOrderIndexBucketName)
 	hashBytes := idIndex.Get(serializedID)
 	if hashBytes == nil {
-		return nil, errNoBlockIDEntry
+		return nil, errNoBlockOrderEntry
 	}
 
 	var hash hash.Hash
@@ -164,11 +166,11 @@ func dbFetchBlockHashBySerializedID(dbTx database.Tx, serializedID []byte) (*has
 	return &hash, nil
 }
 
-// dbFetchBlockHashByID uses an existing database transaction to retrieve the
-// hash for the provided block id from the index.
-func dbFetchBlockHashByID(dbTx database.Tx, id uint32) (*hash.Hash, error) {
+// dbFetchBlockHashByOrder uses an existing database transaction to retrieve the
+// hash for the provided block order from the index.
+func dbFetchBlockHashByOrder(dbTx database.Tx, order uint32) (*hash.Hash, error) {
 	var serializedID [4]byte
-	byteOrder.PutUint32(serializedID[:], id)
+	byteOrder.PutUint32(serializedID[:], order)
 	return dbFetchBlockHashBySerializedID(dbTx, serializedID[:])
 }
 
@@ -347,8 +349,8 @@ func dbRemoveTxIdByHash(dbTx database.Tx, txhash hash.Hash) error {
 // TxIndex implements a transaction by hash index.  That is to say, it supports
 // querying all transactions by their hash.
 type TxIndex struct {
-	db         database.DB
-	curBlockID uint32
+	db       database.DB
+	curOrder int64
 
 	chain *blockchain.BlockChain
 }
@@ -361,7 +363,8 @@ var _ Indexer = (*TxIndex)(nil)
 // disconnecting blocks.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) Init() error {
+func (idx *TxIndex) Init(chain *blockchain.BlockChain) error {
+	idx.chain = chain
 	// Find the latest known block id field for the internal block id
 	// index and initialize it.  This is done because it's a lot more
 	// efficient to do a single search at initialize time than it is to
@@ -370,36 +373,42 @@ func (idx *TxIndex) Init() error {
 		// Scan forward in large gaps to find a block id that doesn't
 		// exist yet to serve as an upper bound for the binary search
 		// below.
-		var highestKnown, nextUnknown uint32
-		testBlockID := uint32(1)
-		increment := uint32(100000)
+		highestKnown := int64(-1)
+		nextUnknown := int64(0)
+		testBlockOrder := int64(0)
+		increment := int64(100000)
+
+		defer func() {
+			idx.curOrder = highestKnown
+		}()
+
 		for {
-			_, err := dbFetchBlockHashByID(dbTx, testBlockID)
+			_, err := dbFetchBlockHashByOrder(dbTx, uint32(testBlockOrder))
 			if err != nil {
-				nextUnknown = testBlockID
+				nextUnknown = testBlockOrder
 				break
 			}
 
-			highestKnown = testBlockID
-			testBlockID += increment
+			highestKnown = testBlockOrder
+			testBlockOrder += increment
 		}
 		log.Trace("Forward scan ...",
 			"highest known", highestKnown, "next unknown", nextUnknown)
 
 		// No used block IDs due to new database.
-		if nextUnknown == 1 {
+		if nextUnknown == 0 {
 			return nil
 		}
 
 		// Use a binary search to find the final highest used block id.
 		// This will take at most ceil(log_2(increment)) attempts.
 		for {
-			testBlockID = (highestKnown + nextUnknown) / 2
-			_, err := dbFetchBlockHashByID(dbTx, testBlockID)
+			testBlockOrder = (highestKnown + nextUnknown) / 2
+			_, err := dbFetchBlockHashByOrder(dbTx, uint32(testBlockOrder))
 			if err != nil {
-				nextUnknown = testBlockID
+				nextUnknown = testBlockOrder
 			} else {
-				highestKnown = testBlockID
+				highestKnown = testBlockOrder
 			}
 			log.Trace("Binary scan ...",
 				"highest known", highestKnown, "next unknown", nextUnknown)
@@ -407,15 +416,27 @@ func (idx *TxIndex) Init() error {
 				break
 			}
 		}
-
-		idx.curBlockID = highestKnown
 		return nil
 	})
 	if err != nil {
 		return err
 	}
 
-	log.Debug("Current internal block ", "block id", idx.curBlockID)
+	if chain.CacheInvalidTx {
+		if idx.curOrder == -1 {
+			idx.db.Update(func(dbTx database.Tx) error {
+				dbTx.Metadata().Put(dbnamespace.CacheInvalidTxName, []byte{byte(0)})
+				return nil
+			})
+		}
+	} else {
+		idx.db.Update(func(dbTx database.Tx) error {
+			dbTx.Metadata().Delete(dbnamespace.CacheInvalidTxName)
+			return nil
+		})
+	}
+
+	log.Debug("Current internal block ", "block order", idx.curOrder)
 	return nil
 }
 
@@ -454,10 +475,10 @@ func (idx *TxIndex) GetTxBytes(blockRegion *database.BlockRegion) ([]byte, error
 // This is part of the Indexer interface.
 func (idx *TxIndex) Create(dbTx database.Tx) error {
 	meta := dbTx.Metadata()
-	if _, err := meta.CreateBucket(idByHashIndexBucketName); err != nil {
+	if _, err := meta.CreateBucket(orderByHashIndexBucketName); err != nil {
 		return err
 	}
-	if _, err := meta.CreateBucket(hashByIDIndexBucketName); err != nil {
+	if _, err := meta.CreateBucket(hashByOrderIndexBucketName); err != nil {
 		return err
 	}
 	if _, err := meta.CreateBucket(txidByTxhashBucketName); err != nil {
@@ -479,22 +500,24 @@ func (idx *TxIndex) Create(dbTx database.Tx) error {
 // for every transaction in the passed block.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
+func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
 	// Increment the internal block ID to use for the block being connected
 	// and add all of the transactions in the block to the index.
-	newBlockID := idx.curBlockID + 1
-	node := idx.chain.BlockDAG().GetBlock(block.Hash())
-	if node == nil {
+	newOrder := idx.curOrder + 1
+	if ib == nil {
 		return fmt.Errorf("no node %s", block.Hash())
 	}
+	if block.Order() != uint64(newOrder) {
+		return fmt.Errorf("TxIndex.curOrder != block(%s).order(%d)", block.Hash(), block.Order())
+	}
 
-	if !node.GetStatus().KnownInvalid() {
-		if err := dbAddTxIndexEntries(dbTx, block, newBlockID); err != nil {
+	if !ib.GetStatus().KnownInvalid() {
+		if err := dbAddTxIndexEntries(dbTx, block, uint32(newOrder)); err != nil {
 			return err
 		}
 	} else {
 		if idx.chain.CacheInvalidTx {
-			if err := dbAddInvalidTxIndexEntries(dbTx, block, newBlockID); err != nil {
+			if err := dbAddInvalidTxIndexEntries(dbTx, block, uint32(newOrder)); err != nil {
 				return err
 			}
 		}
@@ -502,11 +525,11 @@ func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock,
 
 	// Add the new block ID index entry for the block being connected and
 	// update the current internal block ID accordingly.
-	err := dbPutBlockIDIndexEntry(dbTx, block.Hash(), newBlockID)
+	err := dbPutBlockOrderIndexEntry(dbTx, block.Hash(), uint32(newOrder))
 	if err != nil {
 		return err
 	}
-	idx.curBlockID = newBlockID
+	idx.curOrder = newOrder
 	return nil
 }
 
@@ -528,10 +551,10 @@ func (idx *TxIndex) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlo
 
 	// Remove the block ID index entry for the block being disconnected and
 	// decrement the current internal block ID to account for it.
-	if err := dbRemoveBlockIDIndexEntry(dbTx, block.Hash()); err != nil {
+	if err := dbRemoveBlockOrderIndexEntry(dbTx, block.Hash()); err != nil {
 		return err
 	}
-	idx.curBlockID--
+	idx.curOrder--
 	return nil
 }
 
@@ -594,7 +617,7 @@ func NewTxIndex(db database.DB) *TxIndex {
 func dropBlockIDIndex(db database.DB) error {
 	return db.Update(func(dbTx database.Tx) error {
 		meta := dbTx.Metadata()
-		err := meta.DeleteBucket(idByHashIndexBucketName)
+		err := meta.DeleteBucket(orderByHashIndexBucketName)
 		if err != nil {
 			return err
 		}
@@ -602,7 +625,7 @@ func dropBlockIDIndex(db database.DB) error {
 		if err != nil {
 			return err
 		}
-		return meta.DeleteBucket(hashByIDIndexBucketName)
+		return meta.DeleteBucket(hashByOrderIndexBucketName)
 	})
 }
 

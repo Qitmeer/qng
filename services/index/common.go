@@ -10,9 +10,10 @@ package index
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
+	"github.com/Qitmeer/qng-core/meerdag"
+	"github.com/Qitmeer/qng/core/blockchain"
 )
 
 var (
@@ -47,11 +48,11 @@ type Indexer interface {
 	// Init is invoked when the index manager is first initializing the
 	// index.  This differs from the Create method in that it is called on
 	// every load, including the case the index was just created.
-	Init() error
+	Init(chain *blockchain.BlockChain) error
 
 	// ConnectBlock is invoked when the index manager is notified that a new
 	// block has been connected to the main chain.
-	ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error
+	ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error
 
 	// DisconnectBlock is invoked when the index manager is notified that a
 	// block has been disconnected from the main chain.

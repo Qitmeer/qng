@@ -9,16 +9,17 @@ package index
 import (
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"sync"
 
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/core/address"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/crypto/ecc"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
 )
 
 const (
@@ -633,7 +634,7 @@ func (idx *AddrIndex) NeedsInputs() bool {
 // initialize for this index.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) Init() error {
+func (idx *AddrIndex) Init(chain *blockchain.BlockChain) error {
 	// Nothing to do.
 	return nil
 }
@@ -745,8 +746,10 @@ func (idx *AddrIndex) indexBlock(data writeIndexData, block *types.SerializedBlo
 // the transactions in the block involve.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
-
+func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
+	if ib.GetStatus().KnownInvalid() {
+		return nil
+	}
 	// The offset and length of the transactions within the serialized
 	// block.
 	txLocs, err := block.TxLoc()
@@ -755,7 +758,7 @@ func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBloc
 	}
 	// Get the internal block ID associated with the block.
 	blockHash := block.Hash()
-	blockID, err := dbFetchBlockIDByHash(dbTx, blockHash)
+	blockID, err := dbFetchOrderByHash(dbTx, blockHash)
 	if err != nil {
 		return err
 	}
