@@ -82,6 +82,11 @@ func (s *RpcServer) handleNotifyMsg(notification *blockchain.Notification) {
 			break
 		}
 		s.ntfnMgr.NotifyReorganization(rnd)
+	case blockchain.Shutdown:
+		select {
+		case s.RequestedProcessShutdown() <- struct{}{}:
+		default:
+		}
 	}
 }
 
