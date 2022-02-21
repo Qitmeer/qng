@@ -2,7 +2,7 @@
 set -ex
 
 export GO111MODULE=on
-go mod tidy
+#go mod tidy
 
 if [ ! -x "$(type -p golangci-lint)" ]; then
   exit 1
