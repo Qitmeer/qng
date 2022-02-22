@@ -71,6 +71,11 @@ func (w *RemoteWorker) GetRequest(powType pow.PowType, reply chan *gbtResponse) 
 			reply <- &gbtResponse{nil, err}
 			return
 		}
+	} else {
+		if err := w.miner.updateBlockTemplate(false); err != nil {
+			reply <- &gbtResponse{nil, err}
+			return
+		}
 	}
 	var headerBuf bytes.Buffer
 	err := w.miner.template.Block.Header.Serialize(&headerBuf)

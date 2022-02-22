@@ -124,6 +124,11 @@ func (w *GBTWorker) GetRequest(request *json.TemplateRequest, reply chan *gbtRes
 			reply <- &gbtResponse{nil, err}
 			return
 		}
+	} else {
+		if err := w.miner.updateBlockTemplate(false); err != nil {
+			reply <- &gbtResponse{nil, err}
+			return
+		}
 	}
 	result, err := w.getResult(useCoinbaseValue, nil)
 	reply <- &gbtResponse{result, err}
