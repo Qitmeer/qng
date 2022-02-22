@@ -194,6 +194,9 @@ func (bd *MeerDAG) getDiscardedTips() []IBlock {
 		if block.IsOrdered() {
 			continue
 		}
+		if block.GetID()+uint(bd.tipsDisLimit) >= mainTip.GetID() {
+			continue
+		}
 		gap := int64(mainTip.GetHeight()) - int64(block.GetHeight())
 		if gap > bd.tipsDisLimit {
 			if result == nil {
