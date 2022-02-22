@@ -999,7 +999,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 			if b.indexManager != nil {
 				err := b.indexManager.ConnectBlock(dbTx, block, stxos, node)
 				if err != nil {
-					return err
+					return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 				}
 			}
 			return nil
@@ -1068,7 +1068,7 @@ func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoVie
 		if b.indexManager != nil {
 			err := b.indexManager.DisconnectBlock(dbTx, block, stxos)
 			if err != nil {
-				return err
+				return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 			}
 		}
 		return nil

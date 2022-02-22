@@ -152,7 +152,9 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	// also handles validation of the transaction scripts.
 	_, err = b.connectDagChain(ib, block, newOrders, oldOrders)
 	if err != nil {
-		panic(err)
+		log.Error(err.Error())
+		go b.sendNotification(Shutdown, nil)
+		return err
 	}
 
 	err = b.updateBestState(ib, block, newOrders)
