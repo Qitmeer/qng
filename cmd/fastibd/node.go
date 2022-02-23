@@ -259,6 +259,10 @@ func (node *Node) Import() error {
 		}
 		offset += 4 + int(ibdb.length)
 
+		err = node.bc.CheckBlockSanity(ibdb.blk, node.bc.TimeSource(), blockchain.BFFastAdd, params.ActiveNetParams.Params)
+		if err != nil {
+			return err
+		}
 		err = node.bc.FastAcceptBlock(ibdb.blk, blockchain.BFFastAdd)
 		if err != nil {
 			return err
@@ -414,6 +418,10 @@ func (node *Node) Upgrade() error {
 		log.Info("Upgrade...")
 	}
 	for _, block := range blocks {
+		err = node.bc.CheckBlockSanity(block, node.bc.TimeSource(), blockchain.BFFastAdd, params.ActiveNetParams.Params)
+		if err != nil {
+			return err
+		}
 		err := node.bc.FastAcceptBlock(block, blockchain.BFFastAdd)
 		if err != nil {
 			return err

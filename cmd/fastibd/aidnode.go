@@ -239,10 +239,16 @@ func (node *AidNode) Upgrade() error {
 	}()
 
 	for _, block := range blocks {
+		err = node.bc.CheckBlockSanity(block, node.bc.TimeSource(), blockchain.BFFastAdd, params.ActiveNetParams.Params)
+		if err != nil {
+			fmt.Println()
+			log.Info(fmt.Sprintf("The block stopped because of an error:%s (%s)", block.Hash().String(), err))
+			return nil
+		}
 		err := node.bc.FastAcceptBlock(block, blockchain.BFNone)
 		if err != nil {
 			fmt.Println()
-			log.Info(fmt.Sprintf("The block stopped because of an error:%s", block.Hash().String()))
+			log.Info(fmt.Sprintf("The block stopped because of an error:%s (%s)", block.Hash().String(), err))
 			return nil
 		}
 		if bar != nil {
