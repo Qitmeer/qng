@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/config"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng-core/meerdag"
-	"github.com/Qitmeer/qng/core/dbnamespace"
+	"github.com/Qitmeer/qng-core/core/event"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
+	"github.com/Qitmeer/qng/vm"
 	"github.com/schollz/progressbar/v3"
 	"path"
 	"runtime"
@@ -24,6 +26,8 @@ type AidNode struct {
 	db    database.DB
 	cfg   *Config
 	total uint64
+	// event system
+	events event.Feed
 }
 
 func (node *AidNode) init(cfg *Config) error {
@@ -108,7 +112,7 @@ func (node *AidNode) Upgrade() error {
 
 	for i = uint(1); i <= endNum; i++ {
 		blockHash = nil
-		isEmpty:=false
+		isEmpty := false
 		err := node.db.View(func(dbTx database.Tx) error {
 
 			block := &meerdag.Block{}
@@ -117,7 +121,7 @@ func (node *AidNode) Upgrade() error {
 			err := meerdag.DBGetDAGBlock(dbTx, ib)
 			if err != nil {
 				if err.(*meerdag.DAGError).IsEmpty() {
-					isEmpty=true
+					isEmpty = true
 					return nil
 				}
 				return err
@@ -198,6 +202,22 @@ func (node *AidNode) Upgrade() error {
 	}
 	node.bc = bc
 	node.name = path.Base(node.cfg.DataDir)
+	// vm
+	vmServer, err := vm.NewService(&config.Config{
+		DataDir:           node.cfg.DataDir,
+		DebugLevel:        "info",
+		DebugPrintOrigins: false,
+		EVMEnv:            "",
+	}, &node.events, nil, nil)
+	if err != nil {
+		return err
+	}
+	err = vmServer.Start()
+	if err != nil {
+		return err
+	}
+
+	node.bc.VMService = vmServer
 
 	log.Info(fmt.Sprintf("Load new data:%s", node.cfg.DataDir))
 
