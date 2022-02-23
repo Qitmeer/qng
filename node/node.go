@@ -2,13 +2,13 @@
 package node
 
 import (
-	"github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/common/roughtime"
 	"github.com/Qitmeer/qng-core/common/util"
+	"github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/core/event"
 	"github.com/Qitmeer/qng-core/database"
-	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/node/service"
 	"sync"
 )
 
@@ -77,6 +77,14 @@ func (n *Node) Start() error {
 	// Already started?
 	if err := n.Service.Start(); err != nil {
 		return err
+	}
+
+	fn := n.GetQitmeerFull()
+	if fn != nil {
+		txm := fn.GetTxManager()
+		if txm != nil {
+			txm.LoadMempool()
+		}
 	}
 
 	// Finished node start
