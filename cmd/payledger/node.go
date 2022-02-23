@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/log"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/services/index"
 	"os"
 	"path"
@@ -119,7 +119,10 @@ func (node *Node) processBlockDAG(srcnode *SrcNode) error {
 		if err != nil {
 			return err
 		}
-		//fmt.Printf("%d %s\n", i, blockHash.String())
+		err = node.bc.CheckBlockSanity(block, node.bc.TimeSource(), blockchain.BFFastAdd, params.ActiveNetParams.Params)
+		if err != nil {
+			return err
+		}
 		err = node.bc.FastAcceptBlock(block, blockchain.BFFastAdd)
 		if err != nil {
 			return err

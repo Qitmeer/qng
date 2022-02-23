@@ -53,11 +53,14 @@ func (tm *TxManager) Start() error {
 		return err
 	}
 
+	return tm.initFeeEstimator()
+}
+
+func (tm *TxManager) LoadMempool() {
 	err := tm.txMemPool.Load()
 	if err != nil {
 		log.Error(err.Error())
 	}
-	return tm.initFeeEstimator()
 }
 
 func (tm *TxManager) initFeeEstimator() error {

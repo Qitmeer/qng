@@ -14,12 +14,12 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/core/event"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng-core/meerdag"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/vm"
@@ -80,15 +80,15 @@ func (node *Node) init(cfg *Config) error {
 
 	// vm
 	vmServer, err := vm.NewService(&config.Config{
-		DataDir:cfg.DataDir,
-		DebugLevel:"info",
-		DebugPrintOrigins:false,
-		EVMEnv:"",
+		DataDir:           cfg.DataDir,
+		DebugLevel:        "info",
+		DebugPrintOrigins: false,
+		EVMEnv:            "",
 	}, &node.events, nil, nil)
 	if err != nil {
 		return err
 	}
-	node.bc.VMService=vmServer
+	node.bc.VMService = vmServer
 	return vmServer.Start()
 }
 
@@ -259,6 +259,10 @@ func (node *Node) Import() error {
 		}
 		offset += 4 + int(ibdb.length)
 
+		err = node.bc.CheckBlockSanity(ibdb.blk, node.bc.TimeSource(), blockchain.BFFastAdd, params.ActiveNetParams.Params)
+		if err != nil {
+			return err
+		}
 		err = node.bc.FastAcceptBlock(ibdb.blk, blockchain.BFFastAdd)
 		if err != nil {
 			return err
@@ -389,6 +393,22 @@ func (node *Node) Upgrade() error {
 	node.bc = bc
 	node.name = path.Base(node.cfg.DataDir)
 
+	// vm
+	vmServer, err := vm.NewService(&config.Config{
+		DataDir:           node.cfg.DataDir,
+		DebugLevel:        "info",
+		DebugPrintOrigins: false,
+		EVMEnv:            "",
+	}, &node.events, nil, nil)
+	if err != nil {
+		return err
+	}
+	err = vmServer.Start()
+	if err != nil {
+		return err
+	}
+
+	node.bc.VMService = vmServer
 	log.Info(fmt.Sprintf("Load new data:%s", node.cfg.DataDir))
 
 	if bar != nil {
@@ -398,6 +418,10 @@ func (node *Node) Upgrade() error {
 		log.Info("Upgrade...")
 	}
 	for _, block := range blocks {
+		err = node.bc.CheckBlockSanity(block, node.bc.TimeSource(), blockchain.BFFastAdd, params.ActiveNetParams.Params)
+		if err != nil {
+			return err
+		}
 		err := node.bc.FastAcceptBlock(block, blockchain.BFFastAdd)
 		if err != nil {
 			return err

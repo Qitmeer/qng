@@ -64,8 +64,8 @@ github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a h1:O2Er
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:KiA7g46zc6dkgf/3NbEpJirY75v656WYlmSQNR1wTVk=
 github.com/Qitmeer/go-ethereum v1.10.9-q.5 h1:zLwIePKqwmWbbevuMDgAplMj7zpEMkrgNzLKeR1wyLU=
 github.com/Qitmeer/go-ethereum v1.10.9-q.5/go.mod h1:8bALkv9mq8Bvsw8TEUaxO2TtxAGRxoXebspLZ+CSJ9U=
-github.com/Qitmeer/meerevm v0.0.0-20220220103316-973a65b16b3c h1:k+1HqRJLsX6UbGAqH5VTc9OXT8YbzeXUkKvYC+Z2J9A=
-github.com/Qitmeer/meerevm v0.0.0-20220220103316-973a65b16b3c/go.mod h1:eEyPRJVL3TUoag6c59Onsl9kCfIU+c4o/a+3WOmj/vU=
+github.com/Qitmeer/meerevm v0.0.0-20220223075014-73abc9029430 h1:Cxvraar3AwfqOJdVY1u7ommQlnC6MBqB77f7eCpvbuY=
+github.com/Qitmeer/meerevm v0.0.0-20220223075014-73abc9029430/go.mod h1:dgions2Eb6A3Ohvraxt7L8yU16ZQw1MK1MjH1TPXVKc=
 github.com/Qitmeer/qng-core v1.2.13/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
 github.com/Qitmeer/qng-core v1.2.14 h1:E/3fj3JLFVhSf0f5zPCZcRoDTejbx4QA7d9JEK7ENoI=
 github.com/Qitmeer/qng-core v1.2.14/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
