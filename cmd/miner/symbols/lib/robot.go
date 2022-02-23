@@ -385,6 +385,10 @@ func (this *QitmeerRobot) Status() {
 // stats the submit result
 func (this *QitmeerRobot) HandlePendingBlocks() {
 	this.WsConnect()
+
+	stallTicker := time.NewTicker(time.Millisecond * time.Duration(this.Cfg.OptionConfig.TaskInterval))
+	defer stallTicker.Stop()
+
 	for {
 		select {
 		case <-this.Quit.Done():
@@ -393,7 +397,7 @@ func (this *QitmeerRobot) HandlePendingBlocks() {
 				this.WsClient.Shutdown()
 			}
 			return
-		default:
+		case <-stallTicker.C:
 			if this.WsClient == nil || this.WsClient.Disconnected() {
 				this.WsConnect()
 			}
