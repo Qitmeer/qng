@@ -298,7 +298,7 @@ var (
 			Usage:       "Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute",
 			Destination: &cfg.FreeTxRelayLimit,
 		},
-		&cli.BoolFlag{
+		&cli.BoolTFlag{
 			Name:        "acceptnonstd",
 			Usage:       "Accept and relay non-standard transactions to the network regardless of the default settings for the active network.",
 			Destination: &cfg.AcceptNonStd,
@@ -405,7 +405,7 @@ var (
 			Value:       defaultMaxInboundPeersPerHost,
 			Destination: &cfg.MaxInbound,
 		},
-		&cli.BoolFlag{
+		&cli.BoolTFlag{
 			Name:        "banning",
 			Usage:       "Enable banning of misbehaving peers",
 			Destination: &cfg.Banning,
