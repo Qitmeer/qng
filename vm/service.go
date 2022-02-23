@@ -260,24 +260,11 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Bloc
 		}
 
 		if types.IsCrossChainExportTx(tx.Tx) {
-			ctx := &qconsensus.Tx{Type: types.TxTypeCrossChainExport}
-			_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
+			ctx, err := qconsensus.NewExportTx(tx.Tx)
 			if err != nil {
 				return nil, err
 			}
-
-			if len(pksAddrs) > 0 {
-				secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
-				if !ok {
-					return nil, fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
-				}
-				ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
-				ctx.Value = uint64(tx.Tx.TxOut[0].Amount.Value)
-				result.Txs = append(result.Txs, ctx)
-			} else {
-				return nil, fmt.Errorf("tx format error :TxTypeCrossChainExport")
-			}
-
+			result.Txs = append(result.Txs, ctx)
 		} else if types.IsCrossChainImportTx(tx.Tx) {
 			ctx, err := qconsensus.NewImportTx(tx.Tx)
 			if err != nil {
