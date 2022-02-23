@@ -134,28 +134,6 @@ func (me *MeerEngine) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 }
 
 func (me *MeerEngine) verifyHeader(chain consensus.ChainHeaderReader, header, parent *types.Header, uncle bool, seal bool, unixNow int64) error {
-	// Ensure that the header's extra-data section is of a reasonable size
-	if uint64(len(header.Extra)) > MaximumExtraDataSize {
-		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), MaximumExtraDataSize)
-	}
-	// Verify the header's timestamp
-	if !uncle {
-		if header.Time > uint64(unixNow+allowedFutureBlockTimeSeconds) {
-			return consensus.ErrFutureBlock
-		}
-	} else {
-		// Ensure that we do not verify an uncle
-		return errUnclesUnsupported
-	}
-	if header.Time <= parent.Time {
-		return errOlderBlockTime
-	}
-	// Verify the block's difficulty based on its timestamp and parent's difficulty
-	expected := me.CalcDifficulty(chain, header.Time, parent)
-
-	if expected.Cmp(header.Difficulty) != 0 {
-		return fmt.Errorf("invalid difficulty: have %v, want %v", header.Difficulty, expected)
-	}
 	// Verify that the gas limit is <= 2^63-1
 	cap := uint64(0x7fffffffffffffff)
 	if header.GasLimit > cap {
