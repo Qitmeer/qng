@@ -6,7 +6,6 @@ package types
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/common/math"
 )
 
@@ -286,7 +285,7 @@ func IsCrossChainExportTx(tx *Transaction) bool {
 	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
 		return false
 	}
-	if tx.TxIn[0].PreviousOut.Hash == hash.ZeroHash {
+	if tx.TxIn[0].PreviousOut.OutIndex == SupperPrevOutIndex {
 		return false
 	}
 	enable, ok := GetSupportCoinsForCrossChain()[tx.TxOut[0].Amount.Id]
