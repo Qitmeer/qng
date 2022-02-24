@@ -258,6 +258,9 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Bloc
 		if idx == 0 {
 			continue
 		}
+		if tx.IsDuplicate {
+			continue
+		}
 
 		if types.IsCrossChainExportTx(tx.Tx) {
 			ctx, err := qconsensus.NewExportTx(tx.Tx)
