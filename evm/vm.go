@@ -279,16 +279,20 @@ func (vm *VM) validateTx(tx *types.Transaction) error {
 	return nil
 }
 
-func (vm *VM) addTx(tx *types.Transaction) error {
+func (vm *VM) addTx(tx *types.Transaction) (*qtypes.Transaction, error) {
 	txmb, err := tx.MarshalBinary()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	txmbHex := hexutil.Encode(txmb)
 
+	qtxhb := tx.Hash().Bytes()
+	qcommon.ReverseBytes(&qtxhb)
+	qtxh := hash.MustBytesToHash(qtxhb)
+
 	mtx := qtypes.NewTransaction()
 	mtx.AddTxIn(&qtypes.TxInput{
-		PreviousOut: *qtypes.NewOutPoint(&hash.ZeroHash, qtypes.SupperPrevOutIndex),
+		PreviousOut: *qtypes.NewOutPoint(&qtxh, qtypes.SupperPrevOutIndex),
 		Sequence:    uint32(qtypes.TxTypeCrossChainVM),
 		AmountIn:    qtypes.Amount{Id: qtypes.ETHID, Value: 0},
 		SignScript:  []byte(txmbHex),
@@ -300,19 +304,19 @@ func (vm *VM) addTx(tx *types.Transaction) error {
 
 	acceptedTxs, err := vm.ctx.GetTxPool().ProcessTransaction(qtypes.NewTx(mtx), false, false, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	vm.ctx.GetNotify().AnnounceNewTransactions(acceptedTxs, nil)
 	vm.ctx.GetNotify().AddRebroadcastInventory(acceptedTxs)
 
-	return nil
+	return mtx, nil
 }
 
 func (vm *VM) sendTxs(txs []*types.Transaction) {
 	for _, tx := range txs {
-		err := vm.addTx(tx)
+		qtx, err := vm.addTx(tx)
 		if err != nil {
-			log.Error(fmt.Sprintf("Remove tx(%s) from tx pool:%v", tx.Hash().String(), err.Error()))
+			log.Error(fmt.Sprintf("Ignore evm tx(%s)[Exist in qng tx(%s)] from tx pool:%v", tx.Hash().String(), qtx.TxHash(), err.Error()))
 			vm.chain.Ether().TxPool().RemoveTx(tx.Hash(), true)
 		}
 	}
