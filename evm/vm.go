@@ -304,7 +304,7 @@ func (vm *VM) addTx(tx *types.Transaction) (*qtypes.Transaction, error) {
 
 	acceptedTxs, err := vm.ctx.GetTxPool().ProcessTransaction(qtypes.NewTx(mtx), false, false, true)
 	if err != nil {
-		return nil, err
+		return mtx, err
 	}
 	vm.ctx.GetNotify().AnnounceNewTransactions(acceptedTxs, nil)
 	vm.ctx.GetNotify().AddRebroadcastInventory(acceptedTxs)
@@ -320,6 +320,16 @@ func (vm *VM) sendTxs(txs []*types.Transaction) {
 			vm.chain.Ether().TxPool().RemoveTx(tx.Hash(), true)
 		}
 	}
+}
+
+func (vm *VM) RemoveTxFromMempool(h *hash.Hash) error {
+	ehb := h.Bytes()
+	qcommon.ReverseBytes(&ehb)
+	eh := common.BytesToHash(ehb)
+	log.Error(fmt.Sprintf("Ignore evm tx(%s)", eh.String()))
+	vm.chain.Ether().TxPool().RemoveTx(eh, true)
+
+	return nil
 }
 
 func (vm *VM) initTxPool() {
