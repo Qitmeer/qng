@@ -313,9 +313,6 @@ func IsCrossChainVMTx(tx *Transaction) bool {
 	if TxType(tx.TxIn[0].Sequence) != TxTypeCrossChainVM {
 		return false
 	}
-	if tx.TxIn[0].PreviousOut.Hash != hash.ZeroHash {
-		return false
-	}
 
 	enable, ok := GetSupportCoinsForCrossChain()[tx.TxOut[0].Amount.Id]
 	return ok && enable
