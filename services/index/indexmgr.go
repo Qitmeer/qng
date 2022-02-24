@@ -390,6 +390,20 @@ func (m *Manager) IsDuplicateTx(dbTx database.Tx, txid *hash.Hash, blockHash *ha
 	return true
 }
 
+func (m *Manager) HasTx(txid *hash.Hash) bool {
+	hasTx := false
+	m.db.View(func(dbTx database.Tx) error {
+		blockRegion, err := dbFetchTxIndexEntry(dbTx, txid)
+		if err == nil {
+			if blockRegion != nil {
+				hasTx = true
+			}
+		}
+		return nil
+	})
+	return hasTx
+}
+
 // dbFetchTx looks up the passed transaction hash in the transaction index and
 // loads it from the database.
 func DBFetchTx(dbTx database.Tx, hash *hash.Hash) (*types.Transaction, error) {

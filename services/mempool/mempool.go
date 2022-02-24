@@ -357,6 +357,9 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 
 		return nil, txD, nil
 	} else if types.IsCrossChainImportTx(tx.Tx) {
+		if mp.cfg.BC.HasTx(txHash) {
+			return nil, nil, fmt.Errorf("Already have transaction %v", txHash)
+		}
 		itx, err := consensus.NewImportTx(tx.Tx)
 		if err != nil {
 			return nil, nil, err
@@ -402,10 +405,13 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		// Add to transaction pool.
 		txD := mp.addTransaction(utxoView, tx, nextBlockHeight, fee)
 
-		log.Debug(fmt.Sprintf("Accepted import transaction ,txHash:%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
+		log.Debug(fmt.Sprintf("Accepted import transaction ,txHash(qng):%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
 		return nil, txD, nil
 	} else if types.IsCrossChainVMTx(tx.Tx) {
 		if opreturn.IsMeerEVMTx(tx.Tx) {
+			if mp.cfg.BC.HasTx(txHash) {
+				return nil, nil, fmt.Errorf("Already have transaction %v", txHash)
+			}
 			vtx := &consensus.Tx{Type: types.TxTypeCrossChainVM, Data: []byte(tx.Tx.TxIn[0].SignScript)}
 			fee, err := mp.cfg.BC.VMService.VerifyTx(vtx)
 			if err != nil {
@@ -415,7 +421,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			// Add to transaction pool.
 			txD := mp.addTransaction(blockchain.NewUtxoViewpoint(), tx, nextBlockHeight, fee)
 
-			log.Debug(fmt.Sprintf("Accepted meerevm transaction ,txHash:%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
+			log.Debug(fmt.Sprintf("Accepted meerevm transaction ,txHash(qng):%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
 			return nil, txD, nil
 		}
 	}
