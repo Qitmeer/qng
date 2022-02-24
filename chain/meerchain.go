@@ -288,6 +288,10 @@ func NewMeerChain(chain *ETHChain) *MeerChain {
 }
 
 func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.StateDB, engine consensus.Engine, timestamp int64) *types.Header {
+	ptt:=int64(parent.Time())
+	if timestamp <= ptt {
+		timestamp = ptt + 1
+	}
 	header := &types.Header{
 		Root:       state.IntermediateRoot(chain.Config().IsEIP158(parent.Number())),
 		ParentHash: parent.Hash(),
