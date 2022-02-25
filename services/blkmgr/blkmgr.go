@@ -393,9 +393,10 @@ out:
 				if msg.flags.Has(blockchain.BFRPCAdd) {
 					_, ok := b.chain.BlockDAG().CheckSubMainChainTip(msg.block.Block().Parents)
 					if !ok {
-						msg.reply <- processBlockResponse{
-							isOrphan: false,
-							err:      fmt.Errorf("The tips of block is expired:%s\n", msg.block.Hash().String()),
+						msg.reply <- ProcessBlockResponse{
+							IsOrphan:      false,
+							Err:           fmt.Errorf("The tips of block is expired:%s\n", msg.block.Hash().String()),
+							IsTipsExpired: true,
 						}
 						continue
 					}
@@ -404,9 +405,10 @@ out:
 				isOrphan, err := b.chain.ProcessBlock(
 					msg.block, msg.flags)
 				if err != nil {
-					msg.reply <- processBlockResponse{
-						isOrphan: isOrphan,
-						err:      err,
+					msg.reply <- ProcessBlockResponse{
+						IsOrphan:      isOrphan,
+						Err:           err,
+						IsTipsExpired: false,
 					}
 					continue
 				}
@@ -429,9 +431,10 @@ out:
 					}
 				*/
 
-				msg.reply <- processBlockResponse{
-					isOrphan: isOrphan,
-					err:      nil,
+				msg.reply <- ProcessBlockResponse{
+					IsOrphan:      isOrphan,
+					Err:           nil,
+					IsTipsExpired: false,
 				}
 				b.peerServer.Rebroadcast().RegainMempool()
 
@@ -492,9 +495,10 @@ out:
 
 // processBlockResponse is a response sent to the reply channel of a
 // processBlockMsg.
-type processBlockResponse struct {
-	isOrphan bool
-	err      error
+type ProcessBlockResponse struct {
+	IsOrphan      bool
+	Err           error
+	IsTipsExpired bool
 }
 
 // processBlockMsg is a message type to be sent across the message channel
@@ -505,17 +509,17 @@ type processBlockResponse struct {
 type processBlockMsg struct {
 	block *types.SerializedBlock
 	flags blockchain.BehaviorFlags
-	reply chan processBlockResponse
+	reply chan ProcessBlockResponse
 }
 
 // ProcessBlock makes use of ProcessBlock on an internal instance of a block
 // chain.  It is funneled through the block manager since blockchain is not safe
 // for concurrent access.
-func (b *BlockManager) ProcessBlock(block *types.SerializedBlock, flags blockchain.BehaviorFlags) (bool, error) {
-	reply := make(chan processBlockResponse, 1)
+func (b *BlockManager) ProcessBlock(block *types.SerializedBlock, flags blockchain.BehaviorFlags) ProcessBlockResponse {
+	reply := make(chan ProcessBlockResponse, 1)
 	b.msgChan <- processBlockMsg{block: block, flags: flags, reply: reply}
 	response := <-reply
-	return response.isOrphan, response.err
+	return response
 }
 
 // processTransactionResponse is a response sent to the reply channel of a
