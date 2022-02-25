@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/core/address"
+	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng-core/core/merkle"
 	s "github.com/Qitmeer/qng-core/core/serialization"
 	"github.com/Qitmeer/qng-core/core/types"
@@ -195,11 +196,26 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 			txSigOpCosts = append(txSigOpCosts, tokenSOC)
 			tokenSigOpCost += tokenSOC
 			tokenSize += uint32(tx.Transaction().SerializeSize())
+			if blockManager.GetChain().HasTx(tx.Hash()) {
+				log.Info(fmt.Sprintf("Ignore token tx:is duplicate"))
+				continue
+			}
 			continue
 		} else if types.IsCrossChainImportTx(tx.Tx) || types.IsCrossChainVMTx(tx.Tx) {
 			_, ok := payToAddress.(*address.SecpPubKeyAddress)
 			if !ok {
 				log.Info(fmt.Sprintf("Ignore meerevm tx:Your miner address is not supported, please use PKAddress by (./qx ec-to-pkaddr) for --miningaddr"))
+				continue
+			}
+			if blockManager.GetChain().HasTx(tx.Hash()) {
+				log.Info(fmt.Sprintf("Ignore meerevm tx:is duplicate:%s(qng)", tx.Hash()))
+				blockManager.GetTxManager().MemPool().RemoveTransaction(tx, false)
+				if opreturn.IsMeerEVMTx(tx.Tx) {
+					err := blockManager.GetChain().VMService.RemoveTxFromMempool(&tx.Tx.TxIn[0].PreviousOut.Hash)
+					if err != nil {
+						log.Error(err.Error())
+					}
+				}
 				continue
 			}
 
@@ -215,8 +231,14 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 
 			err := blockManager.GetChain().VMService.CheckConnectBlock(sblock)
 			if err != nil {
-				log.Info(fmt.Sprintf("Ignore evm tx:%s", tx.Hash()))
+				log.Info(fmt.Sprintf("Ignore meerevm tx:%s(qng)  err:%s", tx.Hash(), err))
 				blockManager.GetTxManager().MemPool().RemoveTransaction(tx, false)
+				if opreturn.IsMeerEVMTx(tx.Tx) {
+					err := blockManager.GetChain().VMService.RemoveTxFromMempool(&tx.Tx.TxIn[0].PreviousOut.Hash)
+					if err != nil {
+						log.Error(err.Error())
+					}
+				}
 				continue
 			}
 

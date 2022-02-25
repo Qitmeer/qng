@@ -1521,3 +1521,7 @@ func (b *BlockChain) CalcPastMedianTime(block meerdag.IBlock) time.Time {
 func (b *BlockChain) GetSubsidyCache() *SubsidyCache {
 	return b.subsidyCache
 }
+
+func (b *BlockChain) HasTx(txid *hash.Hash) bool {
+	return b.indexManager.HasTx(txid)
+}

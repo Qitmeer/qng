@@ -64,10 +64,10 @@ github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a h1:O2Er
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:KiA7g46zc6dkgf/3NbEpJirY75v656WYlmSQNR1wTVk=
 github.com/Qitmeer/go-ethereum v1.10.9-q.5 h1:zLwIePKqwmWbbevuMDgAplMj7zpEMkrgNzLKeR1wyLU=
 github.com/Qitmeer/go-ethereum v1.10.9-q.5/go.mod h1:8bALkv9mq8Bvsw8TEUaxO2TtxAGRxoXebspLZ+CSJ9U=
-github.com/Qitmeer/meerevm v0.0.0-20220224075243-b9af630f799b h1:3OUHV/M2ehDZaiFBg7kcBgeARrYtSG/zMkz7CvQA/M4=
-github.com/Qitmeer/meerevm v0.0.0-20220224075243-b9af630f799b/go.mod h1:bhYNSDLSykuGkWWQ+yhAN7XuO6UXBL2uPeC7L0xauA0=
-github.com/Qitmeer/qng-core v1.2.15 h1:ANhHxJmz52HKB8PL2l7iMj2U6lQTC9uZV82pdpt5ZGg=
-github.com/Qitmeer/qng-core v1.2.15/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
+github.com/Qitmeer/meerevm v0.0.0-20220224151826-bbc63f549215 h1:Cs7sGU4B8/lF1cGSKAODLk0QuD6tjBLFfl4wwUWBmcs=
+github.com/Qitmeer/meerevm v0.0.0-20220224151826-bbc63f549215/go.mod h1:jhlPiQJ679cu67w8AU+uIRwfUMki1TLZO+0TO/xoGe8=
+github.com/Qitmeer/qng-core v1.2.16 h1:Ka12GB1BV+xhn7+VEwLnkjO5GXwYkeRbygnk0Lg4GIA=
+github.com/Qitmeer/qng-core v1.2.16/go.mod h1:VeXRmyRHYSezmAJ7KzZgOt+mC5B/E0H6cE9m7IFWVKg=
 github.com/Shopify/sarama v1.29.1/go.mod h1:mdtqvCSg8JOxk8PmpTNGyo6wzd4BMm4QXSfDnTXmgkE=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 h1:fLjPD/aNc3UIOA6tDi6QXUemppXK3P9BI7mr2hd6gx8=

@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/meerevm/evm"
+	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/config"
 	qconfig "github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/consensus"
@@ -201,6 +202,14 @@ func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 		return 0, fmt.Errorf("Balance (%s)  %d < output %d", pka.String(), ba, itx.Transaction.TxOut[0].Amount.Value)
 	}
 	return ba - itx.Transaction.TxOut[0].Amount.Value, nil
+}
+
+func (s *Service) RemoveTxFromMempool(h *hash.Hash) error {
+	v, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return err
+	}
+	return v.RemoveTxFromMempool(h)
 }
 
 func (s *Service) CheckConnectBlock(block *types.SerializedBlock) error {
