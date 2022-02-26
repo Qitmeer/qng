@@ -366,13 +366,16 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 
 	// Process this block using the same rules as blocks coming from other
 	// nodes. This will in turn relay it to the network like normal.
-	isOrphan, err := m.blockManager.ProcessBlock(block, blockchain.BFRPCAdd)
-	if err != nil {
+	rsp := m.blockManager.ProcessBlock(block, blockchain.BFRPCAdd)
+	if rsp.Err != nil {
+		if rsp.IsTipsExpired {
+			go m.BlockChainChange()
+		}
 		// Anything other than a rule violation is an unexpected error,
 		// so log that error as an internal error.
-		rErr, ok := err.(blockchain.RuleError)
+		rErr, ok := rsp.Err.(blockchain.RuleError)
 		if !ok {
-			return nil, fmt.Errorf(fmt.Sprintf("Unexpected error while processing block submitted miner: %v (%s)", err, m.worker.GetType()))
+			return nil, fmt.Errorf(fmt.Sprintf("Unexpected error while processing block submitted miner: %v (%s)", rsp.Err, m.worker.GetType()))
 		}
 		// Occasionally errors are given out for timing errors with
 		// ReduceMinDifficulty and high block works that is above
@@ -381,12 +384,12 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 			rErr.ErrorCode == blockchain.ErrHighHash {
 			return nil, fmt.Errorf(fmt.Sprintf("Block submitted via miner rejected "+
 				"because of ReduceMinDifficulty time sync failure: %v (%s)",
-				err, m.worker.GetType()))
+				rsp.Err, m.worker.GetType()))
 		}
 		// Other rule errors should be reported.
-		return nil, fmt.Errorf(fmt.Sprintf("Block submitted via %s rejected: %v ", m.worker.GetType(), err))
+		return nil, fmt.Errorf(fmt.Sprintf("Block submitted via %s rejected: %v ", m.worker.GetType(), rsp.Err))
 	}
-	if isOrphan {
+	if rsp.IsOrphan {
 		return nil, fmt.Errorf(fmt.Sprintf("Block submitted via %s is an orphan building "+
 			"on parent %v", m.worker.GetType(), block.Block().Header.ParentRoot))
 	}

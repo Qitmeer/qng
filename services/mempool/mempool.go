@@ -115,6 +115,7 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 		}
 		delete(mp.pool, *txHash)
 		atomic.StoreInt64(&mp.lastUpdated, roughtime.Now().Unix())
+		log.Trace(fmt.Sprintf("TxPool:remove tx %s", txHash))
 	}
 }
 
