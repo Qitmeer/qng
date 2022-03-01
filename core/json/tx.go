@@ -181,7 +181,7 @@ type TransactionInput struct {
 
 type TransactionOutput struct {
 	Address string `json:"address"`
-	Amount int64  `json:"amount"`
+	Amount  int64  `json:"amount"`
 }
 
 type Amounts map[string]uint64 //{\"address\":amount,...}

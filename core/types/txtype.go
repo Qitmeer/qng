@@ -285,7 +285,7 @@ func IsCrossChainExportTx(tx *Transaction) bool {
 	if len(tx.TxOut) < 1 || len(tx.TxIn) < 1 {
 		return false
 	}
-	for k,to :=range tx.TxOut {
+	for k, to := range tx.TxOut {
 		if k == 0 {
 			continue
 		}
