@@ -4,13 +4,13 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/meerdag"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng-core/core/serialization"
 	"github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"sync"
 )
 
@@ -145,7 +145,9 @@ func (view *UtxoViewpoint) Entries() map[types.TxOutPoint]*UtxoEntry {
 
 func (view *UtxoViewpoint) AddTxOut(tx *types.Tx, txOutIdx uint32, blockHash *hash.Hash) {
 	if types.IsCrossChainExportTx(tx.Tx) {
-		return
+		if txOutIdx == 0 {
+			return
+		}
 	}
 	// Can't add an output for an out of bounds index.
 	if txOutIdx >= uint32(len(tx.Tx.TxOut)) {
@@ -166,14 +168,14 @@ func (view *UtxoViewpoint) AddTxOut(tx *types.Tx, txOutIdx uint32, blockHash *ha
 // outputs, they are simply marked unspent.  All fields will be updated for
 // existing entries since it's possible it has changed during a reorg.
 func (view *UtxoViewpoint) AddTxOuts(tx *types.Tx, blockHash *hash.Hash) {
-	if types.IsCrossChainExportTx(tx.Tx) {
-		return
-	}
 	// Loop all of the transaction outputs and add those which are not
 	// provably unspendable.
 	isCoinBase := tx.Tx.IsCoinBase()
 	prevOut := types.TxOutPoint{Hash: *tx.Hash()}
 	for txOutIdx, txOut := range tx.Tx.TxOut {
+		if txOutIdx == 0 && types.IsCrossChainExportTx(tx.Tx) {
+			continue
+		}
 		// Update existing entries.  All fields are updated because it's
 		// possible (although extremely unlikely) that the existing
 		// entry is being replaced by a different transaction with the
@@ -470,13 +472,13 @@ func (view *UtxoViewpoint) connectTransaction(tx *types.Tx, node *BlockNode, blo
 	return nil
 }
 
-func (view *UtxoViewpoint) connectImportTransaction(tx *types.Tx, node *BlockNode, blockIndex uint32, stxos *[]SpentTxOut, bc *BlockChain,balance int64) error {
+func (view *UtxoViewpoint) connectImportTransaction(tx *types.Tx, node *BlockNode, blockIndex uint32, stxos *[]SpentTxOut, bc *BlockChain, balance int64) error {
 	if stxos == nil {
 		return nil
 	}
 
 	var stxo = SpentTxOut{
-		Amount:     types.Amount{Id:types.MEERID,Value:balance},
+		Amount:     types.Amount{Id: types.MEERID, Value: balance},
 		Fees:       types.Amount{Value: 0, Id: types.MEERID},
 		PkScript:   nil,
 		BlockHash:  hash.ZeroHash,

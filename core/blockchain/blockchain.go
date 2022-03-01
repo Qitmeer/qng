@@ -1326,11 +1326,10 @@ func (b *BlockChain) CalculateFees(block *types.SerializedBlock) types.AmountMap
 		if i == 0 || tx.Tx.IsCoinBase() || tx.IsDuplicate {
 			continue
 		}
-		if types.IsCrossChainExportTx(tx.Tx) {
-			totalAtomOut[types.MEERID] += int64(tx.Tx.TxOut[0].Amount.Value)
-			continue
-		}
-		for _, txOut := range tx.Transaction().TxOut {
+		for k, txOut := range tx.Transaction().TxOut {
+			if k == 0 && types.IsCrossChainExportTx(tx.Tx) {
+				continue
+			}
 			totalAtomOut[txOut.Amount.Id] += int64(txOut.Amount.Value)
 		}
 	}

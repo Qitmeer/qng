@@ -26,6 +26,10 @@ func NewExportTx(tx *types.Transaction) (*ExportTx, error) {
 
 	etx := &ExportTx{Transaction: tx, Tx: &Tx{}}
 	etx.Type = types.TxTypeCrossChainExport
+
+	if len(tx.TxIn) < 1 || len(tx.TxOut) < 1 {
+		return nil, fmt.Errorf("Tx fmt is error")
+	}
 	if len(tx.TxOut[0].PkScript) <= 0 {
 		return nil, fmt.Errorf("Tx output is error:%s in tx(%s)", types.DetermineTxType(tx), tx.TxHash())
 	}
