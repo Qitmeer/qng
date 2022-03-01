@@ -15,12 +15,12 @@ import (
 	"github.com/Qitmeer/qng-core/database"
 	"github.com/Qitmeer/qng-core/engine/txscript"
 	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng-core/rpc/api"
 	qconsensus "github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/message"
 	"github.com/Qitmeer/qng/rpc"
-	"github.com/Qitmeer/qng-core/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/services/mempool"
 	"strconv"
@@ -936,7 +936,6 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 	privateKey, _ := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
 	param := params.ActiveNetParams.Params
 
-
 	if len(rawTxStr)%2 != 0 {
 		return nil, fmt.Errorf("rawTxStr:%d", len(rawTxStr))
 	}
@@ -1252,8 +1251,8 @@ func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, 
 
 // cross chain import tx
 func (api *PublicTxAPI) CreateImportRawTransaction(pkAddress string, amount int64) (interface{}, error) {
-	if amount <=0 {
-		return nil,fmt.Errorf("Amount is empty")
+	if amount <= 0 {
+		return nil, fmt.Errorf("Amount is empty")
 	}
 	mtx := types.NewTransaction()
 	mtx.AddTxIn(&types.TxInput{
@@ -1300,15 +1299,48 @@ func (api *PublicTxAPI) CreateImportRawTransaction(pkAddress string, amount int6
 }
 
 // cross chain export tx
-func (api *PublicTxAPI) CreateExportRawTransaction(txid string,vout uint32,pkAddress string, amount int64) (interface{}, error) {
-	if amount <=0 {
-		return nil,fmt.Errorf("Amount is empty")
+func (api *PublicTxAPI) CreateExportRawTransaction(txid string, vout uint32, pkAddress string, amount int64) (interface{}, error) {
+	if amount <= 0 {
+		return nil, fmt.Errorf("Amount is empty")
 	}
 
 	aa := json.AdreesAmount{}
 	aa[pkAddress] = json.Amout{CoinId: uint16(types.ETHID), Amount: amount}
-	inputs:=[]json.TransactionInput{
-		json.TransactionInput{Txid:txid,Vout:vout},
+	inputs := []json.TransactionInput{
+		json.TransactionInput{Txid: txid, Vout: vout},
 	}
 	return api.CreateRawTransactionV2(inputs, aa, nil)
+}
+
+func (api *PublicTxAPI) CreateExportRawTransactionV2(inputs []json.TransactionInput, outputs []json.TransactionOutput, lockTime *int64) (interface{}, error) {
+	if len(outputs) <= 0 {
+		return nil, fmt.Errorf("outputs number is error")
+	}
+	ePKAddress := outputs[0].Address
+	eAmount := outputs[0].Amount
+
+	if eAmount <= 0 {
+		return nil, fmt.Errorf("meerevm amount is empty")
+	}
+	ePKAddr, err := address.DecodeAddress(ePKAddress)
+	if err != nil {
+		return nil, rpc.RpcAddressKeyError("Could not decode "+
+			"address: %v", err)
+	}
+	_, ok := ePKAddr.(*address.SecpPubKeyAddress)
+	if !ok {
+		return nil, fmt.Errorf("%s is not public key address", ePKAddress)
+	}
+
+	aa := json.AdreesAmount{}
+	aa[ePKAddress] = json.Amout{CoinId: uint16(types.ETHID), Amount: eAmount}
+	if len(outputs) > 0 {
+		for k, v := range outputs {
+			if k == 0 {
+				continue
+			}
+			aa[v.Address] = json.Amout{CoinId: uint16(types.MEERID), Amount: v.Amount}
+		}
+	}
+	return api.CreateRawTransactionV2(inputs, aa, lockTime)
 }

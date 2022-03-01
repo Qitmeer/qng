@@ -77,6 +77,12 @@ or
 ~ ./cli.sh txSign [Your_Private_Key] [rawTx]
 ~ ./cli.sh sendRawTx [signRawTx]
 ``` 
+* Or you can use the multiple inputs or outputs version:`createExportRawTxV2 <inputs> <outputs> <lockTime>`
+``` 
+~ ./cli.sh createExportRawTxV2 '[{"txid":"0e6aa3a41c6712ed5d68960f2315041579767a9d0a7be9988276cc802e2ae269","vout":0},{"txid":"2d1b3e5e89fbcec54368b7d98079bf533e38f1ce48bfd752582ea87bbac5cbca","vout":0}],[{"address":"Tk6tMafZQW1r2WzwW9V8ynq2HkLhc43nPaMivHTsJGvBUHRNLycPh","amount":11000000000},{"address":"TnNbgxLpoPJCLTcsJbHCzpzcHUouTtfbP8c","amount":999900000}]' 
+~ ./cli.sh txSign [Your_Private_Key] [rawTx]
+~ ./cli.sh sendRawTx [signRawTx]
+``` 
 * Finally, wait for the miner to pack your transaction into the block. Then you have the money to start operating your MeerEVM ecosystem.
 
 

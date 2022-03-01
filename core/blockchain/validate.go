@@ -1175,6 +1175,7 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 	if msgTx.IsCoinBase() {
 		return nil, nil
 	}
+	isCCExportTx := types.IsCrossChainExportTx(tx.Tx)
 	bd := b.bd
 	// -------------------------------------------------------------------
 	// General transaction testing.
@@ -1195,6 +1196,11 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 		err := types.CheckCoinID(utxoEntry.amount.Id)
 		if err != nil {
 			return nil, err
+		}
+		if isCCExportTx {
+			if utxoEntry.amount.Id != types.MEERID {
+				return nil, fmt.Errorf("%s has illegal inputs %s", types.DetermineTxType(tx.Tx), utxoEntry.amount.Id.Name())
+			}
 		}
 
 		// Ensure the transaction is not spending coins which have not
@@ -1274,17 +1280,17 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 	// to ignore overflow and out of range errors here because those error
 	// conditions would have already been caught by checkTransactionSanity.
 	totalAtomOut := make(map[types.CoinID]int64)
-	if types.IsCrossChainExportTx(tx.Transaction()) {
-		totalAtomOut[types.MEERID] = tx.Transaction().TxOut[0].Amount.Value
-	} else {
-		for _, txOut := range tx.Transaction().TxOut {
-			// Ensure the coinId is known
-			err := types.CheckCoinID(txOut.Amount.Id)
-			if err != nil {
-				return nil, err
-			}
-			totalAtomOut[txOut.Amount.Id] += txOut.Amount.Value
+	for idx, txOut := range tx.Transaction().TxOut {
+		if idx == 0 && isCCExportTx {
+			totalAtomOut[types.MEERID] += txOut.Amount.Value
+			continue
 		}
+		// Ensure the coinId is known
+		err := types.CheckCoinID(txOut.Amount.Id)
+		if err != nil {
+			return nil, err
+		}
+		totalAtomOut[txOut.Amount.Id] += txOut.Amount.Value
 	}
 
 	// Ensure no unbalanced/unknowned coin type from input/output
