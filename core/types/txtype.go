@@ -282,8 +282,16 @@ func GetSupportCoinsForCrossChain() map[CoinID]bool {
 }
 
 func IsCrossChainExportTx(tx *Transaction) bool {
-	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
+	if len(tx.TxOut) < 1 || len(tx.TxIn) < 1 {
 		return false
+	}
+	for k,to :=range tx.TxOut {
+		if k == 0 {
+			continue
+		}
+		if to.Amount.Id != MEERID {
+			return false
+		}
 	}
 	if tx.TxIn[0].PreviousOut.OutIndex == SupperPrevOutIndex {
 		return false

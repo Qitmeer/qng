@@ -179,6 +179,11 @@ type TransactionInput struct {
 	Vout uint32 `json:"vout"`
 }
 
+type TransactionOutput struct {
+	Address string `json:"address"`
+	Amount int64  `json:"amount"`
+}
+
 type Amounts map[string]uint64 //{\"address\":amount,...}
 
 type Amout struct {
