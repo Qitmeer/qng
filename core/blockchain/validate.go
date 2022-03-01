@@ -1199,7 +1199,7 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 		}
 		if isCCExportTx {
 			if utxoEntry.amount.Id != types.MEERID {
-				return nil, fmt.Errorf("%s has illegal inputs %s", types.DetermineTxType(tx.Tx), utxoEntry.amount.Id)
+				return nil, fmt.Errorf("%s has illegal inputs %s", types.DetermineTxType(tx.Tx), utxoEntry.amount.Id.Name())
 			}
 		}
 
