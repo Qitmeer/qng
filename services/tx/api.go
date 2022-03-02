@@ -916,6 +916,58 @@ func (api *PublicTxAPI) GetRawTransactionByHash(txHash hash.Hash, verbose bool) 
 	return api.GetRawTransaction(*txid, verbose)
 }
 
+func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error) {
+	var mtx *types.Tx
+	tx, _ := api.txManager.txMemPool.FetchTransaction(&txid)
+	if tx == nil {
+		txIndex := api.txManager.txIndex
+		if txIndex == nil {
+			return nil, fmt.Errorf("the transaction index " +
+				"must be enabled to query the blockchain (specify --txindex in configuration)")
+		}
+		var blockRegion *database.BlockRegion
+		var err error
+
+		blockRegion, err = txIndex.TxBlockRegion(txid)
+		if err != nil {
+			return nil, errors.New("Failed to retrieve transaction location")
+		}
+		if blockRegion == nil {
+			if api.txManager.bm.GetChain().CacheInvalidTx {
+				blockRegion, err = txIndex.InvalidTxBlockRegion(txid)
+				if err != nil {
+					return nil, errors.New("Failed to retrieve transaction location")
+				}
+			} else {
+				return nil, rpc.RpcNoTxInfoError(&txid)
+			}
+		}
+
+		var txBytes []byte
+		err = api.txManager.db.View(func(dbTx database.Tx) error {
+			var err error
+			txBytes, err = dbTx.FetchBlockRegion(blockRegion)
+			return err
+		})
+		if err != nil {
+			return nil, rpc.RpcNoTxInfoError(&txid)
+		}
+		var msgTx types.Transaction
+		err = msgTx.Deserialize(bytes.NewReader(txBytes))
+		if err != nil {
+			context := "Failed to deserialize transaction"
+			return nil, rpc.RpcInternalError(err.Error(), context)
+		}
+		mtx = types.NewTx(&msgTx)
+	} else {
+		mtx = tx
+	}
+	if !types.IsCrossChainVMTx(mtx.Tx) {
+		return nil, fmt.Errorf("%s is not %v", txid, types.DetermineTxType(mtx.Tx))
+	}
+	return fmt.Sprintf("0x%s", mtx.Tx.TxIn[0].PreviousOut.Hash.String()), nil
+}
+
 type PrivateTxAPI struct {
 	txManager *TxManager
 }
