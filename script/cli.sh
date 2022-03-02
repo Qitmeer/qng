@@ -444,6 +444,11 @@ function tips(){
   get_result "$data"
 }
 
+function get_rpc_modules(){
+  local data='{"jsonrpc":"2.0","method":"getRpcModules","params":[],"id":null}'
+  get_result "$data"
+}
+
 function get_coinbase(){
   local block_hash=$1
   local verbose=$2
@@ -632,6 +637,7 @@ function usage(){
   echo "  vmsinfo"
   echo "  getbalance <PKAddress> <coinID>"
   echo "  getaddresses <private key>"
+  echo "  modules"
   echo "block  :"
   echo "  block <order|hash>"
   echo "  blockid <id>"
@@ -1020,6 +1026,9 @@ elif [ "$1" == "iscurrent" ]; then
 elif [ "$1" == "tips" ]; then
   shift
   tips | jq .
+elif [ "$1" == "modules" ]; then
+  shift
+  get_rpc_modules | jq .
 elif [ "$1" == "tokeninfo" ]; then
   shift
   get_tokeninfo | jq .
