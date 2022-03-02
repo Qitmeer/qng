@@ -216,6 +216,11 @@ web3._extend({
 			call: 'qng_createExportRawTransaction',
 			params: 4,
 		}),
+		new web3._extend.Method({
+			name: 'createExportRawTransactionV2',
+			call: 'qng_createExportRawTransactionV2',
+			params: 3,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
