@@ -172,15 +172,10 @@ func (node *Node) Export() error {
 		log.Info("Export...")
 	}
 
-	var maxNum [4]byte
-	dbnamespace.ByteOrder.PutUint32(maxNum[:], uint32(endNum))
-	_, err = outFile.Write(maxNum[:])
-	if err != nil {
-		return err
-	}
+	bhs := []*hash.Hash{}
 	var i uint
-	var blockHash *hash.Hash
 	for i = uint(1); i <= endNum; i++ {
+		var blockHash *hash.Hash
 		if node.cfg.ByID {
 			ib := node.bc.BlockDAG().GetBlockById(i)
 			if ib != nil {
@@ -193,9 +188,23 @@ func (node *Node) Export() error {
 		}
 
 		if blockHash == nil {
-			return fmt.Errorf(fmt.Sprintf("Can't find block (%d)!", i))
+			if node.cfg.ByID {
+				log.Trace(fmt.Sprintf("Skip block: Can't find block (%d)!", i))
+				continue
+			} else {
+				return fmt.Errorf(fmt.Sprintf("Can't find block (%d)!", i))
+			}
 		}
+		bhs = append(bhs, blockHash)
+	}
 
+	var maxNum [4]byte
+	dbnamespace.ByteOrder.PutUint32(maxNum[:], uint32(len(bhs)))
+	_, err = outFile.Write(maxNum[:])
+	if err != nil {
+		return err
+	}
+	for _, blockHash := range bhs {
 		block, err := node.bc.FetchBlockByHash(blockHash)
 		if err != nil {
 			return err
@@ -223,7 +232,7 @@ func (node *Node) Export() error {
 		bar.Add(100)
 		fmt.Println()
 	}
-	log.Info(fmt.Sprintf("Finish export: blocks(%d)    ------>File:%s", endNum, outFilePath))
+	log.Info(fmt.Sprintf("Finish export: blocks(%d)    ------>File:%s", len(bhs), outFilePath))
 	return nil
 }
 
