@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/math"
 	"github.com/Qitmeer/qng-core/common/roughtime"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/core/json"
 	"github.com/Qitmeer/qng-core/core/protocol"
 	"github.com/Qitmeer/qng-core/core/types/pow"
+	"github.com/Qitmeer/qng-core/meerdag"
 	"github.com/Qitmeer/qng-core/params"
 	"github.com/Qitmeer/qng-core/rpc/api"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/version"
@@ -382,6 +382,24 @@ func (api *PublicBlockChainAPI) GetSubsidy() (interface{}, error) {
 	}
 	info.NextSubsidy = sc.CalcBlockSubsidy(api.node.GetBlockManager().GetChain().BlockDAG().GetBlueInfo(api.node.GetBlockManager().GetChain().BlockDAG().GetMainChainTip()))
 	return info, nil
+}
+
+func (api *PublicBlockChainAPI) GetRpcModules() (interface{}, error) {
+	result := []json.KV{
+		json.KV{Key: cmds.DefaultServiceNameSpace, Val: false},
+		json.KV{Key: cmds.MinerNameSpace, Val: false},
+		json.KV{Key: cmds.TestNameSpace, Val: false},
+		json.KV{Key: cmds.LogNameSpace, Val: false},
+	}
+
+	for _, m := range api.node.node.Config.Modules {
+		for i := 0; i < len(result); i++ {
+			if result[i].Key == m {
+				result[i].Val = true
+			}
+		}
+	}
+	return json.OrderedResult(result), nil
 }
 
 type PrivateBlockChainAPI struct {

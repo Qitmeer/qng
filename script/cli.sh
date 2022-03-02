@@ -201,6 +201,12 @@ function get_tx_by_hash(){
   get_result "$data"
 }
 
+function get_evm_txhash_by_id(){
+  local tx_id=$1
+  local data='{"jsonrpc":"2.0","method":"getMeerEVMTxHashByID","params":["'$tx_id'"],"id":1}'
+  get_result "$data"
+}
+
 # return info about UTXO
 function get_utxo() {
   local tx_hash=$1
@@ -444,6 +450,11 @@ function tips(){
   get_result "$data"
 }
 
+function get_rpc_modules(){
+  local data='{"jsonrpc":"2.0","method":"getRpcModules","params":[],"id":null}'
+  get_result "$data"
+}
+
 function get_coinbase(){
   local block_hash=$1
   local verbose=$2
@@ -632,6 +643,7 @@ function usage(){
   echo "  vmsinfo"
   echo "  getbalance <PKAddress> <coinID>"
   echo "  getaddresses <private key>"
+  echo "  modules"
   echo "block  :"
   echo "  block <order|hash>"
   echo "  blockid <id>"
@@ -651,6 +663,7 @@ function usage(){
   echo "  tokeninfo"
   echo "tx     :"
   echo "  tx <id>"
+  echo "  evmtxhash <id>"
   echo "  txv2 <id>"
   echo "  txbyhash <hash>"
   echo "  createRawTx"
@@ -1020,6 +1033,9 @@ elif [ "$1" == "iscurrent" ]; then
 elif [ "$1" == "tips" ]; then
   shift
   tips | jq .
+elif [ "$1" == "modules" ]; then
+  shift
+  get_rpc_modules | jq .
 elif [ "$1" == "tokeninfo" ]; then
   shift
   get_tokeninfo | jq .
@@ -1042,6 +1058,9 @@ elif [ "$1" == "tx" ]; then
 elif [ "$1" == "txbyhash" ]; then
   shift
   get_tx_by_hash $@
+elif [ "$1" == "evmtxhash" ]; then
+  shift
+  get_evm_txhash_by_id $@
 
 elif [ "$1" == "createRawTx" ]; then
   shift
