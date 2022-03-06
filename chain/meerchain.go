@@ -27,8 +27,6 @@ import (
 
 type MeerChain struct {
 	chain *ETHChain
-
-	parent *types.Block
 }
 
 func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
@@ -55,8 +53,6 @@ func (b *MeerChain) ConnectBlock(block qconsensus.Block) error {
 		return fmt.Errorf("BuildBlock error")
 	}
 
-	b.parent = mblock
-
 	//
 	mbhb := block.ID().Bytes()
 	qcommon.ReverseBytes(&mbhb)
@@ -70,9 +66,12 @@ func (b *MeerChain) ConnectBlock(block qconsensus.Block) error {
 }
 
 func (b *MeerChain) DisconnectBlock(block qconsensus.Block) error {
-	if b.parent == nil {
+	curBlock := b.chain.Ether().BlockChain().CurrentBlock()
+	if curBlock == nil {
+		log.Error("Can't find current block")
 		return nil
 	}
+
 	mbhb := block.ID().Bytes()
 	qcommon.ReverseBytes(&mbhb)
 	mbh := common.BytesToHash(mbhb)
@@ -85,25 +84,21 @@ func (b *MeerChain) DisconnectBlock(block qconsensus.Block) error {
 		DeleteBlockNumber(b.chain.Ether().ChainDb(), mbh)
 	}()
 
-	if *bn > b.parent.NumberU64() {
+	if *bn > curBlock.NumberU64() {
 		return nil
 	}
-
-	var newParent *types.Block
-	if *bn == b.parent.NumberU64() {
-		newParent = b.chain.Ether().BlockChain().GetBlockByHash(b.parent.ParentHash())
-
-	} else {
-		newParent = b.chain.Ether().BlockChain().GetBlockByNumber(*bn)
-		newParent = b.chain.Ether().BlockChain().GetBlockByHash(newParent.ParentHash())
+	parentNumber := *bn - 1
+	err := b.chain.Ether().BlockChain().SetHead(parentNumber)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
 	}
-
+	newParent := b.chain.Ether().BlockChain().CurrentBlock()
 	if newParent == nil {
-		return fmt.Errorf("Can't find %v in meerevm", b.parent.ParentHash().String())
+		log.Error("Can't find current block")
+		return nil
 	}
-
-	log.Debug(fmt.Sprintf("Reorganize:%s(%d) => %s(%d)", b.parent.Hash().String(), b.parent.NumberU64(), newParent.Hash().String(), newParent.NumberU64()))
-	b.parent = newParent
+	log.Debug(fmt.Sprintf("Reorganize:%s(%d) => %s(%d)", curBlock.Hash().String(), curBlock.NumberU64(), newParent.Hash().String(), newParent.NumberU64()))
 	return nil
 }
 
@@ -112,20 +107,18 @@ func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx, timestamp int64) (*types.Bl
 	engine := b.chain.Ether().Engine()
 	db := b.chain.Ether().ChainDb()
 
-	if b.parent == nil {
-		b.parent = b.chain.Ether().BlockChain().CurrentBlock()
-	}
+	parent := b.chain.Ether().BlockChain().CurrentBlock()
 
 	uncles := []*types.Header{}
 
 	chainreader := &fakeChainReader{config: config}
 
-	statedb, err := state.New(b.parent.Root(), state.NewDatabase(db), nil)
+	statedb, err := state.New(parent.Root(), state.NewDatabase(db), nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	header := makeHeader(chainreader, b.parent, statedb, engine, timestamp)
+	header := makeHeader(chainreader, parent, statedb, engine, timestamp)
 
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(statedb)
@@ -288,7 +281,7 @@ func NewMeerChain(chain *ETHChain) *MeerChain {
 }
 
 func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.StateDB, engine consensus.Engine, timestamp int64) *types.Header {
-	ptt:=int64(parent.Time())
+	ptt := int64(parent.Time())
 	if timestamp <= ptt {
 		timestamp = ptt + 1
 	}
