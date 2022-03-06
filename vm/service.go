@@ -217,7 +217,7 @@ func (s *Service) CheckConnectBlock(block *types.SerializedBlock) error {
 	if err != nil {
 		return err
 	}
-	b, err := s.normalizeBlock(block)
+	b, err := s.normalizeBlock(block, true)
 	if err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (s *Service) ConnectBlock(block *types.SerializedBlock) error {
 	if err != nil {
 		return err
 	}
-	b, err := s.normalizeBlock(block)
+	b, err := s.normalizeBlock(block, true)
 	if err != nil {
 		return err
 	}
@@ -249,7 +249,7 @@ func (s *Service) DisconnectBlock(block *types.SerializedBlock) error {
 	if err != nil {
 		return err
 	}
-	b, err := s.normalizeBlock(block)
+	b, err := s.normalizeBlock(block, false)
 	if err != nil {
 		return err
 	}
@@ -260,14 +260,14 @@ func (s *Service) DisconnectBlock(block *types.SerializedBlock) error {
 	return vm.DisconnectBlock(b)
 }
 
-func (s *Service) normalizeBlock(block *types.SerializedBlock) (*qconsensus.Block, error) {
+func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*qconsensus.Block, error) {
 	result := &qconsensus.Block{Id: block.Hash(), Txs: []consensus.Tx{}, Time: block.Block().Header.Timestamp}
 
 	for idx, tx := range block.Transactions() {
 		if idx == 0 {
 			continue
 		}
-		if tx.IsDuplicate {
+		if tx.IsDuplicate && checkDup {
 			continue
 		}
 
