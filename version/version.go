@@ -27,7 +27,7 @@ const (
 const (
 	Major uint = 1
 	Minor uint = 0
-	Patch uint = 4
+	Patch uint = 5
 )
 
 var (
