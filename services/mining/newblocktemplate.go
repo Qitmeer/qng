@@ -174,7 +174,19 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	txSigOpCosts = append(txSigOpCosts, coinbaseSigOpCost)
 
 	tokenSigOpCost := int64(0)
-	tokenSize := uint32(0)
+
+	blockSize := uint32(blockHeaderOverhead) + uint32(coinbaseTx.Transaction().SerializeSize())
+
+	// ==== fix parents size
+	expectParents := []*hash.Hash{}
+	if parents == nil {
+		expectParents = blockManager.GetChain().GetMiningTips(meerdag.MaxPriority)
+	}
+	blockSize += uint32(s.VarIntSerializeSize(uint64(len(expectParents))))
+	for i := 0; i < len(expectParents); i++ {
+		blockSize += hash.HashSize
+	}
+	// =====
 
 	log.Debug("Inclusion to new block", "transactions", len(sourceTxns))
 
@@ -188,16 +200,26 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 		}
 		if types.IsTokenTx(tx.Tx) {
 			log.Trace(fmt.Sprintf("Skipping token tx %s", tx.Hash()))
+			if blockManager.GetChain().HasTx(tx.Hash()) {
+				log.Info(fmt.Sprintf("Ignore token tx:is duplicate"))
+				continue
+			}
+			txSize := uint32(tx.Transaction().SerializeSize())
+			blockPlusTxSize := blockSize + txSize
+			if blockPlusTxSize < blockSize || blockPlusTxSize >= policy.BlockMaxSize {
+				log.Trace(fmt.Sprintf("Ignore tx %s (size %v) because it "+
+					"would exceed the max block size; cur block "+
+					"size %v, cur num tx %v", tx.Hash(), txSize,
+					blockSize, len(blockTxns)))
+				continue
+			}
+
 			blockTxns = append(blockTxns, tx)
 			txFees = append(txFees, 0)
 			tokenSOC := int64(blockchain.CountSigOps(tx))
 			txSigOpCosts = append(txSigOpCosts, tokenSOC)
 			tokenSigOpCost += tokenSOC
-			tokenSize += uint32(tx.Transaction().SerializeSize())
-			if blockManager.GetChain().HasTx(tx.Hash()) {
-				log.Info(fmt.Sprintf("Ignore token tx:is duplicate"))
-				continue
-			}
+			blockSize += txSize
 			continue
 		} else if types.IsCrossChainImportTx(tx.Tx) || types.IsCrossChainVMTx(tx.Tx) {
 			_, ok := payToAddress.(*address.SecpPubKeyAddress)
@@ -210,14 +232,24 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 				blockManager.GetTxManager().MemPool().RemoveTransaction(tx, false)
 				continue
 			}
-
 			log.Trace(fmt.Sprintf("Skipping cross chain tx %s", tx.Hash()))
+
+			txSize := uint32(tx.Transaction().SerializeSize())
+			blockPlusTxSize := blockSize + txSize
+			if blockPlusTxSize < blockSize || blockPlusTxSize >= policy.BlockMaxSize {
+				log.Trace(fmt.Sprintf("Ignore tx %s (size %v) because it "+
+					"would exceed the max block size; cur block "+
+					"size %v, cur num tx %v", tx.Hash(), txSize,
+					blockSize, len(blockTxns)))
+				continue
+			}
+
 			blockTxns = append(blockTxns, tx)
 			txFees = append(txFees, 0)
 			tokenSOC := int64(blockchain.CountSigOps(tx))
 			txSigOpCosts = append(txSigOpCosts, tokenSOC)
 			tokenSigOpCost += tokenSOC
-			tokenSize += uint32(tx.Transaction().SerializeSize())
+			blockSize += txSize
 			continue
 		}
 		if !blockchain.IsFinalizedTransaction(tx, nextBlockHeight,
@@ -237,19 +269,6 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	}
 	log.Trace(fmt.Sprintf("Weighted random queue len %d, dependers len %d",
 		weightedRandQueue.Len(), len(dependers)))
-
-	blockSize := uint32(blockHeaderOverhead) + uint32(coinbaseTx.Transaction().SerializeSize()) + tokenSize
-
-	// ==== fix parents size
-	expectParents := []*hash.Hash{}
-	if parents == nil {
-		expectParents = blockManager.GetChain().GetMiningTips(meerdag.MaxPriority)
-	}
-	blockSize += uint32(s.VarIntSerializeSize(uint64(len(expectParents))))
-	for i := 0; i < len(expectParents); i++ {
-		blockSize += hash.HashSize
-	}
-	// =====
 
 	blockSigOpCost := coinbaseSigOpCost + tokenSigOpCost
 	totalFees := int64(0)
