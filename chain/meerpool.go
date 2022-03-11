@@ -77,9 +77,7 @@ type MeerPool struct {
 
 	current *environment // An environment for current running cycle.
 
-	mu       sync.RWMutex // The lock used to protect the coinbase and extra fields
-	coinbase common.Address
-	extra    []byte
+	mu sync.RWMutex // The lock used to protect the coinbase and extra fields
 
 	snapshotMu    sync.RWMutex // The lock used to protect the snapshots below
 	snapshotBlock *types.Block
@@ -99,8 +97,6 @@ func newMeerPool(config *miner.Config, chainConfig *params.ChainConfig, engine c
 		txsCh:       make(chan core.NewTxsEvent, txChanSize),
 		chainHeadCh: make(chan core.ChainHeadEvent, chainHeadChanSize),
 		quit:        make(chan struct{}),
-		extra:       []byte{},
-		coinbase:    common.Address{},
 		remoteTxsQM: map[string]*qtypes.Transaction{},
 		remoteTxsM:  map[string]*qtypes.Transaction{},
 	}
@@ -140,9 +136,6 @@ func (m *MeerPool) handler() {
 				if gp := m.current.gasPool; gp != nil && gp.Gas() < params.TxGas {
 					continue
 				}
-				m.mu.RLock()
-				coinbase := m.coinbase
-				m.mu.RUnlock()
 
 				txs := make(map[common.Address]types.Transactions)
 				for _, tx := range ev.Txs {
@@ -151,7 +144,7 @@ func (m *MeerPool) handler() {
 				}
 				txset := types.NewTransactionsByPriceAndNonce(m.current.signer, txs, m.current.header.BaseFee)
 				tcount := m.current.tcount
-				m.commitTransactions(txset, coinbase)
+				m.commitTransactions(txset, m.config.Etherbase)
 				if tcount != m.current.tcount {
 					m.updateSnapshot()
 
@@ -305,9 +298,10 @@ func (m *MeerPool) updateTemplate(timestamp int64) {
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent.GasLimit(), m.config.GasCeil),
-		Extra:      m.extra,
+		Extra:      m.config.ExtraData,
 		Time:       uint64(timestamp),
-		Coinbase:   m.coinbase,
+		Coinbase:   m.config.Etherbase,
+		Difficulty: common.Big1,
 	}
 	// Set baseFee and GasLimit if we are on an EIP-1559 chain
 	if m.chainConfig.IsLondon(header.Number) {
@@ -363,13 +357,13 @@ func (m *MeerPool) updateTemplate(timestamp int64) {
 	}
 	if len(localTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(m.current.signer, localTxs, header.BaseFee)
-		if m.commitTransactions(txs, m.coinbase) {
+		if m.commitTransactions(txs, m.config.Etherbase) {
 			return
 		}
 	}
 	if len(remoteTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(m.current.signer, remoteTxs, header.BaseFee)
-		if m.commitTransactions(txs, m.coinbase) {
+		if m.commitTransactions(txs, m.config.Etherbase) {
 			return
 		}
 	}

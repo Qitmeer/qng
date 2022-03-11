@@ -12,13 +12,13 @@ import (
 	qtypes "github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/rpc/api"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 	"math/big"
@@ -119,7 +119,7 @@ func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx, timestamp int64) (*types.Bl
 		return nil, nil, err
 	}
 
-	header := makeHeader(chainreader, parent, statedb, engine, timestamp)
+	header := makeHeader(&b.chain.Config().Eth, parent, statedb, timestamp)
 
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(statedb)
@@ -296,28 +296,23 @@ func NewMeerChain(chain *ETHChain, ctx qconsensus.Context) *MeerChain {
 	return mc
 }
 
-func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.StateDB, engine consensus.Engine, timestamp int64) *types.Header {
+func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB, timestamp int64) *types.Header {
 	ptt := int64(parent.Time())
 	if timestamp <= ptt {
 		timestamp = ptt + 1
 	}
 	header := &types.Header{
-		Root:       state.IntermediateRoot(chain.Config().IsEIP158(parent.Number())),
+		Root:       state.IntermediateRoot(cfg.Genesis.Config.IsEIP158(parent.Number())),
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
-		Difficulty: engine.CalcDifficulty(chain, uint64(timestamp), &types.Header{
-			Number:     parent.Number(),
-			Time:       parent.Time(),
-			Difficulty: parent.Difficulty(),
-			UncleHash:  parent.UncleHash(),
-		}),
-		GasLimit: parent.GasLimit(),
-		Number:   new(big.Int).Add(parent.Number(), common.Big1),
-		Time:     uint64(timestamp),
+		Difficulty: common.Big1,
+		GasLimit:   core.CalcGasLimit(parent.GasLimit(), cfg.Miner.GasCeil),
+		Number:     new(big.Int).Add(parent.Number(), common.Big1),
+		Time:       uint64(timestamp),
 	}
-	if chain.Config().IsLondon(header.Number) {
-		header.BaseFee = misc.CalcBaseFee(chain.Config(), parent.Header())
-		if !chain.Config().IsLondon(parent.Number()) {
+	if cfg.Genesis.Config.IsLondon(header.Number) {
+		header.BaseFee = misc.CalcBaseFee(cfg.Genesis.Config, parent.Header())
+		if !cfg.Genesis.Config.IsLondon(parent.Number()) {
 			parentGasLimit := parent.GasLimit() * params.ElasticityMultiplier
 			header.GasLimit = core.CalcGasLimit(parentGasLimit, parentGasLimit)
 		}
