@@ -27,6 +27,8 @@ type TxPool interface {
 	ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allowHighFees bool) ([]*types.TxDesc, error)
 
 	GetMainHeight() int64
+
+	AddTransaction(tx *types.Tx, height uint64, fee int64)
 }
 
 type FeeEstimator interface {
