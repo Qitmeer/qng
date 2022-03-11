@@ -175,10 +175,6 @@ func (me *MeerEngine) CalcDifficulty(chain consensus.ChainHeaderReader, time uin
 }
 
 func (me *MeerEngine) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
-	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-	if parent == nil {
-		return consensus.ErrUnknownAncestor
-	}
 	header.Difficulty = big.NewInt(1)
 	return nil
 }

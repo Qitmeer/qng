@@ -26,7 +26,8 @@ import (
 )
 
 type MeerChain struct {
-	chain *ETHChain
+	chain    *ETHChain
+	meerpool *MeerPool
 }
 
 func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
@@ -275,8 +276,23 @@ func (b *MeerChain) RegisterAPIs(apis []api.API) {
 	b.chain.Node().RegisterAPIs(eapis)
 }
 
-func NewMeerChain(chain *ETHChain) *MeerChain {
-	mc := &MeerChain{chain: chain}
+func (b *MeerChain) Start() {
+	b.meerpool.start()
+}
+
+func (b *MeerChain) Stop() {
+	b.meerpool.stop()
+}
+
+func (b *MeerChain) MeerPool() *MeerPool {
+	return b.meerpool
+}
+
+func NewMeerChain(chain *ETHChain, ctx qconsensus.Context) *MeerChain {
+	mc := &MeerChain{
+		chain:    chain,
+		meerpool: newMeerPool(&chain.config.Eth.Miner, chain.config.Eth.Genesis.Config, chain.ether.Engine(), chain.ether, chain.ether.EventMux(), ctx),
+	}
 	return mc
 }
 

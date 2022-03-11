@@ -13,19 +13,14 @@ import (
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/consensus"
 	"github.com/Qitmeer/qng-core/core/address"
-	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
 	qtypes "github.com/Qitmeer/qng-core/core/types"
 	"github.com/Qitmeer/qng-core/rpc/api"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/event"
 	"runtime"
-	"sync"
-	"time"
 )
 
 // meerevm ID of the platform
@@ -37,15 +32,10 @@ const (
 )
 
 type VM struct {
-	ctx          consensus.Context
-	shutdownChan chan struct{}
-	shutdownWg   sync.WaitGroup
+	ctx consensus.Context
 
 	chain  *chain.ETHChain
 	mchain *chain.MeerChain
-
-	txsCh  chan core.NewTxsEvent
-	txsSub event.Subscription
 }
 
 func (vm *VM) GetID() string {
@@ -69,12 +59,7 @@ func (vm *VM) Initialize(ctx consensus.Context) error {
 		return err
 	}
 	vm.chain = ethchain
-	vm.mchain = chain.NewMeerChain(ethchain)
-
-	vm.txsSub = ethchain.Ether().TxPool().SubscribeNewTxsEvent(vm.txsCh)
-
-	vm.shutdownWg.Add(1)
-	go vm.handler()
+	vm.mchain = chain.NewMeerChain(ethchain, ctx)
 
 	return nil
 }
@@ -116,9 +101,9 @@ func (vm *VM) Bootstrapping() error {
 	for addr := range vm.chain.Config().Eth.Genesis.Alloc {
 		log.Debug(fmt.Sprintf("Alloc address:%v balance:%v", addr.String(), state.GetBalance(addr)))
 	}
+
+	vm.mchain.Start()
 	//
-	vm.initTxPool()
-	//vm.chain.Ether().Miner().Close()
 	return nil
 }
 
@@ -133,11 +118,10 @@ func (vm *VM) Shutdown() error {
 		return nil
 	}
 
-	close(vm.shutdownChan)
 	vm.chain.Stop()
+	vm.mchain.Stop()
 
 	vm.chain.Wait()
-	vm.shutdownWg.Wait()
 	return nil
 }
 
@@ -279,104 +263,16 @@ func (vm *VM) validateTx(tx *types.Transaction) error {
 	return nil
 }
 
-func (vm *VM) addTx(tx *types.Transaction) (*qtypes.Transaction, error) {
-	txmb, err := tx.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	txmbHex := hexutil.Encode(txmb)
-
-	qtxhb := tx.Hash().Bytes()
-	qcommon.ReverseBytes(&qtxhb)
-	qtxh := hash.MustBytesToHash(qtxhb)
-
-	mtx := qtypes.NewTransaction()
-	mtx.AddTxIn(&qtypes.TxInput{
-		PreviousOut: *qtypes.NewOutPoint(&qtxh, qtypes.SupperPrevOutIndex),
-		Sequence:    uint32(qtypes.TxTypeCrossChainVM),
-		AmountIn:    qtypes.Amount{Id: qtypes.ETHID, Value: 0},
-		SignScript:  []byte(txmbHex),
-	})
-	mtx.AddTxOut(&qtypes.TxOutput{
-		Amount:   qtypes.Amount{Value: 0, Id: qtypes.ETHID},
-		PkScript: opreturn.NewEVMTx().PKScript(),
-	})
-
-	acceptedTxs, err := vm.ctx.GetTxPool().ProcessTransaction(qtypes.NewTx(mtx), false, false, true)
-	if err != nil {
-		return mtx, err
-	}
-	vm.ctx.GetNotify().AnnounceNewTransactions(acceptedTxs, nil)
-	vm.ctx.GetNotify().AddRebroadcastInventory(acceptedTxs)
-
-	return mtx, nil
+func (vm *VM) AddTxToMempool(tx *qtypes.Transaction, local bool) (int64, error) {
+	return vm.mchain.MeerPool().AddTx(tx, local)
 }
 
-func (vm *VM) sendTxs(txs []*types.Transaction) {
-	for _, tx := range txs {
-		qtx, err := vm.addTx(tx)
-		if err != nil {
-			log.Error(fmt.Sprintf("Ignore evm tx(%s)[Exist in qng tx(%s)] from tx pool:%v", tx.Hash().String(), qtx.TxHash(), err.Error()))
-			vm.chain.Ether().TxPool().RemoveTx(tx.Hash(), true)
-		}
-	}
+func (vm *VM) GetTxsFromMempool() ([]*qtypes.Transaction, error) {
+	return vm.mchain.MeerPool().GetTxs()
 }
 
-func (vm *VM) RemoveTxFromMempool(h *hash.Hash) error {
-	ehb := h.Bytes()
-	qcommon.ReverseBytes(&ehb)
-	eh := common.BytesToHash(ehb)
-	log.Error(fmt.Sprintf("Ignore evm tx(%s)", eh.String()))
-	vm.chain.Ether().TxPool().RemoveTx(eh, true)
-
-	return nil
-}
-
-func (vm *VM) initTxPool() {
-	go func() {
-		<-time.After(time.Second * 2)
-		log.Debug("EVM:start init txpool")
-		pending, err := vm.chain.Ether().TxPool().Pending(false)
-		if err != nil {
-			log.Error("Failed to fetch pending transactions", "err", err)
-		} else {
-			if len(pending) > 0 {
-				for _, txs := range pending {
-					vm.sendTxs(txs)
-				}
-			}
-		}
-
-	}()
-}
-
-func (vm *VM) handler() {
-	log.Debug("Meerevm handler start")
-	defer vm.txsSub.Unsubscribe()
-
-out:
-	for {
-		select {
-
-		case ev := <-vm.txsCh:
-			vm.sendTxs(ev.Txs)
-
-		case <-vm.shutdownChan:
-			break out
-		}
-	}
-
-cleanup:
-	for {
-		select {
-		case <-vm.txsCh:
-		default:
-			break cleanup
-		}
-	}
-
-	vm.shutdownWg.Done()
-	log.Debug("Meerevm handler done")
+func (vm *VM) RemoveTxFromMempool(tx *qtypes.Transaction) error {
+	return vm.mchain.MeerPool().RemoveTx(tx)
 }
 
 func (vm *VM) RegisterAPIs(apis []api.API) {
@@ -384,8 +280,5 @@ func (vm *VM) RegisterAPIs(apis []api.API) {
 }
 
 func New() *VM {
-	return &VM{
-		shutdownChan: make(chan struct{}),
-		txsCh:        make(chan core.NewTxsEvent, 256),
-	}
+	return &VM{}
 }
