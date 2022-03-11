@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/core/address"
-	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng-core/core/merkle"
 	s "github.com/Qitmeer/qng-core/core/serialization"
 	"github.com/Qitmeer/qng-core/core/types"
@@ -16,7 +15,6 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"golang.org/x/net/context"
-	"time"
 )
 
 // NewBlockTemplate returns a new block template that is ready to be solved
@@ -210,35 +208,6 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 			if blockManager.GetChain().HasTx(tx.Hash()) {
 				log.Info(fmt.Sprintf("Ignore meerevm tx:is duplicate:%s(qng)", tx.Hash()))
 				blockManager.GetTxManager().MemPool().RemoveTransaction(tx, false)
-				if opreturn.IsMeerEVMTx(tx.Tx) {
-					err := blockManager.GetChain().VMService.RemoveTxFromMempool(&tx.Tx.TxIn[0].PreviousOut.Hash)
-					if err != nil {
-						log.Error(err.Error())
-					}
-				}
-				continue
-			}
-
-			block := &types.Block{
-				Header:  types.BlockHeader{Timestamp: time.Now(), Pow: pow.GetInstance(powType, 0, []byte{})},
-				Parents: []*hash.Hash{},
-			}
-			for _, tx := range blockTxns {
-				block.AddTransaction(tx.Tx)
-			}
-			block.AddTransaction(tx.Tx)
-			sblock := types.NewBlock(block)
-
-			err := blockManager.GetChain().VMService.CheckConnectBlock(sblock)
-			if err != nil {
-				log.Info(fmt.Sprintf("Ignore meerevm tx:%s(qng)  err:%s", tx.Hash(), err))
-				blockManager.GetTxManager().MemPool().RemoveTransaction(tx, false)
-				if opreturn.IsMeerEVMTx(tx.Tx) {
-					err := blockManager.GetChain().VMService.RemoveTxFromMempool(&tx.Tx.TxIn[0].PreviousOut.Hash)
-					if err != nil {
-						log.Error(err.Error())
-					}
-				}
 				continue
 			}
 

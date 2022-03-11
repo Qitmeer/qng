@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/meerevm/evm"
-	"github.com/Qitmeer/qng-core/common/hash"
 	"github.com/Qitmeer/qng-core/config"
 	qconfig "github.com/Qitmeer/qng-core/config"
 	"github.com/Qitmeer/qng-core/consensus"
@@ -204,12 +203,28 @@ func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 	return ba - itx.Transaction.TxOut[0].Amount.Value, nil
 }
 
-func (s *Service) RemoveTxFromMempool(h *hash.Hash) error {
+func (s *Service) AddTxToMempool(tx *types.Transaction, local bool) (int64, error) {
+	v, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return 0, err
+	}
+	return v.AddTxToMempool(tx, local)
+}
+
+func (s *Service) RemoveTxFromMempool(tx *types.Transaction) error {
 	v, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
 		return err
 	}
-	return v.RemoveTxFromMempool(h)
+	return v.RemoveTxFromMempool(tx)
+}
+
+func (s *Service) GetTxsFromMempool() ([]*types.Transaction, error) {
+	v, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil, err
+	}
+	return v.GetTxsFromMempool()
 }
 
 func (s *Service) CheckConnectBlock(block *types.SerializedBlock) error {
