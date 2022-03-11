@@ -25,6 +25,8 @@ type TxPool interface {
 	PruneExpiredTx()
 
 	ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allowHighFees bool) ([]*types.TxDesc, error)
+
+	GetMainHeight() int64
 }
 
 type FeeEstimator interface {

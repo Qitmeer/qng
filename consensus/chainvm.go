@@ -6,6 +6,7 @@ package consensus
 
 import (
 	"github.com/Qitmeer/qng-core/common/hash"
+	"github.com/Qitmeer/qng-core/core/types"
 )
 
 type ChainVM interface {
@@ -23,7 +24,11 @@ type ChainVM interface {
 
 	VerifyTx(tx Tx) (int64, error)
 
-	RemoveTxFromMempool(h *hash.Hash) error
+	AddTxToMempool(tx *types.Transaction, local bool) (int64, error)
+
+	GetTxsFromMempool() ([]*types.Transaction, error)
+
+	RemoveTxFromMempool(tx *types.Transaction) error
 
 	CheckConnectBlock(block Block) error
 
