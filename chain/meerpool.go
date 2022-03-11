@@ -507,6 +507,8 @@ func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
 		}
 
 		localTxs = append(localTxs, td)
+
+		m.ctx.GetTxPool().AddTransaction(td.Tx, uint64(td.Height), td.Fee)
 	}
 
 	//
