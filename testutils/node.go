@@ -40,7 +40,7 @@ func newNodeConfig(homeDir string, extraArgs []string) *nodeConfig {
 		program:   "qng",
 		listen:    "127.0.0.1:" + params.PrivNetParam.DefaultPort, //38130 by default
 		rpclisten: "127.0.0.1:" + params.PrivNetParam.RpcPort,     //38131 by default
-		evmlisten: "127.0.0.1:18545",
+		evmlisten: "18545",
 		rpcuser:   "testuser",
 		rpcpass:   "testpass",
 		homeDir:   homeDir,
