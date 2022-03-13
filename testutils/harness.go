@@ -314,14 +314,14 @@ func AllHarnesses() []*Harness {
 
 const (
 	// the minimum and maximum p2p and rpc port numbers used by a test harness.
-	minP2PPort   = 38200               // 38200 The min is inclusive
-	maxP2PPort   = minP2PPort + 10000  // 48199 The max is exclusive
-	minRPCPort   = maxP2PPort          // 48200
-	maxRPCPort   = minRPCPort + 10000  // 58199
-	minEVMPort   = maxRPCPort          // 58200
-	maxEVMPort   = minEVMPort + 5000   // 63199
-	minEVMWSPort = maxEVMPort          // 63200
-	maxEVMWSPort = minEVMWSPort + 5000 // 68199
+	minP2PPort   = 28200               // 28200 The min is inclusive
+	maxP2PPort   = minP2PPort + 10000  // 38199 The max is exclusive
+	minRPCPort   = maxP2PPort          // 38200
+	maxRPCPort   = minRPCPort + 10000  // 48199
+	minEVMPort   = maxRPCPort          // 48200
+	maxEVMPort   = minEVMPort + 2000   // 53199
+	minEVMWSPort = maxEVMPort          // 53200
+	maxEVMWSPort = minEVMWSPort + 2000 // 58199
 
 )
 
