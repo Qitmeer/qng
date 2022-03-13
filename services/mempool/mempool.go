@@ -72,13 +72,28 @@ type TxDesc struct {
 // This function is safe for concurrent access.
 func (mp *TxPool) TxDescs() []*TxDesc {
 	mp.mtx.RLock()
-	descs := make([]*TxDesc, len(mp.pool))
-	i := 0
+	descs := []*TxDesc{}
 	for _, desc := range mp.pool {
-		descs[i] = desc
-		i++
+		descs = append(descs, desc)
 	}
 	mp.mtx.RUnlock()
+
+	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	if err != nil {
+		log.Error(err.Error())
+		return descs
+	}
+
+	for _, tx := range etxs {
+		txDesc := &TxDesc{
+			TxDesc: types.TxDesc{
+				Tx:     types.NewTx(tx),
+				Added:  roughtime.Now(),
+				Height: mp.GetMainHeight(),
+			},
+		}
+		descs = append(descs, txDesc)
+	}
 
 	return descs
 }
@@ -129,6 +144,14 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 	// Protect concurrent access.
 	mp.mtx.Lock()
 	mp.removeTransaction(tx, removeRedeemers)
+
+	if opreturn.IsMeerEVMTx(tx.Tx) {
+		err := mp.cfg.BC.VMService.RemoveTxFromMempool(tx.Tx)
+		if err != nil {
+			log.Error(err.Error())
+		}
+	}
+
 	mp.mtx.Unlock()
 }
 
@@ -170,9 +193,19 @@ func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
 			Fee:      fee,
 			FeePerKB: fee * 1000 / int64(tx.Tx.SerializeSize()),
 		},
-		StartingPriority: CalcPriority(msgTx, utxoView, height, mp.cfg.BD),
 	}
-	mp.pool[*tx.Hash()] = txD
+
+	if utxoView != nil {
+		txD.StartingPriority = CalcPriority(msgTx, utxoView, height, mp.cfg.BD)
+	}
+
+	if !types.IsCrossChainVMTx(tx.Tx) {
+		mp.pool[*tx.Hash()] = txD
+
+		if mp.cfg.ExistsAddrIndex != nil {
+			mp.cfg.ExistsAddrIndex.AddUnconfirmedTx(msgTx)
+		}
+	}
 
 	if !types.IsCrossChainVMTx(tx.Tx) &&
 		!types.IsCrossChainImportTx(tx.Tx) &&
@@ -193,11 +226,8 @@ func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
 
 	// Add unconfirmed address index entries associated with the transaction
 	// if enabled.
-	if mp.cfg.AddrIndex != nil {
+	if mp.cfg.AddrIndex != nil && utxoView != nil {
 		mp.cfg.AddrIndex.AddUnconfirmedTx(tx, utxoView)
-	}
-	if mp.cfg.ExistsAddrIndex != nil {
-		mp.cfg.ExistsAddrIndex.AddUnconfirmedTx(msgTx)
 	}
 
 	// Record this tx for fee estimation if enabled.
@@ -210,9 +240,8 @@ func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
 }
 
 //Call addTransaction
-func (mp *TxPool) AddTransaction(utxoView *blockchain.UtxoViewpoint,
-	tx *types.Tx, height uint64, fee int64) {
-	mp.addTransaction(utxoView, tx, height, fee)
+func (mp *TxPool) AddTransaction(tx *types.Tx, height uint64, fee int64) {
+	mp.addTransaction(nil, tx, height, fee)
 }
 
 // maybeAcceptTransaction is the internal function which implements the public
@@ -413,14 +442,12 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			if mp.cfg.BC.HasTx(txHash) {
 				return nil, nil, fmt.Errorf("Already have transaction %v", txHash)
 			}
-			vtx := &consensus.Tx{Type: types.TxTypeCrossChainVM, Data: []byte(tx.Tx.TxIn[0].SignScript)}
-			fee, err := mp.cfg.BC.VMService.VerifyTx(vtx)
+			fee, err := mp.cfg.BC.VMService.AddTxToMempool(tx.Tx, false)
 			if err != nil {
 				return nil, nil, err
 			}
 
-			// Add to transaction pool.
-			txD := mp.addTransaction(blockchain.NewUtxoViewpoint(), tx, nextBlockHeight, fee)
+			txD := mp.addTransaction(nil, tx, nextBlockHeight, fee)
 
 			log.Debug(fmt.Sprintf("Accepted meerevm transaction ,txHash(qng):%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
 			return nil, txD, nil
@@ -965,8 +992,19 @@ func (mp *TxPool) FetchTransaction(txHash *hash.Hash) (*types.Tx, error) {
 	if exists {
 		return txDesc.Tx, nil
 	}
+	er := fmt.Errorf("transaction is not in the pool")
+	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	if err != nil {
+		return nil, er
+	}
 
-	return nil, fmt.Errorf("transaction is not in the pool")
+	for _, tx := range etxs {
+		th := tx.TxHash()
+		if txHash.IsEqual(&th) {
+			return types.NewTx(tx), nil
+		}
+	}
+	return nil, er
 }
 
 // HaveAllTransactions returns whether or not all of the passed transaction
@@ -974,12 +1012,27 @@ func (mp *TxPool) FetchTransaction(txHash *hash.Hash) (*types.Tx, error) {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) HaveAllTransactions(hashes []hash.Hash) bool {
+	etxs, _ := mp.cfg.BC.VMService.GetTxsFromMempool()
 	mp.mtx.RLock()
 	inPool := true
 	for _, h := range hashes {
 		if _, exists := mp.pool[h]; !exists {
-			inPool = false
-			break
+
+			isinep := false
+			if len(etxs) > 0 {
+				for _, tx := range etxs {
+					th := tx.TxHash()
+					if h.IsEqual(&th) {
+						isinep = true
+						break
+					}
+				}
+			}
+
+			if !isinep {
+				inPool = false
+				break
+			}
 		}
 	}
 	mp.mtx.RUnlock()
@@ -1015,7 +1068,17 @@ func (mp *TxPool) isTransactionInPool(hash *hash.Hash) bool {
 	if _, exists := mp.pool[*hash]; exists {
 		return true
 	}
+	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	if err != nil {
+		return false
+	}
 
+	for _, tx := range etxs {
+		th := tx.TxHash()
+		if hash.IsEqual(&th) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -1072,14 +1135,26 @@ func (mp *TxPool) LastUpdated() time.Time {
 // concurrent access as required by the interface contract.
 func (mp *TxPool) MiningDescs() []*types.TxDesc {
 	mp.mtx.RLock()
-	descs := make([]*types.TxDesc, len(mp.pool))
-	i := 0
+	descs := []*types.TxDesc{}
 	for _, desc := range mp.pool {
-		descs[i] = &desc.TxDesc
-		i++
+		descs = append(descs, &desc.TxDesc)
 	}
 	mp.mtx.RUnlock()
 
+	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	if err != nil {
+		log.Error(err.Error())
+		return descs
+	}
+
+	for _, tx := range etxs {
+		txDesc := &types.TxDesc{
+			Tx:     types.NewTx(tx),
+			Added:  roughtime.Now(),
+			Height: mp.GetMainHeight(),
+		}
+		descs = append(descs, txDesc)
+	}
 	return descs
 }
 
@@ -1119,9 +1194,17 @@ func (mp *TxPool) Count() int {
 	count := len(mp.pool)
 	mp.mtx.RUnlock()
 
+	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	if err == nil {
+		count += len(etxs)
+	}
 	return count
 }
 
 func (mp *TxPool) GetConfig() *Config {
 	return &mp.cfg
+}
+
+func (mp *TxPool) GetMainHeight() int64 {
+	return int64(mp.cfg.BestHeight() + 1)
 }
