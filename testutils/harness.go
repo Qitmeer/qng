@@ -271,7 +271,7 @@ func NewHarness(t *testing.T, params *params.Params, args ...string) (*Harness, 
 	config := newNodeConfig(testDir, extraArgs)
 
 	// use auto-genereated p2p/rpc port settings instead of default
-	config.listen, config.rpclisten, config.evmlisten = genListenArgs()
+	config.listen, config.rpclisten, config.evmlisten, config.evmWSlisten = genListenArgs()
 
 	// create node
 	newNode, err := newNode(t, config)
@@ -314,19 +314,21 @@ func AllHarnesses() []*Harness {
 
 const (
 	// the minimum and maximum p2p and rpc port numbers used by a test harness.
-	minP2PPort = 38200              // 38200 The min is inclusive
-	maxP2PPort = minP2PPort + 10000 // 48199 The max is exclusive
-	minRPCPort = maxP2PPort         // 48200
-	maxRPCPort = minRPCPort + 10000 // 58199
-	minEVMPort = maxRPCPort         // 58200
-	maxEVMPort = minEVMPort + 10000 // 68199
+	minP2PPort   = 38200               // 38200 The min is inclusive
+	maxP2PPort   = minP2PPort + 10000  // 48199 The max is exclusive
+	minRPCPort   = maxP2PPort          // 48200
+	maxRPCPort   = minRPCPort + 10000  // 58199
+	minEVMPort   = maxRPCPort          // 58200
+	maxEVMPort   = minEVMPort + 5000   // 63199
+	minEVMWSPort = maxEVMPort          // 63200
+	maxEVMWSPort = minEVMWSPort + 5000 // 68199
 
 )
 
 // GenListenArgs returns auto generated args for p2p listen and rpc listen in the format of
 // ["--listen=127.0.0.1:12345", --rpclisten=127.0.0.1:12346"].
 // in order to support multiple test node running at the same time.
-func genListenArgs() (string, string, string) {
+func genListenArgs() (string, string, string, string) {
 	localhost := "127.0.0.1"
 	genPort := func(min, max int) string {
 		port := min + len(harnessInstances) + (42 * harnessMainProcessId % (max - min))
@@ -335,5 +337,6 @@ func genListenArgs() (string, string, string) {
 	p2p := net.JoinHostPort(localhost, genPort(minP2PPort, maxP2PPort))
 	rpc := net.JoinHostPort(localhost, genPort(minRPCPort, maxRPCPort))
 	evm := genPort(minEVMPort, maxEVMPort)
-	return p2p, rpc, evm
+	evmWS := genPort(minEVMWSPort, maxEVMWSPort)
+	return p2p, rpc, evm, evmWS
 }
