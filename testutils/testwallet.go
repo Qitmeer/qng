@@ -23,6 +23,7 @@ import (
 	"github.com/Qitmeer/qng/rpc/client"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	common2 "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"strconv"
 	"strings"
 	"sync"
@@ -105,7 +106,7 @@ type testWallet struct {
 	netParams        *params.Params
 	t                *testing.T
 	client           *Client
-	evmClient        *Client
+	evmClient        *ethclient.Client
 	maxRescanOrder   uint64
 	ScanCount        uint64
 	OnRescanComplete func()
@@ -115,7 +116,7 @@ func (w *testWallet) setRpcClient(client *Client) {
 	w.client = client
 }
 
-func (w *testWallet) setEVMClient(client *Client) {
+func (w *testWallet) setEVMClient(client *ethclient.Client) {
 	w.evmClient = client
 }
 

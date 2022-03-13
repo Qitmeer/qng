@@ -80,7 +80,7 @@ func TestNodeStartStop(t *testing.T) {
 
 func TestGenListenArgs(t *testing.T) {
 	c := newNodeConfig("test", nil)
-	a1, a2 := genListenArgs()
+	a1, a2, _ := genListenArgs()
 	c.listen, c.rpclisten = a1, a2
 	args := []string{
 		"--listen=" + a1,

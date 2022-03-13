@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 )
@@ -23,6 +24,7 @@ type nodeConfig struct {
 	listen    string
 	rpclisten string
 	evmlisten string
+	evmPort   string
 	rpcuser   string
 	rpcpass   string
 	homeDir   string
@@ -60,6 +62,10 @@ func (n *nodeConfig) args() []string {
 	}
 	if n.rpclisten != "" {
 		args = append(args, fmt.Sprintf("--rpclisten=%s", n.rpclisten))
+	}
+	if n.evmlisten != "" {
+		p, _ := strconv.Atoi(n.evmlisten)
+		args = append(args, fmt.Sprintf(`--evmenv="--http --http.port=%s --ws --ws.port=%d"`, n.evmlisten, p+1))
 	}
 	if n.rpcuser != "" {
 		args = append(args, fmt.Sprintf("--rpcuser=%s", n.rpcuser))

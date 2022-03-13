@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng-core/params"
 	"github.com/Qitmeer/qng/rpc/client"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"io/ioutil"
 	"log"
 	"net"
@@ -50,7 +51,7 @@ type Harness struct {
 	// the rpc client to the qitmeer node in the Harness instance.
 	Client *Client
 	// the rpc client to the qng evm node in the Harness instance.
-	EVMClient *Client
+	EVMClient *ethclient.Client
 	// the maximized attempts try to establish the rpc connection
 	maxRpcConnRetries int
 	// Notifier use rpc/client with web-socket notification support
@@ -102,7 +103,7 @@ func (h *Harness) Setup() error {
 // this function returns with an error if all retries failed.
 func (h *Harness) connectRPCClient() error {
 	var client *Client
-	var evmClient *Client
+	var evmClient *ethclient.Client
 	var err error
 
 	url, user, pass := h.Node.config.rpclisten, h.Node.config.rpcuser, h.Node.config.rpcpass
@@ -119,7 +120,7 @@ func (h *Harness) connectRPCClient() error {
 	}
 
 	for i := 0; i < h.maxRpcConnRetries; i++ {
-		if evmClient, err = Dial("http://"+h.Node.config.evmlisten, user, pass, certs); err != nil {
+		if evmClient, err = ethclient.Dial("http://127.0.0.1:" + h.Node.config.evmlisten); err != nil {
 			time.Sleep(time.Duration(i) * time.Second)
 			continue
 		}
@@ -270,7 +271,7 @@ func NewHarness(t *testing.T, params *params.Params, args ...string) (*Harness, 
 	config := newNodeConfig(testDir, extraArgs)
 
 	// use auto-genereated p2p/rpc port settings instead of default
-	config.listen, config.rpclisten = genListenArgs()
+	config.listen, config.rpclisten, config.evmlisten = genListenArgs()
 
 	// create node
 	newNode, err := newNode(t, config)
@@ -317,13 +318,15 @@ const (
 	maxP2PPort = minP2PPort + 10000 // 48199 The max is exclusive
 	minRPCPort = maxP2PPort         // 48200
 	maxRPCPort = minRPCPort + 10000 // 58199
+	minEVMPort = maxRPCPort         // 58200
+	maxEVMPort = minEVMPort + 10000 // 68199
 
 )
 
 // GenListenArgs returns auto generated args for p2p listen and rpc listen in the format of
 // ["--listen=127.0.0.1:12345", --rpclisten=127.0.0.1:12346"].
 // in order to support multiple test node running at the same time.
-func genListenArgs() (string, string) {
+func genListenArgs() (string, string, string) {
 	localhost := "127.0.0.1"
 	genPort := func(min, max int) string {
 		port := min + len(harnessInstances) + (42 * harnessMainProcessId % (max - min))
@@ -331,5 +334,6 @@ func genListenArgs() (string, string) {
 	}
 	p2p := net.JoinHostPort(localhost, genPort(minP2PPort, maxP2PPort))
 	rpc := net.JoinHostPort(localhost, genPort(minRPCPort, maxRPCPort))
-	return p2p, rpc
+	evm := genPort(minEVMPort, maxEVMPort)
+	return p2p, rpc, evm
 }
