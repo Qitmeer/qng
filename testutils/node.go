@@ -19,34 +19,37 @@ import (
 
 // the configuration of the node
 type nodeConfig struct {
-	program   string
-	listen    string
-	rpclisten string
-	evmlisten string
-	rpcuser   string
-	rpcpass   string
-	homeDir   string
-	dataDir   string
-	logDir    string
-	keyFile   string
-	certFile  string
-	extraArgs []string
+	program     string
+	listen      string
+	rpclisten   string
+	evmlisten   string
+	evmWSlisten string
+	evmPort     string
+	rpcuser     string
+	rpcpass     string
+	homeDir     string
+	dataDir     string
+	logDir      string
+	keyFile     string
+	certFile    string
+	extraArgs   []string
 }
 
 func newNodeConfig(homeDir string, extraArgs []string) *nodeConfig {
 	c := &nodeConfig{
-		program:   "qng",
-		listen:    "127.0.0.1:" + params.PrivNetParam.DefaultPort, //38130 by default
-		rpclisten: "127.0.0.1:" + params.PrivNetParam.RpcPort,     //38131 by default
-		evmlisten: "127.0.0.1:18545",
-		rpcuser:   "testuser",
-		rpcpass:   "testpass",
-		homeDir:   homeDir,
-		dataDir:   filepath.Join(homeDir, "data"),
-		logDir:    filepath.Join(homeDir, "log"),
-		keyFile:   filepath.Join(homeDir, "rpc.key"),
-		certFile:  filepath.Join(homeDir, "rpc.cert"),
-		extraArgs: extraArgs,
+		program:     "qng",
+		listen:      "127.0.0.1:" + params.PrivNetParam.DefaultPort, //38130 by default
+		rpclisten:   "127.0.0.1:" + params.PrivNetParam.RpcPort,     //38131 by default
+		evmlisten:   "18545",
+		evmWSlisten: "18546",
+		rpcuser:     "testuser",
+		rpcpass:     "testpass",
+		homeDir:     homeDir,
+		dataDir:     filepath.Join(homeDir, "data"),
+		logDir:      filepath.Join(homeDir, "log"),
+		keyFile:     filepath.Join(homeDir, "rpc.key"),
+		certFile:    filepath.Join(homeDir, "rpc.cert"),
+		extraArgs:   extraArgs,
 	}
 	return c
 }
@@ -60,6 +63,9 @@ func (n *nodeConfig) args() []string {
 	}
 	if n.rpclisten != "" {
 		args = append(args, fmt.Sprintf("--rpclisten=%s", n.rpclisten))
+	}
+	if n.evmlisten != "" {
+		args = append(args, fmt.Sprintf(`--evmenv="--http --http.port=%s --ws --ws.port=%s"`, n.evmlisten, n.evmWSlisten))
 	}
 	if n.rpcuser != "" {
 		args = append(args, fmt.Sprintf("--rpcuser=%s", n.rpcuser))

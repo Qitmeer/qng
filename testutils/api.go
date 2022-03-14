@@ -110,11 +110,3 @@ func (c *Client) TestSign(privateKey, rawStr, tokenPrivateKey string) (string, e
 	}
 	return hexbalance, nil
 }
-
-func (c *Client) GetEthBalance(addr string) (string, error) {
-	var rawstring string
-	if err := c.Call(&rawstring, "eth_getBalance", addr, "latest"); err != nil {
-		return "", err
-	}
-	return rawstring, nil
-}

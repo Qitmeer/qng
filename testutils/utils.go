@@ -241,11 +241,7 @@ func TimeoutFunc(t *testing.T, f func() bool, timeout int) {
 	t.Logf("time use:%.4f ms", float64(time.Now().UnixNano())/float64(start))
 }
 
-func ConvertEthToMeer(ba string) *big.Int {
-	amount, ok := new(big.Int).SetString(ba[2:], 16)
-	if !ok {
-		return nil
-	}
+func ConvertEthToMeer(amount *big.Int) *big.Int {
 	// wei 1e18  meer 1e8
 	amount = amount.Div(amount, big.NewInt(1e10))
 	return amount
