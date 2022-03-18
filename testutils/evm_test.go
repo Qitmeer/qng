@@ -177,20 +177,16 @@ func TestCallErc20Contract(t *testing.T) {
 		t.Fatal(err)
 	}
 	toAmount := int64(100)
-	for i := 0; i < 10; i++ {
-		tx, err := tokenCall.Transfer(authCaller, h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		log.Println(i, "transfer tx:", tx.Hash().String())
+	tx, err := tokenCall.Transfer(authCaller, h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+	if err != nil {
+		t.Fatal(err)
 	}
-
+	log.Println("transfer tx:", tx.Hash().String())
 	GenerateBlock(t, h, 1)
 	ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[0])
 	if err != nil {
 		t.Fatal(err)
 	}
-	toAmount *= 10 // 转10次
 	allAmount -= toAmount
 	assert.Equal(t, ba, big.NewInt(allAmount).Mul(big.NewInt(allAmount), big.NewInt(1e18)))
 	ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[1])
