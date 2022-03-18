@@ -6,7 +6,7 @@ package encoder
 
 import (
 	"fmt"
-	qtypes "github.com/Qitmeer/qng-core/core/types"
+	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/prysmaticlabs/go-ssz/types"
 	"io"
 	"io/ioutil"

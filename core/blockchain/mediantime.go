@@ -8,7 +8,7 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/roughtime"
+	"github.com/Qitmeer/qng/common/roughtime"
 	"math"
 	"sort"
 	"sync"

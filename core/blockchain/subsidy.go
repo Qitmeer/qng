@@ -9,10 +9,10 @@
 package blockchain
 
 import (
-	"github.com/Qitmeer/qng-core/meerdag"
+	"github.com/Qitmeer/qng/meerdag"
 	"sync"
 
-	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/params"
 )
 
 // The number of values to precalculate on initialization of the subsidy

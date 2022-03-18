@@ -6,8 +6,8 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/Qitmeer/meerevm/chain"
-	mcommon "github.com/Qitmeer/meerevm/common"
+	"github.com/Qitmeer/qng/meerevm/chain"
+	mcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"

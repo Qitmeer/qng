@@ -2,7 +2,7 @@ package token
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng/core/types"
 	"strings"
 )
 

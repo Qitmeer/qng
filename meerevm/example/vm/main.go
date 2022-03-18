@@ -6,10 +6,10 @@ package main
 
 import (
 	"context"
-	"github.com/Qitmeer/meerevm/evm"
-	"github.com/Qitmeer/meerevm/evm/util"
-	"github.com/Qitmeer/qng-core/config"
-	"github.com/Qitmeer/qng-core/consensus"
+	"github.com/Qitmeer/qng/meerevm/evm"
+	"github.com/Qitmeer/qng/meerevm/evm/util"
+	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/log"
 )
 

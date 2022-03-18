@@ -7,7 +7,7 @@ package testutils
 import (
 	"bufio"
 	"fmt"
-	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
 	"io"
 	"os"

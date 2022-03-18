@@ -2,8 +2,8 @@
 package node
 
 import (
-	"github.com/Qitmeer/qng-core/config"
-	"github.com/Qitmeer/qng-core/database"
+	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/node/service"
 )
 

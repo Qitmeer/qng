@@ -6,10 +6,10 @@ package common
 
 import (
 	"encoding/hex"
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/core/blockchain/opreturn"
-	qtypes "github.com/Qitmeer/qng-core/core/types"
-	"github.com/Qitmeer/qng-core/crypto/ecc"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/blockchain/opreturn"
+	qtypes "github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"

@@ -2,7 +2,7 @@
 package blockchain
 
 import (
-	"github.com/Qitmeer/qng-core/common/roughtime"
+	"github.com/Qitmeer/qng/common/roughtime"
 	"time"
 )
 

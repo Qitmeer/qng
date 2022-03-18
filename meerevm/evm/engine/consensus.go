@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"time"
 
-	qtypes "github.com/Qitmeer/qng-core/core/types"
+	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"

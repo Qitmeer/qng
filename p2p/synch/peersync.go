@@ -7,9 +7,9 @@ package synch
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng-core/meerdag"
-	"github.com/Qitmeer/qng-core/core/protocol"
-	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/libp2p/go-libp2p-core/peer"

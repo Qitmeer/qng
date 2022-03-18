@@ -7,9 +7,9 @@ package chain
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/Qitmeer/meerevm/evm/engine"
-	"github.com/Qitmeer/qng-core/core/protocol"
-	qparams "github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/meerevm/evm/engine"
+	"github.com/Qitmeer/qng/core/protocol"
+	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/external"
 	"github.com/ethereum/go-ethereum/accounts/keystore"

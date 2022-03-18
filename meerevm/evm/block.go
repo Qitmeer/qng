@@ -6,8 +6,8 @@ package evm
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/consensus"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"time"

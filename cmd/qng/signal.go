@@ -7,7 +7,7 @@
 package main
 
 import (
-	"github.com/Qitmeer/qng-core/log"
+	"github.com/Qitmeer/qng/log"
 	"os"
 	"os/signal"
 	"syscall"

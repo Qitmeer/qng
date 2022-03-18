@@ -4,8 +4,8 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/Qitmeer/meerevm/chain"
-	"github.com/Qitmeer/qng-core/config"
+	"github.com/Qitmeer/qng/meerevm/chain"
+	"github.com/Qitmeer/qng/config"
 	"io/ioutil"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"

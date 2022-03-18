@@ -1,8 +1,8 @@
 package blockchain
 
 import (
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/meerdag"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/meerdag"
 )
 
 // BlockLocator is used to help locate a specific block.  The algorithm for

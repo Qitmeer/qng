@@ -2,9 +2,9 @@ package index
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/core/types"
-	"github.com/Qitmeer/qng-core/database"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/database"
 )
 
 var (

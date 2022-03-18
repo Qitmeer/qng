@@ -8,11 +8,11 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/meerdag"
-	"github.com/Qitmeer/qng-core/core/types"
-	"github.com/Qitmeer/qng-core/engine/txscript"
-	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/params"
 	"time"
 )
 
