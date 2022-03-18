@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/params"
@@ -249,10 +248,16 @@ func (b *MeerChain) fillBlock(qtxs []qconsensus.Tx, header *types.Header, stated
 func (b *MeerChain) addTx(tx *types.Transaction, header *types.Header, statedb *state.StateDB, txs *[]*types.Transaction, receipts *[]*types.Receipt, gasPool *core.GasPool) error {
 	config := b.chain.Config().Eth.Genesis.Config
 	statedb.Prepare(tx.Hash(), len(*txs))
-	receipt, err := core.ApplyTransaction(config, nil, &header.Coinbase, gasPool, statedb, header, tx, &header.GasUsed, vm.Config{})
+
+	bc:=b.chain.Ether().BlockChain()
+	snap := statedb.Snapshot()
+
+	receipt, err := core.ApplyTransaction(config, bc, &header.Coinbase, gasPool, statedb, header, tx, &header.GasUsed, *bc.GetVMConfig())
 	if err != nil {
-		return err
+		statedb.RevertToSnapshot(snap)
+		return  err
 	}
+
 	*txs = append(*txs, tx)
 	*receipts = append(*receipts, receipt)
 
