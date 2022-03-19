@@ -13,8 +13,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Qitmeer/qng-core/common/mclock"
-	"github.com/Qitmeer/qng-core/crypto"
+	"github.com/Qitmeer/qng/common/mclock"
+	"github.com/Qitmeer/qng/crypto"
 	"github.com/Qitmeer/qng/p2p/qnode"
 	"github.com/davecgh/go-spew/spew"
 )

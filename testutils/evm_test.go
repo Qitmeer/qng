@@ -6,8 +6,8 @@ package testutils
 
 import (
 	"context"
-	"github.com/Qitmeer/qng-core/core/types"
-	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/token"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"

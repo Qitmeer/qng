@@ -3,12 +3,12 @@ package qx
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/meerevm/common"
-	"github.com/Qitmeer/qng-core/common/encode/base58"
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/core/address"
-	"github.com/Qitmeer/qng-core/crypto/ecc"
-	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/meerevm/common"
+	"github.com/Qitmeer/qng/common/encode/base58"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/crypto/ecc"
+	"github.com/Qitmeer/qng/params"
 )
 
 func EcPubKeyToAddress(version string, pubkey string) (string, error) {

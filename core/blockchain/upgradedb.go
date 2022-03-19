@@ -2,9 +2,9 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/roughtime"
-	"github.com/Qitmeer/qng-core/core/serialization"
-	"github.com/Qitmeer/qng-core/database"
+	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/core/serialization"
+	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 )
 

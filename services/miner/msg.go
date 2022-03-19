@@ -1,9 +1,9 @@
 package miner
 
 import (
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/core/json"
-	"github.com/Qitmeer/qng-core/core/types/pow"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/core/types/pow"
 )
 
 type StartCPUMiningMsg struct {

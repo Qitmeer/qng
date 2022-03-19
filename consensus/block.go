@@ -6,8 +6,8 @@ package consensus
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/consensus"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"time"
 )
 

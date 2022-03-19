@@ -4,8 +4,8 @@
 package testutils
 
 import (
-	"github.com/Qitmeer/qng-core/common/util/hexutil"
-	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/common/util/hexutil"
+	"github.com/Qitmeer/qng/params"
 	"testing"
 )
 

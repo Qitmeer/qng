@@ -5,7 +5,7 @@
 package blkmgr
 
 import (
-	"github.com/Qitmeer/qng-core/consensus"
+	"github.com/Qitmeer/qng/vm/consensus"
 )
 
 type TxManager interface {

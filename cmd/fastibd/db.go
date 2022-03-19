@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/Qitmeer/qng-core/database"
-	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/params"
 	"os"
 	"path/filepath"
 )

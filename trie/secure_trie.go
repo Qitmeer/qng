@@ -10,9 +10,9 @@ package trie
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/common/util"
-	"github.com/Qitmeer/qng-core/log"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/log"
 )
 
 // SecureTrie wraps a trie with key hashing. In a secure trie, all

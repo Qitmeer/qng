@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/encode/base58"
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/common/hash/btc"
-	"github.com/Qitmeer/qng-core/core/serialization"
-	"github.com/Qitmeer/qng-core/crypto/ecc"
-	"github.com/Qitmeer/qng-core/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/common/encode/base58"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/common/hash/btc"
+	"github.com/Qitmeer/qng/core/serialization"
+	"github.com/Qitmeer/qng/crypto/ecc"
+	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
 	"reflect"
 )
 

@@ -2,9 +2,9 @@ package common
 
 import (
 	"context"
-	"github.com/Qitmeer/qng-core/common/hash"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng-core/consensus"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/Qitmeer/qng/p2p/encoder"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnode"

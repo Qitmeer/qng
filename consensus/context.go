@@ -2,8 +2,8 @@ package consensus
 
 import (
 	"context"
-	"github.com/Qitmeer/qng-core/config"
-	"github.com/Qitmeer/qng-core/consensus"
+	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/vm/consensus"
 )
 
 type Context struct {

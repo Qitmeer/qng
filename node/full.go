@@ -3,10 +3,10 @@ package node
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/consensus"
-	"github.com/Qitmeer/qng-core/database"
-	"github.com/Qitmeer/qng-core/engine/txscript"
-	"github.com/Qitmeer/qng-core/rpc/api"
+	"github.com/Qitmeer/qng/vm/consensus"
+	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng/node/service"

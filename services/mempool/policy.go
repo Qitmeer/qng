@@ -7,8 +7,8 @@
 package mempool
 
 import (
-	"github.com/Qitmeer/qng-core/core/types"
-	"github.com/Qitmeer/qng-core/engine/txscript"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/engine/txscript"
 )
 
 const (

@@ -2,11 +2,11 @@ package lib
 
 import (
 	"bytes"
-	"github.com/Qitmeer/qng-core/core/json"
-	s "github.com/Qitmeer/qng-core/core/serialization"
-	"github.com/Qitmeer/qng-core/core/types"
-	"github.com/Qitmeer/qng-core/core/types/pow"
-	"github.com/Qitmeer/qng-core/common/hash"
+	"github.com/Qitmeer/qng/core/json"
+	s "github.com/Qitmeer/qng/core/serialization"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/common/hash"
 	"io"
 	"sync"
 )

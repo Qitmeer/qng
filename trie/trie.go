@@ -12,9 +12,9 @@ package trie
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/log"
-	"github.com/Qitmeer/qng-core/metrics"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/metrics"
 )
 
 var (
