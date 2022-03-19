@@ -12,6 +12,7 @@ require (
 	github.com/dchest/blake256 v1.1.0
 	github.com/deckarep/golang-set v1.7.1
 	github.com/dgraph-io/ristretto v0.0.2
+	github.com/docker/docker v20.10.13+incompatible // indirect
 	github.com/ethereum/go-ethereum v1.10.9
 	github.com/ferranbt/fastssz v0.0.0-20200514094935-99fccaf93472
 	github.com/go-stack/stack v1.8.1
@@ -19,6 +20,7 @@ require (
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.4
+	github.com/graph-gophers/graphql-go v1.3.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/ipfs/go-ds-leveldb v0.4.2
 	github.com/ipfs/go-ipfs-addr v0.0.1
@@ -59,6 +61,7 @@ require (
 	gopkg.in/urfave/cli.v1 v1.20.0
 	// indirect
 	gopkg.in/yaml.v2 v2.4.0
+	gotest.tools/v3 v3.1.0 // indirect
 )
 
 replace (
