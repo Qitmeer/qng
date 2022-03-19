@@ -2,10 +2,10 @@ package token
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/hash"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng-core/core/serialization"
-	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng/core/serialization"
+	"github.com/Qitmeer/qng/core/types"
 )
 
 // balanceUpdate specifies the type and update record of the values that change a token

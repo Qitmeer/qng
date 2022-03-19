@@ -3,12 +3,12 @@ package qx
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/encode/base58"
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/crypto/bip32"
-	"github.com/Qitmeer/qng-core/crypto/bip39"
-	"github.com/Qitmeer/qng-core/crypto/ecc"
-	"github.com/Qitmeer/qng-core/crypto/seed"
+	"github.com/Qitmeer/qng/common/encode/base58"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/crypto/bip32"
+	"github.com/Qitmeer/qng/crypto/bip39"
+	"github.com/Qitmeer/qng/crypto/ecc"
+	"github.com/Qitmeer/qng/crypto/seed"
 	"github.com/Qitmeer/qng/wallet"
 	"strconv"
 )

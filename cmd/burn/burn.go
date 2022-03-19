@@ -6,9 +6,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/params"
 	ver "github.com/Qitmeer/qng/version"
-	"github.com/Qitmeer/qng-core/common/encode/base58"
+	"github.com/Qitmeer/qng/common/encode/base58"
 	"math/rand"
 	"os"
 	"strings"

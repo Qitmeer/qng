@@ -11,9 +11,9 @@ package trie
 import (
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng-core/database/statedb"
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/common/prque"
+	"github.com/Qitmeer/qng/database/statedb"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/common/prque"
 )
 
 // ErrNotRequested is returned by the trie sync when it's requested to process a

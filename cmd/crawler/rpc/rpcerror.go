@@ -2,7 +2,7 @@ package rpc
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/hash"
+	"github.com/Qitmeer/qng/common/hash"
 )
 
 // RpcNoTxInfoError is a convenience function for returning a nicely formatted

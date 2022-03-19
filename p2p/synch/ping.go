@@ -8,7 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/roughtime"
+	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/peers"
 	libp2pcore "github.com/libp2p/go-libp2p-core"

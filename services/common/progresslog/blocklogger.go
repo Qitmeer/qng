@@ -8,10 +8,10 @@ package progresslog
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/roughtime"
-	"github.com/Qitmeer/qng-core/meerdag"
-	"github.com/Qitmeer/qng-core/core/types"
-	"github.com/Qitmeer/qng-core/log"
+	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/log"
 	"sync"
 	"time"
 )

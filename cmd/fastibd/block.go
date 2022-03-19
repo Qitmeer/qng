@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng/core/types"
 	"io"
 )
 

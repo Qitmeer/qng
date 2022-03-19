@@ -24,7 +24,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/encode/rlp"
+	"github.com/Qitmeer/qng/common/encode/rlp"
 	"io"
 	"io/ioutil"
 	"os"

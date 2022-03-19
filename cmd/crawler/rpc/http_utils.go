@@ -5,7 +5,7 @@ package rpc
 import (
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng/core/types"
 	"mime"
 	"net/http"
 )

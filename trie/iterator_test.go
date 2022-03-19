@@ -11,9 +11,9 @@ package trie
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng-core/common/hash"
-	"github.com/Qitmeer/qng-core/common/util"
-	"github.com/Qitmeer/qng-core/database/statedb"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/database/statedb"
 	"math/rand"
 	"testing"
 )

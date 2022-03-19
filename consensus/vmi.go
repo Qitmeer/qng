@@ -1,8 +1,8 @@
 package consensus
 
 import (
-	"github.com/Qitmeer/qng-core/consensus"
-	"github.com/Qitmeer/qng-core/core/types"
+	"github.com/Qitmeer/qng/vm/consensus"
+	"github.com/Qitmeer/qng/core/types"
 )
 
 type VMI interface {

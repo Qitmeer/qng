@@ -4,8 +4,8 @@ package vm
 
 import (
 	"encoding/json"
-	qjson "github.com/Qitmeer/qng-core/core/json"
-	"github.com/Qitmeer/qng-core/rpc/api"
+	qjson "github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 )
 

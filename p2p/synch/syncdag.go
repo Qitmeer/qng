@@ -8,7 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng-core/meerdag"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"

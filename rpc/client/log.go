@@ -5,7 +5,7 @@
 package client
 
 import (
-	l "github.com/Qitmeer/qng-core/log"
+	l "github.com/Qitmeer/qng/log"
 )
 
 // log is a logger that is initialized with no output filters.  This

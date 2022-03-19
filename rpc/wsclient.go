@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng-core/core/serialization"
+	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/rpc/websocket"
 	"io"

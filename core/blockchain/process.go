@@ -7,8 +7,8 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng-core/core/types"
-	"github.com/Qitmeer/qng-core/core/types/pow"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/core/types/pow"
 	"time"
 )
 

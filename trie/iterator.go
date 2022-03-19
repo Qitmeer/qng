@@ -12,8 +12,8 @@ import (
 	"bytes"
 	"container/heap"
 	"errors"
-	"github.com/Qitmeer/qng-core/common/encode/rlp"
-	"github.com/Qitmeer/qng-core/common/hash"
+	"github.com/Qitmeer/qng/common/encode/rlp"
+	"github.com/Qitmeer/qng/common/hash"
 )
 
 // Iterator is a key-value trie iterator that traverses a Trie.

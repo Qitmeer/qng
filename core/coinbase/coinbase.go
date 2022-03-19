@@ -1,7 +1,7 @@
 package coinbase
 
 import (
-	"github.com/Qitmeer/qng-core/params"
+	"github.com/Qitmeer/qng/params"
 	"strings"
 )
 
