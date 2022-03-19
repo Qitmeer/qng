@@ -177,21 +177,60 @@ func TestCallErc20Contract(t *testing.T) {
 		t.Fatal(err)
 	}
 	toAmount := int64(100)
-	tx, err := tokenCall.Transfer(authCaller, h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
-	if err != nil {
-		t.Fatal(err)
+	for i := 0; i < 100; i++ {
+		_, _ = h.Wallet.NewAddress()
+		to := h.Wallet.ethAddrs[uint32(i+1)]
+		// send 0.01 meer
+		txid, err := h.Wallet.CreateLegacyTx(h.Wallet.privkeys[0], &to, 0, 21000, big.NewInt(1e16), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		log.Println(i, "transfer meer:", txid)
+		tx, err := tokenCall.Transfer(authCaller, h.Wallet.ethAddrs[uint32(i+1)], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		log.Println(i, "transfer tx:", tx.Hash().String())
 	}
-	log.Println("transfer tx:", tx.Hash().String())
+
 	GenerateBlock(t, h, 1)
 	ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[0])
 	if err != nil {
 		t.Fatal(err)
 	}
-	allAmount -= toAmount
+	allAmount -= toAmount * 100
 	assert.Equal(t, ba, big.NewInt(allAmount).Mul(big.NewInt(allAmount), big.NewInt(1e18)))
-	ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[1])
-	if err != nil {
-		t.Fatal(err)
+	for i := 1; i < 101; i++ {
+		meerBa, err := h.EVMClient.BalanceAt(context.Background(), h.Wallet.ethAddrs[uint32(i)], nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		assert.Equal(t, meerBa, big.NewInt(1e16))
+		ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[uint32(i)])
+		if err != nil {
+			t.Fatal(err)
+		}
+		log.Println(i, "address", h.Wallet.ethAddrs[uint32(i)].String(), "balance", ba)
+		assert.Equal(t, ba, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+		_, _ = h.Wallet.NewAddress()
+		authCaller, err := h.Wallet.AuthTrans(h.Wallet.privkeys[uint32(i)])
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx, err := tokenCall.Transfer(authCaller, h.Wallet.ethAddrs[uint32(i+100)], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		log.Println(i, "transfer tx:", tx.Hash().String())
 	}
-	assert.Equal(t, ba, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+	GenerateBlock(t, h, 1)
+	for i := 101; i < 201; i++ {
+		ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[uint32(i)])
+		if err != nil {
+			t.Fatal(err)
+		}
+		log.Println(i, "address", h.Wallet.ethAddrs[uint32(i)].String(), "balance", ba)
+		assert.Equal(t, ba, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+	}
+
 }
