@@ -83,8 +83,8 @@ func TestCallErc20Contract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	toAmount := int64(100)
-	for i := 0; i < 100; i++ {
+	toAmount := int64(2)
+	for i := 0; i < 2; i++ {
 		_, _ = h.Wallet.NewAddress()
 		to := h.Wallet.ethAddrs[uint32(i+1)]
 		// send 0.01 meer
@@ -105,9 +105,9 @@ func TestCallErc20Contract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	allAmount -= toAmount * 100
+	allAmount -= toAmount * 2
 	assert.Equal(t, ba, big.NewInt(allAmount).Mul(big.NewInt(allAmount), big.NewInt(1e18)))
-	for i := 1; i < 101; i++ {
+	for i := 1; i < 3; i++ {
 		meerBa, err := h.EVMClient.BalanceAt(context.Background(), h.Wallet.ethAddrs[uint32(i)], nil)
 		if err != nil {
 			log.Fatal(err)
@@ -124,14 +124,14 @@ func TestCallErc20Contract(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx, err := tokenCall.Transfer(authCaller, h.Wallet.ethAddrs[uint32(i+100)], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+		tx, err := tokenCall.Transfer(authCaller, h.Wallet.ethAddrs[uint32(i+2)], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 		if err != nil {
 			t.Fatal(err)
 		}
 		log.Println(i, "transfer tx:", tx.Hash().String())
 	}
 	GenerateBlock(t, h, 1)
-	for i := 101; i < 201; i++ {
+	for i := 3; i < 5; i++ {
 		ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[uint32(i)])
 		if err != nil {
 			t.Fatal(err)
