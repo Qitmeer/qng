@@ -7,10 +7,10 @@ package chain
 import (
 	"encoding/hex"
 	"fmt"
-	qcommon "github.com/Qitmeer/qng/meerevm/common"
-	qconsensus "github.com/Qitmeer/qng/vm/consensus"
 	qtypes "github.com/Qitmeer/qng/core/types"
+	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/rpc/api"
+	qconsensus "github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
@@ -249,13 +249,13 @@ func (b *MeerChain) addTx(tx *types.Transaction, header *types.Header, statedb *
 	config := b.chain.Config().Eth.Genesis.Config
 	statedb.Prepare(tx.Hash(), len(*txs))
 
-	bc:=b.chain.Ether().BlockChain()
+	bc := b.chain.Ether().BlockChain()
 	snap := statedb.Snapshot()
 
 	receipt, err := core.ApplyTransaction(config, bc, &header.Coinbase, gasPool, statedb, header, tx, &header.GasUsed, *bc.GetVMConfig())
 	if err != nil {
 		statedb.RevertToSnapshot(snap)
-		return  err
+		return err
 	}
 
 	*txs = append(*txs, tx)
@@ -282,11 +282,11 @@ func (b *MeerChain) RegisterAPIs(apis []api.API) {
 }
 
 func (b *MeerChain) Start() {
-	b.meerpool.start()
+	b.meerpool.Start(b.chain.config.Eth.Miner.Etherbase)
 }
 
 func (b *MeerChain) Stop() {
-	b.meerpool.stop()
+	b.meerpool.Stop()
 }
 
 func (b *MeerChain) MeerPool() *MeerPool {
@@ -296,8 +296,9 @@ func (b *MeerChain) MeerPool() *MeerPool {
 func NewMeerChain(chain *ETHChain, ctx qconsensus.Context) *MeerChain {
 	mc := &MeerChain{
 		chain:    chain,
-		meerpool: newMeerPool(&chain.config.Eth.Miner, chain.config.Eth.Genesis.Config, chain.ether.Engine(), chain.ether, chain.ether.EventMux(), ctx),
+		meerpool: chain.config.Eth.Miner.External.(*MeerPool),
 	}
+	mc.meerpool.init(&chain.config.Eth.Miner, chain.config.Eth.Genesis.Config, chain.ether.Engine(), chain.ether, chain.ether.EventMux(), ctx)
 	return mc
 }
 
@@ -311,7 +312,7 @@ func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
 		Difficulty: common.Big1,
-		GasLimit:   core.CalcGasLimit(parent.GasLimit(), cfg.Miner.GasCeil),
+		GasLimit:   0x7fffffffffffffff,
 		Number:     new(big.Int).Add(parent.Number(), common.Big1),
 		Time:       uint64(timestamp),
 	}

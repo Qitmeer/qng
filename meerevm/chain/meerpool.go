@@ -12,11 +12,12 @@ import (
 	"github.com/ethereum/go-ethereum/miner"
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	qconsensus "github.com/Qitmeer/qng/vm/consensus"
-	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -54,8 +55,9 @@ type environment struct {
 }
 
 type MeerPool struct {
-	wg   sync.WaitGroup
-	quit chan struct{}
+	wg      sync.WaitGroup
+	quit    chan struct{}
+	running int32
 
 	ctx qconsensus.Context
 
@@ -79,41 +81,62 @@ type MeerPool struct {
 
 	mu sync.RWMutex // The lock used to protect the coinbase and extra fields
 
-	snapshotMu    sync.RWMutex // The lock used to protect the snapshots below
-	snapshotBlock *types.Block
+	snapshotMu       sync.RWMutex // The lock used to protect the snapshots below
+	snapshotBlock    *types.Block
+	snapshotReceipts types.Receipts
+	snapshotState    *state.StateDB
+
+	// Feeds
+	pendingLogsFeed event.Feed
 }
 
-func newMeerPool(config *miner.Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux, ctx qconsensus.Context) *MeerPool {
+func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux, ctx qconsensus.Context) error {
 	log.Info(fmt.Sprintf("Meer pool init..."))
 
-	mp := &MeerPool{
-		ctx:         ctx,
-		config:      config,
-		chainConfig: chainConfig,
-		engine:      engine,
-		eth:         eth,
-		mux:         mux,
-		chain:       eth.BlockChain(),
-		txsCh:       make(chan core.NewTxsEvent, txChanSize),
-		chainHeadCh: make(chan core.ChainHeadEvent, chainHeadChanSize),
-		quit:        make(chan struct{}),
-		remoteTxsQM: map[string]*qtypes.Transaction{},
-		remoteTxsM:  map[string]*qtypes.Transaction{},
-	}
-	mp.txsSub = eth.TxPool().SubscribeNewTxsEvent(mp.txsCh)
-	mp.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(mp.chainHeadCh)
+	m.ctx = ctx
+	m.config = config
+	m.chainConfig = chainConfig
+	m.engine = engine
+	m.eth = eth
+	m.mux = mux
+	m.chain = eth.BlockChain()
+	m.txsCh = make(chan core.NewTxsEvent, txChanSize)
+	m.chainHeadCh = make(chan core.ChainHeadEvent, chainHeadChanSize)
+	m.quit = make(chan struct{})
+	m.remoteTxsQM = map[string]*qtypes.Transaction{}
+	m.remoteTxsM = map[string]*qtypes.Transaction{}
+	m.txsSub = eth.TxPool().SubscribeNewTxsEvent(m.txsCh)
+	m.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(m.chainHeadCh)
 
-	mp.wg.Add(1)
-	go mp.handler()
-
-	return mp
+	return nil
 }
 
-func (m *MeerPool) start() {
+func (m *MeerPool) Start(coinbase common.Address) {
+	if m.isRunning() {
+		log.Info("Meer pool was started")
+		return
+	}
+
+	atomic.StoreInt32(&m.running, 1)
+
+	m.quit = make(chan struct{})
+	m.wg.Add(1)
+	go m.handler()
+
 	m.updateTemplate(time.Now().Unix())
 }
 
-func (m *MeerPool) stop() {
+func (m *MeerPool) Close() {
+
+}
+
+func (m *MeerPool) Stop() {
+	if !m.isRunning() {
+		log.Info("Meer pool was stopped")
+		return
+	}
+	atomic.StoreInt32(&m.running, 0)
+
 	log.Info(fmt.Sprintf("Meer pool stopping"))
 	if m.current != nil && m.current.state != nil {
 		m.current.state.StopPrefetcher()
@@ -122,6 +145,10 @@ func (m *MeerPool) stop() {
 	m.wg.Wait()
 
 	log.Info(fmt.Sprintf("Meer pool stopped"))
+}
+
+func (m *MeerPool) isRunning() bool {
+	return atomic.LoadInt32(&m.running) == 1
 }
 
 func (m *MeerPool) handler() {
@@ -208,6 +235,9 @@ func (m *MeerPool) updateSnapshot() {
 		m.current.receipts,
 		trie.NewStackTrie(nil),
 	)
+
+	m.snapshotReceipts = qcommon.CopyReceipts(m.current.receipts)
+	m.snapshotState = m.current.state.Copy()
 }
 
 func (m *MeerPool) commitTransaction(tx *types.Transaction, coinbase common.Address) ([]*types.Log, error) {
@@ -234,6 +264,8 @@ func (m *MeerPool) commitTransactions(txs *types.TransactionsByPriceAndNonce, co
 		m.current.gasPool = new(core.GasPool).AddGas(gasLimit)
 	}
 
+	var coalescedLogs []*types.Log
+
 	for {
 		if m.current.gasPool.Gas() < params.TxGas {
 			log.Trace("Not enough gas for further transactions", "have", m.current.gasPool, "want", params.TxGas)
@@ -252,7 +284,7 @@ func (m *MeerPool) commitTransactions(txs *types.TransactionsByPriceAndNonce, co
 		}
 		m.current.state.Prepare(tx.Hash(), m.current.tcount)
 
-		_, err := m.commitTransaction(tx, coinbase)
+		logs, err := m.commitTransaction(tx, coinbase)
 		switch {
 		case errors.Is(err, core.ErrGasLimitReached):
 			log.Trace("Gas limit exceeded for current block", "sender", from)
@@ -267,6 +299,7 @@ func (m *MeerPool) commitTransactions(txs *types.TransactionsByPriceAndNonce, co
 			txs.Pop()
 
 		case errors.Is(err, nil):
+			coalescedLogs = append(coalescedLogs, logs...)
 			m.current.tcount++
 			txs.Shift()
 
@@ -279,7 +312,14 @@ func (m *MeerPool) commitTransactions(txs *types.TransactionsByPriceAndNonce, co
 			txs.Shift()
 		}
 	}
-
+	if len(coalescedLogs) > 0 {
+		cpy := make([]*types.Log, len(coalescedLogs))
+		for i, l := range coalescedLogs {
+			cpy[i] = new(types.Log)
+			*cpy[i] = *l
+		}
+		m.pendingLogsFeed.Send(cpy)
+	}
 	return false
 }
 
@@ -297,7 +337,7 @@ func (m *MeerPool) updateTemplate(timestamp int64) {
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
-		GasLimit:   core.CalcGasLimit(parent.GasLimit(), m.config.GasCeil),
+		GasLimit:   0x7fffffffffffffff,
 		Extra:      m.config.ExtraData,
 		Time:       uint64(timestamp),
 		Coinbase:   m.config.Etherbase,
@@ -510,4 +550,66 @@ func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
 	m.ctx.GetNotify().AddRebroadcastInventory(localTxs)
 
 	return nil
+}
+
+func (m *MeerPool) Mining() bool {
+	log.Debug("Temporarily not supported: Mining")
+	return false
+}
+
+func (m *MeerPool) Hashrate() uint64 {
+	log.Debug("Temporarily not supported: Hashrate")
+	return 0
+}
+
+func (m *MeerPool) SetExtra(extra []byte) error {
+	log.Debug("Temporarily not supported: SetExtra")
+	return nil
+}
+
+func (m *MeerPool) SetRecommitInterval(interval time.Duration) {
+	log.Debug("Temporarily not supported: SetRecommitInterval")
+}
+
+func (m *MeerPool) Pending() (*types.Block, *state.StateDB) {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
+	if m.snapshotState == nil {
+		return nil, nil
+	}
+	return m.snapshotBlock, m.snapshotState.Copy()
+}
+
+func (m *MeerPool) PendingBlock() *types.Block {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
+	return m.snapshotBlock
+}
+
+func (m *MeerPool) PendingBlockAndReceipts() (*types.Block, types.Receipts) {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
+	return m.snapshotBlock, m.snapshotReceipts
+}
+
+func (m *MeerPool) SetEtherbase(addr common.Address) {
+	log.Debug("Temporarily not supported: SetEtherbase")
+}
+
+func (m *MeerPool) SetGasCeil(ceil uint64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.config.GasCeil = ceil
+}
+
+func (m *MeerPool) EnablePreseal() {
+	log.Debug("Temporarily not supported: EnablePreseal")
+}
+
+func (m *MeerPool) DisablePreseal() {
+	log.Debug("Temporarily not supported: DisablePreseal")
+}
+
+func (m *MeerPool) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription {
+	return m.pendingLogsFeed.Subscribe(ch)
 }
