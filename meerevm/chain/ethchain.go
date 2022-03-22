@@ -7,8 +7,8 @@ package chain
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/evm/engine"
 	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/meerevm/evm/engine"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/external"
@@ -441,6 +441,7 @@ func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
 
 	econfig.Miner.Etherbase = etherbase
 	econfig.Miner.ExtraData = []byte{byte(0)}
+	econfig.Miner.External = &MeerPool{}
 
 	econfig.TxPool.NoLocals = true
 
@@ -696,7 +697,7 @@ func InitEnv(env string) {
 		return
 	}
 	if e, err := strconv.Unquote(env); err == nil {
-		env = e;
+		env = e
 	}
 	args := strings.Split(env, " ")
 	if len(args) <= 0 {
