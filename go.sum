@@ -62,8 +62,8 @@ github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a h1:LUGOJG/lF0TlnlYT
 github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:gbGKdXSJn71Mc2xcKJHqC/waPiX0byZae67zarj83m4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a h1:O2Erw/YvYAkIqkc2uvP/WwuWf0V8S0+pjU/FKHmjFU4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:KiA7g46zc6dkgf/3NbEpJirY75v656WYlmSQNR1wTVk=
-github.com/Qitmeer/go-ethereum v1.10.9-q.6 h1:vDjqE5wJi7M9Ddb+BPirGDJ1RToPUOSJlltRPlxDL98=
-github.com/Qitmeer/go-ethereum v1.10.9-q.6/go.mod h1:8bALkv9mq8Bvsw8TEUaxO2TtxAGRxoXebspLZ+CSJ9U=
+github.com/Qitmeer/go-ethereum v1.10.9-q.7 h1:7gAqVxpj7Y3E2BDsXZk16xdjORMeS5+uhWWvmE6qcYU=
+github.com/Qitmeer/go-ethereum v1.10.9-q.7/go.mod h1:8bALkv9mq8Bvsw8TEUaxO2TtxAGRxoXebspLZ+CSJ9U=
 github.com/Shopify/sarama v1.29.1/go.mod h1:mdtqvCSg8JOxk8PmpTNGyo6wzd4BMm4QXSfDnTXmgkE=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 h1:fLjPD/aNc3UIOA6tDi6QXUemppXK3P9BI7mr2hd6gx8=
