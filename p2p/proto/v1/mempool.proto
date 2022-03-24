@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package qitmeer.p2p.v1;
+
+message MemPoolRequest {
+    uint64 txsNum  = 1;
+}
+
+message MemPoolRespond {
+    uint64 txsNum  = 1;
+}

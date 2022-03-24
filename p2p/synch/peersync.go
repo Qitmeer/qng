@@ -7,12 +7,12 @@ package synch
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/Qitmeer/qng/services/notifymgr/notify"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -451,57 +451,53 @@ func (ps *PeerSync) continueSync(orphan bool) {
 	ps.updateSyncPeer(false)
 }
 
-func (ps *PeerSync) RelayInventory(data interface{}, filters []peer.ID) {
-	filtersM := map[peer.ID]struct{}{}
-	if len(filters) > 0 {
-		for _, f := range filters {
-			filtersM[f] = struct{}{}
-		}
-	}
+func (ps *PeerSync) RelayInventory(nds []*notify.NotifyData) {
 	ps.sy.Peers().ForPeers(peers.PeerConnected, func(pe *peers.Peer) {
-		_, ok := filtersM[pe.GetID()]
-		if ok {
-			return
-		}
-		msg := &pb.Inventory{Invs: []*pb.InvVect{}}
 
-		switch value := data.(type) {
-		case *types.TxDesc:
-			if pe.HasBroadcast(value.Tx.Hash().String()) {
-				return
+		invs:=[]*pb.InvVect{}
+
+		for _,nd:=range nds {
+			if nd.IsFilter(pe.GetID()) {
+				continue
 			}
-			// Don't relay the transaction to the peer when it has
-			// transaction relaying disabled.
-			if pe.DisableRelayTx() {
-				return
-			}
-			feeFilter := pe.FeeFilter()
-			if feeFilter > 0 && value.FeePerKB < feeFilter {
-				return
-			}
-			// Don't relay the transaction if there is a bloom
-			// filter loaded and the transaction doesn't match it.
-			filter := pe.Filter()
-			if filter.IsLoaded() {
-				if !filter.MatchTxAndUpdate(value.Tx) {
-					return
+
+			switch value := nd.Data.(type) {
+			case *types.TxDesc:
+				if pe.HasBroadcast(value.Tx.Hash().String()) {
+					continue
 				}
+				// Don't relay the transaction to the peer when it has
+				// transaction relaying disabled.
+				if pe.DisableRelayTx() {
+					continue
+				}
+				feeFilter := pe.FeeFilter()
+				if feeFilter > 0 && value.FeePerKB < feeFilter {
+					continue
+				}
+				// Don't relay the transaction if there is a bloom
+				// filter loaded and the transaction doesn't match it.
+				filter := pe.Filter()
+				if filter.IsLoaded() {
+					if !filter.MatchTxAndUpdate(value.Tx) {
+						continue
+					}
+				}
+				invs = append(invs, NewInvVect(InvTypeTx, value.Tx.Hash()))
+				log.Trace(fmt.Sprintf("Relay inventory tx(%s) to peer(%s)", value.Tx.Hash().String(), pe.GetID().String()))
+				pe.Broadcast(value.Tx.Hash().String(), value)
+
+			case types.BlockHeader:
+				blockHash := value.BlockHash()
+				invs = append(invs, NewInvVect(InvTypeBlock, &blockHash))
+				log.Trace(fmt.Sprintf("Relay inventory block(%s) to peer(%s)", blockHash.String(), pe.GetID().String()))
 			}
-			msg.Invs = append(msg.Invs, NewInvVect(InvTypeTx, value.Tx.Hash()))
-			log.Trace(fmt.Sprintf("Relay inventory tx(%s) to peer(%s)", value.Tx.Hash().String(), pe.GetID().String()))
-			pe.Broadcast(value.Tx.Hash().String(), value)
-
-		case types.BlockHeader:
-			blockHash := value.BlockHash()
-			msg.Invs = append(msg.Invs, NewInvVect(InvTypeBlock, &blockHash))
-			log.Trace(fmt.Sprintf("Relay inventory block(%s) to peer(%s)", blockHash.String(), pe.GetID().String()))
 		}
-
-		if len(msg.Invs) <= 0 {
+		if len(invs) <= 0 {
 			return
 		}
 
-		go ps.sy.sendInventoryRequest(ps.sy.p2p.Context(), pe, msg)
+		ps.sy.tryToSendInventoryRequest(pe,invs)
 	})
 }
 

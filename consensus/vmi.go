@@ -14,4 +14,5 @@ type VMI interface {
 	AddTxToMempool(tx *types.Transaction, local bool) (int64, error)
 	RemoveTxFromMempool(tx *types.Transaction) error
 	GetTxsFromMempool() ([]*types.Transaction, error)
+	GetMempoolSize() int64
 }

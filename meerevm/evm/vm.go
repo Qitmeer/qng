@@ -271,6 +271,10 @@ func (vm *VM) GetTxsFromMempool() ([]*qtypes.Transaction, error) {
 	return vm.mchain.MeerPool().GetTxs()
 }
 
+func (vm *VM) GetMempoolSize() int64 {
+	return vm.mchain.MeerPool().GetSize()
+}
+
 func (vm *VM) RemoveTxFromMempool(tx *qtypes.Transaction) error {
 	return vm.mchain.MeerPool().RemoveTx(tx)
 }

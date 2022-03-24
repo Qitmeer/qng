@@ -412,7 +412,7 @@ func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
 		Ethash:              new(params.EthashConfig),
 	}
 
-	genBalance := big.NewInt(1000000000000000000)
+	genBalance := big.NewInt(9000000000000000000)
 	genAddress := common.HexToAddress("0x71bc4403Af41634Cda7C32600A8024d54e7F6499")
 
 	genesis := &core.Genesis{

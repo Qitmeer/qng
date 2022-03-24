@@ -28,6 +28,8 @@ type ChainVM interface {
 
 	GetTxsFromMempool() ([]*types.Transaction, error)
 
+	GetMempoolSize() int64
+
 	RemoveTxFromMempool(tx *types.Transaction) error
 
 	CheckConnectBlock(block Block) error

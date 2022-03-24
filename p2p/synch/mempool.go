@@ -19,7 +19,7 @@ func (s *Sync) SendMempoolRequest(ctx context.Context, pe *peers.Peer) error {
 	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
 	defer cancel()
 
-	stream, err := s.Send(ctx, &pb.MemPoolRequest{}, RPCMemPool, pe.GetID())
+	stream, err := s.Send(ctx, &pb.MemPoolRequest{TxsNum:uint64(s.p2p.TxMemPool().Count())}, RPCMemPool, pe.GetID())
 	if err != nil {
 		return err
 	}
@@ -50,12 +50,17 @@ func (s *Sync) HandlerMemPool(ctx context.Context, msg interface{}, stream libp2
 	if pe == nil {
 		return ErrPeerUnknown
 	}
-	_, ok := msg.(*pb.MemPoolRequest)
+	mpr, ok := msg.(*pb.MemPoolRequest)
 	if !ok {
 		err = fmt.Errorf("message is not type *MsgFilterLoad")
 		return ErrMessage(err)
 	}
+	curCount:=uint64(s.p2p.TxMemPool().Count())
+	if mpr.TxsNum == curCount || curCount == 0 {
+		return nil
+	}
 	s.peerSync.msgChan <- &OnMsgMemPool{pe: pe, data: &MsgMemPool{}}
+
 	return nil
 }
 
@@ -80,18 +85,17 @@ func (ps *PeerSync) OnMemPool(sp *peers.Peer, msg *MsgMemPool) {
 	// the passed hint to the maximum allowed, so it's safe to pass it
 	// without double checking it here.
 	txDescs := ps.sy.p2p.TxMemPool().TxDescs()
-	invMsg := &pb.Inventory{Invs: []*pb.InvVect{}}
+
+	invs:=[]*pb.InvVect{}
 	for _, txDesc := range txDescs {
 		// Either add all transactions when there is no bloom filter,
 		// or only the transactions that match the filter when there is
 		// one.
 		filter := sp.Filter()
 		if !filter.IsLoaded() || filter.MatchTxAndUpdate(txDesc.Tx) {
-			invMsg.Invs = append(invMsg.Invs, NewInvVect(InvTypeTx, txDesc.Tx.Hash()))
+			invs = append(invs, NewInvVect(InvTypeTx, txDesc.Tx.Hash()))
 		}
 	}
 	// Send the inventory message if there is anything to send.
-	if len(invMsg.Invs) > 0 {
-		go ps.sy.sendInventoryRequest(ps.sy.p2p.Context(), sp, invMsg)
-	}
+	ps.sy.tryToSendInventoryRequest(sp,invs)
 }

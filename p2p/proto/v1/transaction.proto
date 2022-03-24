@@ -3,7 +3,16 @@ syntax = "proto3";
 package qitmeer.p2p.v1;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "message.proto";
+
+message GetTxs {
+  repeated Hash txs =1 [(gogoproto.moretags) = "ssz-max:\"20000\""];
+}
 
 message Transaction {
   bytes txBytes = 1 [(gogoproto.moretags) = "ssz-max:\"1048576\""];
+}
+
+message Transactions {
+  repeated Transaction txs = 1 [(gogoproto.moretags) = "ssz-max:\"20000\""];
 }

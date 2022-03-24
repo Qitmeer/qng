@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/p2p/peers"
 	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/services/notifymgr/notify"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -78,6 +79,8 @@ out:
 			}
 
 		case <-timer.C:
+
+			nds:=[]*notify.NotifyData{}
 			for h, data := range pendingInvs {
 				dh := h
 				if _, ok := data.(*types.TxDesc); ok {
@@ -86,8 +89,11 @@ out:
 						continue
 					}
 				}
+				nds = append(nds,&notify.NotifyData{Data:data})
+			}
 
-				r.s.RelayInventory(data, nil)
+			if len(nds) > 0 {
+				r.s.RelayInventory(nds)
 			}
 
 			rt := int64(len(pendingInvs)/50) * int64(params.ActiveNetParams.TargetTimePerBlock)
@@ -136,21 +142,23 @@ func (r *Rebroadcast) RemoveInventory(h *hash.Hash) {
 }
 
 func (r *Rebroadcast) RegainMempool() {
-	if r.regainMP || r.regainMPLimit <= 0 {
+	if r.regainMP {
 		return
 	}
 	r.regainMP = true
 }
 
 func (r *Rebroadcast) onRegainMempool() {
-	if !r.regainMP || r.regainMPLimit <= 0 {
-		return
+	if !r.regainMP {
+		if r.s.TxMemPool().Count() > 0 {
+			return
+		}
 	}
 	if !r.s.PeerSync().IsCurrent() {
 		return
 	}
-	r.regainMP = false
-	r.regainMPLimit--
+
+	r.regainMP=false
 
 	r.s.sy.Peers().ForPeers(peers.PeerConnected, func(pe *peers.Peer) {
 		r.s.sy.SendMempoolRequest(r.s.Context(), pe)
@@ -162,7 +170,7 @@ func NewRebroadcast(s *Service) *Rebroadcast {
 		s:                    s,
 		quit:                 make(chan struct{}),
 		modifyRebroadcastInv: make(chan interface{}),
-		regainMP:             false,
+		regainMP:             true,
 		regainMPLimit:        1,
 	}
 

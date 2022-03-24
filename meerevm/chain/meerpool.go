@@ -486,6 +486,16 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, error) {
 	return result, nil
 }
 
+func (m *MeerPool) GetSize() int64 {
+	m.snapshotMu.Lock()
+	defer m.snapshotMu.Unlock()
+
+	if m.snapshotBlock != nil {
+		return int64(len(m.snapshotBlock.Transactions()))
+	}
+	return 0
+}
+
 func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
 	if !opreturn.IsMeerEVMTx(tx) {
 		return fmt.Errorf("%s is not %v", tx.TxHash().String(), qtypes.TxTypeCrossChainVM)
