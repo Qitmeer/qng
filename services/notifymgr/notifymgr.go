@@ -15,6 +15,8 @@ import (
 
 const NotifyTickerDur = time.Second
 
+const MaxNotifyProcessTimeout = time.Second*30
+
 // NotifyMgr manage message announce & relay & notification between mempool, websocket, gbt long pull
 // and rpc server.
 type NotifyMgr struct {
@@ -23,12 +25,14 @@ type NotifyMgr struct {
 	Server    *p2p.Service
 	RpcServer *rpc.RpcServer
 
-	nds []*notify.NotifyData
-	wg      sync.WaitGroup
-	quit    chan struct{}
+	nds    []*notify.NotifyData
+	wg     sync.WaitGroup
+	quit   chan struct{}
 	ticker *time.Ticker
 
 	sync.Mutex
+
+	lastProTime time.Time
 }
 
 // AnnounceNewTransactions generates and relays inventory vectors and notifies
@@ -44,10 +48,10 @@ func (ntmgr *NotifyMgr) AnnounceNewTransactions(newTxs []*types.TxDesc, filters 
 	defer ntmgr.Unlock()
 
 	for _, tx := range newTxs {
-		ntmgr.nds = append(ntmgr.nds,&notify.NotifyData{Data: tx,Filters:filters})
+		ntmgr.nds = append(ntmgr.nds, &notify.NotifyData{Data: tx, Filters: filters})
 	}
 
-	ntmgr.ticker.Reset(NotifyTickerDur)
+	ntmgr.Reset()
 }
 
 // RelayInventory relays the passed inventory vector to all connected peers
@@ -56,8 +60,8 @@ func (ntmgr *NotifyMgr) RelayInventory(data interface{}, filters []peer.ID) {
 	ntmgr.Lock()
 	defer ntmgr.Unlock()
 
-	ntmgr.nds = append(ntmgr.nds,&notify.NotifyData{Data: data,Filters:filters})
-	ntmgr.ticker.Reset(NotifyTickerDur)
+	ntmgr.nds = append(ntmgr.nds, &notify.NotifyData{Data: data, Filters: filters})
+	ntmgr.Reset()
 }
 
 func (ntmgr *NotifyMgr) BroadcastMessage(data interface{}) {
@@ -98,7 +102,7 @@ func (ntmgr *NotifyMgr) Stop() error {
 
 	if ntmgr.ticker != nil {
 		ntmgr.ticker.Stop()
-		ntmgr.ticker=nil
+		ntmgr.ticker = nil
 	}
 
 	close(ntmgr.quit)
@@ -131,13 +135,13 @@ func (ntmgr *NotifyMgr) handleStallSample() {
 		return
 	}
 
-	txds:=[]*types.TxDesc{}
+	txds := []*types.TxDesc{}
 	for _, nd := range ntmgr.nds {
 		txd, ok := nd.Data.(*types.TxDesc)
 		if ok {
 			log.Trace(fmt.Sprintf("Announce new transaction :hash=%s height=%d add=%s", txd.Tx.Hash().String(), txd.Height, txd.Added.String()))
 
-			txds = append(txds,txd)
+			txds = append(txds, txd)
 		}
 	}
 	ntmgr.Server.RelayInventory(ntmgr.nds)
@@ -149,14 +153,26 @@ func (ntmgr *NotifyMgr) handleStallSample() {
 	}
 
 	ntmgr.nds = []*notify.NotifyData{}
+	ntmgr.lastProTime = time.Now()
+}
+
+func (ntmgr *NotifyMgr) IsTimeout() bool {
+	return time.Since(ntmgr.lastProTime) >= MaxNotifyProcessTimeout
+}
+
+func (ntmgr *NotifyMgr) Reset() {
+	if !ntmgr.IsTimeout() {
+		ntmgr.ticker.Reset(NotifyTickerDur)
+	}
 }
 
 func New(p2pServer *p2p.Service) *NotifyMgr {
-	ntmgr:=&NotifyMgr{
-		quit:         make(chan struct{}),
-		ticker:time.NewTicker(time.Second),
-		nds:[]*notify.NotifyData{},
-		Server:p2pServer,
+	ntmgr := &NotifyMgr{
+		quit:        make(chan struct{}),
+		ticker:      time.NewTicker(time.Second),
+		nds:         []*notify.NotifyData{},
+		Server:      p2pServer,
+		lastProTime: time.Now(),
 	}
 	return ntmgr
 }
