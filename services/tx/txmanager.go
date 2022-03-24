@@ -52,7 +52,7 @@ func (tm *TxManager) Start() error {
 	if err := tm.Service.Start(); err != nil {
 		return err
 	}
-
+	tm.LoadMempool()
 	return tm.initFeeEstimator()
 }
 
