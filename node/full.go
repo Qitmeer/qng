@@ -143,6 +143,13 @@ func (qm *QitmeerFull) RegisterMinerService() error {
 	return nil
 }
 
+func (qm *QitmeerFull) RegisterNotifyMgr() error {
+	nfManager := notifymgr.New(qm.GetPeerServer())
+	qm.Services().RegisterService(nfManager)
+	qm.nfManager = nfManager
+	return nil
+}
+
 func (qm *QitmeerFull) RegisterAccountService() error {
 	// account manager
 	acctmgr, err := acct.New()
@@ -252,8 +259,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		indexManager = index.NewManager(qm.db, indexes, node.Params)
 	}
 
-	nfManager := &notifymgr.NotifyMgr{Server: qm.GetPeerServer()}
-	qm.nfManager = nfManager
+	qm.RegisterNotifyMgr()
 
 	if err := qm.RegisterBlkMgrService(indexManager); err != nil {
 		return nil, err
@@ -292,8 +298,9 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		qm.GetRpcServer().TxIndex = txIndex
 		qm.GetRpcServer().ChainParams = bm.ChainParams()
 
-		nfManager.RpcServer = qm.GetRpcServer()
+		qm.nfManager.(*notifymgr.NotifyMgr).RpcServer = qm.GetRpcServer()
 	}
 
+	qm.Services().LowestPriority(qm.GetPeerServer())
 	return &qm, nil
 }

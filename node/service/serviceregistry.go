@@ -89,6 +89,28 @@ func (s *ServiceRegistry) RegisterService(service IService) error {
 	return nil
 }
 
+func (s *ServiceRegistry) LowestPriority(service IService) bool {
+	kind := reflect.TypeOf(service)
+	_, exists := s.services[kind]
+	if !exists {
+		return false
+	}
+
+	serviceTypes:=[]reflect.Type{}
+
+	for _, k := range s.serviceTypes {
+		if kind == k {
+			continue
+		}
+		serviceTypes = append(serviceTypes,k)
+	}
+
+	serviceTypes = append(serviceTypes,kind)
+
+	s.serviceTypes = serviceTypes
+	return true
+}
+
 func (s *ServiceRegistry) FetchService(service interface{}) error {
 	if reflect.TypeOf(service).Kind() != reflect.Ptr {
 		return fmt.Errorf("input must be of pointer type, received value type instead: %T", service)
