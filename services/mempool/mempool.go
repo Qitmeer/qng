@@ -1007,6 +1007,42 @@ func (mp *TxPool) FetchTransaction(txHash *hash.Hash) (*types.Tx, error) {
 	return nil, er
 }
 
+func (mp *TxPool) FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error) {
+	// Protect concurrent access.
+	result:=[]*types.Tx{}
+
+	mp.mtx.RLock()
+	for _,txh:=range txHashs {
+		txDesc, exists := mp.pool[*txh]
+		if !exists {
+			continue
+		}
+		result=append(result,txDesc.Tx)
+	}
+	mp.mtx.RUnlock()
+
+
+	er := fmt.Errorf("transaction is not in the pool")
+	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	if err != nil {
+		return nil, er
+	}
+
+	etxsM:=map[string]*types.Transaction{}
+	for i:=0;i<len(etxs);i++ {
+		etxsM[etxs[i].TxHash().String()]=etxs[i]
+	}
+
+	for _,txh:=range txHashs {
+		tx, exists := etxsM[txh.String()]
+		if !exists {
+			continue
+		}
+		result=append(result,types.NewTx(tx))
+	}
+	return result, nil
+}
+
 // HaveAllTransactions returns whether or not all of the passed transaction
 // hashes exist in the mempool.
 //
@@ -1194,10 +1230,8 @@ func (mp *TxPool) Count() int {
 	count := len(mp.pool)
 	mp.mtx.RUnlock()
 
-	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
-	if err == nil {
-		count += len(etxs)
-	}
+	count += int(mp.cfg.BC.VMService.GetMempoolSize())
+
 	return count
 }
 

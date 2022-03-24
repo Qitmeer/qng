@@ -162,7 +162,7 @@ func (s *Sync) registerRPCHandlers() {
 
 	s.registerRPC(
 		RPCTransaction,
-		&pb.Hash{},
+		&pb.GetTxs{},
 		s.txHandler,
 	)
 

@@ -227,6 +227,14 @@ func (s *Service) GetTxsFromMempool() ([]*types.Transaction, error) {
 	return v.GetTxsFromMempool()
 }
 
+func (s *Service) GetMempoolSize() int64 {
+	v, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return 0
+	}
+	return v.GetMempoolSize()
+}
+
 func (s *Service) CheckConnectBlock(block *types.SerializedBlock) error {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {

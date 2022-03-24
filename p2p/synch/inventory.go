@@ -12,6 +12,25 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 )
 
+func (s *Sync) tryToSendInventoryRequest(pe *peers.Peer, invs []*pb.InvVect) error {
+	if len(invs) > 0 {
+		var invMsg *pb.Inventory
+		for i:=0;i<len(invs);i++ {
+			if invMsg == nil {
+				invMsg = &pb.Inventory{Invs: []*pb.InvVect{}}
+			}
+			invMsg.Invs = append(invMsg.Invs,invs[i])
+
+			if len(invMsg.Invs) >= MaxInvPerMsg ||
+				(i == (len(invs)-1) && len(invMsg.Invs) > 0) {
+				go s.sendInventoryRequest(s.p2p.Context(), pe, invMsg)
+				invMsg=nil
+			}
+		}
+	}
+	return nil
+}
+
 func (s *Sync) sendInventoryRequest(ctx context.Context, pe *peers.Peer, inv *pb.Inventory) error {
 	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
 	defer cancel()
@@ -64,6 +83,7 @@ func (s *Sync) inventoryHandler(ctx context.Context, msg interface{}, stream lib
 	if e != nil {
 		return e
 	}
+
 	return nil
 }
 

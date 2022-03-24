@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	pv "github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/services/notifymgr/notify"
 	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p/common"
@@ -447,8 +448,8 @@ func (s *Service) PeerSync() *synch.PeerSync {
 	return s.sy.PeerSync()
 }
 
-func (s *Service) RelayInventory(data interface{}, filters []peer.ID) {
-	s.PeerSync().RelayInventory(data, filters)
+func (s *Service) RelayInventory(nds []*notify.NotifyData) {
+	s.PeerSync().RelayInventory(nds)
 }
 
 func (s *Service) BroadcastMessage(data interface{}) {

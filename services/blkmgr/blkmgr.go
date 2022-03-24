@@ -217,14 +217,16 @@ func (b *BlockManager) handleNotifyMsg(notification *blockchain.Notification) {
 		// no longer an orphan. Transactions which depend on a confirmed
 		// transaction are NOT removed recursively because they are still
 		// valid.
+		txds:=[]*types.TxDesc{}
 		for _, tx := range block.Transactions()[1:] {
 			b.GetTxManager().MemPool().RemoveTransaction(tx, false)
 			b.GetTxManager().MemPool().RemoveDoubleSpends(tx)
 			b.GetTxManager().MemPool().RemoveOrphan(tx.Hash())
 			b.notify.TransactionConfirmed(tx)
 			acceptedTxs := b.GetTxManager().MemPool().ProcessOrphans(tx.Hash())
-			b.notify.AnnounceNewTransactions(acceptedTxs, nil)
+			txds = append(txds,acceptedTxs...)
 		}
+		b.notify.AnnounceNewTransactions(txds, nil)
 
 		/*
 			if r := b.server.rpcServer; r != nil {

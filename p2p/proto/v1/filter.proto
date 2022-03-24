@@ -17,6 +17,3 @@ message FilterLoadRequest {
   uint64 tweak = 3;
   uint64 flags = 4;
 }
-
-message MemPoolRequest {
-}

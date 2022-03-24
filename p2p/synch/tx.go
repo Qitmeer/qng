@@ -18,11 +18,13 @@ import (
 	"sync/atomic"
 )
 
-func (s *Sync) sendTxRequest(ctx context.Context, id peer.ID, txhash *hash.Hash) (*pb.Transaction, error) {
+const TXDATA_SSZ_HEAD_SIZE = 4
+
+func (s *Sync) sendTxRequest(ctx context.Context, id peer.ID, gtxs *pb.GetTxs) (*pb.Transactions, error) {
 	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
 	defer cancel()
 
-	stream, err := s.Send(ctx, &pb.Hash{Hash: txhash.Bytes()}, RPCTransaction, id)
+	stream, err := s.Send(ctx, gtxs, RPCTransaction, id)
 	if err != nil {
 		return nil, err
 	}
@@ -42,11 +44,10 @@ func (s *Sync) sendTxRequest(ctx context.Context, id peer.ID, txhash *hash.Hash)
 		return nil, errors.New(errMsg)
 	}
 
-	msg := &pb.Transaction{}
+	msg := &pb.Transactions{}
 	if err := s.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return nil, err
 	}
-
 	return msg, err
 }
 
@@ -57,57 +58,117 @@ func (s *Sync) txHandler(ctx context.Context, msg interface{}, stream libp2pcore
 		cancel()
 	}()
 
-	m, ok := msg.(*pb.Hash)
+	m, ok := msg.(*pb.GetTxs)
 	if !ok {
 		err = fmt.Errorf("message is not type *pb.Transaction")
 		return ErrMessage(err)
 	}
-	tx, err := s.p2p.TxMemPool().FetchTransaction(changePBHashToHash(m))
+
+	txs, err := s.p2p.TxMemPool().FetchTransactions(changePBHashsToHashs(m.Txs))
 	if err != nil {
-		log.Trace(fmt.Sprintf("Unable to fetch tx %x from transaction pool : %v ", m.Hash, err))
+		log.Trace(fmt.Sprintf("Unable to fetch txs %v from transaction pool : %v ", len(m.Txs), err))
 		return ErrMessage(err)
 	}
 
-	txbytes, err := tx.Tx.Serialize()
-	if err != nil {
-		return ErrMessage(err)
+	pbtxs:=&pb.Transactions{Txs:[]*pb.Transaction{}}
+	for _,tx:=range txs {
+		if len(pbtxs.Txs) >= MaxInvPerMsg {
+			break
+		}
+		txbytes, err := tx.Tx.Serialize()
+		if err != nil {
+			log.Warn(err.Error())
+			continue
+		}
+		pbtx:=&pb.Transaction{TxBytes: txbytes}
+		if uint64(pbtxs.SizeSSZ()+pbtx.SizeSSZ()+TXDATA_SSZ_HEAD_SIZE) >= s.p2p.Encoding().GetMaxChunkSize() {
+			break
+		}
+		pbtxs.Txs=append(pbtxs.Txs,pbtx)
 	}
 
-	pbtx := &pb.Transaction{TxBytes: txbytes}
-	e := s.EncodeResponseMsg(stream, pbtx)
+	e := s.EncodeResponseMsg(stream, pbtxs)
 	if e != nil {
 		return e
 	}
 	return nil
 }
 
-func (s *Sync) handleTxMsg(msg *pb.Transaction, pid peer.ID) error {
+func (s *Sync) handleTxMsg(msg *pb.Transaction, pid peer.ID) (*hash.Hash,error) {
 	tx := changePBTxToTx(msg)
 	if tx == nil {
-		return fmt.Errorf("message is not type *pb.Transaction")
+		return nil,fmt.Errorf("message is not type *pb.Transaction")
 	}
+	txh:=tx.TxHash()
 	// Process the transaction to include validation, insertion in the
 	// memory pool, orphan handling, etc.
 	allowOrphans := s.p2p.Config().MaxOrphanTxs > 0
 	acceptedTxs, err := s.p2p.TxMemPool().ProcessTransaction(types.NewTx(tx), allowOrphans, true, true)
 	if err != nil {
-		return fmt.Errorf("Failed to process transaction %v: %v\n", tx.TxHash().String(), err.Error())
+		return &txh,fmt.Errorf("Failed to process transaction %v: %v\n", tx.TxHash().String(), err.Error())
 	}
 	s.p2p.Notify().AnnounceNewTransactions(acceptedTxs, []peer.ID{pid})
 
-	return nil
+	return &txh,nil
 }
 
-func (ps *PeerSync) processGetTxs(pe *peers.Peer, txs []*hash.Hash) error {
-	for _, txh := range txs {
-		tx, err := ps.sy.sendTxRequest(ps.sy.p2p.Context(), pe.GetID(), txh)
-		if err != nil {
-			return err
+func (ps *PeerSync) processGetTxs(pe *peers.Peer, otxs []*hash.Hash) error {
+	if len(otxs) <= 0 {
+		return nil
+	}
+	txs:=[]*hash.Hash{}
+	for _,txh:=range otxs {
+		if !ps.sy.p2p.TxMemPool().HaveTransaction(txh) {
+			txs=append(txs,txh)
 		}
-		err = ps.sy.handleTxMsg(tx, pe.GetID())
-		if err != nil {
-			return err
+	}
+
+	txsM:=map[string]struct{}{}
+	for i:=0;i<len(txs);i++ {
+		txsM[txs[i].String()]= struct{}{}
+	}
+
+
+	total:=len(txsM)
+	txsM=map[string]struct{}{}
+	var gtxs *pb.GetTxs
+
+	for len(txsM) < total {
+		needSend:=false
+		gtxs = &pb.GetTxs{Txs:[]*pb.Hash{}}
+		for i:=0;i<len(txs);i++ {
+			_,ok:=txsM[txs[i].String()]
+			if ok {
+				continue
+			}
+			gtxs.Txs = append(gtxs.Txs,&pb.Hash{Hash: txs[i].Bytes()})
+
+			if len(gtxs.Txs) >= MaxInvPerMsg {
+				needSend=true
+				break
+			}
 		}
+
+		if !needSend && len(gtxs.Txs) > 0 {
+			needSend=true
+		}
+
+		if needSend {
+			txs, err := ps.sy.sendTxRequest(ps.sy.p2p.Context(), pe.GetID(), gtxs)
+			if err != nil {
+				return err
+			}
+			for _,tx:=range txs.Txs {
+				txh,err := ps.sy.handleTxMsg(tx, pe.GetID())
+				txsM[txh.String()]= struct{}{}
+
+				if err != nil {
+					log.Debug(err.Error())
+					continue
+				}
+			}
+		}
+
 	}
 	return nil
 }
