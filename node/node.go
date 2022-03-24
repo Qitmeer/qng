@@ -79,14 +79,6 @@ func (n *Node) Start() error {
 		return err
 	}
 
-	fn := n.GetQitmeerFull()
-	if fn != nil {
-		txm := fn.GetTxManager()
-		if txm != nil {
-			txm.LoadMempool()
-		}
-	}
-
 	// Finished node start
 	// Server startup time. Used for the uptime command for uptime calculation.
 	n.startupTime = roughtime.Now().Unix()

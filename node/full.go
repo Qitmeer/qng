@@ -301,6 +301,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		qm.nfManager.(*notifymgr.NotifyMgr).RpcServer = qm.GetRpcServer()
 	}
 
+	qm.Services().LowestPriority(qm.GetTxManager())
 	qm.Services().LowestPriority(qm.GetPeerServer())
 	return &qm, nil
 }
