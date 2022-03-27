@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/p2p/peers"
 	"github.com/Qitmeer/qng/params"
@@ -80,7 +81,7 @@ out:
 
 		case <-timer.C:
 
-			nds:=[]*notify.NotifyData{}
+			nds := []*notify.NotifyData{}
 			for h, data := range pendingInvs {
 				dh := h
 				if _, ok := data.(*types.TxDesc); ok {
@@ -89,7 +90,7 @@ out:
 						continue
 					}
 				}
-				nds = append(nds,&notify.NotifyData{Data:data})
+				nds = append(nds, &notify.NotifyData{Data: data})
 			}
 
 			if len(nds) > 0 {
@@ -158,9 +159,12 @@ func (r *Rebroadcast) onRegainMempool() {
 		return
 	}
 
-	r.regainMP=false
+	r.regainMP = false
 
 	r.s.sy.Peers().ForPeers(peers.PeerConnected, func(pe *peers.Peer) {
+		if !protocol.HasServices(pe.Services(), protocol.Full) {
+			return
+		}
 		r.s.sy.SendMempoolRequest(r.s.Context(), pe)
 	})
 }

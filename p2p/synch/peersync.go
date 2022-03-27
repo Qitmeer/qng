@@ -453,10 +453,13 @@ func (ps *PeerSync) continueSync(orphan bool) {
 
 func (ps *PeerSync) RelayInventory(nds []*notify.NotifyData) {
 	ps.sy.Peers().ForPeers(peers.PeerConnected, func(pe *peers.Peer) {
+		if !protocol.HasServices(pe.Services(), protocol.Full) {
+			return
+		}
 
-		invs:=[]*pb.InvVect{}
+		invs := []*pb.InvVect{}
 
-		for _,nd:=range nds {
+		for _, nd := range nds {
 			if nd.IsFilter(pe.GetID()) {
 				continue
 			}
@@ -497,7 +500,7 @@ func (ps *PeerSync) RelayInventory(nds []*notify.NotifyData) {
 			return
 		}
 
-		ps.sy.tryToSendInventoryRequest(pe,invs)
+		ps.sy.tryToSendInventoryRequest(pe, invs)
 	})
 }
 
