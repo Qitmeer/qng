@@ -15,11 +15,11 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 )
 
-func (s *Sync) SendMempoolRequest(ctx context.Context, pe *peers.Peer) error {
+func (s *Sync) SendMempoolRequest(ctx context.Context, pe *peers.Peer,count uint64) error {
 	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
 	defer cancel()
 
-	stream, err := s.Send(ctx, &pb.MemPoolRequest{TxsNum:uint64(s.p2p.TxMemPool().Count())}, RPCMemPool, pe.GetID())
+	stream, err := s.Send(ctx, &pb.MemPoolRequest{TxsNum:count}, RPCMemPool, pe.GetID())
 	if err != nil {
 		return err
 	}
