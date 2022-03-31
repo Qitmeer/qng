@@ -429,6 +429,9 @@ func (m *MeerPool) commit(update bool, start time.Time) error {
 }
 
 func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if local {
 		log.Warn("This function is not supported for the time being: local meer tx")
 		return 0, nil
@@ -459,6 +462,9 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 }
 
 func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.snapshotMu.Lock()
 	defer m.snapshotMu.Unlock()
 
@@ -497,6 +503,9 @@ func (m *MeerPool) GetSize() int64 {
 }
 
 func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if !opreturn.IsMeerEVMTx(tx) {
 		return fmt.Errorf("%s is not %v", tx.TxHash().String(), qtypes.TxTypeCrossChainVM)
 	}
@@ -512,6 +521,9 @@ func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
 }
 
 func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	localTxs := []*qtypes.TxDesc{}
 	blockTxs := map[string]struct{}{}
 
