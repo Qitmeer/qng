@@ -9,10 +9,10 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -307,7 +307,7 @@ func (api *PublicBlockAPI) GetBlockHeader(hash hash.Hash, verbose bool) (interfa
 	blockHeaderReply := json.GetBlockHeaderVerboseResult{
 		Hash:          hash.String(),
 		Confirmations: confirmations,
-		Version:       int32(blockHeader.Version),
+		Version:       int32(blockHeader.Version.GetVersion()),
 		ParentRoot:    blockHeader.ParentRoot.String(),
 		TxRoot:        blockHeader.TxRoot.String(),
 		StateRoot:     blockHeader.StateRoot.String(),
@@ -439,13 +439,13 @@ func (api *PublicBlockAPI) GetCoinbase(h hash.Hash, verbose *bool) (interface{},
 
 // GetCoinbase
 func (api *PublicBlockAPI) GetFees(h hash.Hash) (interface{}, error) {
-	feesMap:=map[string]int64{}
-	fsm:=api.bm.chain.GetFees(&h)
-	for coinId,v:=range fsm {
+	feesMap := map[string]int64{}
+	fsm := api.bm.chain.GetFees(&h)
+	for coinId, v := range fsm {
 		if v <= 0 {
 			continue
 		}
-		feesMap[coinId.Name()]=v
+		feesMap[coinId.Name()] = v
 	}
 	return feesMap, nil
 }

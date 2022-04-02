@@ -6,15 +6,15 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/node/service"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/mempool"
@@ -605,7 +605,7 @@ func NewMiner(cfg *config.Config, policy *mining.Policy,
 }
 
 func IsEqualForMiner(header *types.BlockHeader, other *types.BlockHeader) bool {
-	if header.Version != other.Version ||
+	if header.Version.GetVersion() != other.Version.GetVersion() ||
 		!header.ParentRoot.IsEqual(&other.ParentRoot) ||
 		!header.StateRoot.IsEqual(&other.StateRoot) ||
 		!header.TxRoot.IsEqual(&other.TxRoot) {

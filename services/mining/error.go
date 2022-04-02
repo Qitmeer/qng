@@ -64,6 +64,10 @@ const (
 
 	// ErrFetchTxStore indicates a transaction store failed to fetch.
 	ErrFetchTxStore
+
+	// ErrBlockVersion indicates that there was a problem generating
+	// the version.
+	ErrBlockVersion
 )
 
 // Map of MiningErrorCode values back to their constant names for pretty printing.
@@ -81,6 +85,7 @@ var miningErrorCodeStrings = map[MiningErrorCode]string{
 	ErrCoinbaseLengthOverflow: "ErrCoinbaseLengthOverflow",
 	ErrFraudProofIndex:        "ErrFraudProofIndex",
 	ErrFetchTxStore:           "ErrFetchTxStore",
+	ErrBlockVersion:           "ErrBlockVersion",
 }
 
 // String returns the MiningErrorCode as a human-readable name.

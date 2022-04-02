@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/merkle"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
@@ -12,7 +13,6 @@ import (
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"golang.org/x/net/context"
 )
@@ -479,7 +479,7 @@ mempool:
 	paMerkles := merkle.BuildParentsMerkleTreeStore(parents)
 	var block types.Block
 	block.Header = types.BlockHeader{
-		Version:    blockVersion,
+		Version:    types.SetVersion(blockVersion),
 		ParentRoot: *paMerkles[len(paMerkles)-1],
 		TxRoot:     *merkles[len(merkles)-1],
 		StateRoot:  blockManager.GetChain().CalculateTokenStateRoot(blockTxns, parents),
@@ -487,6 +487,9 @@ mempool:
 		Difficulty: reqCompactDifficulty,
 		Pow:        pow.GetInstance(powType, 0, []byte{}),
 		// Size declared below
+	}
+	if block.Header.Version <= 0 {
+		return nil, miningRuleError(ErrBlockVersion, "version can not bigger than 1024")
 	}
 	for _, pb := range parents {
 		if err := block.AddParent(pb); err != nil {

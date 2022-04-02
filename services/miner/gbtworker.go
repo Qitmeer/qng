@@ -4,12 +4,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/mining"
 	"github.com/Qitmeer/qng/version"
@@ -244,7 +244,7 @@ func (w *GBTWorker) getResult(useCoinbaseValue bool, submitOld *bool) (*json.Get
 		// make([]json.GetBlockTemplateResultTx, 0, 1)
 		Parents:      parents,
 		Transactions: transactions,
-		Version:      template.Block.Header.Version,
+		Version:      template.Block.Header.Version.GetVersion(),
 		LongPollID:   longPollID,
 		//TODO, submitOld
 		SubmitOld: submitOld,

@@ -41,7 +41,7 @@ const MaxBlocksPerMsg = 500
 type BlockHeader struct {
 
 	// block version
-	Version uint32
+	Version Version
 
 	// The merkle root of the previous parent blocks (the dag layer)
 	ParentRoot hash.Hash
