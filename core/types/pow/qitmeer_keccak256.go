@@ -102,7 +102,7 @@ func (this *QitmeerKeccak256) Bytes() PowBytes {
 // pow proof data
 func (this *QitmeerKeccak256) BlockData() PowBytes {
 	l := len(this.Bytes())
-	return PowBytes(this.Bytes()[:l-PROOFDATA_LENGTH])
+	return PowBytes(this.Bytes()[:l-PROOFDATA_LENGTH+EXTRA_DATA_LENGTH])
 }
 
 //not support

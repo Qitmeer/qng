@@ -103,7 +103,7 @@ func (this *Blake2bd) Bytes() PowBytes {
 func (this *Blake2bd) BlockData() PowBytes {
 	bytes := this.Bytes()
 	l := len(bytes)
-	return PowBytes(bytes[:l-PROOFDATA_LENGTH])
+	return PowBytes(bytes[:l-PROOFDATA_LENGTH+EXTRA_DATA_LENGTH])
 }
 
 //solve solution

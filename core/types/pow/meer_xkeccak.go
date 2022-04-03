@@ -12,6 +12,8 @@ import (
 	"math/big"
 )
 
+const OLD_VERSION = 0x20000000
+
 type MeerXKeccakV1 struct {
 	Pow
 }
@@ -37,6 +39,11 @@ func (this *MeerXKeccakV1) Verify(headerData []byte, blockHash hash.Hash, target
 		str := fmt.Sprintf("block target difficulty of %064x is "+
 			"higher than max of %064x", target, this.params.MeerXKeccakV1PowLimit)
 		return errors.New(str)
+	}
+	version := binary.LittleEndian.Uint32(headerData[:4])
+	switch version {
+	case OLD_VERSION:
+		headerData = headerData[:len(headerData)-EXTRA_DATA_LENGTH]
 	}
 	h := hash.HashMeerXKeccakV1(headerData)
 	hashNum := HashToBig(&h)
@@ -102,7 +109,13 @@ func (this *MeerXKeccakV1) Bytes() PowBytes {
 // pow proof data
 func (this *MeerXKeccakV1) BlockData() PowBytes {
 	l := len(this.Bytes())
-	return PowBytes(this.Bytes()[:l-PROOFDATA_LENGTH])
+	b := PowBytes(this.Bytes()[:l-PROOFDATA_LENGTH])
+	switch this.Version {
+	case OLD_VERSION:
+	default:
+		copy(b[STATE_ROOT_START:STATE_ROOT_END], this.ProofData.GetExtraData())
+	}
+	return b
 }
 
 //not support

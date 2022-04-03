@@ -13,8 +13,13 @@ import (
 // the pow length is 178
 const POW_LENGTH = 178
 
+const EXTRA_DATA_LENGTH = 8
+
 // proof data length is 169
 const PROOFDATA_LENGTH = 169
+
+const STATE_ROOT_START = 68
+const STATE_ROOT_END = 100
 
 type PowType byte
 type PowBytes []byte
@@ -62,6 +67,10 @@ func (this *ProofDataType) Bytes() []byte {
 	return this[:]
 }
 
+func (this *ProofDataType) GetExtraData() []byte {
+	return this[:EXTRA_DATA_LENGTH]
+}
+
 type IPow interface {
 	// verify result difficulty
 	Verify(headerData []byte, blockHash hash.Hash, targetDiff uint32) error
@@ -89,6 +98,8 @@ type IPow interface {
 	SetParams(params *PowConfig)
 	//SetHeight
 	SetMainHeight(height MainHeight)
+	//SetVersion
+	SetVersion(version uint32)
 	CheckAvailable() bool
 	CompareDiff(newtarget *big.Int, target *big.Int) bool
 	FindSolver(headerData []byte, blockHash hash.Hash, targetDiffBits uint32) bool
@@ -100,6 +111,7 @@ type Pow struct {
 	ProofData  ProofDataType // 1 edge_bits  168  bytes circle length total 169 bytes
 	params     *PowConfig
 	mainHeight MainHeight
+	Version    uint32
 }
 
 //get pow instance
@@ -143,6 +155,10 @@ func (this *Pow) SetParams(params *PowConfig) {
 
 func (this *Pow) SetMainHeight(mainHeight MainHeight) {
 	this.mainHeight = mainHeight
+}
+
+func (this *Pow) SetVersion(version uint32) {
+	this.Version = version
 }
 
 func (this *Pow) GetPowType() PowType {

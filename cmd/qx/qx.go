@@ -6,6 +6,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -606,6 +607,7 @@ MEER is the 64 bit spend amount in qitmeer.`)
 		case "cuckaroo":
 			instance := &pow.Cuckaroo{}
 			instance.SetMainHeight(pow.MainHeight(mheight))
+			instance.SetVersion(uint32(blockchain.VBTopBits))
 			instance.SetEdgeBits(uint8(edgeBits))
 			instance.SetParams(p.PowConfig)
 			return int(instance.GraphWeight())
@@ -614,12 +616,14 @@ MEER is the 64 bit spend amount in qitmeer.`)
 			instance.SetMainHeight(pow.MainHeight(mheight))
 			instance.SetEdgeBits(uint8(edgeBits))
 			instance.SetParams(p.PowConfig)
+			instance.SetVersion(uint32(blockchain.VBTopBits))
 			return int(instance.GraphWeight())
 		case "cuckatoo":
 			instance := &pow.Cuckaroo{}
 			instance.SetMainHeight(pow.MainHeight(mheight))
 			instance.SetEdgeBits(uint8(edgeBits))
 			instance.SetParams(p.PowConfig)
+			instance.SetVersion(uint32(blockchain.VBTopBits))
 			return int(instance.GraphWeight())
 		}
 		return 0

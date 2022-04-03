@@ -1,6 +1,7 @@
 package pow
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common"
@@ -281,4 +282,21 @@ func TestCalcQitmeerKeccak256NextDiff(t *testing.T) {
 	fmt.Println("\ndiff after adjust:", nextDiffBig.Uint64())
 	//10000 * ( 27 / 30 ) * (30 / 50)
 	assert.Equal(t, uint64(5399), nextDiffBig.Uint64())
+}
+
+func TestUintBytes(t *testing.T) {
+	a := uint32(1234)
+	b := make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, a)
+	fmt.Println(b)
+	b1 := []byte{255, 255, 255, 0}
+	fmt.Println(binary.BigEndian.Uint32(b1))
+}
+
+func TestConvertToBytes(t *testing.T) {
+	smallIndexes := []int{0, 1, 2, 38, 3, 40, 41, 28}
+	b := ConvertSmallIndexesToBytes(smallIndexes)
+	si := ConvertPositionBytesToSmallIndexes(b)
+	fmt.Println(smallIndexes)
+	fmt.Println(si)
 }
