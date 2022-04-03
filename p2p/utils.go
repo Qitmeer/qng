@@ -165,18 +165,22 @@ func metaDataFromConfig(cfg *common.Config) (*pb.MetaData, error) {
 }
 
 // Attempt to dial an address to verify its connectivity
-func verifyConnectivity(addr string, port uint, protocol string) {
-	if addr != "" {
+func verifyConnectivity(addr string, port uint, protocol string) (interface{}, error) {
+	if addr != "" && len(protocol) > 0 {
 		a := fmt.Sprintf("%s:%d", addr, port)
 		conn, err := net.DialTimeout(protocol, a, dialTimeout)
 		if err != nil {
 			log.Warn(fmt.Sprintf("IP address is not accessible:protocol=%s address=%s error=%s", protocol, a, err))
-			return
+			return nil, err
 		}
-		if err := conn.Close(); err != nil {
-			log.Debug(fmt.Sprintf("Could not close connection:protocol=%s address=%s error=%s", protocol, a, err))
+		info := fmt.Sprintf("%s %s OK", conn.RemoteAddr().String(), conn.RemoteAddr().Network())
+		err = conn.Close()
+		if err != nil {
+			log.Warn(fmt.Sprintf("Could not close connection:protocol=%s address=%s error=%s", protocol, a, err))
 		}
+		return info, nil
 	}
+	return nil, fmt.Errorf("input address is error")
 }
 
 func filterBootStrapAddrs(hostID string, addrs []string) []string {

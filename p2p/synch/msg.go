@@ -14,7 +14,7 @@ import (
 )
 
 type pauseMsg struct {
-	unpause <-chan struct{}
+	unpause chan bool
 }
 
 type ConnectedMsg struct {

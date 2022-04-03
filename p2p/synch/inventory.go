@@ -13,18 +13,21 @@ import (
 )
 
 func (s *Sync) tryToSendInventoryRequest(pe *peers.Peer, invs []*pb.InvVect) error {
+	if s.PeerSync().pause {
+		return fmt.Errorf("P2P is pause")
+	}
 	if len(invs) > 0 {
 		var invMsg *pb.Inventory
-		for i:=0;i<len(invs);i++ {
+		for i := 0; i < len(invs); i++ {
 			if invMsg == nil {
 				invMsg = &pb.Inventory{Invs: []*pb.InvVect{}}
 			}
-			invMsg.Invs = append(invMsg.Invs,invs[i])
+			invMsg.Invs = append(invMsg.Invs, invs[i])
 
 			if len(invMsg.Invs) >= MaxInvPerMsg ||
 				(i == (len(invs)-1) && len(invMsg.Invs) > 0) {
 				go s.sendInventoryRequest(s.p2p.Context(), pe, invMsg)
-				invMsg=nil
+				invMsg = nil
 			}
 		}
 	}

@@ -10,8 +10,6 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	pv "github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/services/notifymgr/notify"
-	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/discover"
@@ -24,6 +22,8 @@ import (
 	"github.com/Qitmeer/qng/p2p/synch"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/mempool"
+	"github.com/Qitmeer/qng/services/notifymgr/notify"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
@@ -219,6 +219,28 @@ func (s *Service) connectWithAllPeers(multiAddrs []multiaddr.Multiaddr) {
 			}
 		}(info)
 	}
+}
+
+func (s *Service) ConnectToPeerByAddress(address string) error {
+	mulAddr, err := MultiAddrFromString(address)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+
+	addrInfo, err := peer.AddrInfoFromP2pAddr(mulAddr)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	go func(info peer.AddrInfo) {
+		err := s.connectWithPeer(info, false)
+		if err != nil {
+			log.Error(fmt.Sprintf("Could not connect with peer %s :%v", info.String(), err))
+		}
+	}(*addrInfo)
+
+	return nil
 }
 
 func (s *Service) connectFromPeerStore() {
