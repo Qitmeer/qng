@@ -113,7 +113,10 @@ func (this *MeerXKeccakV1) BlockData() PowBytes {
 	switch this.Version {
 	case OLD_VERSION:
 	default:
-		copy(b[STATE_ROOT_START:STATE_ROOT_END], this.ProofData.GetExtraData())
+		// stateroot => hash(stateroot + extradata) aims to help pool
+		// hash(stateroot + extradata)
+		stateExtraHash := hash.HashB(append(b[STATE_ROOT_START:STATE_ROOT_END], this.ProofData.GetExtraData()...))
+		copy(b[STATE_ROOT_START:STATE_ROOT_END], stateExtraHash)
 	}
 	return b
 }
