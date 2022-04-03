@@ -16,6 +16,11 @@ func (s *Service) APIs() []api.API {
 			Service:   NewPublicP2PAPI(s),
 			Public:    true,
 		},
+		{
+			NameSpace: cmds.P2PNameSpace,
+			Service:   NewPrivateP2PAPI(s),
+			Public:    false,
+		},
 	}
 }
 
@@ -111,7 +116,15 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, network *string) (interface{
 	return infos, nil
 }
 
-func (api *PublicP2PAPI) AddPeer(address string) (interface{}, error) {
+type PrivateP2PAPI struct {
+	s *Service
+}
+
+func NewPrivateP2PAPI(s *Service) *PrivateP2PAPI {
+	return &PrivateP2PAPI{s}
+}
+
+func (api *PrivateP2PAPI) AddPeer(address string) (interface{}, error) {
 	err := api.s.ConnectToPeerByAddress(address)
 	if err != nil {
 		return false, err
@@ -119,7 +132,7 @@ func (api *PublicP2PAPI) AddPeer(address string) (interface{}, error) {
 	return true, nil
 }
 
-func (api *PublicP2PAPI) Ping(addr string, port uint, protocol string) (interface{}, error) {
+func (api *PrivateP2PAPI) Ping(addr string, port uint, protocol string) (interface{}, error) {
 	if len(protocol) <= 0 {
 		protocol = "tcp"
 	}
@@ -129,6 +142,6 @@ func (api *PublicP2PAPI) Ping(addr string, port uint, protocol string) (interfac
 	return verifyConnectivity(addr, port, protocol)
 }
 
-func (api *PublicP2PAPI) Pause() (interface{}, error) {
+func (api *PrivateP2PAPI) Pause() (interface{}, error) {
 	return api.s.PeerSync().Pause(), nil
 }

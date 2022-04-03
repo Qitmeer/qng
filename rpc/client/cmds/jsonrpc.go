@@ -16,6 +16,7 @@ const (
 	TestNameSpace           = "test"
 	LogNameSpace            = "log"
 	NotifyNameSpace         = ""
+	P2PNameSpace            = "p2p"
 )
 
 type RPCErrorCode int

@@ -401,7 +401,7 @@ function get_peer_info(){
 function get_add_peer(){
   local address=$1
 
-  local data='{"jsonrpc":"2.0","method":"addPeer","params":["'$address'"],"id":null}'
+  local data='{"jsonrpc":"2.0","method":"p2p_addPeer","params":["'$address'"],"id":null}'
   get_result "$data"
 }
 
@@ -413,12 +413,12 @@ function ping(){
     pport=0
   fi
 
-  local data='{"jsonrpc":"2.0","method":"ping","params":["'$address'",'$pport',"'$protocol'"],"id":null}'
+  local data='{"jsonrpc":"2.0","method":"p2p_ping","params":["'$address'",'$pport',"'$protocol'"],"id":null}'
   get_result "$data"
 }
 
 function pause() {
-  local data='{"jsonrpc":"2.0","method":"pause","params":[],"id":null}'
+  local data='{"jsonrpc":"2.0","method":"p2p_pause","params":[],"id":null}'
   get_result "$data"
 }
 
