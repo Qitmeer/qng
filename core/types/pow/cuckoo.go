@@ -147,10 +147,6 @@ func (this *Cuckoo) ConvertBytesToUint32Array(data []byte) []uint32 {
 	return nonces
 }
 
-func InIntArray() {
-
-}
-
 //get sip hash
 //first header data 113 bytes hash
 func (this *Cuckoo) GetSipHash(headerData []byte) hash.Hash {

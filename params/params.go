@@ -106,12 +106,6 @@ const (
 
 	// DefinedDeployments is the number of currently defined deployments.
 	DefinedDeployments
-
-	// NOTE: UpgradeVersion must always come last since it is used to
-	// determine how many defined deployments there currently are.
-
-	// UpgradeVersion is the number of currently defined deployments.
-	UpgradeVersion
 )
 
 // Params defines a qitmeer network by its parameters.  These parameters may be

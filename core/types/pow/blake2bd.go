@@ -101,9 +101,13 @@ func (this *Blake2bd) Bytes() PowBytes {
 
 // pow proof data
 func (this *Blake2bd) BlockData() PowBytes {
-	bytes := this.Bytes()
-	l := len(bytes)
-	return PowBytes(bytes[:l-PROOFDATA_LENGTH+EXTRA_DATA_LENGTH])
+	l := len(this.Bytes())
+	b := PowBytes(this.Bytes()[:l-PROOFDATA_LENGTH])
+	// stateroot => hash(stateroot + extradata) aims to help pool
+	// hash(stateroot + extradata)
+	stateExtraHash := hash.HashB(append(b[STATE_ROOT_START:STATE_ROOT_END], this.ProofData.GetExtraData()...))
+	copy(b[STATE_ROOT_START:STATE_ROOT_END], stateExtraHash)
+	return b
 }
 
 //solve solution

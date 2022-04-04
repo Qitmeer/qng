@@ -102,7 +102,12 @@ func (this *QitmeerKeccak256) Bytes() PowBytes {
 // pow proof data
 func (this *QitmeerKeccak256) BlockData() PowBytes {
 	l := len(this.Bytes())
-	return PowBytes(this.Bytes()[:l-PROOFDATA_LENGTH+EXTRA_DATA_LENGTH])
+	b := PowBytes(this.Bytes()[:l-PROOFDATA_LENGTH])
+	// stateroot => hash(stateroot + extradata) aims to help pool
+	// hash(stateroot + extradata)
+	stateExtraHash := hash.HashB(append(b[STATE_ROOT_START:STATE_ROOT_END], this.ProofData.GetExtraData()...))
+	copy(b[STATE_ROOT_START:STATE_ROOT_END], stateExtraHash)
+	return b
 }
 
 //not support

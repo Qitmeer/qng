@@ -290,7 +290,6 @@ func checkProofOfWork(header *types.BlockHeader, powConfig *pow.PowConfig, flags
 	if flags&BFNoPoWCheck != BFNoPoWCheck {
 		header.Pow.SetParams(powConfig)
 		header.Pow.SetMainHeight(pow.MainHeight(mHeight))
-		header.Pow.SetVersion(header.Version)
 		// The block hash must be less than the claimed target.
 		return header.Pow.Verify(header.BlockData(), header.BlockHash(), header.Difficulty)
 	}
