@@ -15,10 +15,6 @@ type Percent map[MainHeight]PercentItem
 type PercentItem map[PowType]PercentValue
 type ForkValue int
 
-const (
-	FORK_EXPAND_HEADER_EXTRA = ForkValue(1)
-)
-
 type PowConfig struct {
 	// PowLimit defines the highest allowed proof of work value for a block
 	// as a uint256.
@@ -54,8 +50,6 @@ type PowConfig struct {
 
 	//is init
 	init bool
-
-	Forks map[MainHeight]ForkValue
 }
 
 //global cache
@@ -65,7 +59,6 @@ func GetPowConfig() *PowConfig {
 	}
 	PowConfigInstance = &PowConfig{
 		Percent: map[MainHeight]PercentItem{},
-		Forks:   map[MainHeight]ForkValue{},
 	}
 	PowConfigInstance.init = false
 	return PowConfigInstance
@@ -79,26 +72,6 @@ func (this *PowConfig) Set(p *PowConfig) *PowConfig {
 		this.init = true
 	}
 	return this
-}
-
-func (this *PowConfig) GetForkValue(h MainHeight) ForkValue {
-	var keys []MainHeight
-	for k := range this.Forks {
-		keys = append(keys, k)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i] > keys[j] {
-			return false
-		}
-		return true
-	})
-	currentForkValue := ForkValue(0)
-	for _, k := range keys {
-		if h >= k {
-			currentForkValue = this.Forks[k]
-		}
-	}
-	return currentForkValue
 }
 
 // get Percent By height

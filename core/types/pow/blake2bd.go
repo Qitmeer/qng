@@ -100,7 +100,7 @@ func (this *Blake2bd) Bytes() PowBytes {
 }
 
 // pow proof data
-func (this *Blake2bd) BlockData() PowBytes {
+func (this *Blake2bd) BlockData(version uint32) PowBytes {
 	l := len(this.Bytes())
 	b := PowBytes(this.Bytes()[:l-PROOFDATA_LENGTH])
 	// stateroot => hash(stateroot + extradata) aims to help pool

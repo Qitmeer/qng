@@ -109,7 +109,7 @@ func (bh *BlockHeader) BlockData() []byte {
 	// TODO, redefine the protocol version and storage
 	sec := uint32(bh.Timestamp.Unix())
 	_ = s.WriteElements(buf, bh.Version, &bh.ParentRoot, &bh.TxRoot,
-		&bh.StateRoot, bh.Difficulty, sec, bh.Pow.BlockData())
+		&bh.StateRoot, bh.Difficulty, sec, bh.Pow.BlockData(bh.Version))
 	return buf.Bytes()
 }
 

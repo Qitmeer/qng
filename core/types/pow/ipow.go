@@ -21,6 +21,9 @@ const PROOFDATA_LENGTH = 169
 const STATE_ROOT_START = 68
 const STATE_ROOT_END = 100
 
+const BLOCK_VERSION_V1 = 0x20000000
+const BLOCK_VERSION_MASK = 0xe0000000
+
 type PowType byte
 type PowBytes []byte
 
@@ -86,7 +89,7 @@ type IPow interface {
 	//set proof data
 	SetProofData([]byte)
 	Bytes() PowBytes
-	BlockData() PowBytes
+	BlockData(version uint32) PowBytes
 	//if cur_reduce_diff > 0 compare cur_reduce_diff with powLimitBits or minDiff ，the cur_reduce_diff should less than powLimitBits , and should more than min diff
 	//if cur_reduce_diff <=0 return powLimit or min diff
 	GetSafeDiff(cur_reduce_diff uint64) *big.Int

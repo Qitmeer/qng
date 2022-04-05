@@ -176,7 +176,7 @@ func (this *Cuckoo) CompareDiff(newTarget *big.Int, target *big.Int) bool {
 }
 
 // pow proof data
-func (this *Cuckoo) BlockData() PowBytes {
+func (this *Cuckoo) BlockData(version uint32) PowBytes {
 	return this.Bytes()
 }
 

@@ -91,9 +91,6 @@ var PrivNetParams = Params{
 				pow.MEERXKECCAKV1: 30,
 			},
 		},
-		Forks: map[pow.MainHeight]pow.ForkValue{
-			pow.MainHeight(101): pow.FORK_EXPAND_HEADER_EXTRA,
-		},
 		// after this height the big graph will be the main pow graph
 		AdjustmentStartMainHeight: 45 * 1440 * 60 / privTargetTimePerBlock,
 	},
@@ -183,6 +180,11 @@ var PrivNetParams = Params{
 			BitNumber:  1,
 			StartTime:  10,
 			ExpireTime: 20,
+		},
+		UpgradeDeploymentGBT2: {
+			BitNumber:  1,
+			StartTime:  30,
+			ExpireTime: 35,
 		},
 	},
 }

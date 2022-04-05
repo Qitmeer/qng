@@ -100,7 +100,7 @@ func (this *CryptoNight) Bytes() PowBytes {
 }
 
 // pow proof data
-func (this *CryptoNight) BlockData() PowBytes {
+func (this *CryptoNight) BlockData(version uint32) PowBytes {
 	l := len(this.Bytes())
 	return PowBytes(this.Bytes()[:l-PROOFDATA_LENGTH+EXTRA_DATA_LENGTH])
 }

@@ -100,16 +100,21 @@ func (this *MeerXKeccakV1) Bytes() PowBytes {
 }
 
 // pow proof data
-func (this *MeerXKeccakV1) BlockData() PowBytes {
+func (this *MeerXKeccakV1) BlockData(version uint32) PowBytes {
 	l := len(this.Bytes())
 	b := PowBytes(this.Bytes()[:l-PROOFDATA_LENGTH])
-	switch this.params.GetForkValue(this.mainHeight) {
-	case FORK_EXPAND_HEADER_EXTRA:
-		// stateroot => hash(stateroot + extradata) aims to help pool
-		// hash(stateroot + extradata)
-		stateExtraHash := hash.HashB(append(b[STATE_ROOT_START:STATE_ROOT_END], this.ProofData.GetExtraData()...))
-		copy(b[STATE_ROOT_START:STATE_ROOT_END], stateExtraHash)
+	n := version % BLOCK_VERSION_V1
+	// check the old version
+	// old version or vote version is the old version 2^m
+	// calcNextBlockVersion
+	if n == 0 || (n > 0 && (n&(n-1)) == 0) {
+		return b
 	}
+	// when gbt2.0 deployment active , the version will be actived
+	// stateroot => hash(stateroot + extradata) aims to help pool
+	// hash(stateroot + extradata)
+	stateExtraHash := hash.HashB(append(b[STATE_ROOT_START:STATE_ROOT_END], this.ProofData.GetExtraData()...))
+	copy(b[STATE_ROOT_START:STATE_ROOT_END], stateExtraHash)
 	return b
 }
 

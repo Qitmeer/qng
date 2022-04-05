@@ -122,6 +122,16 @@ var MixNetParams = Params{
 			StartTime:  1440,
 			ExpireTime: 14400,
 		},
+		DeploymentMeerEVM: {
+			BitNumber:  1,
+			StartTime:  0,
+			ExpireTime: 5,
+		},
+		UpgradeDeploymentGBT2: {
+			BitNumber:  2,
+			StartTime:  6,
+			ExpireTime: 10,
+		},
 	},
 
 	// Address encoding magics

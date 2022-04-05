@@ -102,7 +102,7 @@ func (this *X16rv3) Bytes() PowBytes {
 }
 
 // pow proof data
-func (this *X16rv3) BlockData() PowBytes {
+func (this *X16rv3) BlockData(version uint32) PowBytes {
 	l := len(this.Bytes())
 	b := PowBytes(this.Bytes()[:l-PROOFDATA_LENGTH])
 	// stateroot => hash(stateroot + extradata) aims to help pool

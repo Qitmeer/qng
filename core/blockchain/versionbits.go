@@ -217,6 +217,14 @@ func (b *BlockChain) calcNextBlockVersion(prevNode meerdag.IBlock) (uint32, erro
 	// that is either in the process of being voted on, or locked in for the
 	// activation at the next threshold window change.
 	expectedVersion := uint32(VBTopBits)
+	active, err := b.isDeploymentActive(params.UpgradeDeploymentGBT2)
+	if err != nil {
+		return 0, err
+	}
+	if active {
+		// 0x20000003
+		expectedVersion += 3
+	}
 	for id := 0; id < len(b.params.Deployments); id++ {
 		deployment := &b.params.Deployments[id]
 		cache := &b.deploymentCaches[id]
@@ -226,9 +234,12 @@ func (b *BlockChain) calcNextBlockVersion(prevNode meerdag.IBlock) (uint32, erro
 			return 0, err
 		}
 		if state == ThresholdStarted || state == ThresholdLockedIn {
+			// 1 2 4
+			// 2^n
 			expectedVersion |= uint32(1) << deployment.BitNumber
 		}
 	}
+
 	return expectedVersion, nil
 }
 

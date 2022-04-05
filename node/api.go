@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/math"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/version"
@@ -100,6 +100,9 @@ func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 
 		case params.DeploymentMeerEVM:
 			forkName = "meerevm"
+
+		case params.UpgradeDeploymentGBT2:
+			forkName = "gbt2.0"
 
 		default:
 			return nil, fmt.Errorf("Unknown deployment %v detected\n", deployment)

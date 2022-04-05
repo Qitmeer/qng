@@ -101,6 +101,12 @@ const (
 	// soft-fork package.
 	DeploymentMeerEVM
 
+	// NOTE: UpgradeDeploymentGBT2 must always come last since it is used to
+	// determine how many defined deployments there currently are.
+
+	// UpgradeDeploymentGBT2 is the number of currently defined deployments.
+	UpgradeDeploymentGBT2
+
 	// NOTE: DefinedDeployments must always come last since it is used to
 	// determine how many defined deployments there currently are.
 
