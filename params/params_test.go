@@ -89,10 +89,3 @@ func checkPrefix(t *testing.T, prefix string, targetString, networkName string, 
 		t.FailNow()
 	}
 }
-
-// checkPrefix checks if targetString starts with the given prefix
-func TestCheckVersion(t *testing.T) {
-	expectedVersion := uint32(0x20000000)
-	expectedVersion |= uint32(1) << uint8(1)
-	fmt.Println(expectedVersion)
-}

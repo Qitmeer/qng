@@ -108,7 +108,7 @@ func (c bitConditionChecker) Condition(node meerdag.IBlock) (bool, error) {
 		return false, nil
 	}
 	conditionMask := uint32(1) << c.bit
-	version := bn.GetHeader().Version
+	version := bn.GetHeader().Version.GetVersion()
 	if version&VBTopMask != VBTopBits {
 		return false, nil
 	}
@@ -198,7 +198,7 @@ func (c deploymentChecker) Condition(node meerdag.IBlock) (bool, error) {
 	}
 
 	conditionMask := uint32(1) << c.deployment.BitNumber
-	version := bn.GetHeader().Version
+	version := bn.GetHeader().Version.GetVersion()
 	return (version&VBTopMask == VBTopBits) && (version&conditionMask != 0),
 		nil
 }
@@ -217,14 +217,6 @@ func (b *BlockChain) calcNextBlockVersion(prevNode meerdag.IBlock) (uint32, erro
 	// that is either in the process of being voted on, or locked in for the
 	// activation at the next threshold window change.
 	expectedVersion := uint32(VBTopBits)
-	active, err := b.isDeploymentActive(params.UpgradeDeploymentGBT2)
-	if err != nil {
-		return 0, err
-	}
-	if active {
-		// 0x20000003
-		expectedVersion += 3
-	}
 	for id := 0; id < len(b.params.Deployments); id++ {
 		deployment := &b.params.Deployments[id]
 		cache := &b.deploymentCaches[id]

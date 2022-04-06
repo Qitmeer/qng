@@ -3,7 +3,6 @@ package blockchain
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
@@ -158,20 +157,4 @@ func createTx() *types.Transaction {
 	copy(tokenChangeScript[1:], p2pkhScript)
 	tx.AddTxOut(&types.TxOutput{Amount: types.Amount{Value: 1 * 1e8, Id: QITID}, PkScript: tokenChangeScript})
 	return tx
-}
-
-func TestVersion(t *testing.T) {
-	// 0x20000003
-	version := uint32(0x20000003)
-	conditionMask := uint32(1) << 0
-	version |= conditionMask
-	n := version % 0x20000003
-	fmt.Println("check n is the 2^m", n > 0 && (n&(n-1)) == 0)
-	fmt.Println(version, conditionMask)
-	fmt.Println(version % VBTopBits)
-	fmt.Printf("\n0x%x\n", version&conditionMask)
-	fmt.Printf("\n0x%x\n", VBTopMask&conditionMask)
-	fmt.Printf("\n0x%x\n", version&VBTopMask)
-	fmt.Println("old version", version&VBTopBits)
-	fmt.Println((version&VBTopMask == 0x20000000) && (version&conditionMask != 0))
 }

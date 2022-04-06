@@ -2,8 +2,10 @@ package mining
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/merkle"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
@@ -12,7 +14,6 @@ import (
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"golang.org/x/net/context"
 )
@@ -84,7 +85,7 @@ import (
 //  the current top blocks to create a new block template.
 // TODO, refactor NewBlockTemplate input dependencies
 
-func NewBlockTemplate(policy *Policy, params *params.Params,
+func NewBlockTemplate(policy *Policy, p *params.Params,
 	sigCache *txscript.SigCache, txSource TxSource, timeSource blockchain.MedianTimeSource,
 	blockManager *blkmgr.BlockManager, payToAddress types.Address, parents []*hash.Hash, powType pow.PowType) (*types.BlockTemplate, error) {
 	subsidyCache := blockManager.GetChain().FetchSubsidyCache()
@@ -128,7 +129,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 		coinbaseScript,
 		bd.GetBlueInfo(mainp),
 		payToAddress,
-		params,
+		p,
 		nil)
 	if err != nil {
 		return nil, err
@@ -276,7 +277,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 
 	fetchUtxo := map[string]struct{}{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), params.TargetTimePerBlock/2)
+	ctx, cancel := context.WithTimeout(context.Background(), p.TargetTimePerBlock/2)
 	defer cancel()
 
 	// Choose which transactions make it into the block.
@@ -285,7 +286,7 @@ mempool:
 		//
 		select {
 		case <-ctx.Done():
-			log.Info(fmt.Sprintf("NewBlockTemplate will timed out(%s), so we will return the result as soon as possible.", (params.TargetTimePerBlock / 2).String()))
+			log.Info(fmt.Sprintf("NewBlockTemplate will timed out(%s), so we will return the result as soon as possible.", (p.TargetTimePerBlock / 2).String()))
 			break mempool
 		default:
 		}
@@ -475,11 +476,14 @@ mempool:
 	if parents == nil {
 		parents = blockManager.GetChain().GetMiningTips(len(blockTxns))
 	}
-
+	active, err := blockManager.GetChain().IsDeploymentActive(params.UpgradeDeploymentGBT2)
+	if err != nil {
+		return nil, miningRuleError(ErrGetDeploymentActive, err.Error())
+	}
 	paMerkles := merkle.BuildParentsMerkleTreeStore(parents)
 	var block types.Block
 	block.Header = types.BlockHeader{
-		Version:    blockVersion,
+		Version:    common.SetVersion(blockVersion, active),
 		ParentRoot: *paMerkles[len(paMerkles)-1],
 		TxRoot:     *merkles[len(merkles)-1],
 		StateRoot:  blockManager.GetChain().CalculateTokenStateRoot(blockTxns, parents),

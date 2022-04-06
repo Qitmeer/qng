@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qng/common"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/json"
 	"math/big"
@@ -103,11 +104,11 @@ func (this *MeerXKeccakV1) Bytes() PowBytes {
 func (this *MeerXKeccakV1) BlockData(version uint32) PowBytes {
 	l := len(this.Bytes())
 	b := PowBytes(this.Bytes()[:l-PROOFDATA_LENGTH])
-	n := version % BLOCK_VERSION_V1
+	ver := common.Version(version)
 	// check the old version
 	// old version or vote version is the old version 2^m
 	// calcNextBlockVersion
-	if n == 0 || (n > 0 && (n&(n-1)) == 0) {
+	if ver.IsOldVersion() {
 		return b
 	}
 	// when gbt2.0 deployment active , the version will be actived

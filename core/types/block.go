@@ -5,6 +5,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"github.com/Qitmeer/qng/common"
 	"github.com/Qitmeer/qng/common/hash"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types/pow"
@@ -41,7 +42,7 @@ const MaxBlocksPerMsg = 500
 type BlockHeader struct {
 
 	// block version
-	Version uint32
+	Version common.Version
 
 	// The merkle root of the previous parent blocks (the dag layer)
 	ParentRoot hash.Hash
@@ -109,7 +110,7 @@ func (bh *BlockHeader) BlockData() []byte {
 	// TODO, redefine the protocol version and storage
 	sec := uint32(bh.Timestamp.Unix())
 	_ = s.WriteElements(buf, bh.Version, &bh.ParentRoot, &bh.TxRoot,
-		&bh.StateRoot, bh.Difficulty, sec, bh.Pow.BlockData(bh.Version))
+		&bh.StateRoot, bh.Difficulty, sec, bh.Pow.BlockData(uint32(bh.Version)))
 	return buf.Bytes()
 }
 
