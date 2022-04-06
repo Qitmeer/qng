@@ -398,6 +398,30 @@ function get_peer_info(){
   get_result "$data"
 }
 
+function get_add_peer(){
+  local address=$1
+
+  local data='{"jsonrpc":"2.0","method":"p2p_addPeer","params":["'$address'"],"id":null}'
+  get_result "$data"
+}
+
+function ping(){
+  local address=$1
+  local pport=$2
+  local protocol=$3
+  if [ "$pport" == "" ]; then
+    pport=0
+  fi
+
+  local data='{"jsonrpc":"2.0","method":"p2p_ping","params":["'$address'",'$pport',"'$protocol'"],"id":null}'
+  get_result "$data"
+}
+
+function pause() {
+  local data='{"jsonrpc":"2.0","method":"p2p_pause","params":[],"id":null}'
+  get_result "$data"
+}
+
 function get_balance() {
   local pkAddress=$1
   local coinID=$2
@@ -630,6 +654,9 @@ function usage(){
   echo "chain  :"
   echo "  nodeinfo"
   echo "  peerinfo"
+  echo "  addpeer"
+  echo "  ping"
+  echo "  pause"
   echo "  networkinfo"
   echo "  rpcinfo"
   echo "  rpcmax <max>"
@@ -1001,6 +1028,15 @@ elif [ "$1" == "nodeinfo" ]; then
 elif [ "$1" == "peerinfo" ]; then
   shift
   get_peer_info $@
+elif [ "$1" == "addpeer" ]; then
+  shift
+  get_add_peer $@
+elif [ "$1" == "ping" ]; then
+  shift
+  ping $@
+elif [ "$1" == "pause" ]; then
+  shift
+  pause $@
 
 elif [ "$1" == "networkinfo" ]; then
   shift

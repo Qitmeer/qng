@@ -5,10 +5,10 @@
 package main
 
 import (
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/node"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -99,7 +99,7 @@ func (api *PublicRelayAPI) GetPeerInfo(verbose *bool, network *string) (interfac
 			}
 			info.Direction = p.Direction.String()
 			if p.GraphState != nil {
-				info.GraphState = node.GetGraphStateResult(p.GraphState)
+				info.GraphState = marshal.GetGraphStateResult(p.GraphState)
 			}
 			info.ConnTime = p.ConnTime.Truncate(time.Second).String()
 

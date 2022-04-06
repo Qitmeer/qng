@@ -40,6 +40,8 @@ type PeerSync struct {
 	wg          sync.WaitGroup
 	quit        chan struct{}
 	longSyncMod bool
+
+	pause bool
 }
 
 func (ps *PeerSync) Start() error {
@@ -90,8 +92,8 @@ out:
 		case m := <-ps.msgChan:
 			switch msg := m.(type) {
 			case pauseMsg:
-				// Wait until the sender unpauses the manager.
-				<-msg.unpause
+				ps.pause = !ps.pause
+				msg.unpause <- ps.pause
 
 			case *ConnectedMsg:
 				ps.processConnected(msg)
@@ -177,10 +179,10 @@ func (ps *PeerSync) handleStallSample() {
 	}
 }
 
-func (ps *PeerSync) Pause() chan<- struct{} {
-	c := make(chan struct{})
+func (ps *PeerSync) Pause() bool {
+	c := make(chan bool)
 	ps.msgChan <- pauseMsg{c}
-	return c
+	return <-c
 }
 
 func (ps *PeerSync) SyncPeer() *peers.Peer {
@@ -274,6 +276,10 @@ func (ps *PeerSync) Chain() *blockchain.BlockChain {
 func (ps *PeerSync) startSync() {
 	// Return now if we're already syncing.
 	if ps.HasSyncPeer() {
+		return
+	}
+	if ps.pause {
+		log.Debug("P2P is pause.")
 		return
 	}
 	best := ps.Chain().BestSnapshot()
@@ -392,6 +398,10 @@ func (ps *PeerSync) IsCompleteForSyncPeer() bool {
 func (ps *PeerSync) IntellectSyncBlocks(refresh bool, pe *peers.Peer) {
 	if pe == nil {
 		log.Trace(fmt.Sprintf("IntellectSyncBlocks has not sync peer, return directly"))
+		return
+	}
+	if ps.pause {
+		log.Debug("P2P is pause.")
 		return
 	}
 
@@ -587,6 +597,7 @@ func NewPeerSync(sy *Sync) *PeerSync {
 		sy:      sy,
 		msgChan: make(chan interface{}),
 		quit:    make(chan struct{}),
+		pause:   false,
 	}
 
 	return peerSync

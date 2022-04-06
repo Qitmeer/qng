@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"strconv"
 	"time"
@@ -327,4 +328,24 @@ func MarshalJsonBlock(b *types.SerializedBlock, inclTx bool, fullTx bool,
 	fields = append(fields, json.KV{Key: "children", Val: tempArr})
 
 	return fields, nil
+}
+
+func GetGraphStateResult(gs *meerdag.GraphState) *json.GetGraphStateResult {
+	if gs != nil {
+		mainTip := gs.GetMainChainTip()
+		tips := []string{mainTip.String() + " main"}
+		for k := range gs.GetTips().GetMap() {
+			if k.IsEqual(mainTip) {
+				continue
+			}
+			tips = append(tips, k.String())
+		}
+		return &json.GetGraphStateResult{
+			Tips:       tips,
+			MainOrder:  uint32(gs.GetMainOrder()),
+			Layer:      uint32(gs.GetLayer()),
+			MainHeight: uint32(gs.GetMainHeight()),
+		}
+	}
+	return nil
 }

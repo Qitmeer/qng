@@ -7,15 +7,16 @@ package node
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/common/math"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/version"
@@ -71,9 +72,9 @@ func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 		Network:          params.ActiveNetParams.Name,
 		Confirmations:    meerdag.StableConfirmations,
 		CoinbaseMaturity: int32(api.node.node.Params.CoinbaseMaturity),
-		Modules:          []string{cmds.DefaultServiceNameSpace, cmds.MinerNameSpace, cmds.TestNameSpace, cmds.LogNameSpace},
+		Modules:          []string{cmds.DefaultServiceNameSpace, cmds.MinerNameSpace, cmds.TestNameSpace, cmds.LogNameSpace,cmds.P2PNameSpace},
 	}
-	ret.GraphState = GetGraphStateResult(best.GraphState)
+	ret.GraphState = marshal.GetGraphStateResult(best.GraphState)
 	hostdns := api.node.GetPeerServer().HostDNS()
 	if hostdns != nil {
 		ret.DNS = hostdns.String()
@@ -168,90 +169,6 @@ func getDifficultyRatio(target *big.Int, params *params.Params, powType pow.PowT
 	return diff
 }
 
-// Return the peer info
-func (api *PublicBlockChainAPI) GetPeerInfo(verbose *bool, network *string) (interface{}, error) {
-	vb := false
-	if verbose != nil {
-		vb = *verbose
-	}
-	networkName := ""
-	if network != nil {
-		networkName = *network
-	}
-	if len(networkName) <= 0 {
-		networkName = params.ActiveNetParams.Name
-	}
-	ps := api.node.GetPeerServer()
-	peers := ps.Peers().StatsSnapshots()
-	infos := make([]*json.GetPeerInfoResult, 0, len(peers))
-	for _, p := range peers {
-
-		if len(networkName) != 0 && networkName != "all" {
-			if p.Network != networkName {
-				continue
-			}
-		}
-
-		if !vb {
-			if !p.State.IsConnected() {
-				continue
-			}
-		}
-		info := &json.GetPeerInfoResult{
-			ID:        p.PeerID,
-			Name:      p.Name,
-			Address:   p.Address,
-			BytesSent: p.BytesSent,
-			BytesRecv: p.BytesRecv,
-			Circuit:   p.IsCircuit,
-			Bads:      p.Bads,
-		}
-		info.Protocol = p.Protocol
-		info.Services = p.Services.String()
-		if p.Genesis != nil {
-			info.Genesis = p.Genesis.String()
-		}
-		if p.IsTheSameNetwork() {
-			info.State = p.State.String()
-		}
-		if len(p.Version) > 0 {
-			info.Version = p.Version
-		}
-		if len(p.Network) > 0 {
-			info.Network = p.Network
-		}
-
-		if p.State.IsConnected() {
-			info.TimeOffset = p.TimeOffset
-			if p.Genesis != nil {
-				info.Genesis = p.Genesis.String()
-			}
-			info.Direction = p.Direction.String()
-			if p.GraphState != nil {
-				info.GraphState = GetGraphStateResult(p.GraphState)
-			}
-			if ps.PeerSync().SyncPeer() != nil {
-				info.SyncNode = p.PeerID == ps.PeerSync().SyncPeer().GetID().String()
-			} else {
-				info.SyncNode = false
-			}
-			info.ConnTime = p.ConnTime.Truncate(time.Second).String()
-			info.GSUpdate = p.GraphStateDur.Truncate(time.Second).String()
-		}
-		if !p.LastSend.IsZero() {
-			info.LastSend = p.LastSend.String()
-		}
-		if !p.LastRecv.IsZero() {
-			info.LastRecv = p.LastRecv.String()
-		}
-		if len(p.QNR) > 0 {
-			info.QNR = p.QNR
-		}
-		infos = append(infos, info)
-	}
-	return infos, nil
-}
-
 // Return the RPC info
 func (api *PublicBlockChainAPI) GetRpcInfo() (interface{}, error) {
 	rs := api.node.GetRpcServer().ReqStatus
@@ -260,26 +177,6 @@ func (api *PublicBlockChainAPI) GetRpcInfo() (interface{}, error) {
 		jrs = append(jrs, v.ToJson())
 	}
 	return jrs, nil
-}
-
-func GetGraphStateResult(gs *meerdag.GraphState) *json.GetGraphStateResult {
-	if gs != nil {
-		mainTip := gs.GetMainChainTip()
-		tips := []string{mainTip.String() + " main"}
-		for k := range gs.GetTips().GetMap() {
-			if k.IsEqual(mainTip) {
-				continue
-			}
-			tips = append(tips, k.String())
-		}
-		return &json.GetGraphStateResult{
-			Tips:       tips,
-			MainOrder:  uint32(gs.GetMainOrder()),
-			Layer:      uint32(gs.GetLayer()),
-			MainHeight: uint32(gs.GetMainHeight()),
-		}
-	}
-	return nil
 }
 
 func (api *PublicBlockChainAPI) GetTimeInfo() (interface{}, error) {
@@ -390,6 +287,7 @@ func (api *PublicBlockChainAPI) GetRpcModules() (interface{}, error) {
 		json.KV{Key: cmds.MinerNameSpace, Val: false},
 		json.KV{Key: cmds.TestNameSpace, Val: false},
 		json.KV{Key: cmds.LogNameSpace, Val: false},
+		json.KV{Key: cmds.P2PNameSpace, Val: false},
 	}
 
 	for _, m := range api.node.node.Config.Modules {
