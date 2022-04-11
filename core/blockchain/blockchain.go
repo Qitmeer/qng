@@ -9,6 +9,9 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/blockchain/token"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/serialization"
@@ -18,9 +21,6 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/consensus"
-	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 	"os"
 	"sort"
@@ -810,17 +810,17 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 
 	// We are extending the main (best) chain with a new block.  This is the
 	// most common case.
-	newOr:=[]uint{}
+	newOr := []uint{}
 	for e := newOrders.Front(); e != nil; e = e.Next() {
 		nodeBlock := e.Value.(meerdag.IBlock)
 		if !nodeBlock.IsOrdered() {
 			continue
 		}
-		newOr=append(newOr,nodeBlock.GetID())
+		newOr = append(newOr, nodeBlock.GetID())
 	}
 
-	if oldOrders.Len() <=0 &&
-		(len(newOr) ==0 || len(newOr) == 1 && newOr[0] == ib.GetID()) {
+	if oldOrders.Len() <= 0 &&
+		(len(newOr) == 0 || len(newOr) == 1 && newOr[0] == ib.GetID()) {
 		if !ib.IsOrdered() {
 			return true, nil
 		}
