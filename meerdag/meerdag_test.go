@@ -216,8 +216,8 @@ func addBlock(tag string, parents []*hash.Hash) (*TestBlock, IBlock, error) {
 	}
 	block := &TestBlock{block: types.NewBlock(b)}
 
-	l, _, ib, _ := bd.AddBlock(block)
-	if l != nil && l.Len() > 0 {
+	_, _, ib, _ := bd.AddBlock(block)
+	if ib != nil {
 		return block, ib, nil
 	} else {
 		return nil, nil, fmt.Errorf("Error: %s\n", tag)
