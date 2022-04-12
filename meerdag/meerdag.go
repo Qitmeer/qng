@@ -1327,7 +1327,7 @@ func (bd *MeerDAG) optimizeReorganizeResult(newOrders *list.List, oldOrders *lis
 
 		neBlock := ne.Value.(IBlock)
 		oeBlock := oe.Value.(*BlockOrderHelp)
-		if neBlock.GetID() == oeBlock.Block.GetID() {
+		if neBlock.GetID() == oeBlock.Block.GetID() && neBlock.GetOrder() == oeBlock.OldOrder {
 			newOrders.Remove(ne)
 			oldOrders.Remove(oe)
 		} else {

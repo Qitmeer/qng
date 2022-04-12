@@ -8,12 +8,12 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain/token"
 	"math"
 	"time"
 )
@@ -110,12 +110,11 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 
 	//dag
 	newOrders, oldOrders, ib, isMainChainTipChange := b.bd.AddBlock(newNode)
-	if newOrders == nil || newOrders.Len() == 0 || ib == nil {
+	if ib == nil {
 		return fmt.Errorf("Irreparable error![%s]\n", newNode.GetHash().String())
 	}
 	block.SetOrder(uint64(ib.GetOrder()))
 	block.SetHeight(ib.GetHeight())
-
 	// Insert the block into the database if it's not already there.  Even
 	// though it is possible the block will ultimately fail to connect, it
 	// has already passed all proof-of-work and validity tests which means
@@ -196,7 +195,7 @@ func (b *BlockChain) FastAcceptBlock(block *types.SerializedBlock, flags Behavio
 	}
 	//dag
 	newOrders, oldOrders, ib, _ := b.bd.AddBlock(newNode)
-	if newOrders == nil || newOrders.Len() == 0 || ib == nil {
+	if ib == nil {
 		return fmt.Errorf("Irreparable error![%s]\n", newNode.GetHash().String())
 	}
 

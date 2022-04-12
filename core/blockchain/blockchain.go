@@ -9,6 +9,9 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/blockchain/token"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/serialization"
@@ -18,9 +21,6 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/consensus"
-	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 	"os"
 	"sort"
@@ -805,15 +805,22 @@ func panicf(format string, args ...interface{}) {
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedBlock, newOrders *list.List, oldOrders *list.List) (bool, error) {
-	if newOrders.Len() == 0 {
-		return true, nil
-	}
 	//Fast double spent check
 	b.fastDoubleSpentCheck(ib, block)
 
 	// We are extending the main (best) chain with a new block.  This is the
 	// most common case.
-	if newOrders.Len() == 1 {
+	newOr := []uint{}
+	for e := newOrders.Front(); e != nil; e = e.Next() {
+		nodeBlock := e.Value.(meerdag.IBlock)
+		if !nodeBlock.IsOrdered() {
+			continue
+		}
+		newOr = append(newOr, nodeBlock.GetID())
+	}
+
+	if oldOrders.Len() <= 0 &&
+		(len(newOr) == 0 || len(newOr) == 1 && newOr[0] == ib.GetID()) {
 		if !ib.IsOrdered() {
 			return true, nil
 		}

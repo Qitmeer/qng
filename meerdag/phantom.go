@@ -520,12 +520,7 @@ func (ph *Phantom) getOrderChangeList(pb *PhantomBlock) *list.List {
 			}
 		}
 	}
-	if !ph.diffAnticone.IsEmpty() {
-		for _, v := range ph.diffAnticone.GetMap() {
-			ib := v.(IBlock)
-			refNodes.PushBack(ib)
-		}
-	}
+
 	return refNodes
 }
 
