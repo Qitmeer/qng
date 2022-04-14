@@ -290,3 +290,49 @@ func BuildTokenBalanceMerkleTreeStore(balance []*hash.Hash) []*hash.Hash {
 
 	return merkles
 }
+
+func GetCoinbaseMerkleTreePath(merkles []*hash.Hash, txNum int) []*hash.Hash {
+	result := []*hash.Hash{}
+	if txNum == 0 {
+		return result
+	}
+
+	arraySize := len(merkles)
+	path := make([]bool, arraySize)
+	path[0] = true
+
+	nextPoT := nextPowerOfTwo(txNum)
+	if nextPoT*2-1 != arraySize {
+		return result
+	}
+
+	offset := nextPoT
+	for i := 0; i < arraySize-1; i += 2 {
+		if merkles[i] != nil {
+			if path[i] {
+				if merkles[i+1] == nil {
+					result = append(result, merkles[i])
+				} else {
+					result = append(result, merkles[i+1])
+				}
+				path[offset] = true
+			} else if path[i+1] {
+				result = append(result, merkles[i])
+				path[offset] = true
+			}
+		}
+		offset++
+	}
+	return result
+}
+
+func CalculateMerkleTreeRootByPath(leaf *hash.Hash, path []*hash.Hash) *hash.Hash {
+	if len(path) <= 0 {
+		return leaf
+	}
+	root := leaf
+	for _, pa := range path {
+		root = HashMerkleBranches(root, pa)
+	}
+	return root
+}

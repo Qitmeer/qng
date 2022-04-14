@@ -14,6 +14,7 @@ import (
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"github.com/Qitmeer/qng/services/mining"
 )
 
 func (m *Miner) APIs() []api.API {
@@ -119,6 +120,7 @@ func (api *PublicMinerAPI) GetMinerInfo() (interface{}, error) {
 	result.Difficulty = fmt.Sprintf("%x", api.miner.template.Block.Header.Difficulty)
 	result.Target = fmt.Sprintf("%064x", pow.CompactToBig(api.miner.template.Block.Header.Difficulty))
 	result.Coinbase = api.miner.coinbaseAddress.String()
+	result.CoinbaseFlags = string(api.miner.coinbaseFlags)
 	result.TotalSubmit = api.miner.totalSubmit
 	result.SuccessSubmit = api.miner.successSubmit
 	if api.miner.worker != nil {
@@ -129,9 +131,13 @@ func (api *PublicMinerAPI) GetMinerInfo() (interface{}, error) {
 	return &result, nil
 }
 
-func (api *PublicMinerAPI) GetRemoteGBT(powType byte) (interface{}, error) {
+func (api *PublicMinerAPI) GetRemoteGBT(powType byte, extraNonce *bool) (interface{}, error) {
 	reply := make(chan *gbtResponse)
-	err := api.miner.RemoteMining(pow.PowType(powType), reply)
+	coinbaseFlags := mining.CoinbaseFlagsStatic
+	if extraNonce != nil && *extraNonce {
+		coinbaseFlags = mining.CoinbaseFlagsDynamic
+	}
+	err := api.miner.RemoteMining(pow.PowType(powType), coinbaseFlags, reply)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +145,7 @@ func (api *PublicMinerAPI) GetRemoteGBT(powType byte) (interface{}, error) {
 	return resp.result, resp.err
 }
 
-func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string) (interface{}, error) {
+func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string, extraNonce *uint64) (interface{}, error) {
 	// Deserialize the hexBlock.
 	m := api.miner
 
@@ -155,7 +161,11 @@ func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string) (interface{}
 	if err != nil {
 		return nil, err
 	}
-	return m.submitBlockHeader(&header)
+	md := uint64(0)
+	if extraNonce != nil {
+		md = *extraNonce
+	}
+	return m.submitBlockHeader(&header, md)
 }
 
 // PrivateMinerAPI provides private RPC methods to control the miner.

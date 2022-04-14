@@ -4,12 +4,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/mining"
 	"github.com/Qitmeer/qng/version"
@@ -304,7 +304,7 @@ func NewGBTWorker(miner *Miner) *GBTWorker {
 	}
 	w.coinbaseAux = &json.GetBlockTemplateResultAux{
 		Flags: hex.EncodeToString(builderScript(txscript.NewScriptBuilder().
-			AddData([]byte(mining.CoinbaseFlags)))),
+			AddData([]byte(mining.CoinbaseFlagsStatic)))),
 	}
 	return &w
 }

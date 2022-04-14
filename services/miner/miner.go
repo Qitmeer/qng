@@ -6,15 +6,15 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/node/service"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/mempool"
@@ -60,6 +60,8 @@ type Miner struct {
 
 	totalSubmit   int
 	successSubmit int
+
+	coinbaseFlags mining.CoinbaseFlags
 }
 
 func (m *Miner) Start() error {
@@ -200,7 +202,7 @@ out:
 			case *RemoteMiningMsg:
 				if m.worker != nil {
 					if m.worker.GetType() == RemoteWorkerType {
-						m.worker.(*RemoteWorker).GetRequest(msg.powType, msg.reply)
+						m.worker.(*RemoteWorker).GetRequest(msg.powType, msg.coinbaseFlags, msg.reply)
 						continue
 					}
 					m.worker.Stop()
@@ -218,7 +220,7 @@ out:
 					continue
 				}
 				worker.Update()
-				worker.GetRequest(msg.powType, msg.reply)
+				worker.GetRequest(msg.powType, msg.coinbaseFlags, msg.reply)
 
 			default:
 				log.Warn("Invalid message type in task handler: %T", msg)
@@ -284,7 +286,7 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 	}
 
 	if reCreate {
-		template, err := mining.NewBlockTemplate(m.policy, params.ActiveNetParams.Params, m.sigCache, m.txSource, m.timeSource, m.blockManager, m.coinbaseAddress, nil, m.powType)
+		template, err := mining.NewBlockTemplate(m.policy, params.ActiveNetParams.Params, m.sigCache, m.txSource, m.timeSource, m.blockManager, m.coinbaseAddress, nil, m.powType, m.coinbaseFlags)
 		if err != nil {
 			e := fmt.Errorf("Failed to create new block template: %s", err.Error())
 			log.Error(e.Error())
@@ -412,7 +414,7 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	}, nil
 }
 
-func (m *Miner) submitBlockHeader(header *types.BlockHeader) (interface{}, error) {
+func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) (interface{}, error) {
 	if !m.IsEnable() || m.template == nil {
 		return nil, fmt.Errorf("You must enable miner by --miner.")
 	}
@@ -420,6 +422,23 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader) (interface{}, error
 	if !IsEqualForMiner(tHeader, header) {
 		return nil, fmt.Errorf("You're overdue")
 	}
+	if extraNonce <= 0 {
+		if !tHeader.TxRoot.IsEqual(&header.TxRoot) {
+			return nil, fmt.Errorf("You're overdue about tx root.")
+		}
+	} else {
+		ctx := types.NewTx(m.template.Block.Transactions[0]).Tx
+		txRoot, err := mining.DoCalculateTransactionsRoot(ctx, m.template.TxMerklePath, m.template.TxWitnessRoot, extraNonce)
+		if err != nil {
+			return nil, err
+		}
+		if !txRoot.IsEqual(&header.TxRoot) {
+			return nil, fmt.Errorf("You're overdue about tx root.")
+		}
+		tHeader.TxRoot = header.TxRoot
+		m.template.Block.Transactions[0] = ctx
+	}
+
 	tHeader.Difficulty = header.Difficulty
 	tHeader.Timestamp = header.Timestamp
 	tHeader.Pow = header.Pow
@@ -569,7 +588,7 @@ func (m *Miner) GBTMining(request *json.TemplateRequest, reply chan *gbtResponse
 	return nil
 }
 
-func (m *Miner) RemoteMining(powType pow.PowType, reply chan *gbtResponse) error {
+func (m *Miner) RemoteMining(powType pow.PowType, coinbaseFlags mining.CoinbaseFlags, reply chan *gbtResponse) error {
 	if !m.cfg.Miner {
 		return fmt.Errorf("Miner is disable. You can enable by --miner.")
 	}
@@ -581,7 +600,7 @@ func (m *Miner) RemoteMining(powType pow.PowType, reply chan *gbtResponse) error
 		return err
 	}
 
-	m.msgChan <- &RemoteMiningMsg{powType: powType, reply: reply}
+	m.msgChan <- &RemoteMiningMsg{powType: powType, coinbaseFlags: coinbaseFlags, reply: reply}
 	return nil
 }
 
@@ -589,16 +608,17 @@ func NewMiner(cfg *config.Config, policy *mining.Policy,
 	sigCache *txscript.SigCache,
 	txSource mining.TxSource, tsource blockchain.MedianTimeSource, blkMgr *blkmgr.BlockManager, events *event.Feed) *Miner {
 	m := Miner{
-		msgChan:      make(chan interface{}),
-		quit:         make(chan struct{}),
-		cfg:          cfg,
-		policy:       policy,
-		sigCache:     sigCache,
-		txSource:     txSource,
-		timeSource:   tsource,
-		blockManager: blkMgr,
-		powType:      pow.MEERXKECCAKV1,
-		events:       events,
+		msgChan:       make(chan interface{}),
+		quit:          make(chan struct{}),
+		cfg:           cfg,
+		policy:        policy,
+		sigCache:      sigCache,
+		txSource:      txSource,
+		timeSource:    tsource,
+		blockManager:  blkMgr,
+		powType:       pow.MEERXKECCAKV1,
+		events:        events,
+		coinbaseFlags: mining.CoinbaseFlagsStatic,
 	}
 
 	return &m
@@ -607,8 +627,7 @@ func NewMiner(cfg *config.Config, policy *mining.Policy,
 func IsEqualForMiner(header *types.BlockHeader, other *types.BlockHeader) bool {
 	if header.Version != other.Version ||
 		!header.ParentRoot.IsEqual(&other.ParentRoot) ||
-		!header.StateRoot.IsEqual(&other.StateRoot) ||
-		!header.TxRoot.IsEqual(&other.TxRoot) {
+		!header.StateRoot.IsEqual(&other.StateRoot) {
 		return false
 	}
 	return true

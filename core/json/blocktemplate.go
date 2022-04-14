@@ -118,10 +118,18 @@ type MinerInfoResult struct {
 	Pow           string `json:"pow"`
 	Running       bool   `json:"running"`
 	Coinbase      string `json:"coinbase"`
+	CoinbaseFlags string `json:"coinbaseflags"`
 	Height        uint64 `json:"height"`
 	Difficulty    string `json:"difficulty"`
 	Target        string `json:"target"`
 	Timestamp     string `json:"timestamp"`
 	TotalSubmit   int    `json:"totalsubmit"`
 	SuccessSubmit int    `json:"successsubmit"`
+}
+
+type RemoteGBTResult struct {
+	HeaderHex     string   `json:"headerhex"`
+	CoinbaseTxHex string   `json:"coinbasetxhex"`
+	TxMerklePath  []string `json:"txmerklepath"`
+	TxWitnessRoot string   `json:"txwitnessroot"`
 }

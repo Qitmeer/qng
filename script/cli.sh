@@ -573,16 +573,24 @@ function submit_block() {
 
 function get_remote_gbt() {
   local powtype=$1
-    if [ "$powtype" == "" ]; then
+  local enableExtraNonce=$2
+  if [ "$powtype" == "" ]; then
     powtype=8
   fi
-  local data='{"jsonrpc":"2.0","method":"getRemoteGBT","params":['$powtype'],"id":1}'
+  if [ "$enableExtraNonce" == "" ]; then
+    enableExtraNonce=false
+  fi
+  local data='{"jsonrpc":"2.0","method":"getRemoteGBT","params":['$powtype','$enableExtraNonce'],"id":1}'
   get_result "$data"
 }
 
 function submit_block_header() {
   local input=$1
-  local data='{"jsonrpc":"2.0","method":"submitBlockHeader","params":["'$input'"],"id":1}'
+  local extraNonce=$2
+  if [ "$extraNonce" == "" ]; then
+    extraNonce=0
+  fi
+  local data='{"jsonrpc":"2.0","method":"submitBlockHeader","params":["'$input'",'$extraNonce'],"id":1}'
   get_result "$data"
 }
 

@@ -85,3 +85,19 @@ func ParseScript(script []byte) ([]ParsedOpcode, error) {
 func MakeScriptNum(v []byte, requireMinimal bool, scriptNumLen int) (scriptNum, error) {
 	return makeScriptNum(v, requireMinimal, scriptNumLen)
 }
+
+func GetInt64FromOpcode(opcode ParsedOpcode) int64 {
+	result := int64(0)
+	if opcode.GetOpcode().GetValue() == OP_0 {
+		result = 0
+	} else if opcode.GetOpcode().GetValue() >= OP_1 && opcode.GetOpcode().GetValue() <= OP_16 {
+		result = int64(opcode.GetOpcode().GetValue() - (OP_1 - 1))
+	} else {
+		i, err := MakeScriptNum(opcode.GetData(), true, 8)
+		if err != nil {
+			return result
+		}
+		result = int64(i)
+	}
+	return result
+}
