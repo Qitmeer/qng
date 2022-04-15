@@ -130,6 +130,6 @@ type MinerInfoResult struct {
 type RemoteGBTResult struct {
 	HeaderHex     string   `json:"headerhex"`
 	CoinbaseTxHex string   `json:"coinbasetxhex"`
-	TxMerklePath  []string `json:"txmerklepath"`
-	TxWitnessRoot string   `json:"txwitnessroot"`
+	TxMerklePath  []string `json:"txmerklepath,omitempty"`
+	TxWitnessRoot string   `json:"txwitnessroot,omitempty"`
 }
