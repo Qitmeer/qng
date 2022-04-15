@@ -41,7 +41,7 @@ type CoinbaseFlags string
 
 const (
 	CoinbaseFlagsStatic CoinbaseFlags = "/qitmeer/"
-	CoinbaseFlagsDynamic CoinbaseFlags = "/qng-dyn/"
+	CoinbaseFlagsDynamic CoinbaseFlags = "/qng/"
 )
 
 // TxSource represents a source of transactions to consider for inclusion in
