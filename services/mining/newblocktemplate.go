@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/merkle"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
@@ -12,7 +13,6 @@ import (
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"golang.org/x/net/context"
 )
@@ -86,7 +86,7 @@ import (
 
 func NewBlockTemplate(policy *Policy, params *params.Params,
 	sigCache *txscript.SigCache, txSource TxSource, timeSource blockchain.MedianTimeSource,
-	blockManager *blkmgr.BlockManager, payToAddress types.Address, parents []*hash.Hash, powType pow.PowType) (*types.BlockTemplate, error) {
+	blockManager *blkmgr.BlockManager, payToAddress types.Address, parents []*hash.Hash, powType pow.PowType,coinbaseFlags CoinbaseFlags) (*types.BlockTemplate, error) {
 	subsidyCache := blockManager.GetChain().FetchSubsidyCache()
 	bd := blockManager.GetChain().BlockDAG()
 	best := blockManager.GetChain().BestSnapshot()
@@ -104,10 +104,14 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	// Add a random coinbase nonce to ensure that tx prefix hash
 	// so that our merkle root is unique for lookups needed for
 	// getwork, etc.
-	extraNonce, err := s.RandomUint64()
-	if err != nil {
-		return nil, err
+	extraNonce:=uint64(0)
+	if coinbaseFlags == CoinbaseFlagsStatic {
+		extraNonce, err = s.RandomUint64()
+		if err != nil {
+			return nil, err
+		}
 	}
+
 
 	var mainp meerdag.IBlock
 	if parents == nil {
@@ -118,7 +122,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 
 	nextBlockHeight = uint64(mainp.GetHeight() + 1)
 
-	coinbaseScript, err := standardCoinbaseScript(nextBlockHeight, extraNonce, policy.CoinbaseGenerator.BuildExtraData(int64(nextBlockHeight)))
+	coinbaseScript, err := StandardCoinbaseScript(nextBlockHeight, extraNonce, policy.CoinbaseGenerator.BuildExtraData(int64(nextBlockHeight)),coinbaseFlags)
 	if err != nil {
 		return nil, err
 	}
@@ -451,7 +455,7 @@ mempool:
 	txFees[0] = -totalFees
 
 	// Fill witness
-	err = fillWitnessToCoinBase(blockTxns)
+	txWitnessRoot,err := fillWitnessToCoinBase(blockTxns)
 	if err != nil {
 		return nil, miningRuleError(ErrCreatingCoinbase, err.Error())
 	}
@@ -528,6 +532,8 @@ mempool:
 		ValidPayAddress: payToAddress != nil,
 		Difficulty:      reqCompactDifficulty,
 		BlockFeesMap:    blockFeesMap,
+		TxMerklePath:merkle.GetCoinbaseMerkleTreePath(merkles,len(block.Transactions)),
+		TxWitnessRoot:txWitnessRoot,
 	}, nil
 
 }

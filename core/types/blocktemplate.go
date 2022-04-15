@@ -1,5 +1,7 @@
 package types
 
+import "github.com/Qitmeer/qng/common/hash"
+
 // BlockTemplate houses a block that has yet to be solved along with additional
 // details about the fees and the number of signature operations for each
 // transaction in the block.
@@ -37,4 +39,7 @@ type BlockTemplate struct {
 	Difficulty uint32
 
 	BlockFeesMap AmountMap
+
+	TxMerklePath  []*hash.Hash
+	TxWitnessRoot *hash.Hash
 }

@@ -1,4 +1,4 @@
-# Solo Mining
+## Solo Mining
 
 ```shell script
 Get BlockTemplate
@@ -92,4 +92,17 @@ curl -X POST \
     "id": 1,
     "result": "0c034550cf7aa78c76e17fb4d79e94c9f687fb9aa57c6dd00c000000cf7ad290",
 }
+```
+
+
+### How to use extra nonce by CoinbaseFlagsDynamic in remote GBT ?
+```
+miner call RPC [ GetRemoteGBT(powType, true) ]=> QNG Node =>[return json :headerhex,coinbasetxhex,txmerklepath,txwitnessroot]
+
+...
+miner call function mining.CalculateTransactionsRoot(coinbasetxhex,txmerklepath,txwitnessroot,YourExtraNonce) to update blockHeader.TxRoot 
+...
+
+miner call RPC [ SubmitBlockHeader(YouerHeaderhex,YourExtraNonce) ] => QNG Node
+
 ```

@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/common/marshal"
+	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/services/mining"
 	"sync"
 	"sync/atomic"
 )
@@ -56,7 +60,7 @@ func (w *RemoteWorker) Update() {
 	}
 }
 
-func (w *RemoteWorker) GetRequest(powType pow.PowType, reply chan *gbtResponse) {
+func (w *RemoteWorker) GetRequest(powType pow.PowType, coinbaseFlags mining.CoinbaseFlags, reply chan *gbtResponse) {
 	if atomic.LoadInt32(&w.shutdown) != 0 {
 		reply <- &gbtResponse{nil, fmt.Errorf("RemoteWorker is not running ")}
 		return
@@ -66,7 +70,16 @@ func (w *RemoteWorker) GetRequest(powType pow.PowType, reply chan *gbtResponse) 
 	defer w.Unlock()
 
 	if w.miner.powType != powType {
+		log.Info(fmt.Sprintf("%s:Change pow type %s => %s", w.GetType(), pow.GetPowName(w.miner.powType), pow.GetPowName(powType)))
 		w.miner.powType = powType
+		if err := w.miner.updateBlockTemplate(true); err != nil {
+			reply <- &gbtResponse{nil, err}
+			return
+		}
+	}
+	if w.miner.coinbaseFlags != coinbaseFlags {
+		log.Info(fmt.Sprintf("%s:Change coinbase flags %s => %s", w.GetType(), w.miner.coinbaseFlags, coinbaseFlags))
+		w.miner.coinbaseFlags = coinbaseFlags
 		if err := w.miner.updateBlockTemplate(true); err != nil {
 			reply <- &gbtResponse{nil, err}
 			return
@@ -79,7 +92,30 @@ func (w *RemoteWorker) GetRequest(powType pow.PowType, reply chan *gbtResponse) 
 		return
 	}
 	hexBlockHeader := hex.EncodeToString(headerBuf.Bytes())
-	reply <- &gbtResponse{hexBlockHeader, err}
+	if coinbaseFlags == mining.CoinbaseFlagsStatic {
+		reply <- &gbtResponse{hexBlockHeader, nil}
+		return
+	}
+	mtxHex, err := marshal.MessageToHex(w.miner.template.Block.Transactions[0])
+	if err != nil {
+		reply <- &gbtResponse{nil, err}
+		return
+	}
+	txHashs := []string{}
+	for _, tx := range w.miner.template.TxMerklePath {
+		txHashs = append(txHashs, tx.String())
+	}
+	var txWitnessRoot string
+	if !w.miner.template.TxWitnessRoot.IsEqual(&hash.ZeroHash) {
+		txWitnessRoot = w.miner.template.TxWitnessRoot.String()
+	}
+
+	reply <- &gbtResponse{&json.RemoteGBTResult{
+		HeaderHex:     hexBlockHeader,
+		CoinbaseTxHex: mtxHex,
+		TxMerklePath:  txHashs,
+		TxWitnessRoot: txWitnessRoot,
+	}, nil}
 }
 
 func NewRemoteWorker(miner *Miner) *RemoteWorker {
