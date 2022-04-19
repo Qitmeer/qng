@@ -312,7 +312,7 @@ func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
 		Difficulty: common.Big1,
-		GasLimit:   0x7fffffffffffffff,
+		GasLimit:   0x8000000,
 		Number:     new(big.Int).Add(parent.Number(), common.Big1),
 		Time:       uint64(timestamp),
 	}
