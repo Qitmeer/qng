@@ -17,10 +17,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/usbwallet"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/catalyst"
 	"github.com/ethereum/go-ethereum/eth/downloader"
@@ -412,19 +410,7 @@ func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
 		Ethash:              new(params.EthashConfig),
 	}
 
-	genBalance := big.NewInt(1000000000000000000)
-	genAddress := common.HexToAddress("0x71bc4403Af41634Cda7C32600A8024d54e7F6499")
-
-	genesis := &core.Genesis{
-		Config:     chainConfig,
-		Nonce:      0,
-		Number:     0,
-		ExtraData:  hexutil.MustDecode("0x00"),
-		GasLimit:   100000000,
-		Difficulty: big.NewInt(0),
-		Alloc:      core.GenesisAlloc{genAddress: {Balance: genBalance}},
-		Timestamp:  uint64(qparams.ActiveNetParams.GenesisBlock.Header.Timestamp.Unix()),
-	}
+	genesis := DefaultGenesisBlock(chainConfig)
 
 	etherbase := common.Address{}
 	econfig := ethconfig.Defaults
