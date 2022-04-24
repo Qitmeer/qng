@@ -171,6 +171,26 @@ var (
 		utils.MetricsInfluxDBBucketFlag,
 		utils.MetricsInfluxDBOrganizationFlag,
 	}
+
+	ChainConfig = &params.ChainConfig{
+		ChainID:             big.NewInt(MeerethChainID),
+		HomesteadBlock:      big.NewInt(0),
+		DAOForkBlock:        big.NewInt(0),
+		DAOForkSupport:      false,
+		EIP150Block:         big.NewInt(0),
+		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		MuirGlacierBlock:    big.NewInt(0),
+		BerlinBlock:         big.NewInt(0),
+		CatalystBlock:       big.NewInt(0),
+		LondonBlock:         nil,
+		Ethash:              new(params.EthashConfig),
+	}
 )
 
 type ETHChain struct {
@@ -390,27 +410,7 @@ func NewETHChain(datadir string) (*ETHChain, error) {
 }
 
 func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
-	chainConfig := &params.ChainConfig{
-		ChainID:             big.NewInt(MeerethChainID),
-		HomesteadBlock:      big.NewInt(0),
-		DAOForkBlock:        big.NewInt(0),
-		DAOForkSupport:      false,
-		EIP150Block:         big.NewInt(0),
-		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:         big.NewInt(0),
-		EIP158Block:         big.NewInt(0),
-		ByzantiumBlock:      big.NewInt(0),
-		ConstantinopleBlock: big.NewInt(0),
-		PetersburgBlock:     big.NewInt(0),
-		IstanbulBlock:       big.NewInt(0),
-		MuirGlacierBlock:    big.NewInt(0),
-		BerlinBlock:         big.NewInt(0),
-		CatalystBlock:       big.NewInt(0),
-		LondonBlock:         nil,
-		Ethash:              new(params.EthashConfig),
-	}
-
-	genesis := DefaultGenesisBlock(chainConfig)
+	genesis := DefaultGenesisBlock(ChainConfig)
 
 	etherbase := common.Address{}
 	econfig := ethconfig.Defaults

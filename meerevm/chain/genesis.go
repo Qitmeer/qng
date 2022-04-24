@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"fmt"
 	qparams "github.com/Qitmeer/qng/params"
 	qcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -25,13 +26,46 @@ func DefaultGenesisBlock(cfg *params.ChainConfig) *core.Genesis {
 }
 
 func DecodePrealloc(data string) core.GenesisAlloc {
-	var p []struct{ Addr, Balance *big.Int }
+	if len(data) <= 0 {
+		return core.GenesisAlloc{}
+	}
+	var p []struct {
+		Addr, Balance *big.Int
+		Code          []byte
+		Nonce         uint64
+		StorageKey    []string
+		StorageValue  []string
+	}
 	if err := rlp.NewStream(strings.NewReader(data), 0).Decode(&p); err != nil {
 		panic(err)
 	}
 	ga := make(core.GenesisAlloc, len(p))
 	for _, account := range p {
-		ga[qcommon.BigToAddress(account.Addr)] = core.GenesisAccount{Balance: account.Balance}
+		if len(account.StorageKey) != len(account.StorageValue) {
+			log.Error(fmt.Sprintf("account.StorageKey != account.StorageValue"))
+			continue
+		}
+		storage := map[qcommon.Hash]qcommon.Hash{}
+		for i := 0; i < len(account.StorageKey); i++ {
+			storage[qcommon.HexToHash(account.StorageKey[i])] = qcommon.HexToHash(account.StorageValue[i])
+		}
+		ga[qcommon.BigToAddress(account.Addr)] = core.GenesisAccount{
+			Balance: account.Balance,
+			Code:    account.Code,
+			Storage: storage,
+			Nonce:   account.Nonce,
+		}
 	}
 	return ga
+}
+
+type GenesisData struct {
+	Genesis   core.Genesis `json:"genesis"`
+	Contracts []Contract   `json:"contracts"`
+}
+
+type Contract struct {
+	ABI   string `json:"abi"`
+	BIN   string `json:"bin"`
+	Input string `json:"input"`
 }
