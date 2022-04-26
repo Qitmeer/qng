@@ -1,10 +1,12 @@
 {
-  "difficulty": "",
-  "gasLimit": "",
+  "genesis":{
+    "difficulty": "",
+    "gasLimit": "",
 
-  "alloc": {
-    "0x71bc4403Af41634Cda7C32600A8024d54e7F6499": {
-      "balance": "1000000000000000000"
+    "alloc": {
+      "0x71bc4403Af41634Cda7C32600A8024d54e7F6499": {
+        "balance": "1000000000000000000"
+      }
     }
   }
 }
