@@ -45,6 +45,12 @@ var (
 	Args           []string = []string{ClientIdentifier}
 
 	//
+	GasLimitFlag = cli.Uint64Flag{
+		Name:  "gaslimit",
+		Usage: "The block gas limit",
+		Value: BLOCK_GASLIMIT,
+	}
+	//
 
 	NodeFlags = []cli.Flag{
 		utils.IdentityFlag,
@@ -128,6 +134,7 @@ var (
 		utils.GpoMaxGasPriceFlag,
 		utils.GpoIgnoreGasPriceFlag,
 		utils.MinerNotifyFullFlag,
+		GasLimitFlag,
 	}
 
 	RpcFlags = []cli.Flag{

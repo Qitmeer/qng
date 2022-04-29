@@ -24,6 +24,8 @@ import (
 	"reflect"
 )
 
+const BLOCK_GASLIMIT = 0x10000000000000
+
 type MeerChain struct {
 	chain    *ETHChain
 	meerpool *MeerPool
@@ -118,7 +120,7 @@ func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx, timestamp int64) (*types.Bl
 		return nil, nil, err
 	}
 
-	header := makeHeader(&b.chain.Config().Eth, parent, statedb, timestamp)
+	header := makeHeader(&b.chain.Config().Eth, parent, statedb, timestamp, b.chain.ctx.GlobalUint64(GasLimitFlag.Name))
 
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(statedb)
@@ -302,17 +304,20 @@ func NewMeerChain(chain *ETHChain, ctx qconsensus.Context) *MeerChain {
 	return mc
 }
 
-func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB, timestamp int64) *types.Header {
+func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB, timestamp int64, gaslimit uint64) *types.Header {
 	ptt := int64(parent.Time())
 	if timestamp <= ptt {
 		timestamp = ptt + 1
+	}
+	if gaslimit <= 0 {
+		gaslimit = BLOCK_GASLIMIT
 	}
 	header := &types.Header{
 		Root:       state.IntermediateRoot(cfg.Genesis.Config.IsEIP158(parent.Number())),
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
 		Difficulty: common.Big1,
-		GasLimit:   0x7fffffffffffffff,
+		GasLimit:   gaslimit,
 		Number:     new(big.Int).Add(parent.Number(), common.Big1),
 		Time:       uint64(timestamp),
 	}
