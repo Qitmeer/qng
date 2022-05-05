@@ -9,6 +9,7 @@ import (
 	"fmt"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
+	qparams "github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	qconsensus "github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/common"
@@ -120,7 +121,7 @@ func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx, timestamp int64) (*types.Bl
 		return nil, nil, err
 	}
 
-	header := makeHeader(&b.chain.Config().Eth, parent, statedb, timestamp, b.chain.ctx.GlobalUint64(GasLimitFlag.Name))
+	header := makeHeader(&b.chain.Config().Eth, parent, statedb, timestamp, qparams.ActiveNetParams.MeerEVMCfg.GasLimit)
 
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(statedb)
