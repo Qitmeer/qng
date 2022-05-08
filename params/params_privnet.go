@@ -182,4 +182,6 @@ var PrivNetParams = Params{
 			ExpireTime: 20,
 		},
 	},
+
+	MeerEVMCfg: MeerEVMConfig{ChainID: 223},
 }
