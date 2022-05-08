@@ -566,10 +566,12 @@ func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
 
 		m.ctx.GetTxPool().AddTransaction(td.Tx, uint64(td.Height), td.Fee)
 	}
-
+	if len(localTxs) <= 0 {
+		return nil
+	}
 	//
 	m.ctx.GetNotify().AnnounceNewTransactions(localTxs, nil)
-	m.ctx.GetNotify().AddRebroadcastInventory(localTxs)
+	go m.ctx.GetNotify().AddRebroadcastInventory(localTxs)
 
 	return nil
 }
