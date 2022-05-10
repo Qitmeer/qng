@@ -21,10 +21,10 @@ import (
 var testMixNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 216), common.Big1)
 
 // target time per block unit second(s)
-const mixTargetTimePerBlock = 30
+const mixTargetTimePerBlock = 15
 
-// Difficulty check interval is about 60*15 = 15 mins
-const mixWorkDiffWindowSize = 60
+// Difficulty check interval is about 30*15 = 7.5 mins
+const mixWorkDiffWindowSize = 30
 
 // testPowNetParams defines the network parameters for the test network.
 var MixNetParams = Params{
@@ -119,8 +119,13 @@ var MixNetParams = Params{
 		},
 		DeploymentToken: {
 			BitNumber:  0,
-			StartTime:  1440,
-			ExpireTime: 14400,
+			StartTime:  1,
+			ExpireTime: 5,
+		},
+		DeploymentMeerEVM: {
+			BitNumber:  1,
+			StartTime:  6, // =270561+2880
+			ExpireTime: 10,
 		},
 	},
 
