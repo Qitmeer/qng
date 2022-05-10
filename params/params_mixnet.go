@@ -23,7 +23,7 @@ var testMixNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 216), co
 // target time per block unit second(s)
 const mixTargetTimePerBlock = 15
 
-// Difficulty check interval is about 60*15 = 7.5 mins
+// Difficulty check interval is about 30*15 = 7.5 mins
 const mixWorkDiffWindowSize = 30
 
 // testPowNetParams defines the network parameters for the test network.
