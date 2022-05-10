@@ -15,8 +15,6 @@ import (
 
 	ds "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-noise"
-	"github.com/libp2p/go-libp2p-secio"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -53,11 +51,6 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.ListenAddrs(listen),
 		libp2p.UserAgent(s.cfg.UserAgent),
 		libp2p.ConnectionGater(s),
-	}
-	if s.cfg.EnableNoise {
-		options = append(options, libp2p.Security(noise.ID, noise.New), libp2p.Security(secio.ID, secio.New))
-	} else {
-		options = append(options, libp2p.Security(secio.ID, secio.New))
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP

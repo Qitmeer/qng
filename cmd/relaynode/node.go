@@ -30,9 +30,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-kad-dht/opts"
-	"github.com/libp2p/go-libp2p-noise"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
-	"github.com/libp2p/go-libp2p-secio"
 	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"path"
@@ -161,12 +159,6 @@ func (node *Node) startP2P() error {
 
 	if node.cfg.EnableRelay {
 		opts = append(opts, libp2p.EnableRelay(relay.OptHop))
-	}
-
-	if node.cfg.EnableNoise {
-		opts = append(opts, libp2p.Security(noise.ID, noise.New), libp2p.Security(secio.ID, secio.New))
-	} else {
-		opts = append(opts, libp2p.Security(secio.ID, secio.New))
 	}
 
 	if node.cfg.HostDNS != "" {
