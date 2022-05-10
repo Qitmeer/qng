@@ -29,12 +29,7 @@ func (a *LockAmount) Init(ops []txscript.ParsedOpcode) error {
 	if len(ops) < 3 {
 		return fmt.Errorf("Illegal %s", a.GetType().Name())
 	}
-	amount, err := txscript.MakeScriptNum(ops[2].GetData(), true, 8)
-	if err != nil {
-		log.Error(err.Error())
-		return err
-	}
-	a.amount = int64(amount)
+	a.amount = txscript.GetInt64FromOpcode(ops[2])
 	return nil
 }
 
