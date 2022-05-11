@@ -32,6 +32,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-kad-dht/opts"
+	"github.com/libp2p/go-libp2p-noise"
+	"github.com/libp2p/go-libp2p-secio"
 	"github.com/multiformats/go-multiaddr"
 	"sync"
 	"time"
@@ -163,6 +165,12 @@ func (node *Node) Run() error {
 		//libp2p.EnableRelay(relay.OptHop),
 		libp2p.ListenAddrs(srcMAddr, eMAddr),
 		libp2p.Identity(p2p.ConvertToInterfacePrivkey(node.privateKey)),
+	}
+
+	if node.cfg.EnableNoise {
+		opts = append(opts, libp2p.Security(noise.ID, noise.New), libp2p.Security(secio.ID, secio.New))
+	} else {
+		opts = append(opts, libp2p.Security(secio.ID, secio.New))
 	}
 
 	node.host, err = libp2p.New(
