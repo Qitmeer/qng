@@ -11,16 +11,17 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
+	"github.com/Qitmeer/qng/core/blockchain/token"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/consensus"
-	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"math"
 	"time"
 )
@@ -153,6 +154,13 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource M
 		}
 	}
 
+	hasevm := false
+	for _, tx := range transactions[1:] {
+		if types.IsCrossChainVMTx(tx.Tx) {
+			hasevm = true
+			break
+		}
+	}
 	// Do some preliminary checks on each regular transaction to ensure they
 	// are sane before continuing.
 	for _, tx := range transactions {
@@ -162,7 +170,7 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource M
 		}
 		// A block must not have stake transactions in the regular
 		// transaction tree.
-		err := CheckTransactionSanity(tx.Transaction(), chainParams)
+		err := CheckTransactionSanity(tx.Transaction(), chainParams, hasevm)
 		if err != nil {
 			return err
 		}
@@ -299,7 +307,7 @@ func checkProofOfWork(header *types.BlockHeader, powConfig *pow.PowConfig, flags
 
 // CheckTransactionSanity performs some preliminary checks on a transaction to
 // ensure it is sane.  These checks are context free.
-func CheckTransactionSanity(tx *types.Transaction, params *params.Params) error {
+func CheckTransactionSanity(tx *types.Transaction, params *params.Params, hasevm bool) error {
 	// A transaction must have at least one input.
 	if len(tx.TxIn) == 0 {
 		return ruleError(ErrNoTxInputs, "transaction has no inputs")
@@ -386,6 +394,20 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params) error 
 		err := validateCoinbase(tx, params)
 		if err != nil {
 			return err
+		}
+		if hasevm {
+			_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.TxOut[CoinbaseOutput_subsidy].PkScript, params)
+			if err != nil {
+				return err
+			}
+			if len(pksAddrs) > 0 {
+				_, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
+				if !ok {
+					return fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
+				}
+			} else {
+				return fmt.Errorf("tx format error :TxTypeCrossChainVM")
+			}
 		}
 	} else {
 		// Previous transaction outputs referenced by the inputs to
