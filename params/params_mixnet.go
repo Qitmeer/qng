@@ -120,13 +120,13 @@ var MixNetParams = Params{
 		},
 		DeploymentToken: {
 			BitNumber:  0,
-			StartTime:  5,
-			ExpireTime: 10,
+			StartTime:  1405,
+			ExpireTime: 1410,
 		},
 		DeploymentMeerEVM: {
 			BitNumber:  1,
-			StartTime:  10,
-			ExpireTime: 20,
+			StartTime:  1410,
+			ExpireTime: 1420,
 		},
 	},
 
