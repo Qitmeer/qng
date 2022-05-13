@@ -108,24 +108,25 @@ var MixNetParams = Params{
 	//
 	// The miner confirmation window is defined as:
 	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 57,                    // 95% of MinerConfirmationWindow
-	MinerConfirmationWindow:       mixWorkDiffWindowSize, //
+	// Consensus rule change deployments.
+	//
+	// The miner confirmation window is defined as:
+	//   target proof of work timespan / target proof of work spacing
+	RuleChangeActivationThreshold: 1,
+	MinerConfirmationWindow:       2,
 	Deployments: []ConsensusDeployment{
 		DeploymentTestDummy: {
-			BitNumber:   28,
-			StartTime:   1626688646, // 2021-07-19 09:58:47 UTC
-			ExpireTime:  1655200727, // 2022-06-14 09:58:47 UTC
-			PerformTime: 1655204327, // 2022-06-14 10:58:47 UTC
+			BitNumber: 28,
 		},
 		DeploymentToken: {
 			BitNumber:  0,
-			StartTime:  1,
-			ExpireTime: 5,
+			StartTime:  5,
+			ExpireTime: 10,
 		},
 		DeploymentMeerEVM: {
 			BitNumber:  1,
-			StartTime:  6, // =270561+2880
-			ExpireTime: 10,
+			StartTime:  10,
+			ExpireTime: 20,
 		},
 	},
 
