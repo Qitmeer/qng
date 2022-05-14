@@ -187,7 +187,7 @@ func TestSwap(t *testing.T) {
 		t.Fatal(err)
 	}
 	log.Println("create weth contract tx:", txWETH)
-	txFACTORY, err := h.Wallet.CreateFactory()
+	txFACTORY, err := h.Wallet.CreateFactory(h.Wallet.ethAddrs[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +221,7 @@ func TestSwap(t *testing.T) {
 	log.Println("new token address:", txD.ContractAddress)
 	log.Println("new weth address:", txWETHD.ContractAddress)
 	log.Println("new factory address:", txFACTORYD.ContractAddress)
-	txROUTER, err := h.Wallet.CreateRouter()
+	txROUTER, err := h.Wallet.CreateRouter(txFACTORYD.ContractAddress, txWETHD.ContractAddress)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,14 +251,6 @@ func TestSwap(t *testing.T) {
 	authCaller, err := h.Wallet.AuthTrans(h.Wallet.privkeys[0])
 	if err != nil {
 		t.Fatal(err)
-	}
-	_, err = routerCall.SetWETH(authCaller, txWETHD.ContractAddress)
-	if err != nil {
-		t.Fatal("SetWETH error", err)
-	}
-	_, err = routerCall.SetFactory(authCaller, txFACTORYD.ContractAddress)
-	if err != nil {
-		t.Fatal("SetFactory error", err)
 	}
 	_, err = tokenCall.Approve(authCaller, txROUTERD.ContractAddress, MAX_UINT256)
 	if err != nil {
