@@ -103,7 +103,6 @@ func TestCallErc20Contract(t *testing.T) {
 		}
 		log.Println(i, "transfer tx:", tx.Hash().String())
 	}
-
 	GenerateBlock(t, h, 1)
 	ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[0])
 	if err != nil {
@@ -143,6 +142,30 @@ func TestCallErc20Contract(t *testing.T) {
 		log.Println(i, "address", h.Wallet.ethAddrs[uint32(i)].String(), "balance", ba)
 		assert.Equal(t, ba, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 	}
+	GenerateBlock(t, h, 1)
+	// check transferFrom
+
+	// not approve
+	authCaller1, err := h.Wallet.AuthTrans(h.Wallet.privkeys[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = tokenCall.TransferFrom(authCaller1, h.Wallet.ethAddrs[0], h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+	if err == nil {
+		t.Fatal("Token Bug,TransferFrom without approve")
+	}
+	log.Println(err)
+	//  approve
+	_, err = tokenCall.Approve(authCaller, h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+	if err != nil {
+		t.Fatal("approve error", err)
+	}
+
+	_, err = tokenCall.TransferFrom(authCaller1, h.Wallet.ethAddrs[0], h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+	if err != nil {
+		t.Fatal("TransferFrom error", err)
+	}
+	GenerateBlock(t, h, 1)
 }
 
 func TestSwap(t *testing.T) {

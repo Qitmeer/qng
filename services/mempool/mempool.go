@@ -10,12 +10,12 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/core/blockchain/opreturn"
-	"github.com/Qitmeer/qng/core/event"
-	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/blockchain/opreturn"
+	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/message"
+	"github.com/Qitmeer/qng/core/types"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -268,7 +268,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	// Perform preliminary sanity checks on the transaction.  This makes
 	// use of chain which contains the invariant rules for what
 	// transactions are allowed into blocks.
-	err := blockchain.CheckTransactionSanity(msgTx, mp.cfg.ChainParams)
+	err := blockchain.CheckTransactionSanity(msgTx, mp.cfg.ChainParams, false)
 	if err != nil {
 		if cerr, ok := err.(blockchain.RuleError); ok {
 			return nil, nil, chainRuleError(cerr)
@@ -1009,18 +1009,17 @@ func (mp *TxPool) FetchTransaction(txHash *hash.Hash) (*types.Tx, error) {
 
 func (mp *TxPool) FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error) {
 	// Protect concurrent access.
-	result:=[]*types.Tx{}
+	result := []*types.Tx{}
 
 	mp.mtx.RLock()
-	for _,txh:=range txHashs {
+	for _, txh := range txHashs {
 		txDesc, exists := mp.pool[*txh]
 		if !exists {
 			continue
 		}
-		result=append(result,txDesc.Tx)
+		result = append(result, txDesc.Tx)
 	}
 	mp.mtx.RUnlock()
-
 
 	er := fmt.Errorf("transaction is not in the pool")
 	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
@@ -1028,17 +1027,17 @@ func (mp *TxPool) FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error) {
 		return nil, er
 	}
 
-	etxsM:=map[string]*types.Transaction{}
-	for i:=0;i<len(etxs);i++ {
-		etxsM[etxs[i].TxHash().String()]=etxs[i]
+	etxsM := map[string]*types.Transaction{}
+	for i := 0; i < len(etxs); i++ {
+		etxsM[etxs[i].TxHash().String()] = etxs[i]
 	}
 
-	for _,txh:=range txHashs {
+	for _, txh := range txHashs {
 		tx, exists := etxsM[txh.String()]
 		if !exists {
 			continue
 		}
-		result=append(result,types.NewTx(tx))
+		result = append(result, types.NewTx(tx))
 	}
 	return result, nil
 }

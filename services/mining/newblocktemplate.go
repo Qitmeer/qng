@@ -86,7 +86,7 @@ import (
 
 func NewBlockTemplate(policy *Policy, params *params.Params,
 	sigCache *txscript.SigCache, txSource TxSource, timeSource blockchain.MedianTimeSource,
-	blockManager *blkmgr.BlockManager, payToAddress types.Address, parents []*hash.Hash, powType pow.PowType,coinbaseFlags CoinbaseFlags) (*types.BlockTemplate, error) {
+	blockManager *blkmgr.BlockManager, payToAddress types.Address, parents []*hash.Hash, powType pow.PowType, coinbaseFlags CoinbaseFlags) (*types.BlockTemplate, error) {
 	subsidyCache := blockManager.GetChain().FetchSubsidyCache()
 	bd := blockManager.GetChain().BlockDAG()
 	best := blockManager.GetChain().BestSnapshot()
@@ -104,14 +104,13 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	// Add a random coinbase nonce to ensure that tx prefix hash
 	// so that our merkle root is unique for lookups needed for
 	// getwork, etc.
-	extraNonce:=uint64(0)
+	extraNonce := uint64(0)
 	if coinbaseFlags == CoinbaseFlagsStatic {
 		extraNonce, err = s.RandomUint64()
 		if err != nil {
 			return nil, err
 		}
 	}
-
 
 	var mainp meerdag.IBlock
 	if parents == nil {
@@ -122,7 +121,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 
 	nextBlockHeight = uint64(mainp.GetHeight() + 1)
 
-	coinbaseScript, err := StandardCoinbaseScript(nextBlockHeight, extraNonce, policy.CoinbaseGenerator.BuildExtraData(int64(nextBlockHeight)),coinbaseFlags)
+	coinbaseScript, err := StandardCoinbaseScript(nextBlockHeight, extraNonce, policy.CoinbaseGenerator.BuildExtraData(int64(nextBlockHeight)), coinbaseFlags)
 	if err != nil {
 		return nil, err
 	}
@@ -190,6 +189,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	for i := 0; i < len(expectParents); i++ {
 		blockSize += hash.HashSize
 	}
+	hasCrossTx := false
 	// =====
 
 	log.Debug("Inclusion to new block", "transactions", len(sourceTxns))
@@ -247,7 +247,12 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 					blockSize, len(blockTxns)))
 				continue
 			}
-
+			if types.IsCrossChainImportTx(tx.Tx) {
+				if hasCrossTx {
+					continue
+				}
+				hasCrossTx = true
+			}
 			blockTxns = append(blockTxns, tx)
 			txFees = append(txFees, 0)
 			tokenSOC := int64(blockchain.CountSigOps(tx))
@@ -261,6 +266,13 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 
 			log.Trace(fmt.Sprintf("Skipping non-finalized tx %s", tx.Hash()))
 			continue
+		}
+
+		if types.IsCrossChainExportTx(tx.Tx) {
+			if hasCrossTx {
+				continue
+			}
+			hasCrossTx = true
 		}
 
 		// Setup dependencies for any transactions which reference
@@ -455,7 +467,7 @@ mempool:
 	txFees[0] = -totalFees
 
 	// Fill witness
-	txWitnessRoot,err := fillWitnessToCoinBase(blockTxns)
+	txWitnessRoot, err := fillWitnessToCoinBase(blockTxns)
 	if err != nil {
 		return nil, miningRuleError(ErrCreatingCoinbase, err.Error())
 	}
@@ -532,8 +544,8 @@ mempool:
 		ValidPayAddress: payToAddress != nil,
 		Difficulty:      reqCompactDifficulty,
 		BlockFeesMap:    blockFeesMap,
-		TxMerklePath:merkle.GetCoinbaseMerkleTreePath(merkles,len(block.Transactions)),
-		TxWitnessRoot:txWitnessRoot,
+		TxMerklePath:    merkle.GetCoinbaseMerkleTreePath(merkles, len(block.Transactions)),
+		TxWitnessRoot:   txWitnessRoot,
 	}, nil
 
 }

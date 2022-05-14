@@ -108,24 +108,25 @@ var MixNetParams = Params{
 	//
 	// The miner confirmation window is defined as:
 	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 57,                    // 95% of MinerConfirmationWindow
-	MinerConfirmationWindow:       mixWorkDiffWindowSize, //
+	// Consensus rule change deployments.
+	//
+	// The miner confirmation window is defined as:
+	//   target proof of work timespan / target proof of work spacing
+	RuleChangeActivationThreshold: 1,
+	MinerConfirmationWindow:       2,
 	Deployments: []ConsensusDeployment{
 		DeploymentTestDummy: {
-			BitNumber:   28,
-			StartTime:   1626688646, // 2021-07-19 09:58:47 UTC
-			ExpireTime:  1655200727, // 2022-06-14 09:58:47 UTC
-			PerformTime: 1655204327, // 2022-06-14 10:58:47 UTC
+			BitNumber: 28,
 		},
 		DeploymentToken: {
 			BitNumber:  0,
-			StartTime:  1,
-			ExpireTime: 5,
+			StartTime:  1405,
+			ExpireTime: 1410,
 		},
 		DeploymentMeerEVM: {
 			BitNumber:  1,
-			StartTime:  6, // =270561+2880
-			ExpireTime: 10,
+			StartTime:  1410,
+			ExpireTime: 1420,
 		},
 	},
 
@@ -149,4 +150,6 @@ var MixNetParams = Params{
 	CoinbaseMaturity:     720,
 	OrganizationPkScript: hexMustDecode("76a91429209320e66d96839785dd07e643a7f1592edc5a88ac"),
 	TokenAdminPkScript:   hexMustDecode("00000000c96d6d76a914b8834294977b26a44094fe2216f8a7d59af1130888ac"),
+
+	MeerEVMCfg: MeerEVMConfig{ChainID: 223},
 }

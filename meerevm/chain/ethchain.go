@@ -44,8 +44,6 @@ var (
 	MeerethChainID int64    = 223
 	Args           []string = []string{ClientIdentifier}
 
-	//
-
 	NodeFlags = []cli.Flag{
 		utils.IdentityFlag,
 		utils.UnlockedAccountFlag,
@@ -410,12 +408,13 @@ func NewETHChain(datadir string) (*ETHChain, error) {
 }
 
 func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
+	ChainConfig.ChainID = big.NewInt(qparams.ActiveNetParams.MeerEVMCfg.ChainID)
 	genesis := DefaultGenesisBlock(ChainConfig)
 
 	etherbase := common.Address{}
 	econfig := ethconfig.Defaults
 
-	econfig.NetworkId = uint64(MeerethChainID)
+	econfig.NetworkId = uint64(qparams.ActiveNetParams.MeerEVMCfg.ChainID)
 	econfig.Genesis = genesis
 	econfig.SyncMode = downloader.FullSync
 	econfig.NoPruning = true
