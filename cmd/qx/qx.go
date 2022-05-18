@@ -143,6 +143,7 @@ func main() {
 	base58CheckEncodeCommand := flag.NewFlagSet("base58check-encode", flag.ExitOnError)
 	base58checkVersion = qx.QitmeerBase58checkVersionFlag{}
 	base58checkVersion.Set("mainnet")
+	base58CheckEncodeCommand.BoolVar(&base58checkVersion.PK, "pk", false, "Input is public key")
 	base58CheckEncodeCommand.Var(&base58checkVersion, "v", "base58check `version` [mainnet|testnet|privnet")
 	base58CheckEncodeCommand.StringVar(&base58checkMode, "m", "qitmeer", "base58check encode mode : [qitmeer|btc]")
 	base58CheckEncodeCommand.StringVar(&base58checkHasher, "a", "", "base58check hasher")
@@ -532,6 +533,7 @@ MEER is the 64 bit spend amount in qitmeer.`)
 	}
 	// Handle base58check-encode
 	if base58CheckEncodeCommand.Parsed() {
+		base58checkVersion.Update()
 		stat, _ := os.Stdin.Stat()
 		if (stat.Mode() & os.ModeNamedPipe) == 0 {
 			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
