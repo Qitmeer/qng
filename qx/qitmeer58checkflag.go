@@ -11,19 +11,37 @@ import (
 type QitmeerBase58checkVersionFlag struct {
 	Ver  []byte
 	flag string
+	PK   bool
 }
 
 func (n *QitmeerBase58checkVersionFlag) Set(s string) error {
 	n.Ver = []byte{}
 	switch s {
 	case "mainnet":
-		n.Ver = append(n.Ver, params.MainNetParams.PubKeyHashAddrID[0:]...)
+		if n.PK {
+			n.Ver = append(n.Ver, params.MainNetParams.PubKeyAddrID[0:]...)
+		} else {
+			n.Ver = append(n.Ver, params.MainNetParams.PubKeyHashAddrID[0:]...)
+		}
+
 	case "privnet":
-		n.Ver = append(n.Ver, params.PrivNetParams.PubKeyHashAddrID[0:]...)
+		if n.PK {
+			n.Ver = append(n.Ver, params.PrivNetParams.PubKeyAddrID[0:]...)
+		} else {
+			n.Ver = append(n.Ver, params.PrivNetParams.PubKeyHashAddrID[0:]...)
+		}
 	case "testnet":
-		n.Ver = append(n.Ver, params.TestNetParams.PubKeyHashAddrID[0:]...)
+		if n.PK {
+			n.Ver = append(n.Ver, params.TestNetParams.PubKeyAddrID[0:]...)
+		} else {
+			n.Ver = append(n.Ver, params.TestNetParams.PubKeyHashAddrID[0:]...)
+		}
 	case "mixnet":
-		n.Ver = append(n.Ver, params.MixNetParams.PubKeyHashAddrID[0:]...)
+		if n.PK {
+			n.Ver = append(n.Ver, params.MixNetParams.PubKeyAddrID[0:]...)
+		} else {
+			n.Ver = append(n.Ver, params.MixNetParams.PubKeyHashAddrID[0:]...)
+		}
 	default:
 		v, err := hex.DecodeString(s)
 		if err != nil {
@@ -37,4 +55,8 @@ func (n *QitmeerBase58checkVersionFlag) Set(s string) error {
 
 func (n *QitmeerBase58checkVersionFlag) String() string {
 	return n.flag
+}
+
+func (n *QitmeerBase58checkVersionFlag) Update() {
+	n.Set(n.flag)
 }
