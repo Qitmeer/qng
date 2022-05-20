@@ -4,13 +4,13 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"sync"
 )
 
@@ -518,7 +518,10 @@ func (view *UtxoViewpoint) disconnectTransactions(block *types.SerializedBlock, 
 			if !types.IsTokenMintTx(tx.Tx) {
 				continue
 			}
+		} else if types.IsCrossChainVMTx(tx.Tx) {
+			continue
 		}
+
 		var packedFlags txoFlags
 		isCoinBase := txIdx == 0
 		if isCoinBase {
@@ -549,6 +552,9 @@ func (view *UtxoViewpoint) disconnectTransactions(block *types.SerializedBlock, 
 		}
 
 		if isCoinBase {
+			continue
+		} else if types.IsCrossChainImportTx(tx.Tx) {
+			stxoIdx--
 			continue
 		}
 		for txInIdx := len(tx.Tx.TxIn) - 1; txInIdx > -1; txInIdx-- {
