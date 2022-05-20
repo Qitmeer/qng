@@ -231,7 +231,7 @@ func (node *DebugAddressNode) processAddress(blueM *map[uint]bool) error {
 				}
 
 				tradeRecord = append(tradeRecord, tr)
-				txOutPoint := types.TxOutPoint{*txHash, uint32(txOutIndex)}
+				txOutPoint := types.TxOutPoint{Hash:*txHash,OutIndex:uint32(txOutIndex)}
 				tradeRecordMap[txOutPoint] = tr
 			}
 		}
