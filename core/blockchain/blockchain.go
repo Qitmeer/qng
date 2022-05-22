@@ -1245,6 +1245,11 @@ func (b *BlockChain) countSpentOutputs(block *types.SerializedBlock) int {
 			} else {
 				continue
 			}
+		} else if types.IsCrossChainImportTx(tx.Tx) {
+			numSpent++
+			continue
+		} else if types.IsCrossChainVMTx(tx.Tx) {
+			continue
 		}
 		numSpent += len(tx.Transaction().TxIn)
 
