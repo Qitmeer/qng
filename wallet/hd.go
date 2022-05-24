@@ -26,8 +26,8 @@ import (
 
 // Use 223	0x800000df for now,  change in the future
 // https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-var QitmeerRootDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 223, 0x80000000 + 0, 0}
-var QitmeerBaseDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 223, 0x80000000 + 0, 0, 0}
+var QitmeerRootDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 813, 0x80000000 + 0, 0}
+var QitmeerBaseDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 813, 0x80000000 + 0, 0, 0}
 
 // BTC Path
 var BtcRootDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 0, 0x80000000 + 0, 0}
