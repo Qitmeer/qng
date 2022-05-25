@@ -132,7 +132,7 @@ var MainNetParams = Params{
 	// address generation.
 	// TODO : register coin type
 	// https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-	HDCoinType: 223,
+	HDCoinType: 813,
 
 	CoinbaseMaturity: 720,
 
@@ -144,5 +144,5 @@ var MainNetParams = Params{
 	// MmQitmeerMainNetHonorAddressXY9JH2y
 	HonorAddrPkScript: hexMustDecode("76a9143846e53e5e952b5cd60240ad9c4cf6164dd5090988ac"),
 
-	MeerEVMCfg: MeerEVMConfig{ChainID: 223},
+	MeerEVMCfg: MeerEVMConfig{ChainID: 813},
 }
