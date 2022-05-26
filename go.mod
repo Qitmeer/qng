@@ -72,3 +72,4 @@ replace (
 )
 
 replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-q.7
+replace github.com/karalabe/usb => github.com/karalabe/usb v0.0.2
