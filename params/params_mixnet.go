@@ -145,7 +145,8 @@ var MixNetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType: 8132,
+	SLIP0044CoinType: 813,
+	LegacyCoinType:   223,
 
 	CoinbaseMaturity:     720,
 	OrganizationPkScript: hexMustDecode("76a91429209320e66d96839785dd07e643a7f1592edc5a88ac"),

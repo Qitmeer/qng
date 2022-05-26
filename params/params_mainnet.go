@@ -130,9 +130,8 @@ var MainNetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	// TODO : register coin type
-	// https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-	HDCoinType: 813,
+	SLIP0044CoinType: 813,
+	LegacyCoinType:   223,
 
 	CoinbaseMaturity: 720,
 
