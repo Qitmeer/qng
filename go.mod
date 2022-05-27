@@ -59,8 +59,9 @@ require (
 	golang.org/x/tools v0.1.6
 	gonum.org/v1/gonum v0.6.0
 	gopkg.in/urfave/cli.v1 v1.20.0
-	// indirect
 	gopkg.in/yaml.v2 v2.4.0
+	// indirect
+	gopkg.in/yaml.v3 v3.0.0
 	gotest.tools/v3 v3.1.0 // indirect
 )
 
@@ -72,4 +73,5 @@ replace (
 )
 
 replace github.com/ethereum/go-ethereum v1.10.9 => github.com/Qitmeer/go-ethereum v1.10.9-q.7
+
 replace github.com/karalabe/usb => github.com/karalabe/usb v0.0.2
