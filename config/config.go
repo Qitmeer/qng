@@ -56,6 +56,8 @@ type Config struct {
 	BlockMaxSize      uint32   `long:"blockmaxsize" description:"Maximum block size in bytes to be used when creating a block"`
 	BlockPrioritySize uint32   `long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
 	miningAddrs       []types.Address
+	GBTNotify         []string `long:"gbtnotify" description:"HTTP URL list to be notified of new block template"`
+
 	//WebSocket support
 	RPCMaxWebsockets     int `long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
 	RPCMaxConcurrentReqs int `long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
