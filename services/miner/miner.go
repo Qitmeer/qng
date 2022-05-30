@@ -1,6 +1,9 @@
 package miner
 
 import (
+	"bytes"
+	"context"
+	ejson "encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
@@ -20,6 +23,7 @@ import (
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/services/mining"
 	"math/rand"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -30,6 +34,9 @@ const (
 	// changed and there have been changes to the available transactions
 	// in the memory pool.
 	gbtRegenerateSeconds = 60
+
+	// This is the timeout for HTTP requests to notify external miners.
+	NotifyURLTimeout = 1 * time.Second
 )
 
 // Miner creates blocks and searches for proof-of-work values.
@@ -62,6 +69,8 @@ type Miner struct {
 	successSubmit int
 
 	coinbaseFlags mining.CoinbaseFlags
+
+	reqWG sync.WaitGroup
 }
 
 func (m *Miner) Start() error {
@@ -98,6 +107,7 @@ func (m *Miner) Stop() error {
 
 	close(m.quit)
 	m.wg.Wait()
+	m.reqWG.Wait()
 
 	return nil
 }
@@ -301,6 +311,7 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 		// consensus rules.
 		m.minTimestamp = mining.MinimumMedianTime(m.blockManager.GetChain())
 
+		m.notifyBlockTemplate()
 		return nil
 	} else {
 		err := mining.UpdateBlockTime(m.template.Block, m.blockManager.GetChain(), m.timeSource, params.ActiveNetParams.Params)
@@ -602,6 +613,43 @@ func (m *Miner) RemoteMining(powType pow.PowType, coinbaseFlags mining.CoinbaseF
 
 	m.msgChan <- &RemoteMiningMsg{powType: powType, coinbaseFlags: coinbaseFlags, reply: reply}
 	return nil
+}
+
+func (m *Miner) notifyBlockTemplate() {
+	if len(m.cfg.GBTNotify) <= 0 ||
+		m.worker == nil {
+		return
+	}
+	var jsonData []byte
+	if m.worker.GetType() == RemoteWorkerType {
+		jsonData, _ = ejson.Marshal(m.worker.(*RemoteWorker).GetRemoteGBTResult())
+	}
+
+	m.reqWG.Add(len(m.cfg.GBTNotify))
+	for _, url := range m.cfg.GBTNotify {
+		go m.sendNotification(url, jsonData)
+	}
+}
+
+func (m *Miner) sendNotification(url string, jsonData []byte) {
+	defer m.reqWG.Done()
+	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
+	ctx, cancel := context.WithTimeout(m.Context(), NotifyURLTimeout)
+	defer cancel()
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Error(err.Error())
+	} else {
+		defer resp.Body.Close()
+		log.Trace(fmt.Sprintf("Notified remote miner:%s %s", url, resp.Status))
+	}
 }
 
 func NewMiner(cfg *config.Config, policy *mining.Policy,
