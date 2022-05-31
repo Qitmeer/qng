@@ -25,12 +25,12 @@ import (
 	"github.com/libp2p/go-libp2p-circuit"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/control"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-kad-dht/opts"
-	"github.com/libp2p/go-libp2p-noise"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
 	"github.com/libp2p/go-libp2p-secio"
 	"github.com/multiformats/go-multiaddr"
@@ -44,7 +44,7 @@ type Node struct {
 	service.Service
 	cfg *Config
 
-	privateKey *ecdsa.PrivateKey
+	privateKey crypto.PrivKey
 
 	host host.Host
 
@@ -155,18 +155,12 @@ func (node *Node) startP2P() error {
 
 	opts := []libp2p.Option{
 		libp2p.ListenAddrs(srcMAddr, eMAddr),
-		libp2p.Identity(p2p.ConvertToInterfacePrivkey(node.privateKey)),
+		libp2p.Identity(node.privateKey),
 		libp2p.ConnectionGater(node),
 	}
 
 	if node.cfg.EnableRelay {
 		opts = append(opts, libp2p.EnableRelay(relay.OptHop))
-	}
-
-	if node.cfg.EnableNoise {
-		opts = append(opts, libp2p.Security(noise.ID, noise.New), libp2p.Security(secio.ID, secio.New))
-	} else {
-		opts = append(opts, libp2p.Security(secio.ID, secio.New))
 	}
 
 	if node.cfg.HostDNS != "" {
@@ -190,10 +184,7 @@ func (node *Node) startP2P() error {
 		opts = append(opts, ps)
 	}
 
-	node.host, err = libp2p.New(
-		node.Context(),
-		opts...,
-	)
+	node.host, err = libp2p.New(opts...)
 	if err != nil {
 		log.Error("Failed to create host %v", err)
 		return err
@@ -205,7 +196,7 @@ func (node *Node) startP2P() error {
 		return err
 	}
 
-	kademliaDHT, err := dht.New(node.Context(), node.host, dhtopts.Protocols(p2p.ProtocolDHT))
+	kademliaDHT, err := dht.New(node.Context(), node.host, dht.V1ProtocolOverride(p2p.ProtocolDHT))
 	if err != nil {
 		return err
 	}

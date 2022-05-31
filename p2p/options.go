@@ -5,9 +5,9 @@
 package p2p
 
 import (
-	"crypto/ecdsa"
 	"fmt"
 	"github.com/Qitmeer/qng/version"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
 	"net"
 	"path"
@@ -15,8 +15,6 @@ import (
 
 	ds "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-noise"
-	"github.com/libp2p/go-libp2p-secio"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -41,7 +39,7 @@ const (
 )
 
 // buildOptions for the libp2p host.
-func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Option {
+func (s *Service) buildOptions(ip net.IP, priKey crypto.PrivKey) []libp2p.Option {
 	cfg := s.cfg
 	listen, err := multiAddressBuilder(ip.String(), cfg.TCPPort)
 	if err != nil {
@@ -53,11 +51,6 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.ListenAddrs(listen),
 		libp2p.UserAgent(s.cfg.UserAgent),
 		libp2p.ConnectionGater(s),
-	}
-	if s.cfg.EnableNoise {
-		options = append(options, libp2p.Security(noise.ID, noise.New), libp2p.Security(secio.ID, secio.New))
-	} else {
-		options = append(options, libp2p.Security(secio.ID, secio.New))
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP
@@ -145,9 +138,9 @@ func multiAddressBuilder(ipAddr string, port uint) (ma.Multiaddr, error) {
 // Adds a private key to the libp2p option if the option was provided.
 // If the private key file is missing or cannot be read, or if the
 // private key contents cannot be marshaled, an exception is thrown.
-func privKeyOption(privkey *ecdsa.PrivateKey) libp2p.Option {
+func privKeyOption(privkey crypto.PrivKey) libp2p.Option {
 	return func(cfg *libp2p.Config) error {
 		log.Debug("ECDSA private key generated")
-		return cfg.Apply(libp2p.Identity(ConvertToInterfacePrivkey(privkey)))
+		return cfg.Apply(libp2p.Identity(privkey))
 	}
 }

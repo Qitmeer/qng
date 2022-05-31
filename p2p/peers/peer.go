@@ -5,9 +5,9 @@ import (
 	"github.com/Qitmeer/qng/common/bloom"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/p2p/common"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnode"
@@ -145,14 +145,14 @@ func (p *Peer) Address() ma.Multiaddr {
 	return p.address
 }
 
-func (p *Peer) QAddress() common.QMultiaddr {
+func (p *Peer) QAddress() *common.QMultiaddr {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	return p.qaddress()
 }
 
-func (p *Peer) qaddress() common.QMultiaddr {
+func (p *Peer) qaddress() *common.QMultiaddr {
 	if p.address == nil {
 		return nil
 	}

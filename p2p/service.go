@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"crypto/ecdsa"
 	"encoding/base64"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
@@ -27,6 +26,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-discovery"
@@ -66,7 +66,7 @@ type Service struct {
 	cfg           *common.Config
 	exclusionList *ristretto.Cache
 	isPreGenesis  bool
-	privKey       *ecdsa.PrivateKey
+	privKey       crypto.PrivKey
 	metaData      *pb.MetaData
 	addrFilter    *multiaddr.Filters
 	host          host.Host
@@ -503,7 +503,7 @@ func (s *Service) RemoveBan(id string) {
 }
 
 func (s *Service) ConnectTo(node *qnode.Node) {
-	addr, err := convertToSingleMultiAddr(node)
+	addr, err := ConvertToSingleMultiAddr(node)
 	if err != nil {
 		log.Error(err.Error())
 		return
@@ -669,7 +669,7 @@ func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*
 		return nil, err
 	}
 	opts := s.buildOptions(ipAddr, s.privKey)
-	h, err := libp2p.New(s.Context(), opts...)
+	h, err := libp2p.New(opts...)
 	if err != nil {
 		log.Error("Failed to create p2p host")
 		return nil, err

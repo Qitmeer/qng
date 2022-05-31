@@ -7,7 +7,7 @@ package p2p
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/p2p/common"
-	"github.com/multiformats/go-multiaddr-net"
+	"github.com/multiformats/go-multiaddr/net"
 	"net"
 
 	"github.com/libp2p/go-libp2p-core/control"

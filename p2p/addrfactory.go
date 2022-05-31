@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/p2p/qnode"
 	"github.com/Qitmeer/qng/p2p/qnr"
-	iaddr "github.com/ipfs/go-ipfs-addr"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"strings"
@@ -78,7 +77,7 @@ func convertToMultiAddr(nodes []*qnode.Node) []ma.Multiaddr {
 		if node.IP() == nil {
 			continue
 		}
-		multiAddr, err := convertToSingleMultiAddr(node)
+		multiAddr, err := ConvertToSingleMultiAddr(node)
 		if err != nil {
 			log.Error(fmt.Sprintf("%s Could not convert to multiAddr", err.Error()))
 			continue
@@ -101,11 +100,11 @@ func convertQNRToMultiAddr(qnrStr string) (ma.Multiaddr, error) {
 		return nil, err
 	}
 
-	return convertToSingleMultiAddr(node)
+	return ConvertToSingleMultiAddr(node)
 }
 
 func convertToAddrInfo(node *qnode.Node) (*peer.AddrInfo, ma.Multiaddr, error) {
-	multiAddr, err := convertToSingleMultiAddr(node)
+	multiAddr, err := ConvertToSingleMultiAddr(node)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -116,13 +115,13 @@ func convertToAddrInfo(node *qnode.Node) (*peer.AddrInfo, ma.Multiaddr, error) {
 	return info, multiAddr, nil
 }
 
-func convertToSingleMultiAddr(node *qnode.Node) (ma.Multiaddr, error) {
+func ConvertToSingleMultiAddr(node *qnode.Node) (ma.Multiaddr, error) {
 	ip4 := node.IP().To4()
 	if ip4 == nil {
 		return nil, fmt.Errorf("node doesn't have an ip4 address, it's stated IP is %s", node.IP().String())
 	}
 	pubkey := node.Pubkey()
-	assertedKey := convertToInterfacePubkey(pubkey)
+	assertedKey := ConvertToInterfacePubkey(pubkey)
 	id, err := peer.IDFromPublicKey(assertedKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not get peer id:%w", err)
@@ -150,7 +149,7 @@ func peersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Could not get qnode from string:%w", err)
 		}
-		addr, err := convertToSingleMultiAddr(qnodeAddr)
+		addr, err := ConvertToSingleMultiAddr(qnodeAddr)
 		if err != nil {
 			return nil, fmt.Errorf("Could not get multiaddr:%w", err)
 		}
@@ -160,9 +159,5 @@ func peersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 }
 
 func MultiAddrFromString(address string) (ma.Multiaddr, error) {
-	addr, err := iaddr.ParseString(address)
-	if err != nil {
-		return nil, err
-	}
-	return addr.Multiaddr(), nil
+	return ma.NewMultiaddr(address)
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/libp2p/go-libp2p-kad-dht/opts"
 	"net"
 )
 
@@ -183,7 +182,7 @@ func (s *Service) isInboundPeerAtLimit() bool {
 }
 
 func (s *Service) startKademliaDHT() error {
-	kademliaDHT, err := dht.New(s.Context(), s.host, dhtopts.Protocols(ProtocolDHT))
+	kademliaDHT, err := dht.New(s.Context(), s.host, dht.V1ProtocolOverride(ProtocolDHT))
 	if err != nil {
 		return err
 	}
