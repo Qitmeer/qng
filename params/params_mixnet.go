@@ -7,18 +7,19 @@
 package params
 
 import (
+	"math/big"
+	"time"
+
 	"github.com/Qitmeer/qng/common"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
-	"math/big"
-	"time"
 )
 
 // testMixNetPowLimit is the highest proof of work value a block can
 // have for the test network. It is the value 2^224 - 1.
 // target 0x0000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffff
-var testMixNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 216), common.Big1)
+var testMixNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 242), common.Big1)
 
 // target time per block unit second(s)
 const mixTargetTimePerBlock = 15
@@ -66,7 +67,7 @@ var MixNetParams = Params{
 		CryptoNightPowLimit:          testMixNetPowLimit,
 		CryptoNightPowLimitBits:      0x2003ffff,
 		MeerXKeccakV1PowLimit:        testMixNetPowLimit,
-		MeerXKeccakV1PowLimitBits:    0x1c00ffff,
+		MeerXKeccakV1PowLimitBits:    0x1f0198f2,
 		//hash ffffffffffffffff000000000000000000000000000000000000000000000000 corresponding difficulty is 48 for edge bits 24
 		// Uniform field type uint64 value is 48 . bigToCompact the uint32 value
 		// 24 edge_bits only need hash 1*4 times use for privnet if GPS is 2. need 50 /2 * 2 ≈ 1min find once
