@@ -6,13 +6,14 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"github.com/Qitmeer/qng/cmd/miner/common"
-	"github.com/Qitmeer/qng/cmd/miner/common/socks"
-	"github.com/Qitmeer/qng/core/types/pow"
 	"net"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Qitmeer/qng/cmd/miner/common"
+	"github.com/Qitmeer/qng/cmd/miner/common/socks"
+	"github.com/Qitmeer/qng/core/types/pow"
 )
 
 // ErrJsonType is an error for json that we do not expect.
@@ -141,7 +142,7 @@ func (s *Stratum) Reconnect() error {
 	var conn net.Conn
 	var err error
 	conf := &tls.Config{
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: s.Cfg.PoolConfig.PoolTLS,
 	}
 	if s.Cfg.OptionConfig.Proxy != "" {
 		proxy := &socks.Proxy{
