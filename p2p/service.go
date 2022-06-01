@@ -34,7 +34,6 @@ import (
 	"github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/multiformats/go-multiaddr"
-	ma "github.com/multiformats/go-multiaddr"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"math/rand"
@@ -530,11 +529,11 @@ func (s *Service) HostAddress() []string {
 	return result
 }
 
-func (s *Service) HostDNS() ma.Multiaddr {
+func (s *Service) HostDNS() multiaddr.Multiaddr {
 	if len(s.cfg.HostDNS) <= 0 {
 		return nil
 	}
-	external, err := ma.NewMultiaddr(fmt.Sprintf("/dns4/%s/tcp/%d/p2p/%s", s.cfg.HostDNS, s.cfg.TCPPort, s.Host().ID().String()))
+	external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/dns4/%s/tcp/%d/p2p/%s", s.cfg.HostDNS, s.cfg.TCPPort, s.Host().ID().String()))
 	if err != nil {
 		log.Error(err.Error())
 		return nil

@@ -285,9 +285,10 @@ func RegisterRPC(rpc common.P2PRPC, basetopic string, base interface{}, handle r
 		ctx, cancel := context.WithTimeout(rpc.Context(), TtfbTimeout)
 		defer func() {
 			processError(e, stream, rpc)
-			time.Sleep(time.Second)
+			if err := stream.CloseWrite(); err != nil {
+				log.Error(fmt.Sprintf("Failed to close stream:%v", err))
+			}
 			cancel()
-			closeSteam(stream)
 		}()
 		if err := stream.SetReadDeadline(time.Now().Add(TtfbTimeout)); err != nil {
 			log.Error(fmt.Sprintf("topic:%s peer:%s Could not set stream read deadline:%v",
@@ -392,7 +393,7 @@ func Send(ctx context.Context, rpc common.P2PRPC, message interface{}, baseTopic
 	}
 	rpc.IncreaseBytesSent(pid, size)
 	// Close stream for writing.
-	if err := stream.Close(); err != nil {
+	if err := stream.CloseWrite(); err != nil {
 		log.Trace(fmt.Sprintf("close stream failed: %v ", err))
 		return nil, err
 	}

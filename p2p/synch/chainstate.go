@@ -25,13 +25,13 @@ const (
 	retErrInvalidChainState
 )
 
-func (s *Sync) sendChainStateRequest(ctx context.Context, id peer.ID) error {
+func (s *Sync) sendChainStateRequest(pctx context.Context, id peer.ID) error {
 	pe := s.peers.Get(id)
 	if pe == nil {
 		return peers.ErrPeerUnknown
 	}
 	log.Trace(fmt.Sprintf("sendChainStateRequest:%s", id))
-	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
+	ctx, cancel := context.WithTimeout(pctx, ReqTimeout)
 	defer cancel()
 
 	resp := s.getChainState()
