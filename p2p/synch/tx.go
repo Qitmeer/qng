@@ -28,11 +28,7 @@ func (s *Sync) sendTxRequest(ctx context.Context, id peer.ID, gtxs *pb.GetTxs) (
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.Error(fmt.Sprintf("Failed to reset stream with protocol %s,%v", stream.Protocol(), err))
-		}
-	}()
+	defer resetSteam(stream)
 
 	code, errMsg, err := ReadRspCode(stream, s.Encoding())
 	if err != nil {

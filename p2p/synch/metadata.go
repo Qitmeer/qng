@@ -31,11 +31,7 @@ func (s *Sync) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.MetaDat
 	// we close the stream outside of `send` because
 	// metadata requests send no payload, so closing the
 	// stream early leads it to a reset.
-	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.Error(fmt.Sprintf("Failed to reset stream for protocol %s  %v", stream.Protocol(), err))
-		}
-	}()
+	defer resetSteam(stream)
 	code, errMsg, err := ReadRspCode(stream, s.Encoding())
 	if err != nil {
 		return nil, err

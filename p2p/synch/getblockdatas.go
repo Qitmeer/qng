@@ -31,12 +31,7 @@ func (s *Sync) sendGetBlockDataRequest(ctx context.Context, id peer.ID, locator 
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err := stream.Reset()
-		if err != nil {
-			log.Error(fmt.Sprintf("Failed to close stream with protocol %s,%v", stream.Protocol(), err))
-		}
-	}()
+	defer resetSteam(stream)
 
 	code, errMsg, err := ReadRspCode(stream, s.Encoding())
 	if err != nil {
@@ -63,12 +58,7 @@ func (s *Sync) sendGetMerkleBlockDataRequest(ctx context.Context, id peer.ID, re
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err := stream.Reset()
-		if err != nil {
-			log.Error(fmt.Sprintf("Failed to close stream with protocol %s,%v", stream.Protocol(), err))
-		}
-	}()
+	defer resetSteam(stream)
 
 	code, errMsg, err := ReadRspCode(stream, s.Encoding())
 	if err != nil {
@@ -90,9 +80,7 @@ func (s *Sync) sendGetMerkleBlockDataRequest(ctx context.Context, id peer.ID, re
 func (s *Sync) getBlockDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
 	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
 	var err error
-	defer func() {
-		cancel()
-	}()
+	defer cancel()
 
 	m, ok := msg.(*pb.GetBlockDatas)
 	if !ok {
@@ -133,9 +121,7 @@ func (s *Sync) getBlockDataHandler(ctx context.Context, msg interface{}, stream 
 func (s *Sync) getMerkleBlockDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
 	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
 	var err error
-	defer func() {
-		cancel()
-	}()
+	defer cancel()
 	m, ok := msg.(*pb.MerkleBlockRequest)
 	if !ok {
 		err = fmt.Errorf("message is not type *pb.Hash")

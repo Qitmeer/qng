@@ -12,7 +12,7 @@ import (
 )
 
 var defaultReadDuration = TtfbTimeout
-var defaultWriteDuration = 10 * time.Second
+var defaultWriteDuration = 20 * time.Second
 
 // SetRPCStreamDeadlines sets read and write deadlines for libp2p-based connection streams.
 func SetRPCStreamDeadlines(stream network.Stream) {
@@ -24,7 +24,7 @@ func SetRPCStreamDeadlines(stream network.Stream) {
 // a connection based on a particular duration.
 func SetStreamReadDeadline(stream network.Stream, duration time.Duration) {
 	if err := stream.SetReadDeadline(time.Now().Add(duration)); err != nil {
-		log.Debug(fmt.Sprintf("Failed to set stream deadline:%v peer:%s protocol:%s direction:%s",
+		log.Error(fmt.Sprintf("Failed to set stream deadline:%v peer:%s protocol:%s direction:%s",
 			err, stream.Conn().RemotePeer(), stream.Protocol(), stream.Stat().Direction))
 	}
 }
@@ -33,7 +33,7 @@ func SetStreamReadDeadline(stream network.Stream, duration time.Duration) {
 // a connection based on a particular duration.
 func SetStreamWriteDeadline(stream network.Stream, duration time.Duration) {
 	if err := stream.SetWriteDeadline(time.Now().Add(duration)); err != nil {
-		log.Debug(fmt.Sprintf("Failed to set stream deadline:%v peer:%s protocol:%s direction:%s",
+		log.Error(fmt.Sprintf("Failed to set stream deadline:%v peer:%s protocol:%s direction:%s",
 			err, stream.Conn().RemotePeer(), stream.Protocol(), stream.Stat().Direction))
 	}
 }

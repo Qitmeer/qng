@@ -39,11 +39,7 @@ func (s *Sync) sendChainStateRequest(pctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.Trace(fmt.Sprintf("Failed to reset stream with protocol %s,%v", stream.Protocol(), err))
-		}
-	}()
+	defer resetSteam(stream)
 
 	code, errMsg, err := ReadRspCode(stream, s.Encoding())
 	if err != nil {
