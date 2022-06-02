@@ -112,7 +112,7 @@ var TestNetParams = Params{
 	// The miner confirmation window is defined as:
 	//   target proof of work timespan / target proof of work spacing
 	RuleChangeActivationThreshold: 1,
-	MinerConfirmationWindow:       2,
+	MinerConfirmationWindow:       testWorkDiffWindowSize,
 	Deployments: []ConsensusDeployment{
 		DeploymentTestDummy: {
 			BitNumber: 28,
@@ -120,12 +120,12 @@ var TestNetParams = Params{
 		DeploymentToken: {
 			BitNumber:  0,
 			StartTime:  1,
-			ExpireTime: 10,
+			ExpireTime: testWorkDiffWindowSize*2,
 		},
 		DeploymentMeerEVM: {
 			BitNumber:  1,
-			StartTime:  10, //
-			ExpireTime: 20,
+			StartTime:  testWorkDiffWindowSize*2, //
+			ExpireTime: testWorkDiffWindowSize*4,
 		},
 	},
 
