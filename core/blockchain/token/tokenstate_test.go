@@ -49,7 +49,7 @@ func TestTokenStateSerialization(t *testing.T) {
 	for i, test := range tests {
 		serialized, err := test.state.Serialize()
 		if !bytes.Equal(serialized, test.bytes) {
-			t.Errorf("test[%d][%s] failed: want %x but got %x : %w", i, test.name, test.bytes, serialized, err)
+			t.Errorf("test[%d][%s] failed: want %x but got %x : %s", i, test.name, test.bytes, serialized, err)
 		}
 		deserialized, err := test.state.Deserialize(test.bytes)
 		if !reflect.DeepEqual(deserialized, len(test.bytes)) {
