@@ -6,16 +6,17 @@ package common
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/cmd/miner/common/go-flags"
-	"github.com/Qitmeer/qng/core/address"
-	l "github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/params"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/Qitmeer/qng/cmd/miner/common/go-flags"
+	"github.com/Qitmeer/qng/core/address"
+	l "github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/params"
 )
 
 const (
@@ -78,6 +79,7 @@ type PoolConfig struct {
 	// Pool related options
 	Pool         string `short:"o" long:"pool" description:"Pool to connect to (e.g.stratum+tcp://pool:port)"`
 	PoolUser     string `short:"m" long:"pooluser" description:"Pool username"`
+	PoolTLS      bool   `long:"pooltls" default-mask:"-" description:"Pool tls"`
 	PoolPassword string `short:"n" long:"poolpass" default-mask:"-" description:"Pool password"`
 }
 

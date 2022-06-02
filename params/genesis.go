@@ -7,13 +7,14 @@
 package params
 
 import (
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
-	"time"
 )
 
 // MainNet ------------------------------------------------------------------------
@@ -441,7 +442,7 @@ var testPowNetGenesisBlock = types.Block{
 		ParentRoot: hash.Hash{},
 		TxRoot:     *testPowNetGenesisMerkleRoot,
 		Timestamp:  time.Unix(1632273458, 0), // 2021-09-22 09:17:38
-		Difficulty: 0x1c00ffff,               // 1T diff
+		Difficulty: 0x1f0198f2,               //
 		Pow:        pow.GetInstance(pow.MEERXKECCAKV1, 0, []byte{}),
 	},
 	Transactions: mixNetGenesisTxs,

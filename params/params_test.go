@@ -3,18 +3,19 @@ package params
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng/common/encode/base58"
-	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/Qitmeer/qng/common/encode/base58"
+	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPowLimitToBits(t *testing.T) {
 	compact := pow.BigToCompact(testMixNetPowLimit)
-	assert.Equal(t, fmt.Sprintf("0x%064x", testMixNetPowLimit), "0x0000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-	assert.Equal(t, fmt.Sprintf("0x%x", compact), "0x1c00ffff")
+	assert.Equal(t, fmt.Sprintf("0x%064x", testMixNetPowLimit), "0x0003ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+	assert.Equal(t, fmt.Sprintf("0x%x", compact), "0x1f03ffff")
 }
 
 //test blake2bd percent params
