@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"crypto/ecdsa"
 	"encoding/base64"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
@@ -27,6 +26,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-discovery"
@@ -34,7 +34,6 @@ import (
 	"github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/multiformats/go-multiaddr"
-	ma "github.com/multiformats/go-multiaddr"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"math/rand"
@@ -66,7 +65,7 @@ type Service struct {
 	cfg           *common.Config
 	exclusionList *ristretto.Cache
 	isPreGenesis  bool
-	privKey       *ecdsa.PrivateKey
+	privKey       crypto.PrivKey
 	metaData      *pb.MetaData
 	addrFilter    *multiaddr.Filters
 	host          host.Host
@@ -99,13 +98,6 @@ func (s *Service) Start() error {
 
 	s.isPreGenesis = false
 
-	var peersToWatch []string
-	if s.cfg.RelayNodeAddr != "" {
-		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
-		if err := dialRelayNode(s.Context(), s.host, s.cfg.RelayNodeAddr); err != nil {
-			log.Warn(fmt.Sprintf("Could not dial relay node:%v", err))
-		}
-	}
 	if !s.cfg.NoDiscovery {
 		err := s.startKademliaDHT()
 		if err != nil {
@@ -114,6 +106,13 @@ func (s *Service) Start() error {
 		}
 	}
 
+	var peersToWatch []string
+	if s.cfg.RelayNodeAddr != "" {
+		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
+		if err := dialRelayNode(s.Context(), s.host, s.cfg.RelayNodeAddr); err != nil {
+			log.Warn(fmt.Sprintf("Could not dial relay node:%v", err))
+		}
+	}
 	_, bootstrapAddrs := parseGenericAddrs(s.cfg.BootstrapNodeAddr)
 	if len(bootstrapAddrs) > 0 {
 		peersToWatch = append(peersToWatch, bootstrapAddrs...)
@@ -503,7 +502,7 @@ func (s *Service) RemoveBan(id string) {
 }
 
 func (s *Service) ConnectTo(node *qnode.Node) {
-	addr, err := convertToSingleMultiAddr(node)
+	addr, err := ConvertToSingleMultiAddr(node)
 	if err != nil {
 		log.Error(err.Error())
 		return
@@ -530,11 +529,11 @@ func (s *Service) HostAddress() []string {
 	return result
 }
 
-func (s *Service) HostDNS() ma.Multiaddr {
+func (s *Service) HostDNS() multiaddr.Multiaddr {
 	if len(s.cfg.HostDNS) <= 0 {
 		return nil
 	}
-	external, err := ma.NewMultiaddr(fmt.Sprintf("/dns4/%s/tcp/%d/p2p/%s", s.cfg.HostDNS, s.cfg.TCPPort, s.Host().ID().String()))
+	external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/dns4/%s/tcp/%d/p2p/%s", s.cfg.HostDNS, s.cfg.TCPPort, s.Host().ID().String()))
 	if err != nil {
 		log.Error(err.Error())
 		return nil
@@ -669,7 +668,7 @@ func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*
 		return nil, err
 	}
 	opts := s.buildOptions(ipAddr, s.privKey)
-	h, err := libp2p.New(s.Context(), opts...)
+	h, err := libp2p.New(opts...)
 	if err != nil {
 		log.Error("Failed to create p2p host")
 		return nil, err

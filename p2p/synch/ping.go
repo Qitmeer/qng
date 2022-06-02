@@ -72,11 +72,7 @@ func (s *Sync) SendPingRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 	currentTime := roughtime.Now()
-	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.Error(fmt.Sprintf("Failed to reset stream with protocol %s", stream.Protocol()))
-		}
-	}()
+	defer resetSteam(stream)
 
 	code, errMsg, err := ReadRspCode(stream, s.Encoding())
 	if err != nil {

@@ -23,11 +23,7 @@ func (s *Sync) SendMempoolRequest(ctx context.Context, pe *peers.Peer,count uint
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.Error(fmt.Sprintf("Failed to reset stream with protocol %s,%v", stream.Protocol(), err))
-		}
-	}()
+	defer resetSteam(stream)
 
 	code, errMsg, err := ReadRspCode(stream, s.Encoding())
 	if err != nil {

@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/iputils"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
@@ -42,13 +41,13 @@ func IpAddr() net.IP {
 
 // Determines a private key for p2p networking from the p2p service's
 // configuration struct. If no key is found, it generates a new one.
-func privKey(cfg *common.Config) (*ecdsa.PrivateKey, error) {
+func privKey(cfg *common.Config) (crypto.PrivKey, error) {
 	return PrivateKey(cfg.DataDir, cfg.PrivateKey, cfg.ReadWritePermissions)
 }
 
 // Determines a private key for p2p networking from the p2p service's
 // configuration struct. If no key is found, it generates a new one.
-func PrivateKey(dataDir string, privateKeyPath string, readWritePermissions os.FileMode) (*ecdsa.PrivateKey, error) {
+func PrivateKey(dataDir string, privateKeyPath string, readWritePermissions os.FileMode) (crypto.PrivKey, error) {
 	defaultKeyPath := path.Join(dataDir, keyPath)
 
 	_, err := os.Stat(defaultKeyPath)
@@ -71,8 +70,7 @@ func PrivateKey(dataDir string, privateKeyPath string, readWritePermissions os.F
 		if err = ioutil.WriteFile(defaultKeyPath, dst, readWritePermissions); err != nil {
 			return nil, err
 		}
-		convertedKey := convertFromInterfacePrivKey(priv)
-		return convertedKey, nil
+		return priv, nil
 	}
 	if defaultKeysExist && privateKeyPath == "" {
 		privateKeyPath = defaultKeyPath
@@ -80,19 +78,12 @@ func PrivateKey(dataDir string, privateKeyPath string, readWritePermissions os.F
 	return retrievePrivKeyFromFile(privateKeyPath)
 }
 
-func convertFromInterfacePrivKey(privkey crypto.PrivKey) *ecdsa.PrivateKey {
-	typeAssertedKey := (*ecdsa.PrivateKey)((*secp256k1.PrivateKey)(privkey.(*crypto.Secp256k1PrivateKey)))
-	return typeAssertedKey
-}
-
-func ConvertToInterfacePrivkey(privkey *ecdsa.PrivateKey) crypto.PrivKey {
-	typeAssertedKey := crypto.PrivKey((*crypto.Secp256k1PrivateKey)((*secp256k1.PrivateKey)(privkey)))
-	return typeAssertedKey
-}
-
-func convertToInterfacePubkey(pubkey *ecdsa.PublicKey) crypto.PubKey {
-	typeAssertedKey := crypto.PubKey((*crypto.Secp256k1PublicKey)((*secp256k1.PublicKey)(pubkey)))
-	return typeAssertedKey
+func ConvertToInterfacePubkey(pubkey *ecdsa.PublicKey) crypto.PubKey {
+	cpubKey,err:=crypto.ECDSAPublicKeyFromPubKey(*pubkey)
+	if err != nil {
+		log.Error(err.Error())
+	}
+	return cpubKey
 }
 
 // SerializeQNR takes the qnr record in its key-value form and serializes it.
@@ -106,7 +97,7 @@ func SerializeQNR(record *qnr.Record) (string, error) {
 }
 
 // Retrieves a p2p networking private key from a file path.
-func retrievePrivKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
+func retrievePrivKeyFromFile(path string) (crypto.PrivKey, error) {
 	src, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.Error(fmt.Sprintf("Error reading private key from file:%v", err))
@@ -121,7 +112,7 @@ func retrievePrivKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return convertFromInterfacePrivKey(unmarshalledKey), nil
+	return unmarshalledKey, nil
 }
 
 // Retrieves node p2p metadata from a set of configuration values

@@ -61,8 +61,8 @@ const (
 
 // Time to first byte timeout. The maximum time to wait for first byte of
 // request response (time-to-first-byte). The client is expected to give up if
-// they don't receive the first byte within 6 seconds.
-const TtfbTimeout = 6 * time.Second
+// they don't receive the first byte within 20 seconds.
+const TtfbTimeout = 20 * time.Second
 
 // rpcHandler is responsible for handling and responding to any incoming message.
 // This method may return an error to internal monitoring, but the error will
@@ -70,13 +70,13 @@ const TtfbTimeout = 6 * time.Second
 type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) *common.Error
 
 // RespTimeout is the maximum time for complete response transfer.
-const RespTimeout = 10 * time.Second
+const RespTimeout = 20 * time.Second
 
 // ReqTimeout is the maximum time for complete request transfer.
-const ReqTimeout = 10 * time.Second
+const ReqTimeout = 20 * time.Second
 
 // HandleTimeout is the maximum time for complete handler.
-const HandleTimeout = 6 * time.Second
+const HandleTimeout = 20 * time.Second
 
 type Sync struct {
 	peers        *peers.Status
@@ -285,17 +285,10 @@ func RegisterRPC(rpc common.P2PRPC, basetopic string, base interface{}, handle r
 		ctx, cancel := context.WithTimeout(rpc.Context(), TtfbTimeout)
 		defer func() {
 			processError(e, stream, rpc)
-			time.Sleep(time.Second)
+			closeWriteSteam(stream)
 			cancel()
-			closeSteam(stream)
 		}()
-		if err := stream.SetReadDeadline(time.Now().Add(TtfbTimeout)); err != nil {
-			log.Error(fmt.Sprintf("topic:%s peer:%s Could not set stream read deadline:%v",
-				topic, stream.Conn().RemotePeer().Pretty(), err))
-			e = common.NewError(common.ErrStreamBase, err)
-			return
-		}
-
+		SetRPCStreamDeadlines(stream)
 		// Given we have an input argument that can be pointer or [][32]byte, this gives us
 		// a way to check for its reflect.Kind and based on the result, we can decode
 		// accordingly.
@@ -323,8 +316,6 @@ func RegisterRPC(rpc common.P2PRPC, basetopic string, base interface{}, handle r
 			size := rpc.Encoding().GetSize(msg)
 			rpc.IncreaseBytesRecv(stream.Conn().RemotePeer(), size)
 		}
-
-		SetRPCStreamDeadlines(stream)
 		e = handle(ctx, msg, stream)
 	})
 }
@@ -356,7 +347,7 @@ func processError(e *common.Error, stream network.Stream, rpc common.P2PRPC) {
 
 // Send a message to a specific peer. The returned stream may be used for reading, but has been
 // closed for writing.
-func Send(ctx context.Context, rpc common.P2PRPC, message interface{}, baseTopic string, pid peer.ID) (network.Stream, error) {
+func Send(pctx context.Context, rpc common.P2PRPC, message interface{}, baseTopic string, pid peer.ID) (network.Stream, error) {
 	curState := rpc.Host().Network().Connectedness(pid)
 	if curState != network.Connected {
 		return nil, fmt.Errorf("%s is %s", pid, curState)
@@ -365,38 +356,33 @@ func Send(ctx context.Context, rpc common.P2PRPC, message interface{}, baseTopic
 	topic := getTopic(baseTopic) + rpc.Encoding().ProtocolSuffix()
 
 	var deadline = TtfbTimeout + RespTimeout
-	ctx, cancel := context.WithTimeout(ctx, deadline)
+	ctx, cancel := context.WithTimeout(pctx, deadline)
 	defer cancel()
 
 	stream, err := rpc.Host().NewStream(ctx, pid, protocol.ID(topic))
 	if err != nil {
-		log.Trace(fmt.Sprintf("open stream on topic %v failed", topic))
+		log.Error(fmt.Sprintf("open stream on topic %v failed", topic))
+		resetSteam(stream)
 		return nil, err
 	}
-	if err := stream.SetReadDeadline(time.Now().Add(deadline)); err != nil {
-		log.Trace(fmt.Sprintf("set stream read dealine %v failed", deadline))
-		return nil, err
-	}
-	if err := stream.SetWriteDeadline(time.Now().Add(deadline)); err != nil {
-		log.Trace(fmt.Sprintf("set stream write dealine %v failed", deadline))
-		return nil, err
-	}
+	SetRPCStreamDeadlines(stream)
 	// do not encode anything if we are sending a metadata request
 	if baseTopic == RPCMetaDataTopic {
 		return stream, nil
 	}
 	size, err := rpc.Encoding().EncodeWithMaxLength(stream, message)
 	if err != nil {
-		log.Trace(fmt.Sprintf("encocde rpc message %v to stream failed", message))
+		log.Error(fmt.Sprintf("encocde rpc message %v to stream failed", message))
+		resetSteam(stream)
 		return nil, err
 	}
 	rpc.IncreaseBytesSent(pid, size)
 	// Close stream for writing.
-	if err := stream.Close(); err != nil {
-		log.Trace(fmt.Sprintf("close stream failed: %v ", err))
+	err=closeWriteSteam(stream)
+	if err != nil {
+		resetSteam(stream)
 		return nil, err
 	}
-
 	return stream, nil
 }
 

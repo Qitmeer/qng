@@ -10,10 +10,12 @@ import (
 	"github.com/Qitmeer/qng/p2p/discover"
 	"github.com/Qitmeer/qng/p2p/qnode"
 	"github.com/Qitmeer/qng/p2p/qnr"
+	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/libp2p/go-libp2p-core/routing"
 	"github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/libp2p/go-libp2p-kad-dht/opts"
 	"net"
 )
 
@@ -183,15 +185,17 @@ func (s *Service) isInboundPeerAtLimit() bool {
 }
 
 func (s *Service) startKademliaDHT() error {
-	kademliaDHT, err := dht.New(s.Context(), s.host, dhtopts.Protocols(ProtocolDHT))
-	if err != nil {
-		return err
+	if s.kademliaDHT == nil {
+		return fmt.Errorf("no kademlia dht")
 	}
-	s.kademliaDHT = kademliaDHT
+	return s.kademliaDHT.Bootstrap(s.Context())
+}
 
-	err = kademliaDHT.Bootstrap(s.Context())
-	if err != nil {
-		return err
+func (s *Service) KademliaDHTOption() libp2p.Option {
+	newDHT := func(h host.Host) (routing.PeerRouting, error) {
+		var err error
+		s.kademliaDHT, err = dht.New(s.Context(), h,dht.V1ProtocolOverride(ProtocolDHT),dht.Mode(dht.ModeServer))
+		return s.kademliaDHT, err
 	}
-	return nil
+	return libp2p.Routing(newDHT)
 }
