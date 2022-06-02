@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"fmt"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/config"
@@ -22,17 +21,15 @@ import (
 	"github.com/Qitmeer/qng/rpc"
 	ds "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-circuit"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/control"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/routing"
 	"github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/libp2p/go-libp2p-kad-dht/opts"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
-	"github.com/libp2p/go-libp2p-secio"
 	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"path"
@@ -160,7 +157,7 @@ func (node *Node) startP2P() error {
 	}
 
 	if node.cfg.EnableRelay {
-		opts = append(opts, libp2p.EnableRelay(relay.OptHop))
+		opts = append(opts, libp2p.EnableRelay())
 	}
 
 	if node.cfg.HostDNS != "" {
@@ -184,6 +181,14 @@ func (node *Node) startP2P() error {
 		opts = append(opts, ps)
 	}
 
+	var kademliaDHT *dht.IpfsDHT
+	newDHT := func(h host.Host) (routing.PeerRouting, error) {
+		var err error
+		kademliaDHT, err = dht.New(node.Context(), h,dht.V1ProtocolOverride(p2p.ProtocolDHT),dht.Mode(dht.ModeServer))
+		return kademliaDHT, err
+	}
+	opts = append(opts,libp2p.Routing(newDHT))
+
 	node.host, err = libp2p.New(opts...)
 	if err != nil {
 		log.Error("Failed to create host %v", err)
@@ -193,11 +198,6 @@ func (node *Node) startP2P() error {
 	err = node.registerHandlers()
 	if err != nil {
 		log.Error(err.Error())
-		return err
-	}
-
-	kademliaDHT, err := dht.New(node.Context(), node.host, dht.V1ProtocolOverride(p2p.ProtocolDHT))
-	if err != nil {
 		return err
 	}
 

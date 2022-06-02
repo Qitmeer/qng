@@ -98,13 +98,6 @@ func (s *Service) Start() error {
 
 	s.isPreGenesis = false
 
-	var peersToWatch []string
-	if s.cfg.RelayNodeAddr != "" {
-		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
-		if err := dialRelayNode(s.Context(), s.host, s.cfg.RelayNodeAddr); err != nil {
-			log.Warn(fmt.Sprintf("Could not dial relay node:%v", err))
-		}
-	}
 	if !s.cfg.NoDiscovery {
 		err := s.startKademliaDHT()
 		if err != nil {
@@ -113,6 +106,13 @@ func (s *Service) Start() error {
 		}
 	}
 
+	var peersToWatch []string
+	if s.cfg.RelayNodeAddr != "" {
+		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
+		if err := dialRelayNode(s.Context(), s.host, s.cfg.RelayNodeAddr); err != nil {
+			log.Warn(fmt.Sprintf("Could not dial relay node:%v", err))
+		}
+	}
 	_, bootstrapAddrs := parseGenericAddrs(s.cfg.BootstrapNodeAddr)
 	if len(bootstrapAddrs) > 0 {
 		peersToWatch = append(peersToWatch, bootstrapAddrs...)

@@ -52,6 +52,9 @@ func (s *Service) buildOptions(ip net.IP, priKey crypto.PrivKey) []libp2p.Option
 		libp2p.UserAgent(s.cfg.UserAgent),
 		libp2p.ConnectionGater(s),
 	}
+	if !s.cfg.NoDiscovery {
+		options = append(options,s.KademliaDHTOption())
+	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP
 	}
