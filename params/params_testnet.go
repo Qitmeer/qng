@@ -22,10 +22,10 @@ var testNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 242), commo
 var maxNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 0), common.Big1)
 
 // target time per block unit second(s)
-const testTargetTimePerBlock = 30
+const testTargetTimePerBlock = 15
 
 // Difficulty check interval is about 60*30 = 30 mins
-const testWorkDiffWindowSize = 60
+const testWorkDiffWindowSize = 30
 
 // TestNetParams defines the network parameters for the test network.
 var TestNetParams = Params{
@@ -111,21 +111,21 @@ var TestNetParams = Params{
 	//
 	// The miner confirmation window is defined as:
 	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 57,
-	MinerConfirmationWindow:       mainWorkDiffWindowSize,
+	RuleChangeActivationThreshold: 1,
+	MinerConfirmationWindow:       2,
 	Deployments: []ConsensusDeployment{
 		DeploymentTestDummy: {
 			BitNumber: 28,
 		},
 		DeploymentToken: {
 			BitNumber:  0,
-			StartTime:  2880,
-			ExpireTime: 28800,
+			StartTime:  1,
+			ExpireTime: 10,
 		},
 		DeploymentMeerEVM: {
 			BitNumber:  1,
-			StartTime:  270561, // =270561+2880
-			ExpireTime: 270661,
+			StartTime:  10, //
+			ExpireTime: 20,
 		},
 	},
 
