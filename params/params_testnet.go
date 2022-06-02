@@ -24,7 +24,7 @@ var maxNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 0), common.B
 // target time per block unit second(s)
 const testTargetTimePerBlock = 15
 
-// Difficulty check interval is about 60*30 = 30 mins
+// Difficulty check interval is about 15*30 = 7.5 mins
 const testWorkDiffWindowSize = 30
 
 // TestNetParams defines the network parameters for the test network.
