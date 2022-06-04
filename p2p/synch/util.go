@@ -15,7 +15,7 @@ var (
 func closeWriteSteam(stream libp2pcore.Stream) error {
 	err := stream.CloseWrite()
 	if err != nil {
-		log.Error(fmt.Sprintf("Failed to close write stream(%s %s %s):%v",stream.Conn().RemotePeer(),stream.Protocol(),stream.Stat().Direction,err))
+		log.Debug(fmt.Sprintf("Failed to close write stream(%s %s %s):%v",stream.Conn().RemotePeer(),stream.Protocol(),stream.Stat().Direction,err))
 	}
 	return err
 }
@@ -26,7 +26,7 @@ func resetSteam(stream libp2pcore.Stream) error {
 	}
 	err := stream.Reset()
 	if err != nil {
-		log.Error(fmt.Sprintf("Failed to reset stream(%s %s %s):%v",stream.Conn().RemotePeer(),stream.Protocol(),stream.Stat().Direction,err))
+		log.Debug(fmt.Sprintf("Failed to reset stream(%s %s %s):%v",stream.Conn().RemotePeer(),stream.Protocol(),stream.Stat().Direction,err))
 	}
 	return err
 }
