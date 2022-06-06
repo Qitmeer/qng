@@ -433,6 +433,11 @@ func (ps *PeerSync) updateSyncPeer(force bool) {
 	ps.startSync()
 }
 
+func (ps *PeerSync) TryAgainUpdateSyncPeer() {
+	<-time.After(DefaultRateTaskTime)
+	ps.updateSyncPeer(true)
+}
+
 func (ps *PeerSync) continueSync(orphan bool) {
 	if !ps.IsRunning() {
 		return
