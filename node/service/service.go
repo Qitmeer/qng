@@ -26,12 +26,19 @@ func (s *Service) Start() error {
 	}
 	s.InitContext()
 	if s.services != nil {
-		return s.services.StartAll()
+		err := s.services.StartAll()
+		if err != nil {
+			atomic.AddInt32(&s.started, -1)
+			return err
+		}
 	}
 	return nil
 }
 
 func (s *Service) Stop() error {
+	if !s.IsStarted() {
+		return nil
+	}
 	if atomic.AddInt32(&s.shutdown, 1) != 1 {
 		return fmt.Errorf("Service is already in the process of shutting down")
 	}
