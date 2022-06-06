@@ -47,7 +47,12 @@ https://github.com/Qitmeer/qng/releases
 * MeerDAG Address:
 ```
 ~ ./qx ec-to-public [Your_Private_Key] | ./qx ec-to-ethaddr
+or
+~ ./qx pkaddr-to-public [Your_pkaddress] | ./qx ec-to-ethaddr
+or
+~ ./qx pkaddr-to-ethaddr [Your_pkaddress]
 ```
+
 
 ##### Use qng RPC 
 * All addresses corresponding to the same private key: 

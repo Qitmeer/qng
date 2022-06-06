@@ -77,6 +77,8 @@ addr & tx & sign :
     ec-to-addr            convert an EC public key to a paymant address. default is qx address
     ec-to-pkaddr          convert an EC public key to a paymant public key address. default is qx address
     ec-to-ethaddr         convert an EC public key to a ethereum address.
+    pkaddr-to-public      convert an pkaddress to EC public key (the uncompressed format by default )
+    pkaddr-to-ethaddr     convert an pkaddress to ethereum address
     tx-encode             encode a unsigned transaction.
     tx-decode             decode a transaction in base16 to json format.
     tx-sign               sign a transactions using a private key.
@@ -124,6 +126,7 @@ var derivePath qx.DerivePathFlag
 var mnemoicSeedPassphrase string
 var curve string
 var uncompressedPKFormat bool
+var compressedPKFormat bool
 var network string
 var powType string
 var txInputs qx.TxInputsFlag
@@ -394,10 +397,22 @@ func main() {
 	}
 	ecToPKAddrCmd.Var(&base58checkVersion, "v", "base58check `version` [mainnet|testnet|privnet]")
 
-	// PKAddress
+	// ETHAddress
 	ecToETHAddrCmd := flag.NewFlagSet("ec-to-ethaddr", flag.ExitOnError)
 	ecToETHAddrCmd.Usage = func() {
 		cmdUsage(ecToETHAddrCmd, "Usage: qx ec-to-ethaddr [ec_public_key] \n")
+	}
+
+	//
+	pkaddrToPubCmd := flag.NewFlagSet("pkaddr-to-public", flag.ExitOnError)
+	pkaddrToPubCmd.Usage = func() {
+		cmdUsage(pkaddrToPubCmd, "Usage: qx pkaddr-to-public [pk address] \n")
+	}
+	pkaddrToPubCmd.BoolVar(&compressedPKFormat, "c", false, "using the compressed public key format")
+
+	pkaddrToETHAddrCmd := flag.NewFlagSet("pkaddr-to-ethaddr", flag.ExitOnError)
+	pkaddrToETHAddrCmd.Usage = func() {
+		cmdUsage(pkaddrToETHAddrCmd, "Usage: qx pkaddr-to-ethaddr [pk address] \n")
 	}
 
 	// Transaction
@@ -495,6 +510,8 @@ MEER is the 64 bit spend amount in qitmeer.`)
 		ecToAddrCmd,
 		ecToPKAddrCmd,
 		ecToETHAddrCmd,
+		pkaddrToPubCmd,
+		pkaddrToETHAddrCmd,
 		txEncodeCmd,
 		txDecodeCmd,
 		txSignCmd,
@@ -1312,6 +1329,51 @@ MEER is the 64 bit spend amount in qitmeer.`)
 			}
 			str := strings.TrimSpace(string(src))
 			qx.EcPubKeyToETHAddressSTDO(str)
+		}
+	}
+
+	if pkaddrToPubCmd.Parsed() {
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeNamedPipe) == 0 {
+			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
+				pkaddrToPubCmd.Usage()
+			} else {
+				key, err := qx.PKAddressToPubKey(os.Args[len(os.Args)-1], compressedPKFormat)
+				if err != nil {
+					qx.ErrExit(err)
+				}
+				fmt.Printf("%s\n", key)
+
+			}
+		} else { //try from STDIN
+			src, err := ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				errExit(err)
+			}
+			str := strings.TrimSpace(string(src))
+			key, err := qx.PKAddressToPubKey(str, compressedPKFormat)
+			if err != nil {
+				qx.ErrExit(err)
+			}
+			fmt.Printf("%s\n", key)
+		}
+	}
+
+	if pkaddrToETHAddrCmd.Parsed() {
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeNamedPipe) == 0 {
+			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
+				pkaddrToETHAddrCmd.Usage()
+			} else {
+				qx.PKAddressToETHAddressSTDO(os.Args[len(os.Args)-1])
+			}
+		} else { //try from STDIN
+			src, err := ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				errExit(err)
+			}
+			str := strings.TrimSpace(string(src))
+			qx.PKAddressToETHAddressSTDO(str)
 		}
 	}
 

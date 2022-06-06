@@ -3,11 +3,11 @@ package qx
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/common/encode/base58"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/crypto/ecc"
+	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/params"
 )
 
@@ -128,4 +128,34 @@ func EcPubKeyToETHAddressSTDO(pubkey string) {
 	}
 
 	fmt.Printf("%s\n", addr.String())
+}
+
+func PKAddressToPubKey(pkaddr string, compressed bool) (string, error) {
+	ePKAddr, err := address.DecodeAddress(pkaddr)
+	if err != nil {
+		return "", err
+	}
+	pka, ok := ePKAddr.(*address.SecpPubKeyAddress)
+	if !ok {
+		return "", fmt.Errorf("%s is not public key address", pkaddr)
+	}
+	var key []byte
+	if compressed {
+		key = pka.PubKey().SerializeCompressed()
+	} else {
+		key = pka.PubKey().SerializeUncompressed()
+	}
+	return fmt.Sprintf("%x", key[:]), nil
+}
+
+func PKAddressToETHAddressSTDO(pkaddr string) {
+	ePKAddr, err := address.DecodeAddress(pkaddr)
+	if err != nil {
+		ErrExit(err)
+	}
+	pka, ok := ePKAddr.(*address.SecpPubKeyAddress)
+	if !ok {
+		ErrExit(fmt.Errorf("%s is not public key address", pkaddr))
+	}
+	EcPubKeyToETHAddressSTDO(hex.EncodeToString(pka.PubKey().SerializeUncompressed()))
 }
