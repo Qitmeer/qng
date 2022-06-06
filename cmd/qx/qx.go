@@ -75,8 +75,8 @@ entropy (seed) & mnemoic & hd & ec :
 
 addr & tx & sign :
     ec-to-addr            convert an EC public key to a paymant address. default is qx address
-	ec-to-pkaddr          convert an EC public key to a paymant public key address. default is qx address
-	ec-to-ethaddr         convert an EC public key to a ethereum address.
+    ec-to-pkaddr          convert an EC public key to a paymant public key address. default is qx address
+    ec-to-ethaddr         convert an EC public key to a ethereum address.
     tx-encode             encode a unsigned transaction.
     tx-decode             decode a transaction in base16 to json format.
     tx-sign               sign a transactions using a private key.
