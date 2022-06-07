@@ -226,7 +226,7 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 		if err != nil {
 			log.Warn(fmt.Sprintf("getBlocks send:%v", err))
 			updateSyncPoint()
-			ps.updateSyncPeer(true)
+			go ps.TryAgainUpdateSyncPeer()
 			return err
 		}
 		log.Trace(fmt.Sprintf("Received:Locator=%d", len(bd.Locator)))
