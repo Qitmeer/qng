@@ -1,11 +1,13 @@
 package p2p
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"time"
 )
 
@@ -129,6 +131,20 @@ func (api *PrivateP2PAPI) AddPeer(address string) (interface{}, error) {
 	if err != nil {
 		return false, err
 	}
+	return true, nil
+}
+
+func (api *PrivateP2PAPI) DelPeer(pid string) (interface{}, error) {
+	peid, err := peer.Decode(pid)
+	if err != nil {
+		return false,err
+	}
+
+	pe := api.s.Peers().Get(peid)
+	if pe == nil {
+		return false, fmt.Errorf("No peer:%s",peid.String())
+	}
+	api.s.PeerSync().Disconnect(pe)
 	return true, nil
 }
 

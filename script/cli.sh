@@ -398,10 +398,17 @@ function get_peer_info(){
   get_result "$data"
 }
 
-function get_add_peer(){
+function add_peer(){
   local address=$1
 
   local data='{"jsonrpc":"2.0","method":"p2p_addPeer","params":["'$address'"],"id":null}'
+  get_result "$data"
+}
+
+function del_peer(){
+  local pid=$1
+
+  local data='{"jsonrpc":"2.0","method":"p2p_delPeer","params":["'$pid'"],"id":null}'
   get_result "$data"
 }
 
@@ -662,7 +669,8 @@ function usage(){
   echo "chain  :"
   echo "  nodeinfo"
   echo "  peerinfo"
-  echo "  addpeer"
+  echo "  addpeer <p2p address>"
+  echo "  delpeer <p2p id>"
   echo "  ping"
   echo "  pause"
   echo "  networkinfo"
@@ -1038,7 +1046,10 @@ elif [ "$1" == "peerinfo" ]; then
   get_peer_info $@
 elif [ "$1" == "addpeer" ]; then
   shift
-  get_add_peer $@
+  add_peer $@
+elif [ "$1" == "delpeer" ]; then
+  shift
+  del_peer $@
 elif [ "$1" == "ping" ]; then
   shift
   ping $@
