@@ -9,7 +9,7 @@ import (
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/encoder"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
-	"io"
+	"github.com/libp2p/go-libp2p-core/network"
 )
 
 func generateErrorResponse(e *common.Error, encoding encoder.NetworkEncoding) ([]byte, error) {
@@ -25,10 +25,11 @@ func generateErrorResponse(e *common.Error, encoding encoder.NetworkEncoding) ([
 }
 
 // ReadRspCode response from a RPC stream.
-func ReadRspCode(stream io.Reader, encoding encoder.NetworkEncoding) (common.ErrorCode, string, error) {
+func ReadRspCode(stream network.Stream,rpc common.P2PRPC) (common.ErrorCode, string, error) {
 	b := make([]byte, 1)
 	_, err := stream.Read(b)
 	if err != nil {
+		processUnderlyingError(rpc,stream.Conn().RemotePeer(),err)
 		return common.ErrNone, "", err
 	}
 
@@ -43,9 +44,10 @@ func ReadRspCode(stream io.Reader, encoding encoder.NetworkEncoding) (common.Err
 	msg := &pb.ErrorResponse{
 		Message: []byte{},
 	}
-	if err := encoding.DecodeWithMaxLength(stream, msg); err != nil {
+
+	err = DecodeMessage(stream,rpc,msg)
+	if  err != nil {
 		return common.ErrNone, "", err
 	}
-
 	return common.ErrorCode(b[0]), string(msg.Message), nil
 }

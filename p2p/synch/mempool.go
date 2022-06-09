@@ -23,9 +23,9 @@ func (s *Sync) SendMempoolRequest(ctx context.Context, pe *peers.Peer,count uint
 	if err != nil {
 		return err
 	}
-	defer resetSteam(stream)
+	defer resetSteam(stream,s.p2p)
 
-	code, errMsg, err := ReadRspCode(stream, s.Encoding())
+	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
 		return err
 	}

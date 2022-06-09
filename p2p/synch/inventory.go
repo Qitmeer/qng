@@ -43,9 +43,9 @@ func (s *Sync) sendInventoryRequest(ctx context.Context, pe *peers.Peer, inv *pb
 		log.Trace(fmt.Sprintf("Failed to send inventory request to peer=%v, err=%v", pe.GetID(), err.Error()))
 		return err
 	}
-	defer resetSteam(stream)
+	defer resetSteam(stream,s.p2p)
 
-	code, errMsg, err := ReadRspCode(stream, s.Encoding())
+	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
 		return err
 	}

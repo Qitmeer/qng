@@ -26,9 +26,9 @@ func (s *Sync) sendGetBlocksRequest(ctx context.Context, id peer.ID, blocks *pb.
 	if err != nil {
 		return nil, err
 	}
-	defer resetSteam(stream)
+	defer resetSteam(stream,s.p2p)
 
-	code, errMsg, err := ReadRspCode(stream, s.Encoding())
+	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (s *Sync) sendGetBlocksRequest(ctx context.Context, id peer.ID, blocks *pb.
 	}
 
 	msg := &pb.DagBlocks{}
-	if err := s.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+	if err := DecodeMessage(stream,s.p2p,msg); err != nil {
 		return nil, err
 	}
 

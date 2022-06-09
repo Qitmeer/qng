@@ -28,9 +28,9 @@ func (s *Sync) sendTxRequest(ctx context.Context, id peer.ID, gtxs *pb.GetTxs) (
 	if err != nil {
 		return nil, err
 	}
-	defer resetSteam(stream)
+	defer resetSteam(stream,s.p2p)
 
-	code, errMsg, err := ReadRspCode(stream, s.Encoding())
+	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (s *Sync) sendTxRequest(ctx context.Context, id peer.ID, gtxs *pb.GetTxs) (
 	}
 
 	msg := &pb.Transactions{}
-	if err := s.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+	if err := DecodeMessage(stream,s.p2p,msg); err != nil {
 		return nil, err
 	}
 	return msg, err
