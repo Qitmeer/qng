@@ -24,7 +24,7 @@ func (s *Sync) sendQNRRequest(ctx context.Context, pe *peers.Peer, qnr *pb.SyncQ
 	if err != nil {
 		return nil, err
 	}
-	defer resetSteam(stream,s.p2p)
+	defer resetSteam(stream, s.p2p)
 
 	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
@@ -37,7 +37,7 @@ func (s *Sync) sendQNRRequest(ctx context.Context, pe *peers.Peer, qnr *pb.SyncQ
 	}
 
 	msg := &pb.SyncQNR{}
-	if err := DecodeMessage(stream,s.p2p,msg); err != nil {
+	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
 

@@ -72,7 +72,7 @@ func (s *Sync) SendPingRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 	currentTime := roughtime.Now()
-	defer resetSteam(stream,s.p2p)
+	defer resetSteam(stream, s.p2p)
 
 	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
@@ -86,7 +86,7 @@ func (s *Sync) SendPingRequest(ctx context.Context, id peer.ID) error {
 		return errors.New(errMsg)
 	}
 	msg := new(uint64)
-	if err := DecodeMessage(stream,s.p2p,msg); err != nil {
+	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return err
 	}
 	valid, err := s.validateSequenceNum(*msg, pe)

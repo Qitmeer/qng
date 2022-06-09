@@ -26,7 +26,7 @@ func (s *Sync) sendGetBlocksRequest(ctx context.Context, id peer.ID, blocks *pb.
 	if err != nil {
 		return nil, err
 	}
-	defer resetSteam(stream,s.p2p)
+	defer resetSteam(stream, s.p2p)
 
 	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
@@ -39,7 +39,7 @@ func (s *Sync) sendGetBlocksRequest(ctx context.Context, id peer.ID, blocks *pb.
 	}
 
 	msg := &pb.DagBlocks{}
-	if err := DecodeMessage(stream,s.p2p,msg); err != nil {
+	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
 

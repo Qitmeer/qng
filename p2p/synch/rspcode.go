@@ -25,11 +25,11 @@ func generateErrorResponse(e *common.Error, encoding encoder.NetworkEncoding) ([
 }
 
 // ReadRspCode response from a RPC stream.
-func ReadRspCode(stream network.Stream,rpc common.P2PRPC) (common.ErrorCode, string, error) {
+func ReadRspCode(stream network.Stream, rpc common.P2PRPC) (common.ErrorCode, string, error) {
 	b := make([]byte, 1)
 	_, err := stream.Read(b)
 	if err != nil {
-		processUnderlyingError(rpc,stream.Conn().RemotePeer(),err)
+		processUnderlyingError(rpc, stream.Conn().RemotePeer(), err)
 		return common.ErrNone, "", err
 	}
 
@@ -45,8 +45,8 @@ func ReadRspCode(stream network.Stream,rpc common.P2PRPC) (common.ErrorCode, str
 		Message: []byte{},
 	}
 
-	err = DecodeMessage(stream,rpc,msg)
-	if  err != nil {
+	err = DecodeMessage(stream, rpc, msg)
+	if err != nil {
 		return common.ErrNone, "", err
 	}
 	return common.ErrorCode(b[0]), string(msg.Message), nil

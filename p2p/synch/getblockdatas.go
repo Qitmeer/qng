@@ -31,7 +31,7 @@ func (s *Sync) sendGetBlockDataRequest(ctx context.Context, id peer.ID, locator 
 	if err != nil {
 		return nil, err
 	}
-	defer resetSteam(stream,s.p2p)
+	defer resetSteam(stream, s.p2p)
 
 	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
@@ -44,7 +44,7 @@ func (s *Sync) sendGetBlockDataRequest(ctx context.Context, id peer.ID, locator 
 	}
 
 	msg := &pb.BlockDatas{}
-	if err := DecodeMessage(stream,s.p2p,msg); err != nil {
+	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
 	return msg, err
@@ -58,7 +58,7 @@ func (s *Sync) sendGetMerkleBlockDataRequest(ctx context.Context, id peer.ID, re
 	if err != nil {
 		return nil, err
 	}
-	defer resetSteam(stream,s.p2p)
+	defer resetSteam(stream, s.p2p)
 
 	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
@@ -71,7 +71,7 @@ func (s *Sync) sendGetMerkleBlockDataRequest(ctx context.Context, id peer.ID, re
 	}
 
 	msg := &pb.MerkleBlockResponse{}
-	if err := DecodeMessage(stream,s.p2p,msg); err != nil {
+	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
 	return msg, err
