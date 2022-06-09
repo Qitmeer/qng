@@ -28,9 +28,9 @@ func (s *Sync) sendTxRequest(ctx context.Context, id peer.ID, gtxs *pb.GetTxs) (
 	if err != nil {
 		return nil, err
 	}
-	defer resetSteam(stream)
+	defer resetSteam(stream, s.p2p)
 
-	code, errMsg, err := ReadRspCode(stream, s.Encoding())
+	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (s *Sync) sendTxRequest(ctx context.Context, id peer.ID, gtxs *pb.GetTxs) (
 	}
 
 	msg := &pb.Transactions{}
-	if err := s.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
 	return msg, err
@@ -66,8 +66,8 @@ func (s *Sync) txHandler(ctx context.Context, msg interface{}, stream libp2pcore
 		return ErrMessage(err)
 	}
 
-	pbtxs:=&pb.Transactions{Txs:[]*pb.Transaction{}}
-	for _,tx:=range txs {
+	pbtxs := &pb.Transactions{Txs: []*pb.Transaction{}}
+	for _, tx := range txs {
 		if len(pbtxs.Txs) >= MaxInvPerMsg {
 			break
 		}
@@ -76,11 +76,11 @@ func (s *Sync) txHandler(ctx context.Context, msg interface{}, stream libp2pcore
 			log.Warn(err.Error())
 			continue
 		}
-		pbtx:=&pb.Transaction{TxBytes: txbytes}
+		pbtx := &pb.Transaction{TxBytes: txbytes}
 		if uint64(pbtxs.SizeSSZ()+pbtx.SizeSSZ()+TXDATA_SSZ_HEAD_SIZE) >= s.p2p.Encoding().GetMaxChunkSize() {
 			break
 		}
-		pbtxs.Txs=append(pbtxs.Txs,pbtx)
+		pbtxs.Txs = append(pbtxs.Txs, pbtx)
 	}
 
 	e := s.EncodeResponseMsg(stream, pbtxs)
@@ -90,63 +90,62 @@ func (s *Sync) txHandler(ctx context.Context, msg interface{}, stream libp2pcore
 	return nil
 }
 
-func (s *Sync) handleTxMsg(msg *pb.Transaction, pid peer.ID) (*hash.Hash,error) {
+func (s *Sync) handleTxMsg(msg *pb.Transaction, pid peer.ID) (*hash.Hash, error) {
 	tx := changePBTxToTx(msg)
 	if tx == nil {
-		return nil,fmt.Errorf("message is not type *pb.Transaction")
+		return nil, fmt.Errorf("message is not type *pb.Transaction")
 	}
-	txh:=tx.TxHash()
+	txh := tx.TxHash()
 	// Process the transaction to include validation, insertion in the
 	// memory pool, orphan handling, etc.
 	allowOrphans := s.p2p.Config().MaxOrphanTxs > 0
 	acceptedTxs, err := s.p2p.TxMemPool().ProcessTransaction(types.NewTx(tx), allowOrphans, true, true)
 	if err != nil {
-		return &txh,fmt.Errorf("Failed to process transaction %v: %v\n", tx.TxHash().String(), err.Error())
+		return &txh, fmt.Errorf("Failed to process transaction %v: %v\n", tx.TxHash().String(), err.Error())
 	}
 	s.p2p.Notify().AnnounceNewTransactions(acceptedTxs, []peer.ID{pid})
 
-	return &txh,nil
+	return &txh, nil
 }
 
 func (ps *PeerSync) processGetTxs(pe *peers.Peer, otxs []*hash.Hash) error {
 	if len(otxs) <= 0 {
 		return nil
 	}
-	txs:=[]*hash.Hash{}
-	for _,txh:=range otxs {
+	txs := []*hash.Hash{}
+	for _, txh := range otxs {
 		if !ps.sy.p2p.TxMemPool().HaveTransaction(txh) {
-			txs=append(txs,txh)
+			txs = append(txs, txh)
 		}
 	}
 
-	txsM:=map[string]struct{}{}
-	for i:=0;i<len(txs);i++ {
-		txsM[txs[i].String()]= struct{}{}
+	txsM := map[string]struct{}{}
+	for i := 0; i < len(txs); i++ {
+		txsM[txs[i].String()] = struct{}{}
 	}
 
-
-	total:=len(txsM)
-	txsM=map[string]struct{}{}
+	total := len(txsM)
+	txsM = map[string]struct{}{}
 	var gtxs *pb.GetTxs
 
 	for len(txsM) < total {
-		needSend:=false
-		gtxs = &pb.GetTxs{Txs:[]*pb.Hash{}}
-		for i:=0;i<len(txs);i++ {
-			_,ok:=txsM[txs[i].String()]
+		needSend := false
+		gtxs = &pb.GetTxs{Txs: []*pb.Hash{}}
+		for i := 0; i < len(txs); i++ {
+			_, ok := txsM[txs[i].String()]
 			if ok {
 				continue
 			}
-			gtxs.Txs = append(gtxs.Txs,&pb.Hash{Hash: txs[i].Bytes()})
+			gtxs.Txs = append(gtxs.Txs, &pb.Hash{Hash: txs[i].Bytes()})
 
 			if len(gtxs.Txs) >= MaxInvPerMsg {
-				needSend=true
+				needSend = true
 				break
 			}
 		}
 
 		if !needSend && len(gtxs.Txs) > 0 {
-			needSend=true
+			needSend = true
 		}
 
 		if needSend {
@@ -154,9 +153,9 @@ func (ps *PeerSync) processGetTxs(pe *peers.Peer, otxs []*hash.Hash) error {
 			if err != nil {
 				return err
 			}
-			for _,tx:=range txs.Txs {
-				txh,err := ps.sy.handleTxMsg(tx, pe.GetID())
-				txsM[txh.String()]= struct{}{}
+			for _, tx := range txs.Txs {
+				txh, err := ps.sy.handleTxMsg(tx, pe.GetID())
+				txsM[txh.String()] = struct{}{}
 
 				if err != nil {
 					log.Debug(err.Error())

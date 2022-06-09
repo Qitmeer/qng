@@ -16,6 +16,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	"io"
 	"reflect"
 	"strings"
 	"time"
@@ -285,7 +286,7 @@ func RegisterRPC(rpc common.P2PRPC, basetopic string, base interface{}, handle r
 		ctx, cancel := context.WithTimeout(rpc.Context(), TtfbTimeout)
 		defer func() {
 			processError(e, stream, rpc)
-			closeWriteSteam(stream)
+			closeWriteSteam(stream, rpc)
 			cancel()
 		}()
 		SetRPCStreamDeadlines(stream)
@@ -303,7 +304,7 @@ func RegisterRPC(rpc common.P2PRPC, basetopic string, base interface{}, handle r
 			}
 			msgT := reflect.New(ty)
 			msg = msgT.Interface()
-			if err := rpc.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+			if err := DecodeMessage(stream, rpc, msg); err != nil {
 				e = common.NewError(common.ErrStreamRead, err)
 				// Debug logs for goodbye errors
 				if strings.Contains(topic, RPCGoodByeTopic) {
@@ -338,6 +339,7 @@ func processError(e *common.Error, stream network.Stream, rpc common.P2PRPC) {
 	} else {
 		if _, err := stream.Write(resp); err != nil {
 			log.Debug(fmt.Sprintf("Failed to write to stream:%v", err))
+			processUnderlyingError(rpc, stream.Conn().RemotePeer(), err)
 		}
 	}
 	if e.Code != common.ErrDAGConsensus {
@@ -362,7 +364,7 @@ func Send(pctx context.Context, rpc common.P2PRPC, message interface{}, baseTopi
 	stream, err := rpc.Host().NewStream(ctx, pid, protocol.ID(topic))
 	if err != nil {
 		log.Error(fmt.Sprintf("open stream on topic %v failed", topic))
-		resetSteam(stream)
+		processUnderlyingError(rpc, pid, err)
 		return nil, err
 	}
 	SetRPCStreamDeadlines(stream)
@@ -370,17 +372,16 @@ func Send(pctx context.Context, rpc common.P2PRPC, message interface{}, baseTopi
 	if baseTopic == RPCMetaDataTopic {
 		return stream, nil
 	}
-	size, err := rpc.Encoding().EncodeWithMaxLength(stream, message)
+	size, err := EncodeMessage(stream, rpc, message)
 	if err != nil {
-		log.Error(fmt.Sprintf("encocde rpc message %v to stream failed", message))
-		resetSteam(stream)
+		log.Error(fmt.Sprintf("encocde rpc message %v to stream failed:%v", message, err))
 		return nil, err
 	}
 	rpc.IncreaseBytesSent(pid, size)
 	// Close stream for writing.
-	err=closeWriteSteam(stream)
+	err = closeWriteSteam(stream, rpc)
 	if err != nil {
-		resetSteam(stream)
+		processUnderlyingError(rpc, pid, err)
 		return nil, err
 	}
 	return stream, nil
@@ -392,7 +393,7 @@ func EncodeResponseMsg(rpc common.P2PRPC, stream libp2pcore.Stream, msg interfac
 		return common.NewError(common.ErrStreamWrite, err)
 	}
 	if msg != nil {
-		size, err := rpc.Encoding().EncodeWithMaxLength(stream, msg)
+		size, err := EncodeMessage(stream, rpc, msg)
 		if err != nil {
 			return common.NewError(common.ErrStreamWrite, err)
 		}
@@ -406,4 +407,15 @@ func getTopic(baseTopic string) string {
 		return baseTopic
 	}
 	return baseTopic + "/" + params.ActiveNetParams.Name
+}
+
+func processUnderlyingError(rpc common.P2PRPC, pid peer.ID, err error) {
+	if err.Error() == io.EOF.Error() {
+		return
+	}
+	log.Info(fmt.Sprintf("An underlying error(%s), try to terminate the connection:%s", err, pid.String()))
+	err = rpc.Disconnect(pid)
+	if err != nil {
+		log.Error(err.Error())
+	}
 }

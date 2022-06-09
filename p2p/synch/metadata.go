@@ -31,8 +31,8 @@ func (s *Sync) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.MetaDat
 	// we close the stream outside of `send` because
 	// metadata requests send no payload, so closing the
 	// stream early leads it to a reset.
-	defer resetSteam(stream)
-	code, errMsg, err := ReadRspCode(stream, s.Encoding())
+	defer resetSteam(stream, s.p2p)
+	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (s *Sync) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.MetaDat
 		return nil, fmt.Errorf(errMsg)
 	}
 	msg := new(pb.MetaData)
-	if err := s.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
 	return msg, nil
