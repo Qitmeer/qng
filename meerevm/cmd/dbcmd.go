@@ -4,8 +4,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/chain"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/meerevm/chain"
+	"github.com/ethereum/go-ethereum/core/types"
 	"os"
 	"path/filepath"
 	"sort"
@@ -50,6 +51,7 @@ Remove blockchain and state databases`,
 			dbPutCmd,
 			dbGetSlotsCmd,
 			dbDumpFreezerIndex,
+			dbMigrateFreezerCmd,
 		},
 	}
 	dbInspectCmd = cli.Command{
@@ -174,6 +176,17 @@ WARNING: This is a low-level operation which may cause database corruption!`,
 			utils.GoerliFlag,
 		},
 		Description: "This command displays information about the freezer index.",
+	}
+	dbMigrateFreezerCmd = cli.Command{
+		Action:    utils.MigrateFlags(freezerMigrate),
+		Name:      "freezer-migrate",
+		Usage:     "Migrate legacy parts of the freezer. (WARNING: may take a long time)",
+		ArgsUsage: "",
+		Flags: utils.GroupFlags([]cli.Flag{
+			utils.SyncModeFlag,
+		}, utils.NetworkFlags, utils.DatabasePathFlags),
+		Description: `The freezer-migrate command checks your database for receipts in a legacy format and updates those.
+WARNING: please back-up the receipt files in your ancients before running this command.`,
 	}
 )
 
@@ -480,10 +493,49 @@ func freezerInspect(ctx *cli.Context) error {
 	defer stack.Close()
 	path := filepath.Join(stack.ResolvePath("chaindata"), "ancient")
 	log.Info("Opening freezer", "location", path, "name", kind)
-	if f, err := rawdb.NewFreezerTable(path, kind, disableSnappy); err != nil {
+	if f, err := rawdb.NewFreezerTable(path, kind, disableSnappy, true); err != nil {
 		return err
 	} else {
 		f.DumpIndex(start, end)
 	}
+	return nil
+}
+
+func freezerMigrate(ctx *cli.Context) error {
+	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg.DataDir)
+	defer stack.Close()
+
+	db := utils.MakeChainDatabase(ctx, stack, false)
+	defer db.Close()
+
+	// Check first block for legacy receipt format
+	numAncients, err := db.Ancients()
+	if err != nil {
+		return err
+	}
+	if numAncients < 1 {
+		log.Info("No receipts in freezer to migrate")
+		return nil
+	}
+
+	isFirstLegacy, firstIdx, err := chain.DBHasLegacyReceipts(db, 0)
+	if err != nil {
+		return err
+	}
+	if !isFirstLegacy {
+		log.Info("No legacy receipts to migrate")
+		return nil
+	}
+
+	log.Info("Starting migration", "ancients", numAncients, "firstLegacy", firstIdx)
+	start := time.Now()
+	if err := db.MigrateTable("receipts", types.ConvertLegacyStoredReceipts); err != nil {
+		return err
+	}
+	if err := db.Close(); err != nil {
+		return err
+	}
+	log.Info("Migration finished", "duration", time.Since(start))
+
 	return nil
 }

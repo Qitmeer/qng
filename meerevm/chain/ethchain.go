@@ -5,6 +5,7 @@
 package chain
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/Qitmeer/qng/core/protocol"
@@ -19,8 +20,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/eth/catalyst"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -57,7 +59,6 @@ var (
 		utils.NoUSBFlag,
 		utils.USBFlag,
 		utils.SmartCardDaemonPathFlag,
-		utils.OverrideLondonFlag,
 		utils.EthashCacheDirFlag,
 		utils.EthashCachesInMemoryFlag,
 		utils.EthashCachesOnDiskFlag,
@@ -90,7 +91,6 @@ var (
 		utils.UltraLightFractionFlag,
 		utils.UltraLightOnlyAnnounceFlag,
 		utils.LightNoSyncServeFlag,
-		utils.WhitelistFlag,
 		utils.BloomFilterSizeFlag,
 		utils.CacheFlag,
 		utils.CacheDatabaseFlag,
@@ -185,7 +185,6 @@ var (
 		IstanbulBlock:       big.NewInt(0),
 		MuirGlacierBlock:    big.NewInt(0),
 		BerlinBlock:         big.NewInt(0),
-		CatalystBlock:       big.NewInt(0),
 		LondonBlock:         nil,
 		Ethash:              new(params.EthashConfig),
 	}
@@ -460,17 +459,27 @@ func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
 
 func makeFullNode(ctx *cli.Context, cfg *MeerethConfig) (*node.Node, *eth.EthAPIBackend, *eth.Ethereum) {
 	stack := makeConfigNode(ctx, cfg)
-	if ctx.GlobalIsSet(utils.OverrideLondonFlag.Name) {
-		cfg.Eth.OverrideLondon = new(big.Int).SetUint64(ctx.GlobalUint64(utils.OverrideLondonFlag.Name))
+	if ctx.GlobalIsSet(utils.OverrideArrowGlacierFlag.Name) {
+		cfg.Eth.OverrideArrowGlacier = new(big.Int).SetUint64(ctx.GlobalUint64(utils.OverrideArrowGlacierFlag.Name))
+	}
+	if ctx.GlobalIsSet(utils.OverrideTerminalTotalDifficulty.Name) {
+		cfg.Eth.OverrideTerminalTotalDifficulty = utils.GlobalBig(ctx, utils.OverrideTerminalTotalDifficulty.Name)
 	}
 	backend, ethe := utils.RegisterEthService(stack, &cfg.Eth)
 
-	if ctx.GlobalBool(utils.CatalystFlag.Name) {
-		if ethe == nil {
-			utils.Fatalf("Catalyst does not work in light client mode.")
+	if ethe != nil {
+		firstIdx := uint64(0)
+		// Hack to speed up check for mainnet because we know
+		// the first non-empty block.
+		ghash := rawdb.ReadCanonicalHash(ethe.ChainDb(), 0)
+		if cfg.Eth.NetworkId == 1 && ghash == params.MainnetGenesisHash {
+			firstIdx = 46147
 		}
-		if err := catalyst.Register(stack, ethe); err != nil {
-			utils.Fatalf("%v", err)
+		isLegacy, _, err := DBHasLegacyReceipts(ethe.ChainDb(), firstIdx)
+		if err != nil {
+			log.Error("Failed to check db for legacy receipts", "err", err)
+		} else if isLegacy {
+			log.Warn("Database has receipts with a legacy format. Please run `qng db freezer-migrate`.")
 		}
 	}
 
@@ -739,4 +748,47 @@ func getDefaultRPCPort() (int, int) {
 	default:
 		return 38535, 38536
 	}
+}
+
+func DBHasLegacyReceipts(db ethdb.Database, firstIdx uint64) (bool, uint64, error) {
+	// Check first block for legacy receipt format
+	numAncients, err := db.Ancients()
+	if err != nil {
+		return false, 0, err
+	}
+	if numAncients < 1 {
+		return false, 0, nil
+	}
+	if firstIdx >= numAncients {
+		return false, firstIdx, nil
+	}
+	var (
+		legacy       bool
+		blob         []byte
+		emptyRLPList = []byte{192}
+	)
+	// Find first block with non-empty receipt, only if
+	// the index is not already provided.
+	if firstIdx == 0 {
+		for i := uint64(0); i < numAncients; i++ {
+			blob, err = db.Ancient("receipts", i)
+			if err != nil {
+				return false, 0, err
+			}
+			if len(blob) == 0 {
+				continue
+			}
+			if !bytes.Equal(blob, emptyRLPList) {
+				firstIdx = i
+				break
+			}
+		}
+	}
+	// Is first non-empty receipt legacy?
+	first, err := db.Ancient("receipts", firstIdx)
+	if err != nil {
+		return false, 0, err
+	}
+	legacy, err = types.IsLegacyStoredReceipts(first)
+	return legacy, firstIdx, err
 }

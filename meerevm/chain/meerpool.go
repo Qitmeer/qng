@@ -378,11 +378,7 @@ func (m *MeerPool) updateTemplate(timestamp int64) {
 
 	m.commit(false, tstart)
 
-	pending, err := m.eth.TxPool().Pending(true)
-	if err != nil {
-		log.Error("Failed to fetch pending transactions", "err", err)
-		return
-	}
+	pending := m.eth.TxPool().Pending(true)
 	if len(pending) == 0 {
 		m.updateSnapshot()
 		return
@@ -636,4 +632,12 @@ func (m *MeerPool) DisablePreseal() {
 
 func (m *MeerPool) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription {
 	return m.pendingLogsFeed.Subscribe(ch)
+}
+
+func (m *MeerPool) GetSealingBlockAsync(parent common.Hash, timestamp uint64, coinbase common.Address, random common.Hash, noTxs bool) (chan *types.Block, error) {
+	return nil, nil
+}
+
+func (m *MeerPool) GetSealingBlockSync(parent common.Hash, timestamp uint64, coinbase common.Address, random common.Hash, noTxs bool) (*types.Block, error) {
+	return nil, nil
 }
