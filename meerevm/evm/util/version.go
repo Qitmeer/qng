@@ -2,5 +2,5 @@ package util
 
 var (
 	// Version is the version of MeerEvm
-	Version = "meerevm-v0.0.1"
+	Version = "meervm-v0.0.2"
 )
