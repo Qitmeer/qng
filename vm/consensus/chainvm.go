@@ -23,6 +23,7 @@ type ChainVM interface {
 	GetBalance(string) (int64, error)
 
 	VerifyTx(tx Tx) (int64, error)
+	VerifyTxSanity(tx Tx) error
 
 	AddTxToMempool(tx *types.Transaction, local bool) (int64, error)
 

@@ -268,7 +268,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	// Perform preliminary sanity checks on the transaction.  This makes
 	// use of chain which contains the invariant rules for what
 	// transactions are allowed into blocks.
-	err := blockchain.CheckTransactionSanity(msgTx, mp.cfg.ChainParams, false)
+	err := blockchain.CheckTransactionSanity(msgTx, mp.cfg.ChainParams, nil, mp.cfg.BC)
 	if err != nil {
 		if cerr, ok := err.(blockchain.RuleError); ok {
 			return nil, nil, chainRuleError(cerr)

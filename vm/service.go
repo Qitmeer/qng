@@ -1,22 +1,17 @@
 package vm
 
 import (
-	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/evm"
 	"github.com/Qitmeer/qng/config"
 	qconfig "github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/vm/consensus"
-	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/core/blockchain/opreturn"
-	"github.com/Qitmeer/qng/core/event"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/rpc/api"
 	qconsensus "github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/event"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/meerevm/evm"
 	"github.com/Qitmeer/qng/node/service"
+	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng/vm/consensus"
 )
 
 type Factory interface {
@@ -203,6 +198,17 @@ func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 	return ba - itx.Transaction.TxOut[0].Amount.Value, nil
 }
 
+func (s *Service) VerifyTxSanity(tx consensus.Tx) error {
+	v, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return err
+	}
+	if tx.GetTxType() == types.TxTypeCrossChainVM {
+		return v.VerifyTxSanity(tx)
+	}
+	return nil
+}
+
 func (s *Service) AddTxToMempool(tx *types.Transaction, local bool) (int64, error) {
 	v, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
@@ -306,22 +312,16 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*
 				return nil, err
 			}
 			result.Txs = append(result.Txs, ctx)
-		} else if opreturn.IsMeerEVMTx(tx.Tx) {
-			ctx := &qconsensus.Tx{Type: types.TxTypeCrossChainVM, Data: []byte(tx.Tx.TxIn[0].SignScript)}
-			_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(block.Transactions()[0].Tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
+		} else if types.IsCrossChainVMTx(tx.Tx) {
+			ctx, err := qconsensus.NewVMTx(tx.Tx)
 			if err != nil {
 				return nil, err
 			}
-			if len(pksAddrs) > 0 {
-				secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
-				if !ok {
-					return nil, fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
-				}
-				ctx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
-				result.Txs = append(result.Txs, ctx)
-			} else {
-				return nil, fmt.Errorf("tx format error :TxTypeCrossChainVM")
+			err = ctx.SetCoinbaseTx(block.Transactions()[0].Tx)
+			if err != nil {
+				return nil, err
 			}
+			result.Txs = append(result.Txs, ctx)
 		}
 	}
 	return result, nil

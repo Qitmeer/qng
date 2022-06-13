@@ -49,22 +49,22 @@ func Test_CheckTransactionSanity(t *testing.T) {
 }
 
 func checkTransactionSanityForAllNet(tx *types.Transaction) error {
-	err := CheckTransactionSanity(tx, &params.TestNetParams, false)
+	err := CheckTransactionSanity(tx, &params.TestNetParams, nil, nil)
 	if err != nil {
 		return err
 	}
 
-	err = CheckTransactionSanity(tx, &params.PrivNetParams, false)
+	err = CheckTransactionSanity(tx, &params.PrivNetParams, nil, nil)
 	if err != nil {
 		return err
 	}
 
-	err = CheckTransactionSanity(tx, &params.MixNetParams, false)
+	err = CheckTransactionSanity(tx, &params.MixNetParams, nil, nil)
 	if err != nil {
 		return err
 	}
 
-	err = CheckTransactionSanity(tx, &params.MainNetParams, false)
+	err = CheckTransactionSanity(tx, &params.MainNetParams, nil, nil)
 	if err != nil {
 		return err
 	}
