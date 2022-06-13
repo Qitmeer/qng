@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
+	qconsensus "github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
+	"log"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -23,8 +26,10 @@ type Amount struct {
 }
 
 type Input struct {
-	TxID     string
-	OutIndex uint32
+	TxID       string
+	OutIndex   uint32
+	SignScript []byte
+	sequence   uint32
 }
 
 func TxEncode(version uint32, lockTime uint32, timestamp *time.Time, inputs []Input, outputs map[string]Amount) (string, error) {
@@ -43,7 +48,10 @@ func TxEncode(version uint32, lockTime uint32, timestamp *time.Time, inputs []In
 			return "", err
 		}
 		prevOut := types.NewOutPoint(txHash, vout.OutIndex)
-		txIn := types.NewTxInput(prevOut, []byte{})
+		txIn := types.NewTxInput(prevOut, vout.SignScript)
+		if vout.sequence > 0 {
+			txIn.Sequence = vout.sequence
+		}
 		if lockTime != 0 {
 			txIn.Sequence = types.MaxTxInSequenceNum - 1
 		}
@@ -71,6 +79,7 @@ func TxEncode(version uint32, lockTime uint32, timestamp *time.Time, inputs []In
 
 		switch addr.(type) {
 		case *address.PubKeyHashAddress:
+		case *address.SecpPubKeyAddress:
 		case *address.ScriptHashAddress:
 		default:
 			return "", fmt.Errorf("invalid type: %T", addr)
@@ -106,6 +115,7 @@ func DecodePkString(pk string) (string, error) {
 
 func TxSign(privkeyStrs []string, rawTxStr string, network string, pks []string) (string, error) {
 	privateKeyMaps := map[string]ecc.PrivateKey{}
+	pkAddrMaps := map[string]ecc.PrivateKey{}
 	var param *params.Params
 	switch network {
 	case "mainnet":
@@ -117,6 +127,7 @@ func TxSign(privkeyStrs []string, rawTxStr string, network string, pks []string)
 	case "mixnet":
 		param = &params.MixNetParams
 	}
+	var defaultPrivateKey ecc.PrivateKey
 	for _, privkeyStr := range privkeyStrs {
 		privkeyByte, err := hex.DecodeString(privkeyStr)
 		if err != nil {
@@ -131,8 +142,15 @@ func TxSign(privkeyStrs []string, rawTxStr string, network string, pks []string)
 		if err != nil {
 			return "", err
 		}
+		addr1, err := address.NewSecpPubKeyAddress(pubKey.SerializeCompressed(), param)
+		if err != nil {
+			return "", err
+		}
+		defaultPrivateKey = privateKey
 		privateKeyMaps[addr.String()] = privateKey
+		pkAddrMaps[addr1.String()] = privateKey
 	}
+
 	if len(rawTxStr)%2 != 0 {
 		return "", fmt.Errorf("invaild raw transaction : %s", rawTxStr)
 	}
@@ -146,34 +164,62 @@ func TxSign(privkeyStrs []string, rawTxStr string, network string, pks []string)
 	if err != nil {
 		return "", err
 	}
-
 	if len(redeemTx.TxIn) != len(pks) {
 		return "", fmt.Errorf("input pkscript len :%d not equal %d txIn length", len(pks), len(redeemTx.TxIn))
 	}
-	var sigScripts [][]byte
-	for i := range redeemTx.TxIn {
-		pkScript, err := hex.DecodeString(pks[i])
-		if err != nil {
-			return "", fmt.Errorf("pkscript %d error:%s", i, err.Error())
+	var kdb txscript.KeyClosure = func(types.Address) (ecc.PrivateKey, bool, error) {
+		return defaultPrivateKey, true, nil // compressed is true
+	}
+	//
+	if types.IsTokenNewTx(&redeemTx) ||
+		types.IsTokenRenewTx(&redeemTx) ||
+		types.IsTokenValidateTx(&redeemTx) ||
+		types.IsTokenInvalidateTx(&redeemTx) {
+		if len(param.TokenAdminPkScript) <= 0 {
+			return "", fmt.Errorf("No token admin pk script.\n")
 		}
-		_, addrs, _, err := txscript.ExtractPkScriptAddrs(pkScript, param)
-		privateKey, ok := privateKeyMaps[addrs[0].String()]
-		if !ok {
-			return "", fmt.Errorf("addrress : %s  privatekey not exist,can not sign", addrs[0].String())
-		}
-		var kdb txscript.KeyClosure = func(types.Address) (ecc.PrivateKey, bool, error) {
-			return privateKey, true, nil // compressed is true
-		}
-
-		sigScript, err := txscript.SignTxOutput(param, &redeemTx, i, pkScript, txscript.SigHashAll, kdb, nil, nil, ecc.ECDSA_Secp256k1)
+		sigScript, err := txscript.SignTxOutput(param, &redeemTx, 0, param.TokenAdminPkScript, txscript.SigHashAll, kdb, nil, nil, ecc.ECDSA_Secp256k1)
 		if err != nil {
 			return "", err
 		}
-		sigScripts = append(sigScripts, sigScript)
-	}
+		redeemTx.TxIn[0].SignScript = sigScript
+	} else if types.IsCrossChainImportTx(&redeemTx) {
+		itx, err := qconsensus.NewImportTx(&redeemTx)
+		if err != nil {
+			return "", err
+		}
+		err = itx.Sign(defaultPrivateKey)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		var sigScripts [][]byte
+		for i := range redeemTx.TxIn {
+			pkScript, err := hex.DecodeString(pks[i])
+			if err != nil {
+				return "", fmt.Errorf("pkscript %d error:%s", i, err.Error())
+			}
+			_, addrs, _, err := txscript.ExtractPkScriptAddrs(pkScript, param)
+			privateKey, ok := privateKeyMaps[addrs[0].String()]
+			if !ok {
+				privateKey, ok = pkAddrMaps[addrs[0].String()]
+				if !ok {
+					return "", fmt.Errorf("addrress : %s  privatekey not exist,can not sign", addrs[0].String())
+				}
+			}
+			var kdb txscript.KeyClosure = func(types.Address) (ecc.PrivateKey, bool, error) {
+				return privateKey, true, nil // compressed is true
+			}
+			sigScript, err := txscript.SignTxOutput(param, &redeemTx, i, pkScript, txscript.SigHashAll, kdb, nil, nil, ecc.ECDSA_Secp256k1)
+			if err != nil {
+				return "", err
+			}
+			sigScripts = append(sigScripts, sigScript)
+		}
 
-	for i2 := range sigScripts {
-		redeemTx.TxIn[i2].SignScript = sigScripts[i2]
+		for i2 := range sigScripts {
+			redeemTx.TxIn[i2].SignScript = sigScripts[i2]
+		}
 	}
 
 	mtxHex, err := marshal.MessageToHex(&redeemTx)
@@ -230,8 +276,10 @@ func TxEncodeSTDO(version TxVersionFlag, lockTime TxLockTimeFlag, txIn TxInputsF
 	txOutputs := make(map[string]Amount)
 	for _, input := range txIn.inputs {
 		txInputs = append(txInputs, Input{
-			TxID:     hex.EncodeToString(input.txhash),
-			OutIndex: input.index,
+			TxID:       hex.EncodeToString(input.txhash),
+			OutIndex:   input.index,
+			SignScript: input.signScript,
+			sequence:   input.sequence,
 		})
 	}
 	for _, output := range txOut.outputs {
@@ -242,7 +290,7 @@ func TxEncodeSTDO(version TxVersionFlag, lockTime TxLockTimeFlag, txIn TxInputsF
 		}
 		txOutputs[output.target] = Amount{
 			TargetLockTime: 0,
-			Id:             types.MEERID,
+			Id:             types.CoinID(output.coinid),
 			Value:          atomic.Value,
 		}
 	}
@@ -259,4 +307,56 @@ func TxSignSTDO(privkeyStr string, rawTxStr string, network string, pks []string
 		ErrExit(err)
 	}
 	fmt.Printf("%s\n", mtxHex)
+}
+
+const LOCK_VIN_SCRIPT_STANDARD = 0
+const LOCK_VIN_SCRIPT_SPEND_LOCK = 1
+const EVMTOMEER = 2
+const PKASCRIPT = 3
+
+func TxLockVin(svin LockVinFlag) {
+	for i := 0; i < len(svin.sv); i++ {
+		v := svin.sv[i]
+		adr, err := address.DecodeAddress(v.Address)
+		if err != nil {
+			log.Fatalln("address", v.Address, "not  support", err)
+			return
+		}
+		switch v.SignType {
+		case LOCK_VIN_SCRIPT_STANDARD:
+			b, err := txscript.PayToAddrScript(adr)
+			if err != nil {
+				log.Fatalln("PayToAddrScript Error", err)
+				return
+			}
+			fmt.Printf("%x\n", b)
+		case LOCK_VIN_SCRIPT_SPEND_LOCK:
+			lockTime, err := strconv.ParseInt(string(v.Args), 10, 64)
+			b, err := txscript.PayToCLTVPubKeyHashScript(adr.Script(), lockTime)
+			if err != nil {
+				log.Fatalln("PayToCLTVPubKeyHashScript Error", err)
+				return
+			}
+			fmt.Printf("%x\n", b)
+		case EVMTOMEER:
+			pkAddr, ok := adr.(*address.SecpPubKeyAddress)
+			if !ok {
+				log.Fatalln("Wrong address", adr.String())
+				return
+			}
+			b, err := txscript.PayToAddrScript(pkAddr.PKHAddress())
+			if err != nil {
+				log.Fatalln("PKHAddress Script Error", err)
+				return
+			}
+			fmt.Printf("%x\n", b)
+		case PKASCRIPT:
+			pkaScript, err := txscript.NewScriptBuilder().AddData([]byte(v.Address)).Script()
+			if err != nil {
+				log.Fatalln("pkaScript Error", err)
+				return
+			}
+			fmt.Printf("%x\n", pkaScript)
+		}
+	}
 }

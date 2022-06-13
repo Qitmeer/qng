@@ -36,6 +36,16 @@ func (lt *TxLockTimeFlag) Set(s string) error {
 	return nil
 }
 
+type LockVinFlag struct {
+	sv []LockAddress
+}
+
+type LockAddress struct {
+	Address  string
+	SignType int64
+	Args     []byte
+}
+
 type TxInputsFlag struct {
 	inputs []txInput
 }
@@ -44,26 +54,41 @@ type TxOutputsFlag struct {
 }
 
 type txInput struct {
-	txhash   []byte
-	index    uint32
-	sequence uint32
+	txhash     []byte
+	index      uint32
+	sequence   uint32
+	signScript []byte
 }
 type txOutput struct {
 	target string
 	amount float64
+	coinid int64
 }
 
+func (i LockAddress) String() string {
+	return fmt.Sprintf("%s:%d:%s", i.Address, i.SignType, string(i.Args))
+}
 func (i txInput) String() string {
-	return fmt.Sprintf("%x:%d:%d", i.txhash[:], i.index, i.sequence)
+	return fmt.Sprintf("%x:%d:%d:%x", i.txhash[:], i.index, i.sequence, i.signScript)
 }
 func (o txOutput) String() string {
-	return fmt.Sprintf("%s:%f", o.target, o.amount)
+	return fmt.Sprintf("%s:%f:%d", o.target, o.amount, o.coinid)
 }
 
 func (v TxInputsFlag) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("{")
 	for _, input := range v.inputs {
+		buffer.WriteString(input.String())
+	}
+	buffer.WriteString("}")
+	return buffer.String()
+}
+
+func (v LockVinFlag) String() string {
+	var buffer bytes.Buffer
+	buffer.WriteString("{")
+	for _, input := range v.sv {
 		buffer.WriteString(input.String())
 	}
 	buffer.WriteString("}")
@@ -98,19 +123,50 @@ func (v *TxInputsFlag) Set(s string) error {
 		return err
 	}
 	var seq = uint32(math.MaxUint32)
-	if len(input) == 3 {
+	if len(input) >= 3 {
 		s, err := strconv.ParseUint(input[2], 10, 32)
 		if err != nil {
 			return err
 		}
 		seq = uint32(s)
 	}
+	sc := []byte{}
+	if len(input) == 4 {
+		sc, err = hex.DecodeString(input[3])
+		if err != nil {
+			return err
+		}
+	}
 	i := txInput{
 		data,
 		uint32(index),
 		uint32(seq),
+		sc,
 	}
 	v.inputs = append(v.inputs, i)
+	return nil
+}
+
+func (v *LockVinFlag) Set(s string) error {
+	input := strings.Split(s, ":")
+	if len(input) < 2 {
+		return fmt.Errorf("error to parse sign input : %s", s)
+	}
+
+	typ, err := strconv.ParseUint(input[1], 10, 64)
+	if err != nil {
+		return err
+	}
+	args := []byte{}
+	if len(input) == 3 {
+		args = []byte(input[2])
+	}
+	i := LockAddress{
+		input[0],
+		int64(typ),
+		args,
+	}
+	v.sv = append(v.sv, i)
 	return nil
 }
 
@@ -124,7 +180,11 @@ func (of *TxOutputsFlag) Set(s string) error {
 	if err != nil {
 		return err
 	}
+	coinid, err := strconv.ParseInt(output[2], 10, 64)
+	if err != nil {
+		return err
+	}
 	of.outputs = append(of.outputs, txOutput{
-		target, amount})
+		target, amount, coinid})
 	return nil
 }

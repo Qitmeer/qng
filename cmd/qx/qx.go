@@ -80,6 +80,7 @@ addr & tx & sign :
     pkaddr-to-public      convert an pkaddress to EC public key (the uncompressed format by default )
     pkaddr-to-ethaddr     convert an pkaddress to ethereum address
     tx-encode             encode a unsigned transaction.
+    tx-lock-vin           lock vin script.
     tx-decode             decode a transaction in base16 to json format.
     tx-sign               sign a transactions using a private key.
     msg-sign              create a message signature
@@ -130,6 +131,7 @@ var compressedPKFormat bool
 var network string
 var powType string
 var txInputs qx.TxInputsFlag
+var vinInputs qx.LockVinFlag
 var txOutputs qx.TxOutputsFlag
 var txVersion qx.TxVersionFlag
 var txLockTime qx.TxLockTimeFlag
@@ -429,14 +431,25 @@ func main() {
 	txVersion = qx.TxVersionFlag(TX_VERION) //set default tx version
 	txEncodeCmd.Var(&txVersion, "v", "the transaction version")
 	txEncodeCmd.Var(&txLockTime, "l", "the transaction lock time")
-	txEncodeCmd.Var(&txInputs, "i", `The set of transaction input points encoded as TXHASH:INDEX:SEQUENCE. 
+	txEncodeCmd.Var(&txInputs, "i", `The set of transaction input points encoded as TXHASH:INDEX:SEQUENCE:SIGNSCRIPT. 
 TXHASH is a Base16 transaction hash. INDEX is the 32 bit input index
 in the context of the transaction. SEQUENCE is the optional 32 bit 
-input sequence and defaults to the maximum value.`)
-	txEncodeCmd.Var(&txOutputs, "o", `The set of transaction output data encoded as TARGET:MEER. 
+input sequence and defaults to the maximum value.
+SIGNSCRIPT is previout script`)
+	txEncodeCmd.Var(&txOutputs, "o", `The set of transaction output data encoded as TARGET:MEER:COINID. 
 TARGET is an address (pay-to-pubkey-hash or pay-to-script-hash).
-MEER is the 64 bit spend amount in qitmeer.`)
+MEER is the 64 bit spend amount in qitmeer.COINID enum {0 => MEER,1=>ETHID}`)
 
+	txLockVinCmd := flag.NewFlagSet("tx-lock-vin", flag.ExitOnError)
+	txLockVinCmd.Usage = func() {
+		cmdUsage(txLockVinCmd, "Usage: qx tx-lock-vin [-i sign-vin]\n")
+	}
+	txLockVinCmd.Var(&vinInputs, "i", `The set of sign input encoded as ADDRESS:TYPE:ARGS. 
+ADDRESS is PKHADDRESS OR PKADDRESS
+TYPE  0 standard 
+TYPE 1 spend lock vin
+ARGS is the extra data with special struct, like json etc.
+`)
 	txSignCmd := flag.NewFlagSet("tx-sign", flag.ExitOnError)
 	txSignCmd.Usage = func() {
 		cmdUsage(txSignCmd, "Usage: qx tx-sign [raw_tx_base16_string] \n")
@@ -515,6 +528,7 @@ MEER is the 64 bit spend amount in qitmeer.`)
 		txEncodeCmd,
 		txDecodeCmd,
 		txSignCmd,
+		txLockVinCmd,
 		msgSignCmd,
 		msgVerifyCmd,
 		scriptDecodeCmd,
@@ -1423,6 +1437,17 @@ MEER is the 64 bit spend amount in qitmeer.`)
 			str := strings.TrimSpace(string(src))
 			pks := strings.Split(pkScripts, ",")
 			qx.TxSignSTDO(privateKey, str, network, pks)
+		}
+	}
+
+	if txLockVinCmd.Parsed() {
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeNamedPipe) == 0 {
+			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
+				txLockVinCmd.Usage()
+			} else {
+				qx.TxLockVin(vinInputs)
+			}
 		}
 	}
 
