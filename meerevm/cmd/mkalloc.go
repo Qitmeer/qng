@@ -12,9 +12,9 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/Qitmeer/qng/params"
 )
 
 type allocItem struct {
@@ -65,14 +65,14 @@ func main() {
 		privateKeyHex = os.Args[1]
 	}
 	if len(os.Args) >= 3 {
-		network:=os.Args[2]
+		network := os.Args[2]
 		if network == params.TestNetParam.Name {
 			params.ActiveNetParams = &params.TestNetParam
-		}else if network == params.PrivNetParam.Name {
+		} else if network == params.PrivNetParam.Name {
 			params.ActiveNetParams = &params.PrivNetParam
-		}else if network == params.MixNetParam.Name {
+		} else if network == params.MixNetParam.Name {
 			params.ActiveNetParams = &params.MixNetParam
-		}else {
+		} else {
 			params.ActiveNetParams = &params.MainNetParam
 		}
 	}
