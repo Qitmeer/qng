@@ -14,6 +14,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/Qitmeer/qng/params"
 )
 
 type allocItem struct {
@@ -63,6 +64,18 @@ func main() {
 	if len(os.Args) >= 2 {
 		privateKeyHex = os.Args[1]
 	}
+	if len(os.Args) >= 3 {
+		network:=os.Args[2]
+		if network == params.TestNetParam.Name {
+			params.ActiveNetParams = &params.TestNetParam
+		}else if network == params.PrivNetParam.Name {
+			params.ActiveNetParams = &params.PrivNetParam
+		}else if network == params.MixNetParam.Name {
+			params.ActiveNetParams = &params.MixNetParam
+		}else {
+			params.ActiveNetParams = &params.MainNetParam
+		}
+	}
 
 	gd := new(chain.GenesisData)
 	file, err := os.Open(filePath)
@@ -72,7 +85,7 @@ func main() {
 	if err := json.NewDecoder(file).Decode(gd); err != nil {
 		panic(err)
 	}
-
+	chain.ChainConfig.ChainID = big.NewInt(params.ActiveNetParams.MeerEVMCfg.ChainID)
 	genesis := chain.DefaultGenesisBlock(chain.ChainConfig)
 	genesis.Alloc = gd.Genesis.Alloc
 
