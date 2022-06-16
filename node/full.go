@@ -3,15 +3,14 @@ package node
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/vm/consensus"
-	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
+	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/rpc"
+	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/services/acct"
 	"github.com/Qitmeer/qng/services/address"
 	"github.com/Qitmeer/qng/services/blkmgr"
@@ -23,6 +22,7 @@ import (
 	"github.com/Qitmeer/qng/services/notifymgr"
 	"github.com/Qitmeer/qng/services/tx"
 	"github.com/Qitmeer/qng/vm"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"reflect"
 )
 
@@ -221,6 +221,15 @@ func (qm *QitmeerFull) GetVMService() *vm.Service {
 	return service
 }
 
+func (qm *QitmeerFull) GetMiner() *miner.Miner {
+	var service *miner.Miner
+	if err := qm.Services().FetchService(&service); err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return service
+}
+
 func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	qm := QitmeerFull{
 		node:       node,
@@ -299,6 +308,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		qm.GetRpcServer().ChainParams = bm.ChainParams()
 
 		qm.nfManager.(*notifymgr.NotifyMgr).RpcServer = qm.GetRpcServer()
+		qm.GetMiner().RpcSer = qm.GetRpcServer()
 	}
 
 	qm.Services().LowestPriority(qm.GetTxManager())

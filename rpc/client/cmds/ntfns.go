@@ -16,6 +16,7 @@ const (
 	RescanProgressNtfnMethod    = "rescanprocess"
 	RescanCompleteNtfnMethod    = "rescancomplete"
 	NodeExitMethod              = "nodeexit"
+	BlockTemplateNtfnMethod     = "blocktemplate"
 )
 
 type BlockConnectedNtfn struct {
@@ -114,6 +115,10 @@ func NewTxAcceptedVerboseNtfn(tx json.DecodeRawTransactionResult) *TxAcceptedVer
 	}
 }
 
+type BlockTemplateNtfn struct {
+	Result json.RemoteGBTResult
+}
+
 func init() {
 	flags := UFWebsocketOnly | UFNotification
 
@@ -127,4 +132,5 @@ func init() {
 	MustRegisterCmd(RescanProgressNtfnMethod, (*RescanProgressNtfn)(nil), flags, NotifyNameSpace)
 	MustRegisterCmd(RescanCompleteNtfnMethod, (*RescanFinishedNtfn)(nil), flags, NotifyNameSpace)
 	MustRegisterCmd(NodeExitMethod, (*NodeExitNtfn)(nil), flags, NotifyNameSpace)
+	MustRegisterCmd(BlockTemplateNtfnMethod, (*BlockTemplateNtfn)(nil), flags, NotifyNameSpace)
 }
