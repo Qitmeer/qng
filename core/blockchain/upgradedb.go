@@ -5,7 +5,6 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 )
 
 // update db to new version
@@ -14,24 +13,12 @@ func (b *BlockChain) upgradeDB() error {
 		return nil
 	}
 	log.Info(fmt.Sprintf("Update cur db to new version: version(%d) -> version(%d) ...", b.dbInfo.version, currentDatabaseVersion))
-	err := b.db.Update(func(dbTx database.Tx) error {
+	err := b.indexManager.Drop()
+	if err != nil {
+		log.Debug(err.Error())
+	}
+	err = b.db.Update(func(dbTx database.Tx) error {
 		bidxStart := roughtime.Now()
-
-		meta := dbTx.Metadata()
-		serializedData := meta.Get(dbnamespace.ChainStateKeyName)
-		if serializedData == nil {
-			return nil
-		}
-		state, err := DeserializeBestChainState(serializedData)
-		if err != nil {
-			return err
-		}
-
-		err = b.bd.UpgradeDB(dbTx,&state.hash,state.total,b.params.GenesisHash)
-		if err != nil {
-			return err
-		}
-
 		// save
 		b.dbInfo = &databaseInfo{
 			version: currentDatabaseVersion,
@@ -39,7 +26,7 @@ func (b *BlockChain) upgradeDB() error {
 			bidxVer: currentBlockIndexVersion,
 			created: roughtime.Now(),
 		}
-		err = dbPutDatabaseInfo(dbTx, b.dbInfo)
+		err := dbPutDatabaseInfo(dbTx, b.dbInfo)
 		if err != nil {
 			return err
 		}
@@ -48,7 +35,7 @@ func (b *BlockChain) upgradeDB() error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("You can cleanup your block data base by '--cleanup'.Your data is too old (%d -> %d). %s\n", b.dbInfo.version, currentDatabaseVersion,err)
+		return fmt.Errorf("You can cleanup your block data base by '--cleanup'.Your data is too old (%d -> %d). %s\n", b.dbInfo.version, currentDatabaseVersion, err)
 	}
 	return nil
 }

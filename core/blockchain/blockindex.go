@@ -31,6 +31,8 @@ type IndexManager interface {
 	IsDuplicateTx(tx database.Tx, txid *hash.Hash, blockHash *hash.Hash) bool
 
 	HasTx(txid *hash.Hash) bool
+
+	Drop() error
 }
 
 // LookupNode returns the block node identified by the provided hash.  It will
