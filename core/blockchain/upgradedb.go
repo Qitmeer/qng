@@ -9,8 +9,11 @@ import (
 
 // update db to new version
 func (b *BlockChain) upgradeDB() error {
+	preVersion := uint32(currentDatabaseVersion - 1)
 	if b.dbInfo.version == currentDatabaseVersion {
 		return nil
+	} else if b.dbInfo.version != preVersion {
+		return fmt.Errorf("Only supported update version(%d) -> version(%d), but cur db is version:%d\n", preVersion, currentDatabaseVersion, b.dbInfo.version)
 	}
 	log.Info(fmt.Sprintf("Update cur db to new version: version(%d) -> version(%d) ...", b.dbInfo.version, currentDatabaseVersion))
 	err := b.indexManager.Drop()
