@@ -15,8 +15,5 @@ RUN wget http://mirrors.ustc.edu.cn/golang/go1.18rc1.linux-amd64.tar.gz && \
 
 RUN make
 
-EXPOSE 8131 18131 1234
-
-CMD ["/build/bin/qng"]
-
+CMD ["./build/bin/qng"]
 
