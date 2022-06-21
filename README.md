@@ -24,7 +24,7 @@ or
 ```
 ~ cd ./build/bin
 ~ ./qng --testnet
-~ docker run -it --name qng qng:latest ./build/bin/qng --mixnet --acceptnonstd --modules=qitmeer --modules=p2p
+~ docker run --rm -it --name qng qng:latest ./build/bin/qng --mixnet --acceptnonstd --modules=qitmeer --modules=p2p
 ``` 
 
 ### Miner

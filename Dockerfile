@@ -1,19 +1,17 @@
-FROM ubuntu:18.04
+FROM golang:1.18.3-alpine3.16 AS base
 WORKDIR /qng
 
 COPY . /qng
 
-VOLUME ["/qng/logs"]
-
-#RUN sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list && \
-#    sed -i s@/security.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list && apt update clean
-
-RUN apt update && apt install build-essential -y && apt install make -y && apt install git -y && apt install wget -y
-
-RUN wget http://mirrors.ustc.edu.cn/golang/go1.18rc1.linux-amd64.tar.gz && \
-    tar zxvf go1.18rc1.linux-amd64.tar.gz && mv go /usr/local/ && ln -fs /usr/local/go/bin/* /usr/local/bin/
+RUN apk add --update git && apk add linux-headers && apk add --update gcc && \
+    apk add musl-dev && apk add --update make
 
 RUN make
 
-CMD ["./build/bin/qng"]
+FROM alpine:latest
+
+WORKDIR /qng
+COPY --from=base /qng/build/bin/qng /qng/
+
+CMD ["./qng"]
 
