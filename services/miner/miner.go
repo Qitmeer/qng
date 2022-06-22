@@ -142,12 +142,18 @@ out:
 				if msg.discreteNum <= 0 {
 					if msg.block != nil {
 						close(msg.block)
+						msg.block = nil
 					}
 					continue
 				}
 				if m.worker != nil {
 					if m.worker.GetType() == CPUWorkerType {
-						m.worker.(*CPUWorker).generateDiscrete(msg.discreteNum, msg.block)
+						if !m.worker.(*CPUWorker).generateDiscrete(msg.discreteNum, msg.block) {
+							if msg.block != nil {
+								close(msg.block)
+								msg.block = nil
+							}
+						}
 						if m.powType != msg.powType {
 							m.powType = msg.powType
 						}
@@ -156,6 +162,7 @@ out:
 						} else {
 							if msg.block != nil {
 								close(msg.block)
+								msg.block = nil
 							}
 						}
 						continue
@@ -169,10 +176,16 @@ out:
 					m.worker = nil
 					if msg.block != nil {
 						close(msg.block)
+						msg.block = nil
 					}
 					continue
 				}
-				worker.generateDiscrete(msg.discreteNum, msg.block)
+				if !worker.generateDiscrete(msg.discreteNum, msg.block) {
+					if msg.block != nil {
+						close(msg.block)
+						msg.block = nil
+					}
+				}
 				worker.Update()
 
 			case *BlockChainChangeMsg:
