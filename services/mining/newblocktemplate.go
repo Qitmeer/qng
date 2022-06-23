@@ -215,7 +215,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 					"would exceed the max block size; cur block "+
 					"size %v, cur num tx %v", tx.Hash(), txSize,
 					blockSize, len(blockTxns)))
-				continue
+				break
 			}
 
 			blockTxns = append(blockTxns, tx)
@@ -245,7 +245,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 					"would exceed the max block size; cur block "+
 					"size %v, cur num tx %v", tx.Hash(), txSize,
 					blockSize, len(blockTxns)))
-				continue
+				break
 			}
 			if types.IsCrossChainImportTx(tx.Tx) {
 				if hasCrossTx {

@@ -42,6 +42,8 @@ type TxPool struct {
 
 	pennyTotal    float64 // exponentially decaying total for penny spends.
 	lastPennyUnix int64   // unix time of last ``penny spend''
+
+	notifyT *time.Timer
 }
 
 // New returns a new memory pool for validating and storing standalone
@@ -143,15 +145,14 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 	// Protect concurrent access.
 	mp.mtx.Lock()
-	mp.removeTransaction(tx, removeRedeemers)
-
 	if opreturn.IsMeerEVMTx(tx.Tx) {
 		err := mp.cfg.BC.VMService.RemoveTxFromMempool(tx.Tx)
 		if err != nil {
 			log.Error(err.Error())
 		}
+	} else {
+		mp.removeTransaction(tx, removeRedeemers)
 	}
-
 	mp.mtx.Unlock()
 }
 
@@ -235,8 +236,25 @@ func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
 		mp.cfg.FeeEstimator.ObserveTransaction(txD)
 	}
 
-	go mp.cfg.Events.Send(event.New(MempoolTxAdd))
+	mp.notify()
+
 	return txD
+}
+
+func (mp *TxPool) notify() {
+	DELAY := time.Second * 2
+	if mp.notifyT == nil {
+		mp.notifyT = time.NewTimer(DELAY)
+		go func() {
+			select {
+			case <-mp.notifyT.C:
+			}
+			mp.cfg.Events.Send(event.New(MempoolTxAdd))
+			mp.notifyT.Stop()
+			mp.notifyT = nil
+		}()
+		return
+	}
 }
 
 //Call addTransaction
