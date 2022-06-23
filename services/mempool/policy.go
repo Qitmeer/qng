@@ -134,6 +134,9 @@ type Policy struct {
 	// MinRelayTxFee defines the minimum transaction fee in AtomQitmeer/kB
 	MinRelayTxFee types.Amount
 
+	// TxTimeScope is the allow tx time scope with server time
+	TxTimeScope int64
+
 	// StandardVerifyFlags defines the function to retrieve the flags to
 	// use for verifying scripts for the block after the current best block.
 	// It must set the verification flags properly depending on the result

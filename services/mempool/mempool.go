@@ -304,6 +304,13 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			txHash, msgTx.Expire)
 		return nil, nil, txRuleError(message.RejectInvalid, str)
 	}
+
+	if !tx.Tx.ValidTime(mp.cfg.Policy.TxTimeScope) {
+		str := fmt.Sprintf("transaction %v with tx time %s is invalid",
+			txHash.String(), tx.Tx.Timestamp.Format(time.RFC3339))
+		return nil, nil, txRuleError(message.RejectTxTimestamp, str)
+	}
+
 	// Don't allow non-standard transactions if the mempool config forbids
 	// their acceptance and relaying.
 	medianTime := mp.cfg.PastMedianTime()
