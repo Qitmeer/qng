@@ -113,6 +113,11 @@ var MainNetParams = Params{
 			StartTime:  0,
 			ExpireTime: mainWorkDiffWindowSize * 2,
 		},
+		DeploymentMeerEVM: {
+			BitNumber:  1,
+			StartTime:  0,
+			ExpireTime: 0,
+		},
 	},
 
 	// Address encoding magics
