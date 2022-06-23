@@ -15,6 +15,7 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"golang.org/x/net/context"
+	"time"
 )
 
 // NewBlockTemplate returns a new block template that is ready to be solved
@@ -394,6 +395,15 @@ mempool:
 				"minBlockSize %d", tx.Hash(), weirandItem.feePerKB,
 				policy.TxMinFreeFee, blockPlusTxSize,
 				policy.BlockMinSize))
+			logSkippedDeps(tx, deps)
+			continue
+		}
+
+		// Skip transactions once the tx time is invalid
+		// minimum block size.
+		if !tx.Tx.ValidTime(policy.TxTimeScope) {
+			log.Trace(fmt.Sprintf("Skipping tx %s with tx time %s is invalid", tx.Hash().String(),
+				tx.Tx.Timestamp.Format(time.RFC3339)))
 			logSkippedDeps(tx, deps)
 			continue
 		}

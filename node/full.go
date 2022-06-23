@@ -132,6 +132,7 @@ func (qm *QitmeerFull) RegisterMinerService() error {
 		BlockMaxSize:      cfg.BlockMaxSize,
 		BlockPrioritySize: cfg.BlockPrioritySize,
 		TxMinFreeFee:      cfg.MinTxFee, //TODO, duplicated config item with mem-pool
+		TxTimeScope:       cfg.TxTimeScope,
 		StandardVerifyFlags: func() (txscript.ScriptFlags, error) {
 			return common.StandardScriptVerifyFlags()
 		}, //TODO, duplicated config item with mem-pool

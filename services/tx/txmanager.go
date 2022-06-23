@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/vm/consensus"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/services/mempool"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"time"
 )
 
@@ -160,6 +160,7 @@ func NewTxManager(bm *blkmgr.BlockManager, txIndex *index.TxIndex,
 			MaxOrphanTxSize:      mempool.DefaultMaxOrphanTxSize,
 			MaxSigOpsPerTx:       blockchain.MaxSigOpsPerBlock / 5,
 			MinRelayTxFee:        *amt,
+			TxTimeScope:          cfg.TxTimeScope,
 			StandardVerifyFlags: func() (txscript.ScriptFlags, error) {
 				return common.StandardScriptVerifyFlags()
 			},
