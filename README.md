@@ -12,13 +12,19 @@ or
 * Install the latest qng available here:
 https://github.com/Qitmeer/qng/releases 
 
+or
+* Build with Docker:
+```bash
+~ docker build -t qng .
+```
+
 
 ### Getting Started
 * We take the construction of test network nodes as an example:
 ```
 ~ cd ./build/bin
 ~ ./qng --testnet
-~ 
+~ docker run --rm -it --name qng qng:latest ./build/bin/qng --mixnet --acceptnonstd --modules=qitmeer --modules=p2p
 ``` 
 
 ### Miner
