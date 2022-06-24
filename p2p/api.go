@@ -126,8 +126,8 @@ func NewPrivateP2PAPI(s *Service) *PrivateP2PAPI {
 	return &PrivateP2PAPI{s}
 }
 
-func (api *PrivateP2PAPI) AddPeer(address string) (interface{}, error) {
-	err := api.s.ConnectToPeerByAddress(address)
+func (api *PrivateP2PAPI) AddPeer(qmaddr string) (interface{}, error) {
+	err := api.s.ConnectToPeer(qmaddr, true)
 	if err != nil {
 		return false, err
 	}
@@ -137,12 +137,12 @@ func (api *PrivateP2PAPI) AddPeer(address string) (interface{}, error) {
 func (api *PrivateP2PAPI) DelPeer(pid string) (interface{}, error) {
 	peid, err := peer.Decode(pid)
 	if err != nil {
-		return false,err
+		return false, err
 	}
 
 	pe := api.s.Peers().Get(peid)
 	if pe == nil {
-		return false, fmt.Errorf("No peer:%s",peid.String())
+		return false, fmt.Errorf("No peer:%s", peid.String())
 	}
 	api.s.PeerSync().Disconnect(pe)
 	return true, nil

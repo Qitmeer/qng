@@ -291,10 +291,11 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 				ps.longSyncMod = false
 			}
 		}
+		updateSyncPoint()
 	} else {
 		err = fmt.Errorf("no get blocks")
+		pe.UpdateSyncPoint(ps.Chain().BlockDAG().GetGenesisHash())
 	}
-	updateSyncPoint()
 	ps.continueSync(hasOrphan)
 	return err
 }
