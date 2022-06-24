@@ -1266,3 +1266,7 @@ func (mp *TxPool) GetConfig() *Config {
 func (mp *TxPool) GetMainHeight() int64 {
 	return int64(mp.cfg.BestHeight() + 1)
 }
+
+func (mp *TxPool) IsSupportVMTx() bool {
+	return mp.cfg.BC.IsValidTxType(types.TxTypeCrossChainVM)
+}

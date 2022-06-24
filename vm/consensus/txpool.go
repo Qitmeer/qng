@@ -29,6 +29,8 @@ type TxPool interface {
 	GetMainHeight() int64
 
 	AddTransaction(tx *types.Tx, height uint64, fee int64)
+
+	IsSupportVMTx() bool
 }
 
 type FeeEstimator interface {
