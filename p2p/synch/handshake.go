@@ -68,6 +68,15 @@ func (ps *PeerSync) processConnected(msg *ConnectedMsg) {
 
 	// Do not perform handshake on inbound dials.
 	if conn.Stat().Direction == network.DirInbound {
+		go func() {
+			<-time.After(RespTimeout + ReqTimeout)
+			remotePe.HSlock.Lock()
+			defer remotePe.HSlock.Unlock()
+			if remotePe.ConnectionState().IsConnecting() {
+				log.Debug(fmt.Sprintf("No handshake response, try to disconnect actively:%s(%s)", peerInfoStr, network.DirInbound))
+				ps.Disconnect(remotePe)
+			}
+		}()
 		return
 	}
 

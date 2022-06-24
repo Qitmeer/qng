@@ -76,10 +76,8 @@ func (s *Sync) maintainPeerStatuses() {
 					return
 				}
 				if roughtime.Now().After(pe.ChainStateLastUpdated().Add(s.PeerInterval)) {
-					if pe.ConnectionState() != peers.PeerConnected {
-						s.peerSync.ReConnect(pe)
-						return
-					}
+					s.peerSync.ReConnect(pe)
+					return
 				}
 			}(pid)
 		}
