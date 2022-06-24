@@ -119,6 +119,7 @@ func (s *Sync) chainStateHandler(ctx context.Context, msg interface{}, stream li
 func (s *Sync) UpdateChainState(pe *peers.Peer, chainState *pb.ChainState, action bool) {
 	pe.SetChainState(chainState)
 	if !action {
+		go s.peerSync.immediatelyDisconnected(pe)
 		return
 	}
 	go s.peerSync.immediatelyConnected(pe)

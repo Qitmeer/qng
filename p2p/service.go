@@ -220,8 +220,8 @@ func (s *Service) connectWithAllPeers(multiAddrs []multiaddr.Multiaddr) {
 	}
 }
 
-func (s *Service) ConnectToPeerByAddress(address string, force bool) error {
-	mulAddr, err := MultiAddrFromString(address)
+func (s *Service) ConnectToPeer(qmaddr string, force bool) error {
+	mulAddr, err := MultiAddrFromString(qmaddr)
 	if err != nil {
 		log.Error(err.Error())
 		return err

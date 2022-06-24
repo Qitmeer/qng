@@ -33,7 +33,7 @@ func (s *Sync) maintainPeerStatuses() {
 				// If our peer status has not been updated correctly we disconnect over here
 				// and set the connection state over here instead.
 				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
-					s.peerSync.Disconnect(pe)
+					s.peerSync.ReConnect(pe)
 					return
 				}
 
@@ -42,6 +42,12 @@ func (s *Sync) maintainPeerStatuses() {
 						log.Debug(fmt.Sprintf("Error when disconnecting with bad peer: %v", err))
 					}
 					return
+				}
+				if roughtime.Now().After(pe.ChainStateLastUpdated().Add(s.PeerInterval)) {
+					if pe.ConnectionState() != peers.PeerConnected {
+						s.peerSync.ReConnect(pe)
+						return
+					}
 				}
 				if !pe.IsConsensus() {
 					return
@@ -59,7 +65,24 @@ func (s *Sync) maintainPeerStatuses() {
 				}
 			}(pid)
 		}
-
+		for _, pid := range s.Peers().Connecting() {
+			pe := s.peers.Get(pid)
+			if pe == nil {
+				continue
+			}
+			go func(id peer.ID) {
+				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
+					s.peerSync.ReConnect(pe)
+					return
+				}
+				if roughtime.Now().After(pe.ChainStateLastUpdated().Add(s.PeerInterval)) {
+					if pe.ConnectionState() != peers.PeerConnected {
+						s.peerSync.ReConnect(pe)
+						return
+					}
+				}
+			}(pid)
+		}
 		for _, pid := range s.Peers().Disconnected() {
 			pe := s.peers.Get(pid)
 			if pe == nil {

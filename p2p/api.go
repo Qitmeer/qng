@@ -126,8 +126,8 @@ func NewPrivateP2PAPI(s *Service) *PrivateP2PAPI {
 	return &PrivateP2PAPI{s}
 }
 
-func (api *PrivateP2PAPI) AddPeer(address string) (interface{}, error) {
-	err := api.s.ConnectToPeerByAddress(address, true)
+func (api *PrivateP2PAPI) AddPeer(qmaddr string) (interface{}, error) {
+	err := api.s.ConnectToPeer(qmaddr, true)
 	if err != nil {
 		return false, err
 	}

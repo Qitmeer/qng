@@ -108,6 +108,16 @@ func (ps *PeerSync) Connection(pe *peers.Peer) {
 	ps.OnPeerConnected(pe)
 }
 
+func (ps *PeerSync) immediatelyDisconnected(pe *peers.Peer) {
+	pe.HSlock.Lock()
+	defer pe.HSlock.Unlock()
+
+	if pe.ConnectionState().IsConnecting() &&
+		pe.Direction() == network.DirInbound {
+		ps.Disconnect(pe)
+	}
+}
+
 func (ps *PeerSync) Disconnect(pe *peers.Peer) {
 	if !pe.IsActive() {
 		return
@@ -129,6 +139,11 @@ func (ps *PeerSync) Disconnect(pe *peers.Peer) {
 
 	log.Trace(fmt.Sprintf("Disconnect:%v ", pe.IDWithAddress()))
 	ps.OnPeerDisconnected(pe)
+}
+
+func (ps *PeerSync) ReConnect(pe *peers.Peer) error {
+	ps.Disconnect(pe)
+	return ps.sy.p2p.ConnectToPeer(pe.QAddress().String(), false)
 }
 
 // AddConnectionHandler adds a callback function which handles the connection with a
