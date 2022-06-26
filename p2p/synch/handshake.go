@@ -151,6 +151,9 @@ func (ps *PeerSync) Disconnect(pe *peers.Peer) {
 }
 
 func (ps *PeerSync) ReConnect(pe *peers.Peer) error {
+	pe.HSlock.Lock()
+	defer pe.HSlock.Unlock()
+
 	ps.Disconnect(pe)
 	return ps.sy.p2p.ConnectToPeer(pe.QAddress().String(), false)
 }
