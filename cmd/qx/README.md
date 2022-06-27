@@ -65,7 +65,6 @@ addr & tx & sign
     ec-to-addr            convert an EC public key to a paymant address. default is qitmeer address
     tx-encode             encode a unsigned transaction.
     tx-decode             decode a transaction in base16 to json format.
-    tx-lock-vin           lock vin script.
     tx-sign               sign a transactions using a private key.
     msg-sign              create a message signature
     msg-verify            validate a message signature
@@ -75,20 +74,11 @@ addr & tx & sign
 ## Money from MEER to EVM
 
 ```
-$ # pkscript
-$ ./qx tx-lock-vin -i XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR:0
-$ 2c24a926e6550d9897f8bfe21d9bef9c4a58cd21aa44668a969ad2c1885d3796
-$ ./qx tx-encode -v 1 -i 2c24a926e6550d9897f8bfe21d9bef9c4a58cd21aa44668a969ad2c1885d3796:0:2147483647 -l 0 -o XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR:9.9999:1 |./qx tx-sign -k (privateKey) -p 21039d05472a845abf3cf5548567ee968d3ef3cd0f064fdb1bd2b6b791ab28f681ffac -n mixnet 
+$ ./qx tx-encode -v 1 -i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967295:TxTypeRegular:XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR -l 0 -o XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR:9.9999:1
 ```
 
 ## Money from EVM to MEER
 
 ```
-$ # pkhScript
-$ ./qx tx-lock-vin -i XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR:2
-$ 76a914ada117669b04771e481cc68ae8d4f33f913d1eda88ac
-$ #pkascript
-$ ./qx tx-lock-vin -i XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR:3
-$ 35586b436664486f4848653272615a774e6f5934734b63584666364a79395138586f744148656e597375635072456f6a314665555452
-$ ./qx tx-encode -v 1 -i 0000000000000000000000000000000000000000000000000000000000000000:4294967294:258:35586b436664486f4848653272615a774e6f5934734b63584666364a79395138586f744148656e597375635072456f6a314665555452 -l 0 -o XmRTajVTajFiaEkd7PygFw46vNsoNW6fWE5:100:0 |./qx tx-sign -k (privateKey) -p 76a914ada117669b04771e481cc68ae8d4f33f913d1eda88ac -n mixnet 
+$ ./qx tx-encode -v 1 -i 0000000000000000000000000000000000000000000000000000000000000000:4294967294:258:TxTypeCrossChainImport:XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR -l 0 -o XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR:100:0:TxTypeCrossChainImport
 ```

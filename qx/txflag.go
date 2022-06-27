@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/core/types"
 	"math"
 	"strconv"
 	"strings"
@@ -36,10 +37,6 @@ func (lt *TxLockTimeFlag) Set(s string) error {
 	return nil
 }
 
-type LockVinFlag struct {
-	sv []LockAddress
-}
-
 type LockAddress struct {
 	Address  string
 	SignType int64
@@ -54,41 +51,33 @@ type TxOutputsFlag struct {
 }
 
 type txInput struct {
-	txhash     []byte
-	index      uint32
-	sequence   uint32
-	signScript []byte
+	txhash   []byte
+	index    uint32
+	sequence uint32
+	txtype   string
+	address  string
 }
 type txOutput struct {
 	target string
 	amount float64
 	coinid int64
+	txtype string
 }
 
 func (i LockAddress) String() string {
 	return fmt.Sprintf("%s:%d:%s", i.Address, i.SignType, string(i.Args))
 }
 func (i txInput) String() string {
-	return fmt.Sprintf("%x:%d:%d:%x", i.txhash[:], i.index, i.sequence, i.signScript)
+	return fmt.Sprintf("%x:%d:%d:%s:%s", i.txhash[:], i.index, i.sequence, i.txtype, i.address)
 }
 func (o txOutput) String() string {
-	return fmt.Sprintf("%s:%f:%d", o.target, o.amount, o.coinid)
+	return fmt.Sprintf("%s:%f:%d:%s", o.target, o.amount, o.coinid, o.txtype)
 }
 
 func (v TxInputsFlag) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("{")
 	for _, input := range v.inputs {
-		buffer.WriteString(input.String())
-	}
-	buffer.WriteString("}")
-	return buffer.String()
-}
-
-func (v LockVinFlag) String() string {
-	var buffer bytes.Buffer
-	buffer.WriteString("{")
-	for _, input := range v.sv {
 		buffer.WriteString(input.String())
 	}
 	buffer.WriteString("}")
@@ -130,49 +119,28 @@ func (v *TxInputsFlag) Set(s string) error {
 		}
 		seq = uint32(s)
 	}
-	sc := []byte{}
-	if len(input) == 4 {
-		sc, err = hex.DecodeString(input[3])
-		if err != nil {
-			return err
-		}
+	txtype := types.TxTypeRegular.String()
+	if len(input) >= 4 {
+		txtype = input[3]
+	}
+	addr := ""
+	if len(input) == 5 {
+		addr = input[4]
 	}
 	i := txInput{
 		data,
 		uint32(index),
 		uint32(seq),
-		sc,
+		txtype,
+		addr,
 	}
 	v.inputs = append(v.inputs, i)
 	return nil
 }
 
-func (v *LockVinFlag) Set(s string) error {
-	input := strings.Split(s, ":")
-	if len(input) < 2 {
-		return fmt.Errorf("error to parse sign input : %s", s)
-	}
-
-	typ, err := strconv.ParseUint(input[1], 10, 64)
-	if err != nil {
-		return err
-	}
-	args := []byte{}
-	if len(input) == 3 {
-		args = []byte(input[2])
-	}
-	i := LockAddress{
-		input[0],
-		int64(typ),
-		args,
-	}
-	v.sv = append(v.sv, i)
-	return nil
-}
-
 func (of *TxOutputsFlag) Set(s string) error {
 	output := strings.Split(s, ":")
-	if len(output) < 2 {
+	if len(output) < 3 {
 		return fmt.Errorf("error to parse tx output : %s", s)
 	}
 	target := output[0]
@@ -184,7 +152,11 @@ func (of *TxOutputsFlag) Set(s string) error {
 	if err != nil {
 		return err
 	}
+	txtype := types.TxTypeRegular.String()
+	if len(output) == 4 {
+		txtype = output[3]
+	}
 	of.outputs = append(of.outputs, txOutput{
-		target, amount, coinid})
+		target, amount, coinid, txtype})
 	return nil
 }
