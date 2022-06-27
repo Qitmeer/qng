@@ -15,7 +15,7 @@ import (
 
 const NotifyTickerDur = time.Second
 
-const MaxNotifyProcessTimeout = time.Second*30
+const MaxNotifyProcessTimeout = time.Second * 30
 
 // NotifyMgr manage message announce & relay & notification between mempool, websocket, gbt long pull
 // and rpc server.
@@ -57,11 +57,12 @@ func (ntmgr *NotifyMgr) AnnounceNewTransactions(newTxs []*types.TxDesc, filters 
 // RelayInventory relays the passed inventory vector to all connected peers
 // that are not already known to have it.
 func (ntmgr *NotifyMgr) RelayInventory(data interface{}, filters []peer.ID) {
-	ntmgr.Lock()
-	defer ntmgr.Unlock()
-
-	ntmgr.nds = append(ntmgr.nds, &notify.NotifyData{Data: data, Filters: filters})
-	ntmgr.Reset()
+	_, ok := data.(types.BlockHeader)
+	if !ok {
+		log.Warn(fmt.Sprintf("No support relay data:%v", data))
+		return
+	}
+	ntmgr.Server.PeerSync().RelayGraphState()
 }
 
 func (ntmgr *NotifyMgr) BroadcastMessage(data interface{}) {
