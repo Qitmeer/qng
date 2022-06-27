@@ -75,6 +75,7 @@ addr & tx & sign
 
 ```
 $ ./qx tx-encode -v 1 -i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967295:TxTypeRegular:XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR -l 0 -o XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR:9.9999:1
+$ ./qx tx-encode -v 1 -i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967295:TxTypeRegular:XmMscU9FC6JZ7hPP6oQsbmHUhwuhsbvJVA6 -l 0 -o XmMscU9FC6JZ7hPP6oQsbmHUhwuhsbvJVA6:9.9999:1
 ```
 
 ## Money from EVM to MEER
