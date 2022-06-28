@@ -325,6 +325,17 @@ func CreateVinPkScript(txType types.TxType, addr string, locktime int64) ([]byte
 		return nil, err
 	}
 	switch txType {
+	case types.TxTypeCrossChainExport:
+		_, ok := adr.(*address.SecpPubKeyAddress)
+		if !ok {
+			return nil, errors.New("address is not SecpPubKeyAddress")
+		}
+		b, err := txscript.PayToAddrScript(adr)
+		if err != nil {
+			log.Fatalln("PayToAddrScript Error", err)
+			return nil, err
+		}
+		return b, nil
 	case types.TxTypeRegular:
 		b, err := txscript.PayToAddrScript(adr)
 		if err != nil {
