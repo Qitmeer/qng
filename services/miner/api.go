@@ -15,6 +15,11 @@ import (
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/services/mining"
+	"time"
+)
+
+const (
+	SubmitInterval = time.Second
 )
 
 func (m *Miner) APIs() []api.API {
@@ -33,11 +38,12 @@ func (m *Miner) APIs() []api.API {
 }
 
 type PublicMinerAPI struct {
-	miner *Miner
+	miner      *Miner
+	lastSubmit time.Time
 }
 
 func NewPublicMinerAPI(m *Miner) *PublicMinerAPI {
-	pmAPI := &PublicMinerAPI{miner: m}
+	pmAPI := &PublicMinerAPI{miner: m, lastSubmit: time.Now()}
 	return pmAPI
 }
 
@@ -77,6 +83,10 @@ func handleGetBlockTemplateRequest(api *PublicMinerAPI, request *json.TemplateRe
 //Attempts to submit new block to network.
 //See https://en.bitcoin.it/wiki/BIP_0022 for full specification
 func (api *PublicMinerAPI) SubmitBlock(hexBlock string) (interface{}, error) {
+	if err := api.checkSubmitLimit(); err != nil {
+		return nil, err
+	}
+	api.lastSubmit = time.Now()
 	// Deserialize the hexBlock.
 	m := api.miner
 
@@ -146,6 +156,10 @@ func (api *PublicMinerAPI) GetRemoteGBT(powType byte, extraNonce *bool) (interfa
 }
 
 func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string, extraNonce *uint64) (interface{}, error) {
+	if err := api.checkSubmitLimit(); err != nil {
+		return nil, err
+	}
+	api.lastSubmit = time.Now()
 	// Deserialize the hexBlock.
 	m := api.miner
 
@@ -166,6 +180,13 @@ func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string, extraNonce *
 		md = *extraNonce
 	}
 	return m.submitBlockHeader(&header, md)
+}
+
+func (api *PublicMinerAPI) checkSubmitLimit() error {
+	if time.Since(api.lastSubmit) < SubmitInterval {
+		return fmt.Errorf("Submission interval Limited:%s < %s\n", time.Since(api.lastSubmit), SubmitInterval)
+	}
+	return nil
 }
 
 // PrivateMinerAPI provides private RPC methods to control the miner.
