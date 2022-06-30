@@ -142,7 +142,7 @@ func (s *Stratum) Reconnect() error {
 	var conn net.Conn
 	var err error
 	conf := &tls.Config{
-		InsecureSkipVerify: s.Cfg.PoolConfig.SkipTLS,
+		InsecureSkipVerify: s.Cfg.PoolConfig.SkipTLSCERT,
 	}
 	if s.Cfg.OptionConfig.Proxy != "" {
 		proxy := &socks.Proxy{
