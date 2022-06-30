@@ -80,6 +80,7 @@ type PoolConfig struct {
 	Pool         string `short:"o" long:"pool" description:"Pool to connect to (e.g.stratum+tcp://pool:port)"`
 	PoolUser     string `short:"m" long:"pooluser" description:"Pool username"`
 	PoolTLS      bool   `long:"pooltls" default-mask:"-" description:"Pool tls"`
+	SkipTLSCERT  bool   `long:"skiptlscert" default-mask:"-" description:"skip pool tls cert"`
 	PoolPassword string `short:"n" long:"poolpass" default-mask:"-" description:"Pool password"`
 }
 
@@ -302,6 +303,7 @@ func LoadConfig() (*GlobalConfig, []string, error) {
 		soloCfg.RPCUser = poolCfg.PoolUser
 		soloCfg.RPCPassword = poolCfg.PoolPassword
 		poolCfg.Pool = ""
+
 	}
 
 	// Show the version and exit if the version flag was specified.
