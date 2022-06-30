@@ -1,4 +1,4 @@
-//+build asic
+//go:build asic
 
 /**
 Qitmeer
