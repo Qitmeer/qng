@@ -220,8 +220,8 @@ func (s *Service) connectWithAllPeers(multiAddrs []multiaddr.Multiaddr) {
 	}
 }
 
-func (s *Service) ConnectToPeerByAddress(address string) error {
-	mulAddr, err := MultiAddrFromString(address)
+func (s *Service) ConnectToPeer(qmaddr string, force bool) error {
+	mulAddr, err := MultiAddrFromString(qmaddr)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -232,14 +232,11 @@ func (s *Service) ConnectToPeerByAddress(address string) error {
 		log.Error(err.Error())
 		return err
 	}
-	go func(info peer.AddrInfo) {
-		err := s.connectWithPeer(info, false)
-		if err != nil {
-			log.Error(fmt.Sprintf("Could not connect with peer %s :%v", info.String(), err))
-		}
-	}(*addrInfo)
-
-	return nil
+	err = s.connectWithPeer(*addrInfo, false)
+	if err != nil {
+		log.Error(fmt.Sprintf("Could not connect with peer %s :%v", addrInfo.String(), err))
+	}
+	return err
 }
 
 func (s *Service) connectFromPeerStore() {

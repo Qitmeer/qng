@@ -285,25 +285,20 @@ func (w *CPUWorker) Update() {
 	w.hasNewWork = false
 }
 
-func (w *CPUWorker) generateDiscrete(num int, block chan *hash.Hash) {
+func (w *CPUWorker) generateDiscrete(num int, block chan *hash.Hash) bool {
 	if atomic.LoadInt32(&w.shutdown) != 0 {
-		if block != nil {
-			close(block)
-		}
-		return
+		return false
 	}
 	w.Lock()
 	defer w.Unlock()
 	if w.discrete && w.discreteNum > 0 {
-		if block != nil {
-			close(block)
-		}
 		log.Info(fmt.Sprintf("It already exists generate blocks by discrete: left=%d", w.discreteNum))
-		return
+		return false
 	}
 	w.discrete = true
 	w.discreteNum = num
 	w.discreteBlock = block
+	return true
 }
 
 func (w *CPUWorker) generateBlocks() {

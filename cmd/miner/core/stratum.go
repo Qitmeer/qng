@@ -142,7 +142,7 @@ func (s *Stratum) Reconnect() error {
 	var conn net.Conn
 	var err error
 	conf := &tls.Config{
-		InsecureSkipVerify: s.Cfg.PoolConfig.PoolTLS,
+		InsecureSkipVerify: s.Cfg.PoolConfig.SkipTLSCERT,
 	}
 	if s.Cfg.OptionConfig.Proxy != "" {
 		proxy := &socks.Proxy{
@@ -152,7 +152,12 @@ func (s *Stratum) Reconnect() error {
 		}
 		conn, err = proxy.Dial("tcp", s.Cfg.PoolConfig.Pool)
 	} else {
-		conn, err = tls.Dial("tcp", s.Cfg.PoolConfig.Pool, conf)
+		if s.Cfg.PoolConfig.PoolTLS {
+			conn, err = tls.Dial("tcp", s.Cfg.PoolConfig.Pool, conf)
+		} else {
+			// not need tls
+			conn, err = net.Dial("tcp", s.Cfg.PoolConfig.Pool)
+		}
 	}
 	if err != nil {
 		common.MinerLoger.Debug("[init reconnect error]", "error", err)

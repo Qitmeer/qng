@@ -71,6 +71,8 @@ type Miner struct {
 	coinbaseFlags mining.CoinbaseFlags
 
 	reqWG sync.WaitGroup
+
+	RpcSer *rpc.RpcServer
 }
 
 func (m *Miner) Start() error {
@@ -140,12 +142,18 @@ out:
 				if msg.discreteNum <= 0 {
 					if msg.block != nil {
 						close(msg.block)
+						msg.block = nil
 					}
 					continue
 				}
 				if m.worker != nil {
 					if m.worker.GetType() == CPUWorkerType {
-						m.worker.(*CPUWorker).generateDiscrete(msg.discreteNum, msg.block)
+						if !m.worker.(*CPUWorker).generateDiscrete(msg.discreteNum, msg.block) {
+							if msg.block != nil {
+								close(msg.block)
+								msg.block = nil
+							}
+						}
 						if m.powType != msg.powType {
 							m.powType = msg.powType
 						}
@@ -154,6 +162,7 @@ out:
 						} else {
 							if msg.block != nil {
 								close(msg.block)
+								msg.block = nil
 							}
 						}
 						continue
@@ -167,10 +176,16 @@ out:
 					m.worker = nil
 					if msg.block != nil {
 						close(msg.block)
+						msg.block = nil
 					}
 					continue
 				}
-				worker.generateDiscrete(msg.discreteNum, msg.block)
+				if !worker.generateDiscrete(msg.discreteNum, msg.block) {
+					if msg.block != nil {
+						close(msg.block)
+						msg.block = nil
+					}
+				}
 				worker.Update()
 
 			case *BlockChainChangeMsg:
@@ -616,13 +631,31 @@ func (m *Miner) RemoteMining(powType pow.PowType, coinbaseFlags mining.CoinbaseF
 }
 
 func (m *Miner) notifyBlockTemplate() {
+	var err error
+	var bt *json.RemoteGBTResult
+	if m.RpcSer != nil {
+		if m.worker.GetType() == RemoteWorkerType {
+			bt = m.worker.(*RemoteWorker).GetRemoteGBTResult()
+			if bt == nil {
+				return
+			}
+			m.RpcSer.NotifyBlockTemplate(bt)
+		}
+	}
 	if len(m.cfg.GBTNotify) <= 0 ||
 		m.worker == nil {
 		return
 	}
+
 	var jsonData []byte
 	if m.worker.GetType() == RemoteWorkerType {
-		jsonData, _ = ejson.Marshal(m.worker.(*RemoteWorker).GetRemoteGBTResult())
+		if bt == nil {
+			bt = m.worker.(*RemoteWorker).GetRemoteGBTResult()
+		}
+		jsonData, err = ejson.Marshal(bt)
+		if err != nil {
+			log.Error(err.Error())
+		}
 	}
 
 	m.reqWG.Add(len(m.cfg.GBTNotify))

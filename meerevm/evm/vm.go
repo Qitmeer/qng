@@ -7,14 +7,14 @@ package evm
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/address"
+	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/meerevm/chain"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/evm/util"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/vm/consensus"
-	"github.com/Qitmeer/qng/core/address"
-	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -211,7 +211,7 @@ func (vm *VM) VerifyTx(tx consensus.Tx) (int64, error) {
 		if err := txe.UnmarshalBinary(txb); err != nil {
 			return 0, fmt.Errorf("rlp decoding failed: %v", err)
 		}
-		err := vm.validateTx(txe)
+		err := vm.validateTx(txe, true)
 		if err != nil {
 			return 0, err
 		}
@@ -223,7 +223,19 @@ func (vm *VM) VerifyTx(tx consensus.Tx) (int64, error) {
 	return 0, fmt.Errorf("Not support")
 }
 
-func (vm *VM) validateTx(tx *types.Transaction) error {
+func (vm *VM) VerifyTxSanity(tx consensus.Tx) error {
+	if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
+		txb := common.FromHex(string(tx.GetData()))
+		var txe = &types.Transaction{}
+		if err := txe.UnmarshalBinary(txb); err != nil {
+			return fmt.Errorf("rlp decoding failed: %v", err)
+		}
+		return vm.validateTx(txe, false)
+	}
+	return fmt.Errorf("Not support")
+}
+
+func (vm *VM) validateTx(tx *types.Transaction, checkState bool) error {
 	if uint64(tx.Size()) > txMaxSize {
 		return core.ErrOversizedData
 	}
@@ -243,15 +255,17 @@ func (vm *VM) validateTx(tx *types.Transaction) error {
 	if err != nil {
 		return core.ErrInvalidSender
 	}
-	currentState, err := vm.chain.Ether().BlockChain().State()
-	if err != nil {
-		return err
-	}
-	if currentState.GetNonce(from) > tx.Nonce() {
-		return core.ErrNonceTooLow
-	}
-	if currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
-		return core.ErrInsufficientFunds
+	if checkState {
+		currentState, err := vm.chain.Ether().BlockChain().State()
+		if err != nil {
+			return err
+		}
+		if currentState.GetNonce(from) > tx.Nonce() {
+			return core.ErrNonceTooLow
+		}
+		if currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+			return core.ErrInsufficientFunds
+		}
 	}
 	intrGas, err := core.IntrinsicGas(tx.Data(), tx.AccessList(), tx.To() == nil, true, true)
 	if err != nil {

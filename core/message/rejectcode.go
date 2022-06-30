@@ -26,6 +26,7 @@ const (
 	RejectCheckpoint      RejectCode = 0x43
 	RejectBan             RejectCode = 0x50
 	RejectMaxInbound      RejectCode = 0x51
+	RejectTxTimestamp     RejectCode = 0x52
 )
 
 // Map of reject codes back strings for pretty printing.
@@ -40,6 +41,7 @@ var rejectCodeStrings = map[RejectCode]string{
 	RejectCheckpoint:      "REJECT_CHECKPOINT",
 	RejectBan:             "REJECT_BAN",
 	RejectMaxInbound:      "REJECT_MAXINBOUND",
+	RejectTxTimestamp:     "REJECT_TX_TIMESTAMP",
 }
 
 // String returns the RejectCode in human-readable form.

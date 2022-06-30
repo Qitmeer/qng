@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus"
-	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
@@ -154,13 +153,6 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource M
 		}
 	}
 
-	hasevm := false
-	for _, tx := range transactions[1:] {
-		if types.IsCrossChainVMTx(tx.Tx) {
-			hasevm = true
-			break
-		}
-	}
 	// Do some preliminary checks on each regular transaction to ensure they
 	// are sane before continuing.
 	for _, tx := range transactions {
@@ -170,7 +162,7 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource M
 		}
 		// A block must not have stake transactions in the regular
 		// transaction tree.
-		err := CheckTransactionSanity(tx.Transaction(), chainParams, hasevm)
+		err := CheckTransactionSanity(tx.Transaction(), chainParams, transactions[0].Transaction(), b)
 		if err != nil {
 			return err
 		}
@@ -307,7 +299,7 @@ func checkProofOfWork(header *types.BlockHeader, powConfig *pow.PowConfig, flags
 
 // CheckTransactionSanity performs some preliminary checks on a transaction to
 // ensure it is sane.  These checks are context free.
-func CheckTransactionSanity(tx *types.Transaction, params *params.Params, hasevm bool) error {
+func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinbase *types.Transaction, bc *BlockChain) error {
 	// A transaction must have at least one input.
 	if len(tx.TxIn) == 0 {
 		return ruleError(ErrNoTxInputs, "transaction has no inputs")
@@ -334,14 +326,20 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, hasevm
 		}
 		return update.CheckSanity()
 	} else if types.IsCrossChainVMTx(tx) {
-		if opreturn.IsMeerEVMTx(tx) {
-			me, err := opreturn.NewOPReturnFrom(tx.TxOut[0].PkScript)
+		vtx, err := consensus.NewVMTx(tx)
+		if err != nil {
+			return err
+		}
+		if bc != nil {
+			vtx.SetVMI(bc.VMService)
+		}
+		if coinbase != nil {
+			err = vtx.SetCoinbaseTx(coinbase)
 			if err != nil {
 				return err
 			}
-			return me.Verify(tx)
 		}
-		return fmt.Errorf("Not support cross chain tx:%s", types.DetermineTxType(tx))
+		return vtx.CheckSanity()
 	}
 
 	// Ensure the transaction amounts are in range.  Each transaction
@@ -394,20 +392,6 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, hasevm
 		err := validateCoinbase(tx, params)
 		if err != nil {
 			return err
-		}
-		if hasevm {
-			_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.TxOut[CoinbaseOutput_subsidy].PkScript, params)
-			if err != nil {
-				return err
-			}
-			if len(pksAddrs) > 0 {
-				_, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
-				if !ok {
-					return fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
-				}
-			} else {
-				return fmt.Errorf("tx format error :TxTypeCrossChainVM")
-			}
 		}
 	} else {
 		// Previous transaction outputs referenced by the inputs to
@@ -1036,15 +1020,15 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			continue
 		}
 		if types.IsCrossChainVMTx(tx.Tx) {
-			if opreturn.IsMeerEVMTx(tx.Tx) {
-				vtx := &consensus.Tx{Type: types.TxTypeCrossChainVM, Data: []byte(tx.Tx.TxIn[0].SignScript)}
-				_, err := b.VMService.VerifyTx(vtx)
-				if err != nil {
-					return err
-				}
-				continue
+			vtx, err := consensus.NewVMTx(tx.Tx)
+			if err != nil {
+				return err
 			}
-			return fmt.Errorf("Not support:%s", types.DetermineTxType(tx.Tx))
+			_, err = b.VMService.VerifyTx(vtx)
+			if err != nil {
+				return err
+			}
+			continue
 		}
 		txFee, err := b.CheckTransactionInputs(tx, utxoView)
 		if err != nil {

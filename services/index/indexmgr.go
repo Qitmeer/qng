@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/math"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 )
 
@@ -595,6 +595,17 @@ func markIndexDeletion(db database.DB, idxKey []byte) error {
 		indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
 		return indexesBucket.Put(indexDropKey(idxKey), idxKey)
 	})
+}
+
+func (m *Manager) Drop() error {
+	if m.db == nil {
+		return fmt.Errorf("No load DB")
+	}
+	err := DropAddrIndex(m.db, make(chan struct{}))
+	if err != nil {
+		return err
+	}
+	return DropTxIndex(m.db, make(chan struct{}))
 }
 
 // indexDropKey returns the key for an index which indicates it is in the

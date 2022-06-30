@@ -429,6 +429,11 @@ function pause() {
   get_result "$data"
 }
 
+function reset_peers() {
+  local data='{"jsonrpc":"2.0","method":"p2p_resetPeers","params":[],"id":null}'
+  get_result "$data"
+}
+
 function get_balance() {
   local pkAddress=$1
   local coinID=$2
@@ -673,6 +678,7 @@ function usage(){
   echo "  delpeer <p2p id>"
   echo "  ping"
   echo "  pause"
+  echo "  resetpeers"
   echo "  networkinfo"
   echo "  rpcinfo"
   echo "  rpcmax <max>"
@@ -1056,7 +1062,9 @@ elif [ "$1" == "ping" ]; then
 elif [ "$1" == "pause" ]; then
   shift
   pause $@
-
+elif [ "$1" == "resetpeers" ]; then
+  shift
+  reset_peers
 elif [ "$1" == "networkinfo" ]; then
   shift
   get_network_info $@

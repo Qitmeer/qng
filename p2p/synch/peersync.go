@@ -519,6 +519,15 @@ func (ps *PeerSync) RelayInventory(nds []*notify.NotifyData) {
 	})
 }
 
+func (ps *PeerSync) RelayGraphState() {
+	ps.sy.Peers().ForPeers(peers.PeerConnected, func(pe *peers.Peer) {
+		if !protocol.HasServices(pe.Services(), protocol.Full) {
+			return
+		}
+		ps.UpdateGraphState(pe)
+	})
+}
+
 // EnforceNodeBloomFlag disconnects the peer if the server is not configured to
 // allow bloom filters.  Additionally, if the peer has negotiated to a protocol
 // version  that is high enough to observe the bloom filter service support bit,

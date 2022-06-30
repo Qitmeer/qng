@@ -4,11 +4,11 @@ import (
 	"context"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/Qitmeer/qng/p2p/encoder"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnode"
 	"github.com/Qitmeer/qng/services/mempool"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
@@ -32,6 +32,7 @@ type P2P interface {
 	RelayNodeInfo() *peer.AddrInfo
 	IncreaseBytesSent(pid peer.ID, size int)
 	IncreaseBytesRecv(pid peer.ID, size int)
+	ConnectToPeer(qmaddr string, force bool) error
 }
 
 type P2PRPC interface {

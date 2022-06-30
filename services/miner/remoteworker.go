@@ -118,7 +118,7 @@ func (w *RemoteWorker) GetRequest(powType pow.PowType, coinbaseFlags mining.Coin
 	}, nil}
 }
 
-func (w *RemoteWorker) GetRemoteGBTResult() interface{} {
+func (w *RemoteWorker) GetRemoteGBTResult() *json.RemoteGBTResult {
 	if atomic.LoadInt32(&w.shutdown) != 0 {
 		return nil
 	}
@@ -130,7 +130,7 @@ func (w *RemoteWorker) GetRemoteGBTResult() interface{} {
 	}
 	hexBlockHeader := hex.EncodeToString(headerBuf.Bytes())
 	if w.miner.coinbaseFlags == mining.CoinbaseFlagsStatic {
-		return hexBlockHeader
+		return &json.RemoteGBTResult{HeaderHex: hexBlockHeader}
 	}
 	mtxHex, err := marshal.MessageToHex(w.miner.template.Block.Transactions[0])
 	if err != nil {
@@ -144,7 +144,6 @@ func (w *RemoteWorker) GetRemoteGBTResult() interface{} {
 	if !w.miner.template.TxWitnessRoot.IsEqual(&hash.ZeroHash) {
 		txWitnessRoot = w.miner.template.TxWitnessRoot.String()
 	}
-
 	return &json.RemoteGBTResult{
 		HeaderHex:     hexBlockHeader,
 		CoinbaseTxHex: mtxHex,
