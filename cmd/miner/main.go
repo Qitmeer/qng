@@ -40,7 +40,6 @@ func main() {
 		<-c
 		cancel()
 		common.MinerLoger.Info("Got Control+C, exiting... wait 20 second")
-		time.Sleep(20 * time.Second)
 		os.Exit(0)
 	}()
 	if robotminer == nil {
