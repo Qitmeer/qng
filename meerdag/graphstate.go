@@ -130,11 +130,6 @@ func (gs *GraphState) IsExcellent(other *GraphState) bool {
 	} else if gs.layer > other.layer {
 		return true
 	}
-	if gs.total < other.total {
-		return false
-	} else if gs.total > other.total {
-		return true
-	}
 	return false
 }
 
