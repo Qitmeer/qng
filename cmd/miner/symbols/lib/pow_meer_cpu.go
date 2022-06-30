@@ -1,4 +1,5 @@
-//+build !asic
+//go:build !asic
+// +build !asic
 
 /**
 Qitmeer
@@ -114,6 +115,9 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 					subm += "-" + this.header.JobID + "-" + this.header.Exnonce2
 				}
 				this.SubmitData <- subm
+				if !this.Pool { // solo only submit once in one task
+					break
+				}
 			}
 		}
 	}
