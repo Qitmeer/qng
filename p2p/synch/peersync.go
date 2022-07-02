@@ -411,7 +411,7 @@ func (ps *PeerSync) IntellectSyncBlocks(refresh bool, pe *peers.Peer) {
 			log.Trace(fmt.Sprintf("IntellectSyncBlocks failed to refresh orphans, err=%v", err.Error()))
 		}
 	}
-	allOrphan := ps.Chain().GetRecentOrphansParents()
+	allOrphan := ps.Chain().CheckRecentOrphansParents()
 
 	if len(allOrphan) > 0 {
 		log.Trace(fmt.Sprintf("IntellectSyncBlocks do ps.GetBlock, peer=%v,allOrphan=%v ", pe.GetID(), allOrphan))

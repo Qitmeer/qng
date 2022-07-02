@@ -3,8 +3,8 @@ package blockchain
 import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/meerdag"
 	"math"
 	"sort"
 	"time"
@@ -93,9 +93,10 @@ func (b *BlockChain) GetOrphansTotal() int {
 	return ol
 }
 
-func (b *BlockChain) GetRecentOrphansParents() []*hash.Hash {
+func (b *BlockChain) CheckRecentOrphansParents() []*hash.Hash {
 	b.orphanLock.RLock()
 	defer b.orphanLock.RUnlock()
+	b.searchOrphansParentsInDB()
 
 	result := meerdag.NewHashSet()
 	mh := b.BestSnapshot().GraphState.GetMainHeight()
@@ -114,7 +115,44 @@ func (b *BlockChain) GetRecentOrphansParents() []*hash.Hash {
 		}
 
 	}
+	if result.IsEmpty() && len(b.orphans) > 0 {
+		b.orphans = map[hash.Hash]*orphanBlock{}
+	}
 	return result.List()
+}
+
+func (b *BlockChain) searchOrphansParentsInDB() {
+	for {
+		inBlocks := []*types.SerializedBlock{}
+		for _, v := range b.orphans {
+			for _, h := range v.block.Block().Parents {
+				if b.HasBlockInDB(h) && !b.isOrphan(h) {
+					block, err := b.FetchBlockByHash(h)
+					if err != nil {
+						continue
+					}
+					inBlocks = append(inBlocks, block)
+				}
+			}
+		}
+		if len(inBlocks) > 0 {
+			for _, block := range inBlocks {
+				serializedHeight, err := ExtractCoinbaseHeight(block.Block().Transactions[0])
+				if err != nil {
+					continue
+				}
+				expiration := roughtime.Now().Add(MaxOrphanStallDuration)
+				oBlock := &orphanBlock{
+					block:      block,
+					expiration: expiration,
+					height:     serializedHeight,
+				}
+				b.orphans[*block.Hash()] = oBlock
+			}
+		} else {
+			return
+		}
+	}
 }
 
 func (b *BlockChain) IsOrphanOK(serializedHeight uint64) bool {
