@@ -6,13 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/marshal"
-	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/qx/txbasetypes"
-	"log"
 	"strings"
 	"time"
 )
@@ -150,6 +148,10 @@ func TxDecode(network string, rawTxStr string) {
 	}
 	strArr := strings.Split(rawTxStr, MTX_STR_SEPERATE)
 	rawTxStr = strArr[0]
+	txTypeIndex := &TxTypeIndex{}
+	if len(strArr) == 2 {
+		txTypeIndex, _ = DecodeTxTypeIndex(rawTxStr)
+	}
 	if len(rawTxStr)%2 != 0 {
 		ErrExit(fmt.Errorf("invaild raw transaction : %s", rawTxStr))
 	}
@@ -162,14 +164,17 @@ func TxDecode(network string, rawTxStr string) {
 	if err != nil {
 		ErrExit(err)
 	}
-
+	vins := marshal.MarshJsonVin(&tx)
+	for i := range vins {
+		vins[i].TxType = txTypeIndex.FindInputTxType(i).String()
+	}
 	jsonTx := &json.OrderedResult{
 		{Key: "txid", Val: tx.TxHash().String()},
 		{Key: "txhash", Val: tx.TxHashFull().String()},
 		{Key: "version", Val: int32(tx.Version)},
 		{Key: "locktime", Val: tx.LockTime},
 		{Key: "expire", Val: tx.Expire},
-		{Key: "vin", Val: marshal.MarshJsonVin(&tx)},
+		{Key: "vin", Val: vins},
 		{Key: "vout", Val: marshal.MarshJsonVout(&tx, nil, param)},
 	}
 	marshaledTx, err := jsonTx.MarshalJSON()
@@ -220,47 +225,4 @@ func TxSignSTDO(privkeyStr string, rawTxStr string, network string) {
 		ErrExit(err)
 	}
 	fmt.Printf("%s\n", mtxHex)
-}
-
-func CreateVinPkScript(txType types.TxType, addr string, locktime int64) ([]byte, error) {
-	adr, err := address.DecodeAddress(addr)
-	if err != nil {
-		log.Fatalln("address", addr, "not  support", err)
-		return nil, err
-	}
-	switch txType {
-	case types.TxTypeCrossChainExport:
-		_, ok := adr.(*address.SecpPubKeyAddress)
-		if !ok {
-			return nil, errors.New("address is not SecpPubKeyAddress")
-		}
-		b, err := txscript.PayToAddrScript(adr)
-		if err != nil {
-			log.Fatalln("PayToAddrScript Error", err)
-			return nil, err
-		}
-		return b, nil
-	case types.TxTypeRegular:
-		b, err := txscript.PayToAddrScript(adr)
-		if err != nil {
-			log.Fatalln("PayToAddrScript Error", err)
-			return nil, err
-		}
-		return b, nil
-	case types.TxTypeGenesisLock:
-		b, err := txscript.PayToCLTVPubKeyHashScript(adr.Script(), locktime)
-		if err != nil {
-			log.Fatalln("PayToCLTVPubKeyHashScript Error", err)
-			return nil, err
-		}
-		fmt.Printf("%x\n", b)
-	case types.TxTypeCrossChainImport:
-		pkaScript, err := txscript.NewScriptBuilder().AddData([]byte(addr)).Script()
-		if err != nil {
-			log.Fatalln("pkaScript Error", err)
-			return nil, err
-		}
-		return pkaScript, nil
-	}
-	return nil, errors.New("txType not support")
 }

@@ -35,6 +35,14 @@ func (this *TxTypeIndex) Encode() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
+func (this *TxTypeIndex) String() string {
+	b, err := json.Marshal(*this)
+	if err != nil {
+		return "default:regular"
+	}
+	return string(b)
+}
+
 func (this *TxTypeIndex) FindInputTxType(index int) types.TxType {
 	if _, ok := (*this)[INPUT_NAME]; !ok {
 		return types.TxTypeRegular
