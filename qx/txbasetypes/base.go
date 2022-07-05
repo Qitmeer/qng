@@ -104,11 +104,6 @@ type TxSignBase interface {
 	Sign(privateKey string, mtx *types.Transaction, inputIndex int, param *params.Params) error
 }
 
-type BaseSign struct {
-	MTX   *types.Transaction
-	input *types.TxInput
-}
-
 func NewTxSignObject(txtype types.TxType) TxSignBase {
 	var s TxSignBase
 	switch txtype {

@@ -59,7 +59,6 @@ func (this *TxTypeCrossChainExportUTXO) AssembleVout(mtx *types.Transaction) err
 }
 
 type TxTypeSignExport struct {
-	BaseSign
 }
 
 func (this *TxTypeSignExport) Sign(privKey string, mtx *types.Transaction, inputIndex int, param *params.Params) error {

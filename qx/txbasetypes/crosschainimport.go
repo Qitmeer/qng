@@ -35,11 +35,6 @@ func (this *TxTypeCrossChainImportUTXO) AssembleVout(mtx *types.Transaction) err
 			"address: %v", err)
 	}
 
-	switch addr.(type) {
-	case *address.SecpPubKeyAddress:
-	default:
-		return fmt.Errorf("invalid type: %T", addr)
-	}
 	pkAddr, ok := addr.(*address.SecpPubKeyAddress)
 	if !ok {
 		return fmt.Errorf("invalid type: %T", addr)
@@ -54,7 +49,6 @@ func (this *TxTypeCrossChainImportUTXO) AssembleVout(mtx *types.Transaction) err
 }
 
 type TxTypeSignImport struct {
-	BaseSign
 }
 
 func (this *TxTypeSignImport) Sign(privKey string, mtx *types.Transaction, inputIndex int, param *params.Params) error {

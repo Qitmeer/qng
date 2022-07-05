@@ -61,7 +61,6 @@ func (this *TxTypeGenesisLockUTXO) AssembleVout(mtx *types.Transaction) error {
 }
 
 type TxTypeSignGenesisBlock struct {
-	BaseSign
 }
 
 func (this *TxTypeSignGenesisBlock) Sign(privKey string, mtx *types.Transaction, inputIndex int, param *params.Params) error {

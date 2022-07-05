@@ -60,7 +60,6 @@ func (this *TxTypeRegularUTXO) AssembleVout(mtx *types.Transaction) error {
 }
 
 type TxTypeSignRegular struct {
-	BaseSign
 }
 
 func (this *TxTypeSignRegular) Sign(privKey string, mtx *types.Transaction, inputIndex int, param *params.Params) error {
