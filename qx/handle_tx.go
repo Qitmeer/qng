@@ -165,8 +165,10 @@ func TxDecode(network string, rawTxStr string) {
 		ErrExit(err)
 	}
 	vins := marshal.MarshJsonVin(&tx)
-	for i := range vins {
-		vins[i].TxType = txTypeIndex.FindInputTxType(i).String()
+	if len(strArr) == 2 {
+		for i := range vins {
+			vins[i].TxType = txTypeIndex.FindInputTxType(i).String()
+		}
 	}
 	jsonTx := &json.OrderedResult{
 		{Key: "txid", Val: tx.TxHash().String()},

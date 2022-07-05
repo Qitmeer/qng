@@ -59,7 +59,16 @@ func (this *TxTypeSignImport) Sign(privKey string, mtx *types.Transaction, input
 	if len(privkeyByte) != 32 {
 		return fmt.Errorf("invaid ec private key bytes: %d", len(privkeyByte))
 	}
-	privateKey, _ := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
+	privateKey, pubkey := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
+	addr, err := address.NewSecpPubKeyAddress(pubkey.SerializeCompressed(), param)
+	if err != nil {
+		return err
+	}
+	pkaScript, err := txscript.NewScriptBuilder().AddData([]byte(addr.String())).Script()
+	if err != nil {
+		return err
+	}
+	mtx.TxIn[inputIndex].SignScript = pkaScript
 	itx, err := qconsensus.NewImportTx(mtx)
 	if err != nil {
 		return err
