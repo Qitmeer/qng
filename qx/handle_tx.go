@@ -150,7 +150,7 @@ func TxDecode(network string, rawTxStr string) {
 	rawTxStr = strArr[0]
 	txTypeIndex := &TxTypeIndex{}
 	if len(strArr) == 2 {
-		txTypeIndex, _ = DecodeTxTypeIndex(rawTxStr)
+		txTypeIndex, _ = DecodeTxTypeIndex(strArr[1])
 	}
 	if len(rawTxStr)%2 != 0 {
 		ErrExit(fmt.Errorf("invaild raw transaction : %s", rawTxStr))
