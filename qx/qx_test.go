@@ -22,28 +22,33 @@ func TestTxSign(t *testing.T) {
 
 func TestTxEncode(t *testing.T) {
 	inputs := make([]Input, 0)
-	outputs := make(map[string]Amount)
+	outputs := make([]Output, 0)
 	inputs = append(inputs, Input{
 		TxID:     "25517e3b3759365e80a164a3d4d2db2462c5d6888e4bd874c5fbfbb6fb130b41",
 		OutIndex: 0,
 	})
-	outputs["TnTf7hM9kzm7ssvQ7RAcrjni5jGQbVykd2w"] = Amount{
-		types.TxTypeRegular,
-		0,
-		2083509771,
-		0,
-	}
-	outputs["TnU8gXq9xHFrfchwk2bjyGHR2HMswANsVU5"] = Amount{
-		types.TxTypeRegular,
-		0,
-		100000000,
-		0,
-	}
+	outputs = append(outputs, Output{
+		TargetAddress: "TnTf7hM9kzm7ssvQ7RAcrjni5jGQbVykd2w",
+		Amount: types.Amount{
+			Value: 2083509771,
+			Id:    0,
+		},
+		OutputType:     types.TxTypeRegular,
+		TargetLockTime: 0,
+	}, Output{
+		TargetAddress: "TnU8gXq9xHFrfchwk2bjyGHR2HMswANsVU5",
+		Amount: types.Amount{
+			Value: 100000000,
+			Id:    0,
+		},
+		OutputType:     types.TxTypeRegular,
+		TargetLockTime: 0,
+	})
 	timestamp, _ := time.Parse("2016-01-02 15:04:05", "2019-13-14 00:00:00")
 	rs, _ := TxEncode(1, 0, &timestamp, inputs, outputs)
 
 	fmt.Println(rs)
-	assert.Equal(t, rs, "0100000001410b13fbb6fbfbc574d84b8e88d6c56224dbd2d4a364a1805e3659373b7e512500000000ffffffff0200000bd62f7c000000001976a914afda839fa515ffdbcbc8630b60909c64cfd73f7a88ac000000e1f505000000001976a914b51127b89f9b704e7cfbc69286f0de2e00e7196988ac000000000000000000096e880100")
+	assert.Equal(t, rs, "0100000001410b13fbb6fbfbc574d84b8e88d6c56224dbd2d4a364a1805e3659373b7e512500000000ffffffff0200000bd62f7c000000001976a914afda839fa515ffdbcbc8630b60909c64cfd73f7a88ac000000e1f505000000001976a914b51127b89f9b704e7cfbc69286f0de2e00e7196988ac000000000000000000096e880100-7b22696e707574223a7b2230223a307d2c226f7574707574223a7b2230223a302c2231223a307d7d")
 }
 
 func TestNewEntropy(t *testing.T) {
