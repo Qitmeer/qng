@@ -72,7 +72,7 @@ addr & tx & sign
 ```
 ## Examples
 ### TxTypeRegular (Regular MEER Tx)
-#### From UTXO: ```5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca``` to MEER ```XmRTajVTajFiaEkd7PygFw46vNsoNW6fWE5``` 9.9999 MEER coinID : 0 MEER
+From UTXO: ```5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca``` to MEER ```XmRTajVTajFiaEkd7PygFw46vNsoNW6fWE5``` 9.9999 MEER coinID : 0 MEER
 ```bash
 $ ./qx tx-encode -v 1 -i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967295:TxTypeRegular -l 0 -o XmRTajVTajFiaEkd7PygFw46vNsoNW6fWE5:9.9999:0:TxTypeRegular
 ```
@@ -150,7 +150,7 @@ $ ./qx sign -k (privateKey) -n mixnet 0100000001ca0265bbe73e89220da12dcfed31fb45
 ```
 
 ### TxTypeCrossChainExport（TX from MEER to EVM)
-#### From UTXO: ```5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca``` to MEER PKAddress ```XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR``` 9.9999 MEER coinID : 1 ETH
+From UTXO: ```5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca``` to MEER PKAddress ```XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR``` 9.9999 MEER coinID : 1 ETH
 
 ```bash
 $ ./qx tx-encode -v 1 -i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967295:TxTypeCrossChainExport -l 0 -o XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR:9.9999:1:TxTypeCrossChainExport
@@ -230,7 +230,7 @@ $ ./qx tx-decode 0100000001ca0265bbe73e89220da12dcfed31fb45ec3d18b60ea161036b418
 ```
 
 ### TxTypeCrossChainImport  (TX from EVM to MEER)
-#### From EVM to MEER PKAddress ```XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR``` 100 MEER coinID : 0 MEER
+From EVM to MEER PKAddress ```XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR``` 100 MEER coinID : 0 MEER
 ```bash
 $ ./qx tx-encode -v 1 -i 0000000000000000000000000000000000000000000000000000000000000000:4294967294:258:TxTypeCrossChainImport -l 0 -o XkCfdHoHHe2raZwNoY4sKcXFf6Jy9Q8XotAHenYsucPrEoj1FeUTR:100:0:TxTypeCrossChainImport
 ```
