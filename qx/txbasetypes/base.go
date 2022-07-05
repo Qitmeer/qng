@@ -1,7 +1,8 @@
-package txencodetypes
+package txbasetypes
 
 import (
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/params"
 	"log"
 )
 
@@ -60,7 +61,13 @@ func NewTxAssembleVinObject(txid string, outIndex uint32, sequence uint32, lockt
 	var utxo TxEncodeBase
 	switch txtype {
 	case types.TxTypeRegular:
+		utxo = &TxTypeRegularUTXO{}
+	case types.TxTypeGenesisLock:
 		utxo = &TxTypeGenesisLockUTXO{}
+	case types.TxTypeCrossChainImport:
+		utxo = &TxTypeCrossChainImportUTXO{}
+	case types.TxTypeCrossChainExport:
+		utxo = &TxTypeCrossChainExportUTXO{}
 	default:
 		log.Fatalln("txtype not support:", txtype.String())
 		return nil
@@ -76,7 +83,13 @@ func NewTxAssembleVoutObject(addr string, amount types.Amount, locktime int64, t
 	var utxo TxEncodeBase
 	switch txtype {
 	case types.TxTypeRegular:
+		utxo = &TxTypeRegularUTXO{}
+	case types.TxTypeGenesisLock:
 		utxo = &TxTypeGenesisLockUTXO{}
+	case types.TxTypeCrossChainImport:
+		utxo = &TxTypeCrossChainImportUTXO{}
+	case types.TxTypeCrossChainExport:
+		utxo = &TxTypeCrossChainExportUTXO{}
 	default:
 		log.Fatalln("txtype not support:", txtype.String())
 		return nil
@@ -85,4 +98,31 @@ func NewTxAssembleVoutObject(addr string, amount types.Amount, locktime int64, t
 	utxo.SetAddr(addr)
 	utxo.SetLockTime(locktime)
 	return utxo
+}
+
+type TxSignBase interface {
+	Sign(privateKey string, mtx *types.Transaction, inputIndex int, param *params.Params) error
+}
+
+type BaseSign struct {
+	MTX   *types.Transaction
+	input *types.TxInput
+}
+
+func NewTxSignObject(txtype types.TxType) TxSignBase {
+	var s TxSignBase
+	switch txtype {
+	case types.TxTypeRegular:
+		s = &TxTypeSignRegular{}
+	case types.TxTypeGenesisLock:
+		s = &TxTypeSignGenesisBlock{}
+	case types.TxTypeCrossChainImport:
+		s = &TxTypeSignImport{}
+	case types.TxTypeCrossChainExport:
+		s = &TxTypeSignExport{}
+	default:
+		log.Fatalln("unsupport txSign type", txtype.String())
+		return nil
+	}
+	return s
 }
