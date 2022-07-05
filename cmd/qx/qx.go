@@ -134,7 +134,6 @@ var txOutputs qx.TxOutputsFlag
 var txVersion qx.TxVersionFlag
 var txLockTime qx.TxLockTimeFlag
 var privateKey string
-var pkScripts string
 var msgSignatureMode string
 
 func main() {
@@ -429,20 +428,25 @@ func main() {
 	txVersion = qx.TxVersionFlag(TX_VERION) //set default tx version
 	txEncodeCmd.Var(&txVersion, "v", "the transaction version")
 	txEncodeCmd.Var(&txLockTime, "l", "the transaction lock time")
-	txEncodeCmd.Var(&txInputs, "i", `The set of transaction input points encoded as TXHASH:INDEX:SEQUENCE. 
+	txEncodeCmd.Var(&txInputs, "i", `The set of transaction input points encoded as TXHASH:INDEX:SEQUENCE:TXTYPE. 
 TXHASH is a Base16 transaction hash. INDEX is the 32 bit input index
 in the context of the transaction. SEQUENCE is the optional 32 bit 
-input sequence and defaults to the maximum value.`)
-	txEncodeCmd.Var(&txOutputs, "o", `The set of transaction output data encoded as TARGET:MEER. 
+input sequence and defaults to the maximum value.
+TXTYPE is type type
+TxTypeRegular the standard tx
+TxTypeGenesisLock the tx try to lock the genesis output to the stake pool
+TxTypeCrossChainExport Cross chain by import tx
+TxTypeCrossChainImport Cross chain by vm tx
+`)
+	txEncodeCmd.Var(&txOutputs, "o", `The set of transaction output data encoded as TARGET:MEER:COINID:TXTYPE. 
 TARGET is an address (pay-to-pubkey-hash or pay-to-script-hash).
-MEER is the 64 bit spend amount in qitmeer.`)
+MEER is the 64 bit spend amount in qitmeer.COINID enum {0 => MEER,1=>ETHID}`)
 
 	txSignCmd := flag.NewFlagSet("tx-sign", flag.ExitOnError)
 	txSignCmd.Usage = func() {
 		cmdUsage(txSignCmd, "Usage: qx tx-sign [raw_tx_base16_string] \n")
 	}
 	txSignCmd.StringVar(&privateKey, "k", "", "the ec private key to sign the raw transaction")
-	txSignCmd.StringVar(&pkScripts, "p", "", "the vin pkScripts in order")
 	txSignCmd.StringVar(&network, "n", "mainnet", "decode rawtx for the target network. (mainnet, testnet, privnet)")
 
 	msgSignCmd := flag.NewFlagSet("msg-sign", flag.ExitOnError)
@@ -1412,8 +1416,7 @@ MEER is the 64 bit spend amount in qitmeer.`)
 			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
 				txSignCmd.Usage()
 			} else {
-				pks := strings.Split(pkScripts, ",")
-				qx.TxSignSTDO(privateKey, os.Args[len(os.Args)-1], network, pks)
+				qx.TxSignSTDO(privateKey, os.Args[len(os.Args)-1], network)
 			}
 		} else { //try from STDIN
 			src, err := ioutil.ReadAll(os.Stdin)
@@ -1421,8 +1424,7 @@ MEER is the 64 bit spend amount in qitmeer.`)
 				errExit(err)
 			}
 			str := strings.TrimSpace(string(src))
-			pks := strings.Split(pkScripts, ",")
-			qx.TxSignSTDO(privateKey, str, network, pks)
+			qx.TxSignSTDO(privateKey, str, network)
 		}
 	}
 

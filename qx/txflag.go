@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/core/types"
 	"math"
 	"strconv"
 	"strings"
@@ -36,6 +37,12 @@ func (lt *TxLockTimeFlag) Set(s string) error {
 	return nil
 }
 
+type LockAddress struct {
+	Address  string
+	SignType int64
+	Args     []byte
+}
+
 type TxInputsFlag struct {
 	inputs []txInput
 }
@@ -47,17 +54,23 @@ type txInput struct {
 	txhash   []byte
 	index    uint32
 	sequence uint32
+	txtype   string
 }
 type txOutput struct {
 	target string
 	amount float64
+	coinid int64
+	txtype string
 }
 
+func (i LockAddress) String() string {
+	return fmt.Sprintf("%s:%d:%s", i.Address, i.SignType, string(i.Args))
+}
 func (i txInput) String() string {
-	return fmt.Sprintf("%x:%d:%d", i.txhash[:], i.index, i.sequence)
+	return fmt.Sprintf("%x:%d:%d:%s", i.txhash[:], i.index, i.sequence, i.txtype)
 }
 func (o txOutput) String() string {
-	return fmt.Sprintf("%s:%f", o.target, o.amount)
+	return fmt.Sprintf("%s:%f:%d:%s", o.target, o.amount, o.coinid, o.txtype)
 }
 
 func (v TxInputsFlag) String() string {
@@ -98,17 +111,22 @@ func (v *TxInputsFlag) Set(s string) error {
 		return err
 	}
 	var seq = uint32(math.MaxUint32)
-	if len(input) == 3 {
+	if len(input) >= 3 {
 		s, err := strconv.ParseUint(input[2], 10, 32)
 		if err != nil {
 			return err
 		}
 		seq = uint32(s)
 	}
+	txtype := types.TxTypeRegular.String()
+	if len(input) >= 4 {
+		txtype = input[3]
+	}
 	i := txInput{
 		data,
 		uint32(index),
 		uint32(seq),
+		txtype,
 	}
 	v.inputs = append(v.inputs, i)
 	return nil
@@ -116,7 +134,7 @@ func (v *TxInputsFlag) Set(s string) error {
 
 func (of *TxOutputsFlag) Set(s string) error {
 	output := strings.Split(s, ":")
-	if len(output) < 2 {
+	if len(output) < 3 {
 		return fmt.Errorf("error to parse tx output : %s", s)
 	}
 	target := output[0]
@@ -124,7 +142,15 @@ func (of *TxOutputsFlag) Set(s string) error {
 	if err != nil {
 		return err
 	}
+	coinid, err := strconv.ParseInt(output[2], 10, 64)
+	if err != nil {
+		return err
+	}
+	txtype := types.TxTypeRegular.String()
+	if len(output) == 4 {
+		txtype = output[3]
+	}
 	of.outputs = append(of.outputs, txOutput{
-		target, amount})
+		target, amount, coinid, txtype})
 	return nil
 }
