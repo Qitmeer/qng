@@ -807,23 +807,27 @@ func (bd *MeerDAG) checkLayerGap(parentsNode []IBlock) bool {
 }
 
 // Checking the sub main chain for the parents of tip
-func (bd *MeerDAG) CheckSubMainChainTip(parents []*hash.Hash) (uint, bool) {
+func (bd *MeerDAG) CheckSubMainChainTip(parents []*hash.Hash) error {
 	bd.stateLock.Lock()
 	defer bd.stateLock.Unlock()
 
 	if len(parents) == 0 {
-		return 0, false
+		return fmt.Errorf("Parents is empty")
 	}
-	mainParent := bd.getBlock(parents[0])
-	if mainParent == nil {
-		return 0, false
+	mainTip := bd.getMainChainTip()
+	if mainTip.GetHash().String() != parents[0].String() {
+		return fmt.Errorf("Main chain tip is overdue")
 	}
-	virtualHeight := mainParent.GetHeight() + 1
-
-	if virtualHeight > bd.getMainChainTip().GetHeight() {
-		return virtualHeight, true
+	for _, pa := range parents {
+		ib := bd.getBlock(pa)
+		if ib == nil {
+			return fmt.Errorf("Parent(%s) is overdue\n", pa.String())
+		}
+		if ib.HasChildren() {
+			return fmt.Errorf("Parent(%s) is not legal tip\n", pa.String())
+		}
 	}
-	return 0, false
+	return nil
 }
 
 // Checking the parents of block legitimacy
