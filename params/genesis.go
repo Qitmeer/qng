@@ -418,7 +418,7 @@ func buildMixNetGenesisTxOne() types.Transaction {
 				SignScript: []byte{},
 			},
 		},
-		Timestamp: time.Unix(1632700998, 0), // 2021-09-27 08:03:18
+		Timestamp: time.Unix(1657101127, 0), // 2022-07-06 17:52:07
 		LockTime:  0,
 		Expire:    0,
 	}
@@ -441,7 +441,7 @@ var testPowNetGenesisBlock = types.Block{
 	Header: types.BlockHeader{
 		ParentRoot: hash.Hash{},
 		TxRoot:     *testPowNetGenesisMerkleRoot,
-		Timestamp:  time.Unix(1632273458, 0), // 2021-09-22 09:17:38
+		Timestamp:  time.Unix(1657101127, 0), // 2022-07-06 17:52:07
 		Difficulty: 0x1f0198f2,               //
 		Pow:        pow.GetInstance(pow.MEERXKECCAKV1, 0, []byte{}),
 	},
