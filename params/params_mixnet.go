@@ -40,8 +40,8 @@ var MixNetParams = Params{
 	},
 
 	// Chain parameters
-	GenesisBlock:         &testPowNetGenesisBlock,
-	GenesisHash:          &testPowNetGenesisHash,
+	GenesisBlock:         &mixNetGenesisBlock,
+	GenesisHash:          &mixNetGenesisHash,
 	ReduceMinDifficulty:  false,
 	MinDiffReductionTime: 0, // Does not apply since ReduceMinDifficulty false
 	GenerateSupported:    true,
