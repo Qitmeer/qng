@@ -385,7 +385,7 @@ var testPowNetGenesisCoinbaseTx = types.Transaction{
 }
 
 var mixNetGenesisTx1 = buildMixNetGenesisTxOne()
-
+var mixnetGenesisTime = time.Unix(1657101127, 0) // 2022-07-06 17:52:07
 func buildMixNetGenesisTxOne() types.Transaction {
 	tx := types.Transaction{
 		Version: 1,
@@ -418,7 +418,7 @@ func buildMixNetGenesisTxOne() types.Transaction {
 				SignScript: []byte{},
 			},
 		},
-		Timestamp: time.Unix(1632700998, 0), // 2021-09-27 08:03:18
+		Timestamp: mixnetGenesisTime,
 		LockTime:  0,
 		Expire:    0,
 	}
@@ -437,12 +437,12 @@ var testPowNetGenesisMerkleRoot = merkle.CalcMerkleRoot(mixNetGenesisTxs)
 
 // testNetGenesisBlock defines the genesis block of the block chain which
 // serves as the public transaction ledger for the test network (version 3).
-var testPowNetGenesisBlock = types.Block{
+var mixNetGenesisBlock = types.Block{
 	Header: types.BlockHeader{
 		ParentRoot: hash.Hash{},
 		TxRoot:     *testPowNetGenesisMerkleRoot,
-		Timestamp:  time.Unix(1632273458, 0), // 2021-09-22 09:17:38
-		Difficulty: 0x1f0198f2,               //
+		Timestamp:  mixnetGenesisTime,
+		Difficulty: 0x1f0198f2, //
 		Pow:        pow.GetInstance(pow.MEERXKECCAKV1, 0, []byte{}),
 	},
 	Transactions: mixNetGenesisTxs,
@@ -451,4 +451,4 @@ var testPowNetGenesisBlock = types.Block{
 
 // testNetGenesisHash is the hash of the first block in the block chain for the
 // test network.
-var testPowNetGenesisHash = testPowNetGenesisBlock.BlockHash()
+var mixNetGenesisHash = mixNetGenesisBlock.BlockHash()

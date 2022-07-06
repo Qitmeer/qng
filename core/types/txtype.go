@@ -83,6 +83,50 @@ func (tt TxType) String() string {
 	return "Unknow"
 }
 
+func GetTxType(txtype string) TxType {
+	switch txtype {
+	case "TxTypeRegular":
+		return TxTypeRegular
+	case "TxTypeCoinbase":
+		return TxTypeCoinbase
+	case "TxTypeGenesisLock":
+		return TxTypeGenesisLock
+	case "TxTypeStakebase":
+		return TxTypeStakebase
+	case "TyTypeStakeReserve":
+		return TyTypeStakeReserve
+	case "TxTypeStakePurchase":
+		return TxTypeStakePurchase
+	case "TxTypeStakeDispose":
+		return TxTypeStakeDispose
+	case "TxTypeTokenRegulation":
+		return TxTypeTokenRegulation
+	case "TxTypeTokenNew":
+		return TxTypeTokenNew
+	case "TxTypeTokenRenew":
+		return TxTypeTokenRenew
+	case "TxTypeTokenValidate":
+		return TxTypeTokenValidate
+	case "TxTypeTokenInvalidate":
+		return TxTypeTokenInvalidate
+	case "TxTypeTokenRevoke":
+		return TxTypeTokenRevoke
+	case "TxTypeTokenbase":
+		return TxTypeTokenbase
+	case "TxTypeTokenMint":
+		return TxTypeTokenMint
+	case "TxTypeTokenUnmint":
+		return TxTypeTokenUnmint
+	case "TxTypeCrossChainExport":
+		return TxTypeCrossChainExport
+	case "TxTypeCrossChainImport":
+		return TxTypeCrossChainImport
+	case "TxTypeCrossChainVM":
+		return TxTypeCrossChainVM
+	}
+	return -1
+}
+
 // DetermineTxType determines the type of transaction
 func DetermineTxType(tx *Transaction) TxType {
 	if IsCoinBaseTx(tx) {

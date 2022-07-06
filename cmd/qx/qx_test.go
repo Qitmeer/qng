@@ -5,7 +5,10 @@ package main
 
 import (
 	"encoding/hex"
+	"fmt"
 	"github.com/Qitmeer/qng/common/encode/base58"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/bip32"
 	"github.com/Qitmeer/qng/crypto/bip39"
 	"github.com/Qitmeer/qng/qx"
@@ -74,7 +77,7 @@ func TestQitmeerBase58CheckEncode(t *testing.T) {
 		}
 	*/
 	for _, addrtest := range testAddresses {
-		encoded,_ := base58.QitmeerCheckEncode(data, addrtest.ver[:])
+		encoded, _ := base58.QitmeerCheckEncode(data, addrtest.ver[:])
 		assert.Equal(t, string(encoded), addrtest.addr)
 	}
 }
@@ -110,6 +113,16 @@ func TestQitmeerHd(t *testing.T) {
 		"xprv9s21ZrQH143K3eKjeMrovhEdqzX9mzxsAxXxY3rYEPRzs7o3hXnD6ja2YgxgvppmxFTYjEpE32yYsyxdnWbBBt3wSiRD1rqN1FFdnQJdnzF")
 	assert.Equal(t, publicKey.String(),
 		"xpub661MyMwAqRbcG8QCkPPpHqBNQ2MeBTgiYBTZLSG9nixyjv8CF56TeXtWPx3tiZTfPc92cbZFtFhZpBuSgpNxvFpDAQKX47DdyYcofRNJYT2")
+}
+
+func TestCrossImportInput(t *testing.T) {
+	input := &types.TxInput{
+		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.SupperPrevOutIndex),
+		Sequence:    uint32(types.TxTypeCrossChainImport),
+	}
+	fmt.Printf("%s:%d:%d", input.PreviousOut.Hash.String(), input.PreviousOut.OutIndex, input.Sequence)
+	// output
+	// 0000000000000000000000000000000000000000000000000000000000000000:4294967294:258
 }
 
 func TestQitmeerHdMixnet(t *testing.T) {
