@@ -8,18 +8,18 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/vm/consensus"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 	"github.com/Qitmeer/qng/services/zmq"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"sync"
 	"time"
 )
@@ -217,14 +217,14 @@ func (b *BlockManager) handleNotifyMsg(notification *blockchain.Notification) {
 		// no longer an orphan. Transactions which depend on a confirmed
 		// transaction are NOT removed recursively because they are still
 		// valid.
-		txds:=[]*types.TxDesc{}
+		txds := []*types.TxDesc{}
 		for _, tx := range block.Transactions()[1:] {
 			b.GetTxManager().MemPool().RemoveTransaction(tx, false)
 			b.GetTxManager().MemPool().RemoveDoubleSpends(tx)
 			b.GetTxManager().MemPool().RemoveOrphan(tx.Hash())
 			b.notify.TransactionConfirmed(tx)
 			acceptedTxs := b.GetTxManager().MemPool().ProcessOrphans(tx.Hash())
-			txds = append(txds,acceptedTxs...)
+			txds = append(txds, acceptedTxs...)
 		}
 		b.notify.AnnounceNewTransactions(txds, nil)
 
@@ -393,11 +393,11 @@ out:
 				log.Trace("blkmgr msgChan processBlockMsg", "msg", msg)
 
 				if msg.flags.Has(blockchain.BFRPCAdd) {
-					_, ok := b.chain.BlockDAG().CheckSubMainChainTip(msg.block.Block().Parents)
-					if !ok {
+					err := b.chain.BlockDAG().CheckSubMainChainTip(msg.block.Block().Parents)
+					if err != nil {
 						msg.reply <- ProcessBlockResponse{
 							IsOrphan:      false,
-							Err:           fmt.Errorf("The tips of block is expired:%s\n", msg.block.Hash().String()),
+							Err:           fmt.Errorf("The tips of block is expired:%s (error:%s)\n", msg.block.Hash().String(), err.Error()),
 							IsTipsExpired: true,
 						}
 						continue

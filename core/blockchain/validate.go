@@ -1344,9 +1344,6 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) error {
-	b.ChainRLock()
-	defer b.ChainRUnlock()
-
 	// Skip the proof of work check as this is just a block template.
 	flags := BFNoPoWCheck
 
