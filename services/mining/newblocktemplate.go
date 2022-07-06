@@ -498,6 +498,8 @@ mempool:
 	// Create a new block ready to be solved.
 	merkles := merkle.BuildMerkleTreeStore(blockTxns, false)
 
+	blockManager.GetChain().ChainLock()
+	defer blockManager.GetChain().ChainUnlock()
 	if parents == nil {
 		parents = blockManager.GetChain().GetMiningTips(len(blockTxns))
 	}
