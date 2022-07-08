@@ -173,9 +173,12 @@ func Test_LocateBlocks(t *testing.T) {
 	gs.SetTotal(1)
 	gs.SetLayer(0)
 	lb := bd.locateBlocks(gs, 100)
-	lbhs := NewHashSet()
-	lbhs.AddList(lb)
-	if !processResult(lbhs, changeToIDList(testData.PH_LocateBlocks.Output)) {
+
+	lbids := NewIdSet()
+	for _, v := range lb {
+		lbids.Add(bd.getBlockId(v))
+	}
+	if !processResult(lbids, changeToIDList(testData.PH_LocateBlocks.Output)) {
 		t.FailNow()
 	}
 }
@@ -191,8 +194,11 @@ func Test_LocateMaxBlocks(t *testing.T) {
 	gs.SetTotal(4)
 	gs.SetLayer(2)
 	lb := bd.locateBlocks(gs, 4)
-	//printBlockChainTag(lb,tbMap)
-	if !processResult(lb, changeToIDList(testData.PH_LocateMaxBlocks.Output)) {
+	lbids := NewIdSet()
+	for _, v := range lb {
+		lbids.Add(bd.getBlockId(v))
+	}
+	if !processResult(lbids, changeToIDList(testData.PH_LocateMaxBlocks.Output)) {
 		t.FailNow()
 	}
 }
