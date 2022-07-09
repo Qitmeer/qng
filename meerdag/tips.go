@@ -177,6 +177,7 @@ func (bd *MeerDAG) removeTip(dbTx database.Tx, b IBlock) error {
 			}
 		}
 	}
+	delete(bd.blocks, b.GetID())
 
 	ph, ok := bd.instance.(*Phantom)
 	if !ok {
