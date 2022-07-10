@@ -7,6 +7,7 @@
 package blockchain
 
 import (
+	"container/list"
 	"fmt"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/types"
@@ -88,19 +89,20 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	// genesis block.
 	b.ChainLock()
 	defer func() {
-		b.ChainUnlock()
 		b.flushNotifications()
 	}()
 
 	newNode := NewBlockNode(block, block.Block().Parents)
 	mainParent := b.bd.GetMainParentByHashs(block.Block().Parents)
 	if mainParent == nil {
+		b.ChainUnlock()
 		return fmt.Errorf("Can't find main parent\n")
 	}
 	// The block must pass all of the validation rules which depend on the
 	// position of the block within the block chain.
 	err := b.checkBlockContext(block, mainParent, flags)
 	if err != nil {
+		b.ChainUnlock()
 		return err
 	}
 
@@ -111,6 +113,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	//dag
 	newOrders, oldOrders, ib, isMainChainTipChange := b.bd.AddBlock(newNode)
 	if ib == nil {
+		b.ChainUnlock()
 		return fmt.Errorf("Irreparable error![%s]\n", newNode.GetHash().String())
 	}
 	block.SetOrder(uint64(ib.GetOrder()))
@@ -146,28 +149,34 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	if err != nil {
 		panic(err.Error())
 	}
+	connectedBlocks := list.New()
 	// Connect the passed block to the chain while respecting proper chain
 	// selection according to the chain with the most proof of work.  This
 	// also handles validation of the transaction scripts.
-	_, err = b.connectDagChain(ib, block, newOrders, oldOrders)
+	_, err = b.connectDagChain(ib, block, newOrders, oldOrders, connectedBlocks)
 	if err != nil {
 		panic(err.Error())
 	}
-
 	err = b.updateBestState(ib, block, newOrders)
 	if err != nil {
 		panic(err.Error())
 	}
+	b.ChainUnlock()
+
+	if connectedBlocks.Len() > 0 {
+		for e := connectedBlocks.Front(); e != nil; e = e.Next() {
+			b.sendNotification(BlockConnected, e.Value)
+		}
+	}
+
 	// Notify the caller that the new block was accepted into the block
 	// chain.  The caller would typically want to react by relaying the
 	// inventory to other peers.
-	b.ChainUnlock()
 	b.sendNotification(BlockAccepted, &BlockAcceptedNotifyData{
 		IsMainChainTipChange: isMainChainTipChange,
 		Block:                block,
 		Flags:                flags,
 	})
-	b.ChainLock()
 	return nil
 }
 
@@ -212,7 +221,8 @@ func (b *BlockChain) FastAcceptBlock(block *types.SerializedBlock, flags Behavio
 		return err
 	}
 
-	_, err = b.connectDagChain(ib, block, newOrders, oldOrders)
+	connectedBlocks := list.New()
+	_, err = b.connectDagChain(ib, block, newOrders, oldOrders, connectedBlocks)
 	if err != nil {
 		panic(err)
 	}
