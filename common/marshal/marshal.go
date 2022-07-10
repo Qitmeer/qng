@@ -332,13 +332,13 @@ func MarshalJsonBlock(b *types.SerializedBlock, inclTx bool, fullTx bool,
 
 func GetGraphStateResult(gs *meerdag.GraphState) *json.GetGraphStateResult {
 	if gs != nil {
-		mainTip := gs.GetMainChainTip()
-		tips := []string{mainTip.String() + " main"}
-		for k := range gs.GetTips().GetMap() {
-			if k.IsEqual(mainTip) {
-				continue
+		tips := []string{}
+		for k, v := range gs.GetTipsList() {
+			if k == 0 {
+				tips = append(tips, v.String()+" main")
+			} else {
+				tips = append(tips, v.String())
 			}
-			tips = append(tips, k.String())
 		}
 		return &json.GetGraphStateResult{
 			Tips:       tips,
