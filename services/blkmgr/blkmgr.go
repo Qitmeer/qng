@@ -15,7 +15,6 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/node/service"
-	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 	"github.com/Qitmeer/qng/services/zmq"
@@ -78,7 +77,7 @@ type BlockManager struct {
 	txManager TxManager
 
 	// network server
-	peerServer *p2p.Service
+	peerServer P2PService
 }
 
 // NewBlockManager returns a new block manager.
@@ -86,7 +85,7 @@ type BlockManager struct {
 func NewBlockManager(ntmgr consensus.Notify, indexManager blockchain.IndexManager, db database.DB,
 	timeSource blockchain.MedianTimeSource, sigCache *txscript.SigCache,
 	cfg *config.Config, par *params.Params,
-	interrupt <-chan struct{}, events *event.Feed, peerServer *p2p.Service) (*BlockManager, error) {
+	interrupt <-chan struct{}, events *event.Feed, peerServer P2PService) (*BlockManager, error) {
 	bm := BlockManager{
 		config:         cfg,
 		params:         par,
@@ -164,7 +163,7 @@ func (b *BlockManager) handleNotifyMsg(notification *blockchain.Notification) {
 		b.zmqNotify.BlockAccepted(block)
 		// Don't relay if we are not current. Other peers that are current
 		// should already know about it
-		if !b.peerServer.PeerSync().IsCurrent() {
+		if !b.peerServer.IsCurrent() {
 			log.Trace("we are not current")
 			return
 		}
@@ -285,7 +284,7 @@ func (b *BlockManager) handleNotifyMsg(notification *blockchain.Notification) {
 }
 
 func (b *BlockManager) IsCurrent() bool {
-	return b.peerServer.PeerSync().IsCurrent()
+	return b.peerServer.IsCurrent()
 }
 
 // Start begins the core block handler which processes block and inv messages.
@@ -438,7 +437,6 @@ out:
 					Err:           nil,
 					IsTipsExpired: false,
 				}
-				b.peerServer.Rebroadcast().RegainMempool()
 
 			case processTransactionMsg:
 				log.Trace("blkmgr msgChan processTransactionMsg", "msg", msg)

@@ -13,3 +13,7 @@ type TxManager interface {
 	FeeEstimator() consensus.FeeEstimator
 	InitDefaultFeeEstimator()
 }
+
+type P2PService interface {
+	IsCurrent() bool
+}

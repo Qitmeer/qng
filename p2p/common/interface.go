@@ -7,6 +7,7 @@ import (
 	"github.com/Qitmeer/qng/p2p/encoder"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnode"
+	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -16,6 +17,7 @@ import (
 type P2P interface {
 	GetGenesisHash() *hash.Hash
 	BlockChain() *blockchain.BlockChain
+	BLKManager() *blkmgr.BlockManager
 	Host() host.Host
 	Disconnect(pid peer.ID) error
 	Context() context.Context
@@ -33,6 +35,8 @@ type P2P interface {
 	IncreaseBytesSent(pid peer.ID, size int)
 	IncreaseBytesRecv(pid peer.ID, size int)
 	ConnectToPeer(qmaddr string, force bool) error
+	RegainMempool()
+	IsCurrent() bool
 }
 
 type P2PRPC interface {
