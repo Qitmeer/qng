@@ -72,7 +72,7 @@ func (ds *DAGSync) CalcSyncBlocks(gs *GraphState, locator []*hash.Hash, mode Syn
 	}
 	//
 	isSubDAG := false
-	for k := range gs.tips.GetMap() {
+	for _, k := range gs.tips {
 		gst := ds.bd.getBlock(&k)
 		if gst == nil || !gst.IsOrdered() {
 			continue

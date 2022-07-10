@@ -488,18 +488,16 @@ func (bd *MeerDAG) getGraphState() *GraphState {
 	gs := NewGraphState()
 	gs.SetLayer(0)
 
-	tips := bd.getValidTips(true)
+	tips := bd.getValidTips(false)
+	tipsH := []*hash.Hash{}
 	for i := 0; i < len(tips); i++ {
 		tip := tips[i]
-		if i == 0 {
-			gs.GetTips().AddPair(tip.GetHash(), true)
-		} else {
-			gs.GetTips().Add(tip.GetHash())
-		}
+		tipsH = append(tipsH, tip.GetHash())
 		if tip.GetLayer() > gs.GetLayer() {
 			gs.SetLayer(tip.GetLayer())
 		}
 	}
+	gs.SetTips(tipsH)
 	gs.SetTotal(bd.blockTotal)
 	gs.SetMainHeight(bd.getMainChainTip().GetHeight())
 	gs.SetMainOrder(bd.getMainChainTip().GetOrder())
