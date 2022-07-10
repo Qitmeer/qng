@@ -1107,8 +1107,6 @@ func (b *BlockChain) FetchSubsidyCache() *SubsidyCache {
 // This function MUST be called with the chain state lock held (for writes).
 
 func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, attachNodes *list.List, newBlock *types.SerializedBlock, connectedBlocks *list.List) error {
-	log.Info(fmt.Sprintf("reorganizeChain：%s", ib.GetHash().String()))
-
 	oldBlocks := []*hash.Hash{}
 	for e := detachNodes.Front(); e != nil; e = e.Next() {
 		ob := e.Value.(*meerdag.BlockOrderHelp)
