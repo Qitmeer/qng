@@ -10,7 +10,8 @@ import (
 // A general description of the whole state of DAG
 type GraphState struct {
 	// The terminal block is in block dag,this block have not any connecting at present.
-	tips *HashSet
+	tips    []hash.Hash
+	tipsSet *HashSet
 
 	// The total number blocks that this dag currently owned
 	total uint
@@ -52,12 +53,37 @@ func (gs *GraphState) SetMainOrder(order uint) {
 }
 
 // Return all tips of DAG
-func (gs *GraphState) GetTips() *HashSet {
-	return gs.tips
+func (gs *GraphState) GetTipsList() []*hash.Hash {
+	ret := []*hash.Hash{}
+	for _, h := range gs.tips {
+		ha := h
+		ret = append(ret, &ha)
+	}
+	return ret
 }
 
-func (gs *GraphState) SetTips(tips *HashSet) {
-	gs.tips = tips
+func (gs *GraphState) SetTips(tips []*hash.Hash) {
+	gs.tipsSet = nil
+	gs.tips = []hash.Hash{}
+	for _, h := range tips {
+		gs.tips = append(gs.tips, *h)
+	}
+}
+
+func (gs *GraphState) GetTips() *HashSet {
+	if gs.tipsSet != nil {
+		return gs.tipsSet
+	}
+	gs.tipsSet = NewHashSet()
+	for k, v := range gs.tips {
+		h := v
+		if k == 0 {
+			gs.tipsSet.AddPair(&h, true)
+		} else {
+			gs.tipsSet.Add(&h)
+		}
+	}
+	return gs.tipsSet
 }
 
 // Return the height of main chain
@@ -79,8 +105,11 @@ func (gs *GraphState) IsEqual(other *GraphState) bool {
 		gs.mainHeight != other.mainHeight {
 		return false
 	}
-	if gs.tips.Contain(other.tips) ||
-		other.tips.Contain(gs.tips) {
+	tipsSet := gs.GetTips()
+	otherTipsSet := other.GetTips()
+
+	if tipsSet.Contain(otherTipsSet) ||
+		otherTipsSet.Contain(tipsSet) {
 		return true
 	}
 	return false
@@ -91,7 +120,7 @@ func (gs *GraphState) Equal(other *GraphState) {
 	if gs.IsEqual(other) {
 		return
 	}
-	gs.tips = other.tips.Clone()
+	gs.SetTips(other.GetTipsList())
 	gs.layer = other.layer
 	gs.total = other.total
 	gs.mainHeight = other.mainHeight
@@ -107,7 +136,7 @@ func (gs *GraphState) Clone() *GraphState {
 
 // Return one string contain info
 func (gs *GraphState) String() string {
-	return fmt.Sprintf("(%d,%d,%d,%d,%d)", gs.mainOrder, gs.mainHeight, gs.layer, gs.total, gs.tips.Size())
+	return fmt.Sprintf("(%d,%d,%d,%d,%d)", gs.mainOrder, gs.mainHeight, gs.layer, gs.total, len(gs.tips))
 }
 
 // Judging whether it is better than other
@@ -151,22 +180,13 @@ func (gs *GraphState) Encode(w io.Writer, pver uint32) error {
 	if err != nil {
 		return err
 	}
-	err = s.WriteVarInt(w, pver, uint64(gs.tips.Size()))
+	err = s.WriteVarInt(w, pver, uint64(len(gs.tips)))
 	if err != nil {
 		return err
 	}
 
-	mainChainTip := gs.GetMainChainTip()
-	err = s.WriteElements(w, mainChainTip)
-	if err != nil {
-		return err
-	}
-
-	for k := range gs.tips.GetMap() {
-		if k.IsEqual(mainChainTip) {
-			continue
-		}
-		err = s.WriteElements(w, &k)
+	for _, v := range gs.tips {
+		err = s.WriteElements(w, &v)
 		if err != nil {
 			return err
 		}
@@ -206,20 +226,16 @@ func (gs *GraphState) Decode(r io.Reader, pver uint32) error {
 		return fmt.Errorf("GraphState.Decode:tips count is zero.:%v", err)
 	}
 
-	locatorHashes := make([]hash.Hash, count)
+	locatorHashes := []*hash.Hash{}
 	for i := uint64(0); i < count; i++ {
-		h := &locatorHashes[i]
-		err := s.ReadElements(r, h)
+		var h hash.Hash
+		err := s.ReadElements(r, &h)
 		if err != nil {
 			return err
 		}
-		if i == 0 {
-			gs.tips.AddPair(h, true)
-		} else {
-			gs.tips.Add(h)
-		}
-
+		locatorHashes = append(locatorHashes, &h)
 	}
+	gs.SetTips(locatorHashes)
 	return nil
 }
 
@@ -228,18 +244,14 @@ func (gs *GraphState) MaxPayloadLength() uint32 {
 }
 
 func (gs *GraphState) GetMainChainTip() *hash.Hash {
-	for k, v := range gs.tips.GetMap() {
-		_, ok := v.(bool)
-		if ok {
-			tip := k
-			return &tip
-		}
+	if len(gs.tips) > 0 {
+		return &gs.tips[0]
 	}
-	return gs.tips.List()[0]
+	return nil
 }
 
 func (gs *GraphState) IsGenesis() bool {
-	if gs.tips.Size() == 1 &&
+	if len(gs.tips) == 1 &&
 		gs.total == 1 &&
 		gs.mainHeight == 0 &&
 		gs.mainOrder == 0 &&
@@ -252,7 +264,7 @@ func (gs *GraphState) IsGenesis() bool {
 // Create a new GraphState
 func NewGraphState() *GraphState {
 	return &GraphState{
-		tips:       NewHashSet(),
+		tips:       []hash.Hash{},
 		total:      0,
 		layer:      0,
 		mainHeight: 0,

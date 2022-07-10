@@ -169,7 +169,7 @@ func Test_LocateBlocks(t *testing.T) {
 		t.FailNow()
 	}
 	gs := NewGraphState()
-	gs.GetTips().Add(bd.GetGenesisHash())
+	gs.SetTips([]*hash.Hash{bd.GetGenesisHash()})
 	gs.SetTotal(1)
 	gs.SetLayer(0)
 	lb := bd.locateBlocks(gs, 100)
@@ -189,8 +189,7 @@ func Test_LocateMaxBlocks(t *testing.T) {
 		t.FailNow()
 	}
 	gs := NewGraphState()
-	gs.GetTips().Add(bd.GetGenesisHash())
-	gs.GetTips().Add(tbMap["G"].GetHash())
+	gs.SetTips([]*hash.Hash{bd.GetGenesisHash(), tbMap["G"].GetHash()})
 	gs.SetTotal(4)
 	gs.SetLayer(2)
 	lb := bd.locateBlocks(gs, 4)

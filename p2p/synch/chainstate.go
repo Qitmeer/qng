@@ -23,6 +23,7 @@ const (
 	retSuccess = iota
 	retErrGeneric
 	retErrInvalidChainState
+	MaxPBGraphStateTips = 100
 )
 
 func (s *Sync) sendChainStateRequest(pctx context.Context, id peer.ID) error {
@@ -197,8 +198,13 @@ func (s *Sync) getGraphState() *pb.GraphState {
 		MainOrder:  uint32(bs.GraphState.GetMainOrder()),
 		Tips:       []*pb.Hash{},
 	}
-	for tip := range bs.GraphState.GetTips().GetMap() {
+	count := 0
+	for _, tip := range bs.GraphState.GetTipsList() {
 		gs.Tips = append(gs.Tips, &pb.Hash{Hash: tip.Bytes()})
+		count++
+		if count >= MaxPBGraphStateTips {
+			break
+		}
 	}
 
 	return gs

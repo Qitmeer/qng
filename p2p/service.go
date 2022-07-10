@@ -20,6 +20,7 @@ import (
 	"github.com/Qitmeer/qng/p2p/runutil"
 	"github.com/Qitmeer/qng/p2p/synch"
 	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/services/notifymgr/notify"
 	"github.com/Qitmeer/qng/vm/consensus"
@@ -79,6 +80,7 @@ type Service struct {
 	sy     *synch.Sync
 
 	blockChain  *blockchain.BlockChain
+	blkMgr      *blkmgr.BlockManager
 	timeSource  blockchain.MedianTimeSource
 	txMemPool   *mempool.TxPool
 	notify      consensus.Notify
@@ -430,8 +432,16 @@ func (s *Service) SetBlockChain(blockChain *blockchain.BlockChain) {
 	s.blockChain = blockChain
 }
 
+func (s *Service) SetBLKManager(blkMgr *blkmgr.BlockManager) {
+	s.blkMgr = blkMgr
+}
+
 func (s *Service) BlockChain() *blockchain.BlockChain {
 	return s.blockChain
+}
+
+func (s *Service) BLKManager() *blkmgr.BlockManager {
+	return s.blkMgr
 }
 
 func (s *Service) SetTxMemPool(txMemPool *mempool.TxPool) {
@@ -552,6 +562,14 @@ func (s *Service) RelayNodeInfo() *peer.AddrInfo {
 
 func (s *Service) Rebroadcast() *Rebroadcast {
 	return s.rebroadcast
+}
+
+func (s *Service) RegainMempool() {
+	s.Rebroadcast().RegainMempool()
+}
+
+func (s *Service) IsCurrent() bool {
+	return s.PeerSync().IsCurrent()
 }
 
 func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*Service, error) {

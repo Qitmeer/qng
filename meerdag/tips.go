@@ -74,7 +74,7 @@ func (bd *MeerDAG) getValidTips(limit bool) []IBlock {
 	temp.Remove(mainParent.GetID())
 	var parents []uint
 	if temp.Size() > 1 {
-		parents = temp.SortHashList(false)
+		parents = temp.SortHeightList(true)
 	} else {
 		parents = temp.List()
 	}

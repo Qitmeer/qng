@@ -284,6 +284,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	bm.SetTxManager(txManager)
 	// prepare peerServer
 	qm.GetPeerServer().SetBlockChain(bm.GetChain())
+	qm.GetPeerServer().SetBLKManager(bm)
 	qm.GetPeerServer().SetTimeSource(qm.timeSource)
 	qm.GetPeerServer().SetTxMemPool(txManager.MemPool().(*mempool.TxPool))
 	qm.GetPeerServer().SetNotify(qm.nfManager)

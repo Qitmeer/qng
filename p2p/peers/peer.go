@@ -403,14 +403,15 @@ func (p *Peer) graphState() *meerdag.GraphState {
 	gs.SetLayer(uint(p.chainState.GraphState.Layer))
 	gs.SetMainHeight(uint(p.chainState.GraphState.MainHeight))
 	gs.SetMainOrder(uint(p.chainState.GraphState.MainOrder))
-	tips := gs.GetTips()
+	tips := []*hash.Hash{}
 	for _, tip := range p.chainState.GraphState.Tips {
 		h, err := hash.NewHash(tip.Hash)
 		if err != nil {
 			return nil
 		}
-		tips.Add(h)
+		tips = append(tips, h)
 	}
+	gs.SetTips(tips)
 	return gs
 }
 
