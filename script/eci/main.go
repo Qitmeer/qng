@@ -5,20 +5,31 @@ import (
 	"github.com/Unknwon/goconfig"
 	eci "github.com/alibabacloud-go/eci-20180808/client"
 	rpcconfig "github.com/alibabacloud-go/tea-rpc/client"
-	"github.com/alibabacloud-go/tea/tea"
-	"log"
 	"os"
+	"strconv"
+	"strings"
 )
 
-var client2 *eci.Client
+var client *eci.Client
 
 var accessKey string
 var secretKey string
 var regionId string
 var zoneId string
 var securityGroupId string
+var nfsServer string
 var vSwitchId string
 var qngImage string
+var dockerContainerCount int
+var endpoint string
+var cpuCores = float32(2.0)
+var memCores = float32(4.0)
+var dataDirPrefix string
+var dockerDataDir string
+var dockerExecCommand string
+var containerName string
+var dockerExecArgs []string
+var exiprePeriod int64
 
 /**
 获取配置信息
@@ -39,20 +50,33 @@ func init() {
 	vSwitchId, _ = cfg.GetValue("eci_conf", "v_switch_id")
 	vSwitchId, _ = cfg.GetValue("eci_conf", "v_switch_id")
 	qngImage, _ = cfg.GetValue("eci_conf", "qng_image")
+	endpoint, _ = cfg.GetValue("eci_conf", "endpoint")
+	cs, _ := cfg.GetValue("eci_conf", "docker_container_count")
+	dockerContainerCount, _ = strconv.Atoi(cs)
+	nfsServer, _ = cfg.GetValue("eci_conf", "nfs_server")
+	dataDirPrefix, _ = cfg.GetValue("eci_conf", "data_dir_prefix")
+	containerName, _ = cfg.GetValue("eci_conf", "container_name")
+	dockerDataDir, _ = cfg.GetValue("eci_conf", "docker_data_dir")
+	dockerExecCommand, _ = cfg.GetValue("eci_conf", "docker_exec_command")
+	ep, _ := cfg.GetValue("eci_conf", "expire_period")
+	exiprePeriod, _ = strconv.ParseInt(ep, 10, 64)
+	args, _ := cfg.GetValue("eci_conf", "docker_exec_args")
 
-	fmt.Printf("init success[ access_key:%s, secret_key:%s, region_id:%s, zoneId:%s, vSwitchId:%s, securityGroupId:%s]\n",
-		accessKey, secretKey, regionId, zoneId, vSwitchId, securityGroupId)
+	dockerExecArgs = strings.Split(args, ",")
+	fmt.Printf("init success[ access_key:%s, secret_key:%s, region_id:%s, "+
+		"zoneId:%s, vSwitchId:%s, securityGroupId:%s ,ContainerCount:%d,expirePeriod:%d]\n",
+		accessKey, secretKey, regionId, zoneId, vSwitchId, securityGroupId, dockerContainerCount, exiprePeriod)
 
 	//init eci client
 	// init config
 	var eci_config = new(rpcconfig.Config).SetAccessKeyId(accessKey).
 		SetAccessKeySecret(secretKey).
-		SetRegionId("cn-hangzhou").
-		SetEndpoint("eci.aliyuncs.com").
+		SetRegionId(regionId).
+		SetEndpoint(endpoint).
 		SetType("access_key")
 
 	// init client
-	client2, err = eci.NewClient(eci_config)
+	client, err = eci.NewClient(eci_config)
 	if err != nil {
 		panic(err)
 	}
@@ -60,97 +84,7 @@ func init() {
 }
 
 func main() {
-	createContainerGroup_v2()
-}
-
-func createContainerGroup_v2() {
-	// init runtimeObject
-	//runtimeObject := new(util.RuntimeOptions).SetAutoretry(false).
-	//	SetMaxIdleConns(3)
-
-	// init request
-	request := new(eci.CreateContainerGroupRequest)
-	request.SetRegionId(regionId)
-	request.SetSecurityGroupId(securityGroupId)
-	request.SetVSwitchId(vSwitchId)
-	dbsC := &eci.CreateContainerGroupRequestDnsConfig{}
-	request.SetDnsConfig(dbsC)
-	request.SetContainerGroupName("qng-mixnet")
-	ca := "NET_ADMIN"
-	ssc1 := &eci.CreateContainerGroupRequestSecurityContext{}
-	request.SetSecurityContext(ssc1)
-
-	createContainerRequestContainers := make([]*eci.CreateContainerGroupRequestContainer, 1)
-
-	createContainerRequestContainer := new(eci.CreateContainerGroupRequestContainer)
-	createContainerRequestContainer.SetName("mixnet")
-	createContainerRequestContainer.SetImage(qngImage)
-	createContainerRequestContainer.SetCpu(2.0)
-	createContainerRequestContainer.SetMemory(4.0)
-	httpGet := &eci.CreateContainerGroupRequestContainerReadinessProbeHttpGet{}
-	start := ""
-	execC := &eci.CreateContainerGroupRequestContainerReadinessProbeExec{
-		Command: []*string{&start},
+	for i := 0; i < dockerContainerCount; i++ {
+		CreateContainerGroup(i)
 	}
-	port := 18160
-	tcpSocket := &eci.CreateContainerGroupRequestContainerReadinessProbeTcpSocket{
-		Port: &port,
-	}
-	readP := &eci.CreateContainerGroupRequestContainerReadinessProbe{
-		HttpGet:   httpGet,
-		Exec:      execC,
-		TcpSocket: tcpSocket,
-	}
-	createContainerRequestContainer.SetReadinessProbe(readP)
-	httpGetL := &eci.CreateContainerGroupRequestContainerLivenessProbeHttpGet{}
-	execCL := &eci.CreateContainerGroupRequestContainerLivenessProbeExec{
-		Command: []*string{&start},
-	}
-	tcpSocketL := &eci.CreateContainerGroupRequestContainerLivenessProbeTcpSocket{
-		Port: &port,
-	}
-	liveP := &eci.CreateContainerGroupRequestContainerLivenessProbe{
-		HttpGet:   httpGetL,
-		Exec:      execCL,
-		TcpSocket: tcpSocketL,
-	}
-	createContainerRequestContainer.SetLivenessProbe(liveP)
-	capa := &eci.CreateContainerGroupRequestContainerSecurityContextCapability{
-		Add: []*string{&ca},
-	}
-	ssc := &eci.CreateContainerGroupRequestContainerSecurityContext{
-		Capability: capa,
-	}
-	createContainerRequestContainer.SetSecurityContext(ssc)
-	qngStartVars := make([]*eci.CreateContainerGroupRequestContainerEnvironmentVar, 0)
-	keys := []string{"mixnet", "rpclisten", "modules", "evmenv", "debuglevel",
-		"circuit", "acceptnonstd", "rpcuser", "rpcpass", "port"}
-	vals := []string{"true", "0.0.0.0:18131", "qitmeer",
-		"--http --http.port=1234 --ws --ws.port=1235 --http.addr=0.0.0.0",
-		"debug", "true", "true", "test", "test", "18160"}
-	fieldRef := &eci.CreateContainerGroupRequestContainerEnvironmentVarFieldRef{}
-	for i := 0; i < len(keys); i++ {
-		qngStartVars = append(qngStartVars, &eci.CreateContainerGroupRequestContainerEnvironmentVar{
-			Key:      &keys[i],
-			Value:    &vals[i],
-			FieldRef: fieldRef,
-		})
-	}
-	createContainerRequestContainer.SetEnvironmentVar(qngStartVars)
-	createContainerRequestContainer.SetCommand([]*string{&start})
-
-	createContainerRequestContainers[0] = createContainerRequestContainer
-
-	request.SetContainer(createContainerRequestContainers)
-	err := tea.Validate(request)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	// call api
-	resp, err := client2.CreateContainerGroup(request)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	fmt.Println(resp)
 }

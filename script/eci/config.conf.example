@@ -9,3 +9,20 @@ zone_id=cn-hongkong
 security_group_id=sg-xxx
 v_switch_id=vsw-xxx
 v_switch_id=registry-vpc.cn-hongkong.aliyuncs.com/qng/qng-mixnet:mixnet
+
+container_name=qng-mixnet
+
+nfs_server=xxxxx.nas.aliyuncs.com
+
+# nfs storage must mkdir dirs qngmixnet-0 - qngmixnet-99 first
+data_dir_prefix=qngmixnet-
+
+docker_data_dir=/qng/data
+
+docker_exec_command=./qng
+docker_exec_args="--mixnet=true,--datadir=data,--rpclisten=0.0.0.0:18131,--modules=qitmeer,--evmenv='--http --http.port=1234 --ws --ws.port=1235 --http.addr=0.0.0.0',--debuglevel=debug,--circuit=true,--acceptnonstd=true,--rpcuser=test,--rpcpass=test,--port=18160"
+
+docker_container_count=2
+
+# 3 hours
+expire_period=1800
