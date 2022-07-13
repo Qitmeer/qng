@@ -31,12 +31,9 @@ var containerName string
 var dockerExecArgs []string
 var exiprePeriod int64
 
-/**
-获取配置信息
-*/
 func init() {
 	var cfg *goconfig.ConfigFile
-	config, err := goconfig.LoadConfigFile("./config.conf") //加载配置文件
+	config, err := goconfig.LoadConfigFile("./config.conf")
 	if err != nil {
 		fmt.Println("get config file error:", err.Error())
 		os.Exit(-1)
