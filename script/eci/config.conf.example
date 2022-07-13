@@ -1,0 +1,11 @@
+[eci_conf]
+version=2022-07-12
+url=http://eci.aliyuncs.com/
+
+access_key=xxxx
+secret_key=xxxx
+region_id=cn-hongkong
+zone_id=cn-hongkong
+security_group_id=sg-xxx
+v_switch_id=vsw-xxx
+v_switch_id=registry-vpc.cn-hongkong.aliyuncs.com/qng/qng-mixnet:mixnet
