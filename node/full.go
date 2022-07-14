@@ -153,7 +153,7 @@ func (qm *QitmeerFull) RegisterNotifyMgr() error {
 
 func (qm *QitmeerFull) RegisterAccountService() error {
 	// account manager
-	acctmgr, err := acct.New()
+	acctmgr, err := acct.New(qm.GetBlockManager().GetChain())
 	if err != nil {
 		return err
 	}
@@ -242,10 +242,6 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 
 	cfg := node.Config
 
-	if err := qm.RegisterAccountService(); err != nil {
-		return nil, err
-	}
-
 	if err := qm.RegisterP2PService(); err != nil {
 		return nil, err
 	}
@@ -300,6 +296,10 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		return nil, err
 	}
 	bm.GetChain().VMService = qm.GetVMService()
+
+	if err := qm.RegisterAccountService(); err != nil {
+		return nil, err
+	}
 
 	if err := qm.RegisterRpcService(); err != nil {
 		return nil, err
