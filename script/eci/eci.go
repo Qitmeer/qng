@@ -174,3 +174,16 @@ func deleteContainerGroupById(containerGroupId string) {
 
 	fmt.Println("DeleteContainerGroup ContainerGroupId :", containerGroupId)
 }
+
+func restartContainerGroupById(containerGroupId string) {
+	restartContainerGroupRequest := new(eci.RestartContainerGroupRequest)
+	restartContainerGroupRequest.RegionId = &regionId
+	restartContainerGroupRequest.ContainerGroupId = &containerGroupId
+
+	_, err := client.RestartContainerGroup(restartContainerGroupRequest)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("RestartContainerGroup ContainerGroupId :", containerGroupId)
+}
