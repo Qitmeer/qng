@@ -297,6 +297,10 @@ func (vm *VM) RegisterAPIs(apis []api.API) {
 	vm.mchain.RegisterAPIs(apis)
 }
 
+func (vm *VM) SetLogLevel(level string) {
+	util.InitLog(level, vm.ctx.GetConfig().DebugPrintOrigins)
+}
+
 func New() *VM {
 	return &VM{}
 }

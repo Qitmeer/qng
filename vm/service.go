@@ -163,6 +163,12 @@ func (s *Service) handleNotifyMsg(notification *blockchain.Notification) {
 	}
 }
 
+func (s *Service) SetLogLevel(level string) {
+	for _, vm := range s.vms {
+		vm.SetLogLevel(level)
+	}
+}
+
 func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 	v, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
