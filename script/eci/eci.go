@@ -159,7 +159,7 @@ func CreateContainerGroup(i int) {
 		fmt.Println(err.Error())
 		return
 	}
-	fmt.Println(resp)
+	fmt.Println("CreateContainerGroup: ", containerName, i, " ,ContainerGroupId: ", resp.ContainerGroupId)
 }
 
 func deleteContainerGroupById(containerGroupId string) {
