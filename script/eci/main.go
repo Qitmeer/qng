@@ -1,87 +1,116 @@
 package main
 
 import (
+	"eci/config"
+	"flag"
 	"fmt"
-	"github.com/Unknwon/goconfig"
-	eci "github.com/alibabacloud-go/eci-20180808/client"
-	rpcconfig "github.com/alibabacloud-go/tea-rpc/client"
-	"os"
-	"strconv"
-	"strings"
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials"
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/eci"
+	"log"
+	"time"
 )
 
-var client *eci.Client
+const PATH_SEP = "/"
 
-var accessKey string
-var secretKey string
-var regionId string
-var zoneId string
-var securityGroupId string
-var nfsServer string
-var vSwitchId string
-var qngImage string
-var dockerContainerCount int
-var endpoint string
-var cpuCores = float32(2.0)
-var memCores = float32(4.0)
-var dataDirPrefix string
-var dockerDataDir string
-var dockerExecCommand string
-var containerName string
-var dockerExecArgs []string
-var exiprePeriod int64
-
-func init() {
-	var cfg *goconfig.ConfigFile
-	config, err := goconfig.LoadConfigFile("./config.conf")
-	if err != nil {
-		fmt.Println("get config file error:", err.Error())
-		os.Exit(-1)
-	}
-	cfg = config
-	accessKey, _ = cfg.GetValue("eci_conf", "access_key")
-	secretKey, _ = cfg.GetValue("eci_conf", "secret_key")
-	regionId, _ = cfg.GetValue("eci_conf", "region_id")
-	zoneId, _ = cfg.GetValue("eci_conf", "zone_id")
-	securityGroupId, _ = cfg.GetValue("eci_conf", "security_group_id")
-	vSwitchId, _ = cfg.GetValue("eci_conf", "v_switch_id")
-	vSwitchId, _ = cfg.GetValue("eci_conf", "v_switch_id")
-	qngImage, _ = cfg.GetValue("eci_conf", "qng_image")
-	endpoint, _ = cfg.GetValue("eci_conf", "endpoint")
-	cs, _ := cfg.GetValue("eci_conf", "docker_container_count")
-	dockerContainerCount, _ = strconv.Atoi(cs)
-	nfsServer, _ = cfg.GetValue("eci_conf", "nfs_server")
-	dataDirPrefix, _ = cfg.GetValue("eci_conf", "data_dir_prefix")
-	containerName, _ = cfg.GetValue("eci_conf", "container_name")
-	dockerDataDir, _ = cfg.GetValue("eci_conf", "docker_data_dir")
-	dockerExecCommand, _ = cfg.GetValue("eci_conf", "docker_exec_command")
-	ep, _ := cfg.GetValue("eci_conf", "expire_period")
-	exiprePeriod, _ = strconv.ParseInt(ep, 10, 64)
-	args, _ := cfg.GetValue("eci_conf", "docker_exec_args")
-
-	dockerExecArgs = strings.Split(args, ",")
-	fmt.Printf("init success[ access_key:%s, secret_key:%s, region_id:%s, "+
-		"zoneId:%s, vSwitchId:%s, securityGroupId:%s ,ContainerCount:%d,expirePeriod:%d]\n",
-		accessKey, secretKey, regionId, zoneId, vSwitchId, securityGroupId, dockerContainerCount, exiprePeriod)
-
-	//init eci client
-	// init config
-	var eci_config = new(rpcconfig.Config).SetAccessKeyId(accessKey).
-		SetAccessKeySecret(secretKey).
-		SetRegionId(regionId).
-		SetEndpoint(endpoint).
-		SetType("access_key")
-
-	// init client
-	client, err = eci.NewClient(eci_config)
-	if err != nil {
-		panic(err)
-	}
-
-}
+var (
+	confPath = flag.String("config", "./config.conf", "./eci --config=./config.conf")
+)
 
 func main() {
-	for i := 0; i < dockerContainerCount; i++ {
-		CreateContainerGroup(i)
+	flag.Parse()
+	conf := config.NewConfig(confPath)
+	c := sdk.NewConfig()
+	c.EnableAsync = conf.EnableAsync             // Asynchronous task switch
+	c.GoRoutinePoolSize = conf.GoRoutinePoolSize // Number of goroutines
+	c.MaxTaskQueueSize = conf.MaxTaskQueueSize   // Maximum number of tasks for a single goroutine
+	c.Timeout = time.Duration(conf.Timeout) * time.Second
+	credential := credentials.NewAccessKeyCredential(conf.AccessKey, conf.SecretKey)
+	client, err := eci.NewClientWithOptions(conf.RegionId, c, credential)
+	if err != nil {
+		log.Fatalln(err)
+		return
 	}
+
+	for i := 0; i < conf.DockerContainerCount; i++ {
+		CreateContainerGroup(i, client, conf)
+	}
+}
+
+func CreateContainerGroup(i int, client *eci.Client, conf *config.Config) {
+	// init request
+	request := eci.CreateCreateContainerGroupRequest()
+	containerGroupName := fmt.Sprintf("%s-%d", conf.ContainerName, i)
+	request.ContainerGroupName = containerGroupName
+	request.RegionId = conf.RegionId
+	request.ZoneId = conf.ZoneId
+	request.Cpu = requests.NewFloat(conf.CpuCores)
+	request.SecurityGroupId = conf.SecurityGroupId
+	request.VSwitchId = conf.VSwitchId
+	if conf.ExiprePeriod > 0 {
+		request.ActiveDeadlineSeconds = requests.NewInteger(conf.ExiprePeriod)
+	}
+	dockerContainerName := fmt.Sprintf("%s%d", conf.DataDirPrefix, i)
+	request.Volume = &[]eci.CreateContainerGroupVolume{
+		{
+			Name: dockerContainerName,
+			Type: conf.VolumeType,
+			NFSVolume: eci.CreateContainerGroupNFSVolume{
+				Server: conf.NfsServer,
+				Path:   PATH_SEP + dockerContainerName,
+			},
+		},
+	}
+	createContainerRequestContainers := make([]eci.CreateContainerGroupContainer, 0)
+	createContainerRequestContainers = append(createContainerRequestContainers, eci.CreateContainerGroupContainer{
+		Name:   dockerContainerName,
+		Image:  conf.QngImage,
+		Cpu:    requests.NewFloat(conf.CpuCores),
+		Memory: requests.NewFloat(conf.MemCores),
+		VolumeMount: &[]eci.CreateContainerGroupVolumeMount{
+			{
+				Name:      dockerContainerName,
+				MountPath: conf.DockerDataDir,
+			},
+		},
+		Command: conf.DockerExecCommand,
+		Arg:     conf.DockerExecArgs,
+	})
+	request.Container = &createContainerRequestContainers
+	response := eci.CreateCreateContainerGroupResponse()
+	err := client.DoAction(request, response)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	// call api
+	fmt.Println("CreateContainerGroup: ", containerGroupName, " ,ContainerGroupId: ", response.ContainerGroupId)
+}
+
+func DeleteContainerGroup(containerId string, client *eci.Client, conf *config.Config) {
+	// init request
+	request := eci.CreateDeleteContainerGroupRequest()
+	request.ContainerGroupId = containerId
+	request.RegionId = conf.RegionId
+	response := eci.CreateDeleteContainerGroupResponse()
+	err := client.DoAction(request, response)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	// call api
+	fmt.Println("DeleteContainerGroup: ", containerId)
+}
+
+func RestartContainerGroup(containerId string, client *eci.Client, conf *config.Config) {
+	// init request
+	request := eci.CreateRestartContainerGroupRequest()
+	request.ContainerGroupId = containerId
+	request.RegionId = conf.RegionId
+	response := eci.CreateRestartContainerGroupResponse()
+	err := client.DoAction(request, response)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	// call api
+	fmt.Println("RestartContainerGroup: ", containerId)
 }
