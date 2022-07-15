@@ -6,13 +6,13 @@ import (
 )
 
 type CreateContainerGroupRequestV2 struct {
-	eci.CreateContainerGroupRequest
+	*eci.CreateContainerGroupRequest
 	AutoCreateEip requests.Boolean `position:"Query" name:"AutoCreateEip"`
 	EipBandwidth  requests.Integer `position:"Query" name:"EipBandwidth"`
 }
 
 func CreateCreateContainerGroupRequestV2() (request *CreateContainerGroupRequestV2) {
 	request = &CreateContainerGroupRequestV2{}
-	request.CreateContainerGroupRequest = *eci.CreateCreateContainerGroupRequest()
+	request.CreateContainerGroupRequest = eci.CreateCreateContainerGroupRequest()
 	return
 }

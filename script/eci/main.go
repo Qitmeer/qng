@@ -2,6 +2,7 @@ package main
 
 import (
 	"eci/config"
+	"eci/eciV2"
 	"flag"
 	"fmt"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
@@ -39,7 +40,9 @@ func main() {
 
 func CreateContainerGroup(i int, client *eci.Client, conf *config.Config) {
 	// init request
-	request := eci.CreateCreateContainerGroupRequest()
+	request := eciV2.CreateCreateContainerGroupRequestV2()
+	request.AutoCreateEip = requests.NewBoolean(conf.AutoCreateEip)
+	request.EipBandwidth = requests.NewInteger(conf.EipBandwidth)
 	containerGroupName := fmt.Sprintf("%s-%d", conf.ContainerName, i)
 	request.ContainerGroupName = containerGroupName
 	request.RegionId = conf.RegionId
@@ -77,8 +80,13 @@ func CreateContainerGroup(i int, client *eci.Client, conf *config.Config) {
 		Arg:     conf.DockerExecArgs,
 	})
 	request.Container = &createContainerRequestContainers
+	err := requests.InitParams(request.CreateContainerGroupRequest)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	request.QueryParams = request.CreateContainerGroupRequest.GetQueryParams()
 	response := eci.CreateCreateContainerGroupResponse()
-	err := client.DoAction(request, response)
+	err = client.DoAction(request, response)
 	if err != nil {
 		log.Fatalln(err)
 	}
