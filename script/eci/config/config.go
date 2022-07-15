@@ -34,6 +34,8 @@ type Config struct {
 	Timeout              int64    `default:"10"`
 	ExiprePeriod         int      `default:"1800"`
 	VolumeType           string   `default:"NFSVolume"`
+	AutoCreateEip        bool     `default:"true"`
+	EipBandwidth         int      `default:"5"`
 }
 
 var Params *Config

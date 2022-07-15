@@ -32,7 +32,6 @@ func main() {
 		log.Fatalln(err)
 		return
 	}
-
 	for i := 0; i < conf.DockerContainerCount; i++ {
 		CreateContainerGroup(i, client, conf)
 	}
@@ -113,4 +112,21 @@ func RestartContainerGroup(containerId string, client *eci.Client, conf *config.
 	}
 	// call api
 	fmt.Println("RestartContainerGroup: ", containerId)
+}
+
+func DescribeContainerGroups(containerIds string, client *eci.Client, conf *config.Config) {
+	// init request
+	request := eci.CreateDescribeContainerGroupsRequest()
+	request.ContainerGroupIds = containerIds
+	request.RegionId = conf.RegionId
+	request.Limit = requests.NewInteger(100)
+	response := eci.CreateDescribeContainerGroupsResponse()
+	err := client.DoAction(request, response)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	// call api
+	for i, v := range response.ContainerGroups {
+		fmt.Println(i, "ContainerGroupId", v.ContainerGroupId, "status", v.Status)
+	}
 }
