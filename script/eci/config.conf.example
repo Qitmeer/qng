@@ -1,5 +1,9 @@
-[eci_conf]
+[base_conf]
 version=2022-07-12
+# aliyun
+eci_type=aliyun
+
+[aliyun_conf]
 url=http://eci.aliyuncs.com/
 
 access_key=xxxx
