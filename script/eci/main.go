@@ -26,7 +26,6 @@ func main() {
 	eciProvider := qngEci.NewEciInstance(conf)
 	switch *action {
 	case ACTION_CREATE:
-		fmt.Println(eciProvider)
 		eciProvider.CreateContainer()
 	case ACTION_RESTART:
 		eciProvider.RestartContainers(*containerId)
