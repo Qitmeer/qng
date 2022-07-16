@@ -11,7 +11,6 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"sync"
 )
 
 // txoFlags is a bitmask defining additional information and state for a
@@ -688,10 +687,10 @@ func (b *BlockChain) FetchUtxoEntry(outpoint types.TxOutPoint) (*UtxoEntry, erro
 func dbFetchUtxoEntry(dbTx database.Tx, outpoint types.TxOutPoint) (*UtxoEntry, error) {
 	// Fetch the unspent transaction output information for the passed
 	// transaction output.  Return now when there is no entry.
-	key := outpointKey(outpoint)
+	key := OutpointKey(outpoint)
 	utxoBucket := dbTx.Metadata().Bucket(dbnamespace.UtxoSetBucketName)
 	serializedUtxo := utxoBucket.Get(*key)
-	recycleOutpointKey(key)
+	RecycleOutpointKey(key)
 	if serializedUtxo == nil {
 		return nil, nil
 	}
@@ -732,9 +731,9 @@ func dbPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
 
 		// Remove the utxo entry if it is spent.
 		if entry.IsSpent() {
-			key := outpointKey(outpoint)
+			key := OutpointKey(outpoint)
 			err := utxoBucket.Delete(*key)
-			recycleOutpointKey(key)
+			RecycleOutpointKey(key)
 			if err != nil {
 				return err
 			}
@@ -747,7 +746,7 @@ func dbPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
 		if err != nil {
 			return err
 		}
-		key := outpointKey(outpoint)
+		key := OutpointKey(outpoint)
 		err = utxoBucket.Put(*key, serialized)
 		// NOTE: The key is intentionally not recycled here since the
 		// database interface contract prohibits modifications.  It will
@@ -838,29 +837,6 @@ func serializeUtxoEntry(entry *UtxoEntry) ([]byte, error) {
 		entry.PkScript())
 
 	return serialized, nil
-}
-
-func outpointKey(outpoint types.TxOutPoint) *[]byte {
-	// A VLQ employs an MSB encoding, so they are useful not only to reduce
-	// the amount of storage space, but also so iteration of utxos when
-	// doing byte-wise comparisons will produce them in order.
-	key := outpointKeyPool.Get().(*[]byte)
-	idx := uint64(outpoint.OutIndex)
-	*key = (*key)[:hash.HashSize+serialization.SerializeSizeVLQ(idx)]
-	copy(*key, outpoint.Hash[:])
-	serialization.PutVLQ((*key)[hash.HashSize:], idx)
-	return key
-}
-
-var outpointKeyPool = sync.Pool{
-	New: func() interface{} {
-		b := make([]byte, hash.HashSize+serialization.MaxUint32VLQSerializeSize)
-		return &b // Pointer to slice to avoid boxing alloc.
-	},
-}
-
-func recycleOutpointKey(key *[]byte) {
-	outpointKeyPool.Put(key)
 }
 
 func utxoEntryHeaderCode(entry *UtxoEntry) (uint64, error) {
