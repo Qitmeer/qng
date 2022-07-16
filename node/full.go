@@ -3,6 +3,7 @@ package node
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng/database"
@@ -151,9 +152,9 @@ func (qm *QitmeerFull) RegisterNotifyMgr() error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterAccountService() error {
+func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	// account manager
-	acctmgr, err := acct.New(qm.GetBlockManager().GetChain())
+	acctmgr, err := acct.New(qm.GetBlockManager().GetChain(), cfg, qm.db)
 	if err != nil {
 		return err
 	}
@@ -297,7 +298,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	}
 	bm.GetChain().VMService = qm.GetVMService()
 
-	if err := qm.RegisterAccountService(); err != nil {
+	if err := qm.RegisterAccountService(cfg); err != nil {
 		return nil, err
 	}
 
