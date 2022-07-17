@@ -435,13 +435,13 @@ function reset_peers() {
 }
 
 function get_balance() {
-  local pkAddress=$1
+  local address=$1
   local coinID=$2
   if [ "$coinID" == "" ]; then
-    coinID=1
+    coinID=0
   fi
 
-  local data='{"jsonrpc":"2.0","method":"getBalance","params":["'$pkAddress'",'$coinID'],"id":null}'
+  local data='{"jsonrpc":"2.0","method":"getBalance","params":["'$address'",'$coinID'],"id":null}'
   get_result "$data"
 }
 
@@ -690,7 +690,7 @@ function usage(){
   echo "  timeinfo"
   echo "  subsidy"
   echo "  vmsinfo"
-  echo "  getbalance <PKAddress> <coinID>"
+  echo "  getbalance <address> <coinID>"
   echo "  getaddresses <private key>"
   echo "  modules"
   echo "block  :"

@@ -296,6 +296,22 @@ func (a *AccountManager) Apply(add bool, op *types.TxOutPoint, entry *blockchain
 	return a.apply(add, op, entry)
 }
 
+func (a *AccountManager) GetBalance(address string) (uint64, error) {
+	result := uint64(0)
+	err := a.db.Update(func(dbTx database.Tx) error {
+		balance, err := DBGetACCTBalance(dbTx, address)
+		if err != nil {
+			return err
+		}
+		result = balance.normal
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
+}
+
 func (a *AccountManager) APIs() []api.API {
 	return []api.API{
 		{

@@ -17,13 +17,15 @@ func NewPublicAccountManagerAPI(a *AccountManager) *PublicAccountManagerAPI {
 	return &PublicAccountManagerAPI{a}
 }
 
-func (api *PublicAccountManagerAPI) GetBalance(pkAddress string, coinID types.CoinID) (interface{}, error) {
-	if coinID != types.ETHID {
-		return nil, fmt.Errorf("Not support %v", coinID)
+func (api *PublicAccountManagerAPI) GetBalance(address string, coinID types.CoinID) (interface{}, error) {
+	if coinID == types.MEERID {
+		return api.a.GetBalance(address)
+	} else if coinID == types.ETHID {
+		cv, err := api.a.chain.VMService.GetVM(evm.MeerEVMID)
+		if err != nil {
+			return nil, err
+		}
+		return cv.GetBalance(address)
 	}
-	cv, err := api.a.chain.VMService.GetVM(evm.MeerEVMID)
-	if err != nil {
-		return nil, err
-	}
-	return cv.GetBalance(pkAddress)
+	return nil, fmt.Errorf("Not support %v", coinID)
 }
