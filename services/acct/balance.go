@@ -7,18 +7,18 @@ import (
 )
 
 type AcctBalance struct {
-	available  uint64
-	avaUTXONum uint32
+	normal  uint64
+	norUTXONum uint32
 	locked     uint64
 	locUTXONum uint32
 }
 
 func (ab *AcctBalance) Encode(w io.Writer) error {
-	err := s.WriteElements(w, ab.available)
+	err := s.WriteElements(w, ab.normal)
 	if err != nil {
 		return err
 	}
-	err = s.WriteElements(w, ab.avaUTXONum)
+	err = s.WriteElements(w, ab.norUTXONum)
 	if err != nil {
 		return err
 	}
@@ -34,12 +34,12 @@ func (ab *AcctBalance) Encode(w io.Writer) error {
 }
 
 func (ab *AcctBalance) Decode(r io.Reader) error {
-	err := s.ReadElements(r, &ab.available)
+	err := s.ReadElements(r, &ab.normal)
 	if err != nil {
 		return err
 	}
 
-	err = s.ReadElements(r, &ab.avaUTXONum)
+	err = s.ReadElements(r, &ab.norUTXONum)
 	if err != nil {
 		return err
 	}
@@ -55,14 +55,18 @@ func (ab *AcctBalance) Decode(r io.Reader) error {
 }
 
 func (ab *AcctBalance) String() string {
-	return fmt.Sprintf("available=%d avaUTXONum=%d locked=%d locUTXONum=%d",
-		ab.available, ab.avaUTXONum, ab.locked, ab.locUTXONum)
+	return fmt.Sprintf("normal=%d norUTXONum=%d locked=%d locUTXONum=%d",
+		ab.normal, ab.norUTXONum, ab.locked, ab.locUTXONum)
 }
 
-func NewAcctBalance(available uint64, avaUTXONum uint32, locked uint64, locUTXONum uint32) *AcctBalance {
+func (ab *AcctBalance) IsEmpty() bool {
+	return ab.norUTXONum ==0 && ab.locUTXONum == 0
+}
+
+func NewAcctBalance(normal uint64, norUTXONum uint32, locked uint64, locUTXONum uint32) *AcctBalance {
 	ab := AcctBalance{
-		available:  available,
-		avaUTXONum: avaUTXONum,
+		normal:  normal,
+		norUTXONum: norUTXONum,
 		locked:     locked,
 		locUTXONum: locUTXONum,
 	}

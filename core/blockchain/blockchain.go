@@ -1528,3 +1528,7 @@ func (b *BlockChain) GetSubsidyCache() *SubsidyCache {
 func (b *BlockChain) HasTx(txid *hash.Hash) bool {
 	return b.indexManager.HasTx(txid)
 }
+
+func (b *BlockChain) DB() database.DB {
+	return b.db
+}

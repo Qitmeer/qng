@@ -71,6 +71,21 @@ func getDBPath(dataDir string) string {
 }
 
 // info
+func DBGetACCTInfo(dbTx database.Tx) (*AcctInfo,error){
+	meta := dbTx.Metadata()
+
+	infoData := meta.Get(InfoBucketName)
+	if infoData == nil {
+		return nil,nil
+	}
+	info:=NewAcctInfo()
+	err := info.Decode(bytes.NewReader(infoData))
+	if err != nil {
+		return nil,err
+	}
+	return info,nil
+}
+
 func DBPutACCTInfo(dbTx database.Tx, ai *AcctInfo) error {
 	var buff bytes.Buffer
 	err := ai.Encode(&buff)
@@ -81,6 +96,24 @@ func DBPutACCTInfo(dbTx database.Tx, ai *AcctInfo) error {
 }
 
 // balance
+func DBGetACCTBalance(dbTx database.Tx, address string) (*AcctBalance,error) {
+	meta := dbTx.Metadata()
+	bucket := meta.Bucket(BalanceBucketName)
+	if bucket == nil {
+		return nil,nil
+	}
+	balData := bucket.Get([]byte(address))
+	if balData == nil {
+		return nil,nil
+	}
+	balance:=&AcctBalance{}
+	err := balance.Decode(bytes.NewReader(balData))
+	if err != nil {
+		return nil,err
+	}
+	return balance,nil
+}
+
 func DBPutACCTBalance(dbTx database.Tx, address string, ab *AcctBalance) error {
 	var buff bytes.Buffer
 	err := ab.Encode(&buff)

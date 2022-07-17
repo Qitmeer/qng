@@ -9,8 +9,8 @@ import (
 const (
 	AddressUTXOsSuffix = "-utxos"
 
-	AvailableUTXOState = 0
-	LockedUTXOState    = 1
+	NormalUTXOState = 0
+	LockedUTXOState = 1
 )
 
 type AcctUTXO struct {
@@ -27,11 +27,6 @@ func (au *AcctUTXO) Encode(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	tb := []byte{}
-	for i := 0; i < 1024*1024*1024; i++ {
-		tb = append(tb, byte(i))
-	}
-	s.WriteVarBytes(w, 0, tb)
 	return nil
 }
 
@@ -58,7 +53,7 @@ func (au *AcctUTXO) SetBalance(balance uint64) {
 
 func NewAcctUTXO() *AcctUTXO {
 	au := AcctUTXO{
-		state: AvailableUTXOState,
+		state: NormalUTXOState,
 	}
 
 	return &au
