@@ -158,6 +158,7 @@ func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
+	qm.GetBlockManager().GetChain().Acct = acctmgr
 	qm.Services().RegisterService(acctmgr)
 	return nil
 }

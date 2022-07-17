@@ -721,7 +721,7 @@ func dbFetchUtxoEntry(dbTx database.Tx, outpoint types.TxOutPoint) (*UtxoEntry, 
 	return entry, nil
 }
 
-func dbPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
+func (b *BlockChain) dbPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
 	utxoBucket := dbTx.Metadata().Bucket(dbnamespace.UtxoSetBucketName)
 	for outpoint, entry := range view.entries {
 		// No need to update the database if the entry was not modified.
@@ -737,7 +737,12 @@ func dbPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
 			if err != nil {
 				return err
 			}
-
+			if b.Acct != nil {
+				err = b.Acct.Apply(false, &outpoint, entry)
+				if err != nil {
+					log.Error(err.Error())
+				}
+			}
 			continue
 		}
 
@@ -754,6 +759,13 @@ func dbPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
 		// it.
 		if err != nil {
 			return err
+		}
+
+		if b.Acct != nil {
+			err = b.Acct.Apply(true, &outpoint, entry)
+			if err != nil {
+				log.Error(err.Error())
+			}
 		}
 	}
 

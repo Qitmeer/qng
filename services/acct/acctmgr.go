@@ -37,6 +37,16 @@ func (a *AccountManager) Start() error {
 	return nil
 }
 
+func (a *AccountManager) Stop() error {
+	if err := a.Service.Stop(); err != nil {
+		return err
+	}
+	if a.db != nil {
+		return a.db.Close()
+	}
+	return nil
+}
+
 func (a *AccountManager) initDB(first bool) error {
 	log.Info("AccountManager enable account mode")
 	var err error
@@ -45,9 +55,10 @@ func (a *AccountManager) initDB(first bool) error {
 		return err
 	}
 	curDAGID := uint32(a.chain.BlockDAG().GetBlockTotal())
-	rebuild := false
+	rebuilddb := false
+	rebuildidx := false
 	err = a.db.Update(func(dbTx database.Tx) error {
-		info,err:=DBGetACCTInfo(dbTx)
+		info, err := DBGetACCTInfo(dbTx)
 		if err != nil {
 			return err
 		}
@@ -58,17 +69,14 @@ func (a *AccountManager) initDB(first bool) error {
 				return err
 			}
 			log.Info("Init account manager info")
-			err = a.rebuild()
-			if err != nil {
-				return err
-			}
+			rebuildidx = true
 		} else {
-			a.info=info
+			a.info = info
 			log.Info(fmt.Sprintf("Load account manager info:%s", a.info.String()))
 			if curDAGID != a.info.updateDAGID {
 				log.Warn(fmt.Sprintf("DAG is not consistent with account manager state"))
 				if first {
-					rebuild = true
+					rebuilddb = true
 				} else {
 					return fmt.Errorf("update dag id is inconformity:%d != %d", curDAGID, a.info.updateDAGID)
 				}
@@ -79,10 +87,15 @@ func (a *AccountManager) initDB(first bool) error {
 	if err != nil {
 		return err
 	}
-	if rebuild {
+	if rebuilddb {
 		a.info = NewAcctInfo()
 		a.cleanDB()
 		return a.initDB(false)
+	} else if rebuildidx {
+		err = a.rebuild()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -93,7 +106,7 @@ func (a *AccountManager) cleanDB() {
 		if err != nil {
 			return
 		}
-		a.db=db
+		a.db = db
 	}
 
 	if a.db != nil {
@@ -148,7 +161,7 @@ func (a *AccountManager) rebuild() error {
 			if err != nil {
 				return err
 			}
-			err = a.apply(true,types.NewOutPoint(txhash,uint32(txOutIdex)),entry)
+			err = a.apply(true, types.NewOutPoint(txhash, uint32(txOutIdex)), entry)
 			if err != nil {
 				return err
 			}
@@ -177,98 +190,98 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 
 	if add {
 		err = a.db.Update(func(dbTx database.Tx) error {
-			addrStr:=addrs[0].String()
-			balance,er:=DBGetACCTBalance(dbTx,addrStr)
+			addrStr := addrs[0].String()
+			balance, er := DBGetACCTBalance(dbTx, addrStr)
 			if er != nil {
 				return er
 			}
 			if balance == nil {
 				if entry.IsCoinBase() {
-					balance = NewAcctBalance(0,0,uint64(entry.Amount().Value),1)
-				}else{
-					balance = NewAcctBalance(uint64(entry.Amount().Value),1,0,0)
+					balance = NewAcctBalance(0, 0, uint64(entry.Amount().Value), 1)
+				} else {
+					balance = NewAcctBalance(uint64(entry.Amount().Value), 1, 0, 0)
 				}
 				a.info.addrTotal++
-				er=DBPutACCTInfo(dbTx,a.info)
+				er = DBPutACCTInfo(dbTx, a.info)
 				if er != nil {
 					return er
 				}
-			}else{
+			} else {
 				if entry.IsCoinBase() {
 					balance.locked += uint64(entry.Amount().Value)
 					balance.locUTXONum++
-				}else{
+				} else {
 					balance.normal += uint64(entry.Amount().Value)
 					balance.norUTXONum++
 				}
 
 			}
-			er=DBPutACCTBalance(dbTx,addrStr,balance)
+			er = DBPutACCTBalance(dbTx, addrStr, balance)
 			if er != nil {
 				return er
 			}
-			au:=NewAcctUTXO()
+			au := NewAcctUTXO()
 			au.SetBalance(uint64(entry.Amount().Value))
-			er=DBPutACCTUTXO(dbTx,addrStr,op,au)
+			er = DBPutACCTUTXO(dbTx, addrStr, op, au)
 			if er != nil {
 				return er
 			}
 			return nil
 		})
 		return err
-	}else{
+	} else {
 		err = a.db.Update(func(dbTx database.Tx) error {
-			addrStr:=addrs[0].String()
-			balance,er:=DBGetACCTBalance(dbTx,addrStr)
+			addrStr := addrs[0].String()
+			balance, er := DBGetACCTBalance(dbTx, addrStr)
 			if er != nil {
 				return er
 			}
 			if balance == nil {
 				return nil
-			}else{
-				amount:=uint64(entry.Amount().Value)
+			} else {
+				amount := uint64(entry.Amount().Value)
 				if entry.IsCoinBase() {
 					if balance.locked <= amount {
-						balance.locked=0
-					}else{
+						balance.locked = 0
+					} else {
 						balance.locked -= amount
 					}
-					if balance.locUTXONum >0 {
+					if balance.locUTXONum > 0 {
 						balance.locUTXONum--
 					}
-				}else{
+				} else {
 					if balance.normal <= amount {
-						balance.locked=0
-					}else{
+						balance.locked = 0
+					} else {
 						balance.normal -= amount
 					}
-					if balance.norUTXONum >0 {
+					if balance.norUTXONum > 0 {
 						balance.norUTXONum--
 					}
 				}
 			}
 			if balance.IsEmpty() {
-				er=DBDelACCTBalance(dbTx,addrStr)
+				er = DBDelACCTBalance(dbTx, addrStr)
 				if er != nil {
 					return er
 				}
-				er=DBDelACCTUTXOs(dbTx,addrStr)
+				er = DBDelACCTUTXOs(dbTx, addrStr)
 				if er != nil {
 					return er
 				}
 				if a.info.addrTotal > 0 {
-					a.info.addrTotal --
-					er=DBPutACCTInfo(dbTx,a.info)
+					a.info.addrTotal--
+					er = DBPutACCTInfo(dbTx, a.info)
 					if er != nil {
 						return er
 					}
 				}
-			}else{
-				er=DBPutACCTBalance(dbTx,addrStr,balance)
+			} else {
+				er = DBPutACCTBalance(dbTx, addrStr, balance)
 				if er != nil {
 					return er
 				}
-				er=DBDelACCTUTXO(dbTx,addrStr,op)
+				er = DBDelACCTUTXO(dbTx, addrStr, op)
 				if er != nil {
 					return er
 				}
@@ -280,7 +293,7 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 }
 
 func (a *AccountManager) Apply(add bool, op *types.TxOutPoint, entry *blockchain.UtxoEntry) error {
-	return a.apply(add,op,entry)
+	return a.apply(add, op, entry)
 }
 
 func (a *AccountManager) APIs() []api.API {

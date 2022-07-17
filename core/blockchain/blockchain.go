@@ -122,6 +122,8 @@ type BlockChain struct {
 	unknownRulesWarned bool
 
 	VMService consensus.VMI
+
+	Acct ACCTI
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.
@@ -989,7 +991,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 			// Update the utxo set using the state of the utxo view.  This
 			// entails removing all of the utxos spent and adding the new
 			// ones created by the block.
-			err := dbPutUtxoView(dbTx, view)
+			err := b.dbPutUtxoView(dbTx, view)
 			if err != nil {
 				return err
 			}
@@ -1056,7 +1058,7 @@ func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoVie
 		// Update the utxo set using the state of the utxo view.  This
 		// entails restoring all of the utxos spent and removing the new
 		// ones created by the block.
-		err := dbPutUtxoView(dbTx, view)
+		err := b.dbPutUtxoView(dbTx, view)
 		if err != nil {
 			return err
 		}
@@ -1129,13 +1131,13 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 	for e := detachNodes.Back(); e != nil; e = e.Prev() {
 		n := e.Value.(*meerdag.BlockOrderHelp)
 		if n == nil {
-			panic(err.Error())
+			panic(fmt.Errorf("No BlockOrderHelp"))
 		}
 		b.updateTokenState(n.Block, nil, true)
 		//
 		block, err = b.fetchBlockByHash(n.Block.GetHash())
 		if err != nil {
-			panic(err.Error())
+			panic(err)
 		}
 
 		block.SetOrder(uint64(n.OldOrder))

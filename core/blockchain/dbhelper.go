@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/core/blockchain/token"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"math/big"
 	"time"
 )
@@ -276,7 +276,7 @@ func (b *BlockChain) createChainState() error {
 		for _, tx := range genesisBlock.Transactions() {
 			view.AddTxOuts(tx, genesisBlock.Hash())
 		}
-		err = dbPutUtxoView(dbTx, view)
+		err = b.dbPutUtxoView(dbTx, view)
 		if err != nil {
 			return err
 		}
