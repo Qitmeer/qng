@@ -27,6 +27,11 @@ func (au *AcctUTXO) Encode(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+	tb := []byte{}
+	for i := 0; i < 1024*1024*1024; i++ {
+		tb = append(tb, byte(i))
+	}
+	s.WriteVarBytes(w, 0, tb)
 	return nil
 }
 
@@ -45,6 +50,10 @@ func (au *AcctUTXO) Decode(r io.Reader) error {
 
 func (au *AcctUTXO) String() string {
 	return fmt.Sprintf("state=%d balance=%d", au.state, au.balance)
+}
+
+func (au *AcctUTXO) SetBalance(balance uint64) {
+	au.balance = balance
 }
 
 func NewAcctUTXO() *AcctUTXO {

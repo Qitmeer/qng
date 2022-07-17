@@ -26,18 +26,23 @@ func (a *AccountManager) Start() error {
 		return err
 	}
 	if a.cfg.AcctMode {
-		return a.initDB()
+		return a.initDB(true)
 	} else {
 		a.cleanDB()
 	}
 	return nil
 }
 
-func (a *AccountManager) initDB() error {
+func (a *AccountManager) initDB(first bool) error {
 	log.Info("AccountManager enable account mode")
+	var err error
+	a.db, err = loadDB(a.cfg.DbType, a.cfg.DataDir, true)
+	if err != nil {
+		return err
+	}
 	curDAGID := uint32(a.chain.BlockDAG().GetBlockTotal())
 	rebuild := false
-	err := a.db.Update(func(dbTx database.Tx) error {
+	err = a.db.Update(func(dbTx database.Tx) error {
 		meta := dbTx.Metadata()
 		infoData := meta.Get(InfoBucketName)
 		if infoData == nil {
@@ -47,6 +52,10 @@ func (a *AccountManager) initDB() error {
 				return err
 			}
 			log.Info("Init account manager info")
+			err = a.rebuild()
+			if err != nil {
+				return err
+			}
 		} else {
 			err := a.info.Decode(bytes.NewReader(infoData))
 			if err != nil {
@@ -55,7 +64,11 @@ func (a *AccountManager) initDB() error {
 			log.Info(fmt.Sprintf("Load account manager info:%s", a.info.String()))
 			if curDAGID != a.info.updateDAGID {
 				log.Warn(fmt.Sprintf("DAG is not consistent with account manager state"))
-				rebuild = true
+				if first {
+					rebuild = true
+				} else {
+					return fmt.Errorf("update dag id is inconformity:%d != %d", curDAGID, a.info.updateDAGID)
+				}
 			}
 		}
 		if rebuild {
@@ -72,8 +85,9 @@ func (a *AccountManager) initDB() error {
 		return err
 	}
 	if rebuild {
+		a.info = NewAcctInfo()
 		a.cleanDB()
-		return a.initDB()
+		return a.initDB(false)
 	}
 	return nil
 }
@@ -101,6 +115,13 @@ func (a *AccountManager) cleanDB() {
 	if err != nil {
 		log.Error(err.Error())
 	}
+	err = removeDB(getDBPath(a.cfg.DataDir))
+	if err != nil {
+		log.Error(err.Error())
+	}
+}
+
+func (a *AccountManager) rebuild() error {
 
 }
 
@@ -141,11 +162,10 @@ func (a *AccountManager) APIs() []api.API {
 	}
 }
 
-func New(chain *blockchain.BlockChain, cfg *config.Config, db database.DB) (*AccountManager, error) {
+func New(chain *blockchain.BlockChain, cfg *config.Config) (*AccountManager, error) {
 	a := AccountManager{
 		chain: chain,
 		cfg:   cfg,
-		db:    db,
 		info:  NewAcctInfo(),
 	}
 	return &a, nil

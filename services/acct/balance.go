@@ -59,8 +59,12 @@ func (ab *AcctBalance) String() string {
 		ab.available, ab.avaUTXONum, ab.locked, ab.locUTXONum)
 }
 
-func NewAcctBalance() *AcctBalance {
-	ab := AcctBalance{}
-
+func NewAcctBalance(available uint64, avaUTXONum uint32, locked uint64, locUTXONum uint32) *AcctBalance {
+	ab := AcctBalance{
+		available:  available,
+		avaUTXONum: avaUTXONum,
+		locked:     locked,
+		locUTXONum: locUTXONum,
+	}
 	return &ab
 }

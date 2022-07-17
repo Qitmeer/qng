@@ -154,7 +154,7 @@ func (qm *QitmeerFull) RegisterNotifyMgr() error {
 
 func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	// account manager
-	acctmgr, err := acct.New(qm.GetBlockManager().GetChain(), cfg, qm.db)
+	acctmgr, err := acct.New(qm.GetBlockManager().GetChain(), cfg)
 	if err != nil {
 		return err
 	}
