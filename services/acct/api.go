@@ -2,6 +2,7 @@ package acct
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/meerevm/evm"
 )
@@ -28,4 +29,12 @@ func (api *PublicAccountManagerAPI) GetBalance(address string, coinID types.Coin
 		return cv.GetBalance(address)
 	}
 	return nil, fmt.Errorf("Not support %v", coinID)
+}
+
+func (api *PublicAccountManagerAPI) GetAcctInfo() (interface{}, error) {
+	return json.AcctInfo{
+		Mode:    api.a.cfg.AcctMode,
+		Version: api.a.info.version,
+		Total:   api.a.info.addrTotal,
+	}, nil
 }

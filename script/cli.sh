@@ -445,6 +445,11 @@ function get_balance() {
   get_result "$data"
 }
 
+function get_acctinfo() {
+   local data='{"jsonrpc":"2.0","method":"getAcctInfo","params":[],"id":null}'
+   get_result "$data"
+}
+
 function get_network_info(){
   local data='{"jsonrpc":"2.0","method":"getNetworkInfo","params":[],"id":null}'
   get_result "$data"
@@ -690,6 +695,7 @@ function usage(){
   echo "  timeinfo"
   echo "  subsidy"
   echo "  vmsinfo"
+  echo "  acctinfo"
   echo "  getbalance <address> <coinID>"
   echo "  getaddresses <private key>"
   echo "  modules"
@@ -1072,7 +1078,9 @@ elif [ "$1" == "networkinfo" ]; then
 elif [ "$1" == "rpcinfo" ]; then
   shift
   get_rpc_info
-
+elif [ "$1" == "acctinfo" ]; then
+  shift
+  get_acctinfo $@
 elif [ "$1" == "getbalance" ]; then
   shift
   get_balance $@
