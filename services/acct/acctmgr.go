@@ -194,6 +194,9 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 	}
 
 	if add {
+		if entry.Amount().Value == 0 && !entry.IsCoinBase() {
+			return nil
+		}
 		err = a.db.Update(func(dbTx database.Tx) error {
 			addrStr := addrs[0].String()
 			balance, er := DBGetACCTBalance(dbTx, addrStr)
