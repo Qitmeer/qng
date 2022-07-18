@@ -228,7 +228,7 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 			if er != nil {
 				return er
 			}
-			log.Trace(fmt.Sprintf("%s: add balance(%s)", addrStr, au.String()))
+			log.Trace(fmt.Sprintf("Add balance:%s(%s)", addrStr, au.String()))
 			return nil
 		})
 		return err
@@ -263,6 +263,7 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 					}
 				}
 			}
+			log.Trace(fmt.Sprintf("Del balance:%s(%s:%d)", addrStr, op.Hash.String(), op.OutIndex))
 			if balance.IsEmpty() {
 				er = DBDelACCTBalance(dbTx, addrStr)
 				if er != nil {

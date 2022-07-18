@@ -9,17 +9,17 @@ import (
 const (
 	AddressUTXOsSuffix = "-utxos"
 
-	NormalUTXOState = 0
-	LockedUTXOState = 1
+	NormalUTXOType = 0
+	LockedUTXOType = 1
 )
 
 type AcctUTXO struct {
-	state   byte
+	typ     byte
 	balance uint64
 }
 
 func (au *AcctUTXO) Encode(w io.Writer) error {
-	err := s.WriteElements(w, au.state)
+	err := s.WriteElements(w, au.typ)
 	if err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func (au *AcctUTXO) Encode(w io.Writer) error {
 }
 
 func (au *AcctUTXO) Decode(r io.Reader) error {
-	err := s.ReadElements(r, &au.state)
+	err := s.ReadElements(r, &au.typ)
 	if err != nil {
 		return err
 	}
@@ -44,21 +44,21 @@ func (au *AcctUTXO) Decode(r io.Reader) error {
 }
 
 func (au *AcctUTXO) String() string {
-	return fmt.Sprintf("state=%s balance=%d", au.StateStr(), au.balance)
+	return fmt.Sprintf("type=%s balance=%d", au.TypeStr(), au.balance)
 }
 
-func (au *AcctUTXO) StateStr() string {
-	switch au.state {
-	case NormalUTXOState:
+func (au *AcctUTXO) TypeStr() string {
+	switch au.typ {
+	case NormalUTXOType:
 		return "normal"
-	case LockedUTXOState:
+	case LockedUTXOType:
 		return "locked"
 	}
 	return "unknown"
 }
 
 func (au *AcctUTXO) Lock() {
-	au.state = LockedUTXOState
+	au.typ = LockedUTXOType
 }
 
 func (au *AcctUTXO) SetBalance(balance uint64) {
@@ -67,7 +67,7 @@ func (au *AcctUTXO) SetBalance(balance uint64) {
 
 func NewAcctUTXO() *AcctUTXO {
 	au := AcctUTXO{
-		state: NormalUTXOState,
+		typ: NormalUTXOType,
 	}
 
 	return &au
