@@ -306,11 +306,17 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 }
 
 func (a *AccountManager) Apply(add bool, op *types.TxOutPoint, entry *blockchain.UtxoEntry) error {
+	if !a.cfg.AcctMode {
+		return nil
+	}
 	a.utxoops = append(a.utxoops, &UTXOOP{add: add, op: op, entry: entry})
 	return nil
 }
 
 func (a *AccountManager) Commit() error {
+	if !a.cfg.AcctMode {
+		return nil
+	}
 	defer func() {
 		a.utxoops = []*UTXOOP{}
 	}()
@@ -334,6 +340,9 @@ func (a *AccountManager) Commit() error {
 }
 
 func (a *AccountManager) GetBalance(address string) (uint64, error) {
+	if !a.cfg.AcctMode {
+		return 0, fmt.Errorf("Please enable --acctmode")
+	}
 	result := uint64(0)
 	err := a.db.Update(func(dbTx database.Tx) error {
 		balance, err := DBGetACCTBalance(dbTx, address)
