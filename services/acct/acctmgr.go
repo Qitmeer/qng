@@ -19,10 +19,11 @@ import (
 // account manager communicate with various backends for signing transactions.
 type AccountManager struct {
 	service.Service
-	chain *blockchain.BlockChain
-	cfg   *config.Config
-	db    database.DB
-	info  *AcctInfo
+	chain   *blockchain.BlockChain
+	cfg     *config.Config
+	db      database.DB
+	info    *AcctInfo
+	utxoops []*UTXOOP
 }
 
 func (a *AccountManager) Start() error {
@@ -30,7 +31,10 @@ func (a *AccountManager) Start() error {
 		return err
 	}
 	if a.cfg.AcctMode {
-		return a.initDB(true)
+		err := a.initDB(true)
+		if err != nil {
+			log.Error(err.Error())
+		}
 	} else {
 		a.cleanDB()
 	}
@@ -42,7 +46,9 @@ func (a *AccountManager) Stop() error {
 		return err
 	}
 	if a.db != nil {
-		return a.db.Close()
+		if err := a.db.Close(); err != nil {
+			log.Error(err.Error())
+		}
 	}
 	return nil
 }
@@ -228,7 +234,7 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 			if er != nil {
 				return er
 			}
-			log.Trace(fmt.Sprintf("Add balance:%s(%s)", addrStr, au.String()))
+			log.Trace(fmt.Sprintf("Add balance: %s (%s)", addrStr, au.String()))
 			return nil
 		})
 		return err
@@ -263,7 +269,7 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 					}
 				}
 			}
-			log.Trace(fmt.Sprintf("Del balance:%s(%s:%d)", addrStr, op.Hash.String(), op.OutIndex))
+			log.Trace(fmt.Sprintf("Del balance: %s (%s:%d)", addrStr, op.Hash.String(), op.OutIndex))
 			if balance.IsEmpty() {
 				er = DBDelACCTBalance(dbTx, addrStr)
 				if er != nil {
@@ -297,7 +303,31 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 }
 
 func (a *AccountManager) Apply(add bool, op *types.TxOutPoint, entry *blockchain.UtxoEntry) error {
-	return a.apply(add, op, entry)
+	a.utxoops = append(a.utxoops, &UTXOOP{add: add, op: op, entry: entry})
+	return nil
+}
+
+func (a *AccountManager) Commit() error {
+	defer func() {
+		a.utxoops = []*UTXOOP{}
+	}()
+
+	curDAGID := uint32(a.chain.BlockDAG().GetBlockTotal())
+	a.info.updateDAGID = curDAGID
+	err := a.db.Update(func(dbTx database.Tx) error {
+		return DBPutACCTInfo(dbTx, a.info)
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, op := range a.utxoops {
+		err := a.apply(op.add, op.op, op.entry)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (a *AccountManager) GetBalance(address string) (uint64, error) {
@@ -328,9 +358,10 @@ func (a *AccountManager) APIs() []api.API {
 
 func New(chain *blockchain.BlockChain, cfg *config.Config) (*AccountManager, error) {
 	a := AccountManager{
-		chain: chain,
-		cfg:   cfg,
-		info:  NewAcctInfo(),
+		chain:   chain,
+		cfg:     cfg,
+		info:    NewAcctInfo(),
+		utxoops: []*UTXOOP{},
 	}
 	return &a, nil
 }
