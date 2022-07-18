@@ -44,7 +44,21 @@ func (au *AcctUTXO) Decode(r io.Reader) error {
 }
 
 func (au *AcctUTXO) String() string {
-	return fmt.Sprintf("state=%d balance=%d", au.state, au.balance)
+	return fmt.Sprintf("state=%s balance=%d", au.StateStr(), au.balance)
+}
+
+func (au *AcctUTXO) StateStr() string {
+	switch au.state {
+	case NormalUTXOState:
+		return "normal"
+	case LockedUTXOState:
+		return "locked"
+	}
+	return "unknown"
+}
+
+func (au *AcctUTXO) Lock() {
+	au.state = LockedUTXOState
 }
 
 func (au *AcctUTXO) SetBalance(balance uint64) {

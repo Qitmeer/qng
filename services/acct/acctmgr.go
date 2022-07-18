@@ -147,7 +147,7 @@ func (a *AccountManager) rebuild() error {
 		utxoBucket := meta.Bucket(dbnamespace.UtxoSetBucketName)
 		cursor := utxoBucket.Cursor()
 		for ok := cursor.First(); ok; ok = cursor.Next() {
-			serializedUtxo := utxoBucket.Get(cursor.Key())
+			serializedUtxo := cursor.Value()
 			txhash, err := hash.NewHash(cursor.Key()[:hash.HashSize])
 			if err != nil {
 				return err
@@ -165,7 +165,6 @@ func (a *AccountManager) rebuild() error {
 			if err != nil {
 				return err
 			}
-			return nil
 		}
 		return nil
 	})
@@ -222,10 +221,14 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 			}
 			au := NewAcctUTXO()
 			au.SetBalance(uint64(entry.Amount().Value))
+			if entry.IsCoinBase() {
+				au.Lock()
+			}
 			er = DBPutACCTUTXO(dbTx, addrStr, op, au)
 			if er != nil {
 				return er
 			}
+			log.Trace(fmt.Sprintf("%s: add balance(%s)", addrStr, au.String()))
 			return nil
 		})
 		return err
