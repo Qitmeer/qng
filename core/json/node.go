@@ -104,3 +104,9 @@ type SubsidyInfo struct {
 	BaseSubsidy        int64  `json:"basesubsidy"`
 	NextSubsidy        int64  `json:"nextsubsidy"`
 }
+
+type AcctInfo struct {
+	Mode    bool   `json:"mode"`
+	Version uint32 `json:"version"`
+	Total   uint32 `json:"total"`
+}

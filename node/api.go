@@ -72,7 +72,7 @@ func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 		Network:          params.ActiveNetParams.Name,
 		Confirmations:    meerdag.StableConfirmations,
 		CoinbaseMaturity: int32(api.node.node.Params.CoinbaseMaturity),
-		Modules:          []string{cmds.DefaultServiceNameSpace, cmds.MinerNameSpace, cmds.TestNameSpace, cmds.LogNameSpace,cmds.P2PNameSpace},
+		Modules:          []string{cmds.DefaultServiceNameSpace, cmds.MinerNameSpace, cmds.TestNameSpace, cmds.LogNameSpace, cmds.P2PNameSpace},
 	}
 	ret.GraphState = marshal.GetGraphStateResult(best.GraphState)
 	hostdns := api.node.GetPeerServer().HostDNS()
@@ -361,5 +361,6 @@ func (api *PrivateLogAPI) SetLogLevel(level string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	api.node.GetVMService().SetLogLevel(level)
 	return level, nil
 }

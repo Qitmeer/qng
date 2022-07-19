@@ -104,6 +104,8 @@ type Config struct {
 	EVMEnv string `long:"evmenv" description:"meer EVM environment"`
 
 	Estimatefee bool `long:"estimatefee" description:"Enable estimate fee"`
+
+	AcctMode bool `long:"acctmode" description:"Enable support account system mode"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {

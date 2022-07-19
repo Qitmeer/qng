@@ -435,14 +435,19 @@ function reset_peers() {
 }
 
 function get_balance() {
-  local pkAddress=$1
+  local address=$1
   local coinID=$2
   if [ "$coinID" == "" ]; then
-    coinID=1
+    coinID=0
   fi
 
-  local data='{"jsonrpc":"2.0","method":"getBalance","params":["'$pkAddress'",'$coinID'],"id":null}'
+  local data='{"jsonrpc":"2.0","method":"getBalance","params":["'$address'",'$coinID'],"id":null}'
   get_result "$data"
+}
+
+function get_acctinfo() {
+   local data='{"jsonrpc":"2.0","method":"getAcctInfo","params":[],"id":null}'
+   get_result "$data"
 }
 
 function get_network_info(){
@@ -690,7 +695,8 @@ function usage(){
   echo "  timeinfo"
   echo "  subsidy"
   echo "  vmsinfo"
-  echo "  getbalance <PKAddress> <coinID>"
+  echo "  acctinfo"
+  echo "  getbalance <address> <coinID>"
   echo "  getaddresses <private key>"
   echo "  modules"
   echo "block  :"
@@ -1072,7 +1078,9 @@ elif [ "$1" == "networkinfo" ]; then
 elif [ "$1" == "rpcinfo" ]; then
   shift
   get_rpc_info
-
+elif [ "$1" == "acctinfo" ]; then
+  shift
+  get_acctinfo $@
 elif [ "$1" == "getbalance" ]; then
   shift
   get_balance $@
