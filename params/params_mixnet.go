@@ -7,18 +7,19 @@
 package params
 
 import (
+	"math/big"
+	"time"
+
 	"github.com/Qitmeer/qng/common"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
-	"math/big"
-	"time"
 )
 
 // testMixNetPowLimit is the highest proof of work value a block can
 // have for the test network. It is the value 2^224 - 1.
 // target 0x0000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffff
-var testMixNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 216), common.Big1)
+var testMixNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 242), common.Big1)
 
 // target time per block unit second(s)
 const mixTargetTimePerBlock = 15
@@ -34,11 +35,13 @@ var MixNetParams = Params{
 	DefaultUDPPort: 28140,
 	Bootstrap: []string{
 		"/dns4/ns.qitmeer.top/tcp/28230/p2p/16Uiu2HAmRtp5CjNv3WvPYuh7kNXXZQDYegwFFeDH9vWY3JY4JS1W",
+		"/dns4/ns1.qitmeer.info/tcp/18132/p2p/16Uiu2HAmLZmu4rBkAXeeHKofb1MECv6N2dbQBuyCs5Wywi7PVi4c",
+		"/dns4/ns2.qitmeer.info/tcp/8130/p2p/16Uiu2HAmGtiMWoDVKtJd3VNWW8NvrM8DcyzteNpKae8ZuZWvUKCy",
 	},
 
 	// Chain parameters
-	GenesisBlock:         &testPowNetGenesisBlock,
-	GenesisHash:          &testPowNetGenesisHash,
+	GenesisBlock:         &mixNetGenesisBlock,
+	GenesisHash:          &mixNetGenesisHash,
 	ReduceMinDifficulty:  false,
 	MinDiffReductionTime: 0, // Does not apply since ReduceMinDifficulty false
 	GenerateSupported:    true,
@@ -66,7 +69,7 @@ var MixNetParams = Params{
 		CryptoNightPowLimit:          testMixNetPowLimit,
 		CryptoNightPowLimitBits:      0x2003ffff,
 		MeerXKeccakV1PowLimit:        testMixNetPowLimit,
-		MeerXKeccakV1PowLimitBits:    0x1c00ffff,
+		MeerXKeccakV1PowLimitBits:    0x1f0198f2,
 		//hash ffffffffffffffff000000000000000000000000000000000000000000000000 corresponding difficulty is 48 for edge bits 24
 		// Uniform field type uint64 value is 48 . bigToCompact the uint32 value
 		// 24 edge_bits only need hash 1*4 times use for privnet if GPS is 2. need 50 /2 * 2 ≈ 1min find once
@@ -145,11 +148,12 @@ var MixNetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType: 223,
+	SLIP0044CoinType: 813,
+	LegacyCoinType:   223,
 
 	CoinbaseMaturity:     720,
 	OrganizationPkScript: hexMustDecode("76a91429209320e66d96839785dd07e643a7f1592edc5a88ac"),
 	TokenAdminPkScript:   hexMustDecode("00000000c96d6d76a914b8834294977b26a44094fe2216f8a7d59af1130888ac"),
 
-	MeerEVMCfg: MeerEVMConfig{ChainID: 223},
+	MeerEVMCfg: MeerEVMConfig{ChainID: 8132},
 }

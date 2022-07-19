@@ -230,10 +230,10 @@
     "out":["true"]
   },
   "PH_LocateBlocks":{
-    "out":["B","C","D","E","F","J","G","I","K","H"]
+    "out":["B","C","D","E","J","G"]
   },
   "PH_LocateMaxBlocks":{
-    "out":["B","E","F","H"]
+    "out":["B","E","J"]
   },
   "CO_Blocks":[
     {

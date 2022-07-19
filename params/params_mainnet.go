@@ -113,6 +113,11 @@ var MainNetParams = Params{
 			StartTime:  0,
 			ExpireTime: mainWorkDiffWindowSize * 2,
 		},
+		DeploymentMeerEVM: {
+			BitNumber:  1,
+			StartTime:  0,
+			ExpireTime: 0,
+		},
 	},
 
 	// Address encoding magics
@@ -130,9 +135,8 @@ var MainNetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	// TODO : register coin type
-	// https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-	HDCoinType: 223,
+	SLIP0044CoinType: 813,
+	LegacyCoinType:   223,
 
 	CoinbaseMaturity: 720,
 
@@ -144,5 +148,5 @@ var MainNetParams = Params{
 	// MmQitmeerMainNetHonorAddressXY9JH2y
 	HonorAddrPkScript: hexMustDecode("76a9143846e53e5e952b5cd60240ad9c4cf6164dd5090988ac"),
 
-	MeerEVMCfg: MeerEVMConfig{ChainID: 223},
+	MeerEVMCfg: MeerEVMConfig{ChainID: 813},
 }

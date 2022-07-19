@@ -369,6 +369,9 @@ func (bd *MeerDAG) locateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
 				continue
 			}
 		}
+		if !ib.IsOrdered() {
+			continue
+		}
 		fsSlice = append(fsSlice, ib)
 	}
 

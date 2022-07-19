@@ -8,18 +8,17 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/vm/consensus"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/node/service"
-	"github.com/Qitmeer/qng/p2p"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 	"github.com/Qitmeer/qng/services/zmq"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"sync"
 	"time"
 )
@@ -78,7 +77,7 @@ type BlockManager struct {
 	txManager TxManager
 
 	// network server
-	peerServer *p2p.Service
+	peerServer P2PService
 }
 
 // NewBlockManager returns a new block manager.
@@ -86,7 +85,7 @@ type BlockManager struct {
 func NewBlockManager(ntmgr consensus.Notify, indexManager blockchain.IndexManager, db database.DB,
 	timeSource blockchain.MedianTimeSource, sigCache *txscript.SigCache,
 	cfg *config.Config, par *params.Params,
-	interrupt <-chan struct{}, events *event.Feed, peerServer *p2p.Service) (*BlockManager, error) {
+	interrupt <-chan struct{}, events *event.Feed, peerServer P2PService) (*BlockManager, error) {
 	bm := BlockManager{
 		config:         cfg,
 		params:         par,
@@ -164,7 +163,7 @@ func (b *BlockManager) handleNotifyMsg(notification *blockchain.Notification) {
 		b.zmqNotify.BlockAccepted(block)
 		// Don't relay if we are not current. Other peers that are current
 		// should already know about it
-		if !b.peerServer.PeerSync().IsCurrent() {
+		if !b.peerServer.IsCurrent() {
 			log.Trace("we are not current")
 			return
 		}
@@ -217,14 +216,14 @@ func (b *BlockManager) handleNotifyMsg(notification *blockchain.Notification) {
 		// no longer an orphan. Transactions which depend on a confirmed
 		// transaction are NOT removed recursively because they are still
 		// valid.
-		txds:=[]*types.TxDesc{}
+		txds := []*types.TxDesc{}
 		for _, tx := range block.Transactions()[1:] {
 			b.GetTxManager().MemPool().RemoveTransaction(tx, false)
 			b.GetTxManager().MemPool().RemoveDoubleSpends(tx)
 			b.GetTxManager().MemPool().RemoveOrphan(tx.Hash())
 			b.notify.TransactionConfirmed(tx)
 			acceptedTxs := b.GetTxManager().MemPool().ProcessOrphans(tx.Hash())
-			txds = append(txds,acceptedTxs...)
+			txds = append(txds, acceptedTxs...)
 		}
 		b.notify.AnnounceNewTransactions(txds, nil)
 
@@ -285,7 +284,7 @@ func (b *BlockManager) handleNotifyMsg(notification *blockchain.Notification) {
 }
 
 func (b *BlockManager) IsCurrent() bool {
-	return b.peerServer.PeerSync().IsCurrent()
+	return b.peerServer.IsCurrent()
 }
 
 // Start begins the core block handler which processes block and inv messages.
@@ -393,11 +392,11 @@ out:
 				log.Trace("blkmgr msgChan processBlockMsg", "msg", msg)
 
 				if msg.flags.Has(blockchain.BFRPCAdd) {
-					_, ok := b.chain.BlockDAG().CheckSubMainChainTip(msg.block.Block().Parents)
-					if !ok {
+					err := b.chain.BlockDAG().CheckSubMainChainTip(msg.block.Block().Parents)
+					if err != nil {
 						msg.reply <- ProcessBlockResponse{
 							IsOrphan:      false,
-							Err:           fmt.Errorf("The tips of block is expired:%s\n", msg.block.Hash().String()),
+							Err:           fmt.Errorf("The tips of block is expired:%s (error:%s)\n", msg.block.Hash().String(), err.Error()),
 							IsTipsExpired: true,
 						}
 						continue
@@ -438,7 +437,6 @@ out:
 					Err:           nil,
 					IsTipsExpired: false,
 				}
-				b.peerServer.Rebroadcast().RegainMempool()
 
 			case processTransactionMsg:
 				log.Trace("blkmgr msgChan processTransactionMsg", "msg", msg)

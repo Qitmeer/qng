@@ -411,7 +411,7 @@ func (ps *PeerSync) IntellectSyncBlocks(refresh bool, pe *peers.Peer) {
 			log.Trace(fmt.Sprintf("IntellectSyncBlocks failed to refresh orphans, err=%v", err.Error()))
 		}
 	}
-	allOrphan := ps.Chain().GetRecentOrphansParents()
+	allOrphan := ps.Chain().CheckRecentOrphansParents()
 
 	if len(allOrphan) > 0 {
 		log.Trace(fmt.Sprintf("IntellectSyncBlocks do ps.GetBlock, peer=%v,allOrphan=%v ", pe.GetID(), allOrphan))
@@ -431,6 +431,11 @@ func (ps *PeerSync) updateSyncPeer(force bool) {
 		ps.SetSyncPeer(nil)
 	}
 	ps.startSync()
+}
+
+func (ps *PeerSync) TryAgainUpdateSyncPeer() {
+	<-time.After(DefaultRateTaskTime)
+	ps.updateSyncPeer(true)
 }
 
 func (ps *PeerSync) continueSync(orphan bool) {
@@ -511,6 +516,15 @@ func (ps *PeerSync) RelayInventory(nds []*notify.NotifyData) {
 		}
 
 		ps.sy.tryToSendInventoryRequest(pe, invs)
+	})
+}
+
+func (ps *PeerSync) RelayGraphState() {
+	ps.sy.Peers().ForPeers(peers.PeerConnected, func(pe *peers.Peer) {
+		if !protocol.HasServices(pe.Services(), protocol.Full) {
+			return
+		}
+		ps.UpdateGraphState(pe)
 	})
 }
 

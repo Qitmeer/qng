@@ -13,6 +13,7 @@ import (
 	"github.com/Qitmeer/qng/p2p/runutil"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"io"
 	"time"
 )
 
@@ -32,7 +33,7 @@ func (s *Sync) maintainPeerStatuses() {
 				// If our peer status has not been updated correctly we disconnect over here
 				// and set the connection state over here instead.
 				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
-					s.peerSync.Disconnect(pe)
+					s.peerSync.ReConnect(pe)
 					return
 				}
 
@@ -42,12 +43,18 @@ func (s *Sync) maintainPeerStatuses() {
 					}
 					return
 				}
+				if roughtime.Now().After(pe.ChainStateLastUpdated().Add(s.PeerInterval)) {
+					if pe.ConnectionState() != peers.PeerConnected {
+						s.peerSync.ReConnect(pe)
+						return
+					}
+				}
 				if !pe.IsConsensus() {
 					return
 				}
 				// If the status hasn't been updated in the recent interval time.
 				if roughtime.Now().After(pe.ChainStateLastUpdated().Add(s.PeerInterval)) {
-					if err := s.reValidatePeer(s.p2p.Context(), id); err != nil {
+					if err := s.reValidatePeer(s.p2p.Context(), id); err != nil && err != io.EOF {
 						log.Debug(fmt.Sprintf("Failed to revalidate peer (%v), peer:%s", err, id))
 						s.Peers().IncrementBadResponses(id, "maintain peer to reValidatePeer")
 					}
@@ -58,7 +65,22 @@ func (s *Sync) maintainPeerStatuses() {
 				}
 			}(pid)
 		}
-
+		for _, pid := range s.Peers().Connecting() {
+			pe := s.peers.Get(pid)
+			if pe == nil {
+				continue
+			}
+			go func(id peer.ID) {
+				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
+					s.peerSync.ReConnect(pe)
+					return
+				}
+				if roughtime.Now().After(pe.ChainStateLastUpdated().Add(s.PeerInterval)) {
+					s.peerSync.ReConnect(pe)
+					return
+				}
+			}(pid)
+		}
 		for _, pid := range s.Peers().Disconnected() {
 			pe := s.peers.Get(pid)
 			if pe == nil {

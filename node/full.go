@@ -3,15 +3,15 @@ package node
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/vm/consensus"
-	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
+	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/rpc"
+	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/services/acct"
 	"github.com/Qitmeer/qng/services/address"
 	"github.com/Qitmeer/qng/services/blkmgr"
@@ -23,6 +23,7 @@ import (
 	"github.com/Qitmeer/qng/services/notifymgr"
 	"github.com/Qitmeer/qng/services/tx"
 	"github.com/Qitmeer/qng/vm"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"reflect"
 )
 
@@ -132,6 +133,7 @@ func (qm *QitmeerFull) RegisterMinerService() error {
 		BlockMaxSize:      cfg.BlockMaxSize,
 		BlockPrioritySize: cfg.BlockPrioritySize,
 		TxMinFreeFee:      cfg.MinTxFee, //TODO, duplicated config item with mem-pool
+		TxTimeScope:       cfg.TxTimeScope,
 		StandardVerifyFlags: func() (txscript.ScriptFlags, error) {
 			return common.StandardScriptVerifyFlags()
 		}, //TODO, duplicated config item with mem-pool
@@ -150,12 +152,13 @@ func (qm *QitmeerFull) RegisterNotifyMgr() error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterAccountService() error {
+func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	// account manager
-	acctmgr, err := acct.New()
+	acctmgr, err := acct.New(qm.GetBlockManager().GetChain(), cfg)
 	if err != nil {
 		return err
 	}
+	qm.GetBlockManager().GetChain().Acct = acctmgr
 	qm.Services().RegisterService(acctmgr)
 	return nil
 }
@@ -221,6 +224,15 @@ func (qm *QitmeerFull) GetVMService() *vm.Service {
 	return service
 }
 
+func (qm *QitmeerFull) GetMiner() *miner.Miner {
+	var service *miner.Miner
+	if err := qm.Services().FetchService(&service); err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return service
+}
+
 func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	qm := QitmeerFull{
 		node:       node,
@@ -231,10 +243,6 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	qm.Service.InitServices()
 
 	cfg := node.Config
-
-	if err := qm.RegisterAccountService(); err != nil {
-		return nil, err
-	}
 
 	if err := qm.RegisterP2PService(); err != nil {
 		return nil, err
@@ -274,6 +282,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	bm.SetTxManager(txManager)
 	// prepare peerServer
 	qm.GetPeerServer().SetBlockChain(bm.GetChain())
+	qm.GetPeerServer().SetBLKManager(bm)
 	qm.GetPeerServer().SetTimeSource(qm.timeSource)
 	qm.GetPeerServer().SetTxMemPool(txManager.MemPool().(*mempool.TxPool))
 	qm.GetPeerServer().SetNotify(qm.nfManager)
@@ -290,6 +299,10 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	}
 	bm.GetChain().VMService = qm.GetVMService()
 
+	if err := qm.RegisterAccountService(cfg); err != nil {
+		return nil, err
+	}
+
 	if err := qm.RegisterRpcService(); err != nil {
 		return nil, err
 	}
@@ -299,6 +312,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		qm.GetRpcServer().ChainParams = bm.ChainParams()
 
 		qm.nfManager.(*notifymgr.NotifyMgr).RpcServer = qm.GetRpcServer()
+		qm.GetMiner().RpcSer = qm.GetRpcServer()
 	}
 
 	qm.Services().LowestPriority(qm.GetTxManager())

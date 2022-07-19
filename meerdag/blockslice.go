@@ -47,6 +47,23 @@ func (bs BlockOrderSlice) Swap(i, j int) {
 	bs[i], bs[j] = bs[j], bs[i]
 }
 
+type BlockHeightSlice []IBlock
+
+func (bs BlockHeightSlice) Len() int {
+	return len(bs)
+}
+
+func (bs BlockHeightSlice) Less(i, j int) bool {
+	if bs[i].GetHeight() == bs[j].GetHeight() {
+		return bs[i].GetHash().String() < bs[j].GetHash().String()
+	}
+	return bs[i].GetHeight() < bs[j].GetHeight()
+}
+
+func (bs BlockHeightSlice) Swap(i, j int) {
+	bs[i], bs[j] = bs[j], bs[i]
+}
+
 // BlockOrderHelp is used to help reorganize block order
 type BlockOrderHelp struct {
 	OldOrder uint

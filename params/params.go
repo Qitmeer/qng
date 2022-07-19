@@ -274,9 +274,17 @@ type Params struct {
 	HDPrivateKeyID [4]byte
 	HDPublicKeyID  [4]byte
 
-	// BIP44 coin type used in the hierarchical deterministic path for
+	// SLIP-0044 is the registered coin type used for BIP44 coin type used in the
+	// hierarchical deterministic path for address generation.
+	// The SLIP-0044 coin type for qitmeer network is 813
+	// https://github.com/satoshilabs/slips/blob/master/slip-0044.md
+	SLIP0044CoinType uint32
+
+	// Legacy BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType uint32
+	// - Previous name was HDCoinType, the LegacyCoinType is used for the backwards compatibility.
+	// - SLIP0044CoinType should be used instead.
+	LegacyCoinType uint32
 
 	// OrganizationPkScript is the output script for block taxes to be
 	// distributed to in every block's coinbase. It should ideally be a P2SH

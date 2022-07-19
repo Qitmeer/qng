@@ -43,6 +43,7 @@ type Config struct {
 	FreeTxRelayLimit float64 `long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
 	AcceptNonStd     bool    `long:"acceptnonstd" description:"Accept and relay non-standard transactions to the network regardless of the default settings for the active network."`
 	MaxOrphanTxs     int     `long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
+	TxTimeScope      int64   `long:"txtimescope" description:"allow the mempool tx time scope(sec) with server time,default 0 will not check the time scope"`
 	MinTxFee         int64   `long:"mintxfee" description:"The minimum transaction fee in AtomMEER/kB."`
 	MempoolExpiry    int64   `long:"mempoolexpiry" description:"Do not keep transactions in the mempool more than mempoolexpiry"`
 	Persistmempool   bool    `long:"persistmempool" description:"Whether to save the mempool on shutdown and load on restart"`
@@ -56,6 +57,8 @@ type Config struct {
 	BlockMaxSize      uint32   `long:"blockmaxsize" description:"Maximum block size in bytes to be used when creating a block"`
 	BlockPrioritySize uint32   `long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
 	miningAddrs       []types.Address
+	GBTNotify         []string `long:"gbtnotify" description:"HTTP URL list to be notified of new block template"`
+
 	//WebSocket support
 	RPCMaxWebsockets     int `long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
 	RPCMaxConcurrentReqs int `long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
@@ -101,6 +104,8 @@ type Config struct {
 	EVMEnv string `long:"evmenv" description:"meer EVM environment"`
 
 	Estimatefee bool `long:"estimatefee" description:"Enable estimate fee"`
+
+	AcctMode bool `long:"acctmode" description:"Enable support account system mode"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {

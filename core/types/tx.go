@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"io"
+	"math"
 	"time"
 )
 
@@ -771,6 +772,16 @@ func (tx *Transaction) TxHashFull() hash.Hash {
 
 func (tx *Transaction) IsCoinBase() bool {
 	return IsCoinBaseTx(tx)
+}
+
+func (t *Transaction) ValidTime(allowScope int64) bool {
+	if t.Timestamp.IsZero() || t.Timestamp.Unix() <= 0 {
+		return false
+	}
+	if allowScope > 0 && math.Abs(float64(time.Now().Unix()-t.Timestamp.Unix())) > float64(allowScope) {
+		return false
+	}
+	return true
 }
 
 // Tx defines a transaction that provides easier and more efficient manipulation

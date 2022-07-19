@@ -7,9 +7,10 @@ package rpc
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/event"
-	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/event"
+	"github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/rpc/websocket"
 	"time"
@@ -95,6 +96,10 @@ func (s *RpcServer) NotifyNewTransactions(txns []*types.TxDesc) {
 		// Notify websocket clients about mempool transactions.
 		s.ntfnMgr.NotifyMempoolTx(txD.Tx, true)
 	}
+}
+
+func (s *RpcServer) NotifyBlockTemplate(bt *json.RemoteGBTResult) {
+	s.ntfnMgr.NotifyBlockTemplate(bt)
 }
 
 func (s *RpcServer) WebsocketHandler(conn *websocket.Conn, remoteAddr string, isAdmin bool) {

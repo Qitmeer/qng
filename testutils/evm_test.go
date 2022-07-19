@@ -160,7 +160,7 @@ func TestCallErc20Contract(t *testing.T) {
 	if err != nil {
 		t.Fatal("approve error", err)
 	}
-
+	GenerateBlock(t, h, 1)
 	_, err = tokenCall.TransferFrom(authCaller1, h.Wallet.ethAddrs[0], h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 	if err != nil {
 		t.Fatal("TransferFrom error", err)

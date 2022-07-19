@@ -5,9 +5,9 @@ import (
 	"github.com/Qitmeer/qng/common/bloom"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/p2p/common"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnode"
@@ -145,14 +145,14 @@ func (p *Peer) Address() ma.Multiaddr {
 	return p.address
 }
 
-func (p *Peer) QAddress() common.QMultiaddr {
+func (p *Peer) QAddress() *common.QMultiaddr {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	return p.qaddress()
 }
 
-func (p *Peer) qaddress() common.QMultiaddr {
+func (p *Peer) qaddress() *common.QMultiaddr {
 	if p.address == nil {
 		return nil
 	}
@@ -403,14 +403,15 @@ func (p *Peer) graphState() *meerdag.GraphState {
 	gs.SetLayer(uint(p.chainState.GraphState.Layer))
 	gs.SetMainHeight(uint(p.chainState.GraphState.MainHeight))
 	gs.SetMainOrder(uint(p.chainState.GraphState.MainOrder))
-	tips := gs.GetTips()
+	tips := []*hash.Hash{}
 	for _, tip := range p.chainState.GraphState.Tips {
 		h, err := hash.NewHash(tip.Hash)
 		if err != nil {
 			return nil
 		}
-		tips.Add(h)
+		tips = append(tips, h)
 	}
+	gs.SetTips(tips)
 	return gs
 }
 

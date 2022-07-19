@@ -23,15 +23,16 @@ const (
 	retSuccess = iota
 	retErrGeneric
 	retErrInvalidChainState
+	MaxPBGraphStateTips = 100
 )
 
-func (s *Sync) sendChainStateRequest(ctx context.Context, id peer.ID) error {
+func (s *Sync) sendChainStateRequest(pctx context.Context, id peer.ID) error {
 	pe := s.peers.Get(id)
 	if pe == nil {
 		return peers.ErrPeerUnknown
 	}
 	log.Trace(fmt.Sprintf("sendChainStateRequest:%s", id))
-	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
+	ctx, cancel := context.WithTimeout(pctx, ReqTimeout)
 	defer cancel()
 
 	resp := s.getChainState()
@@ -39,13 +40,9 @@ func (s *Sync) sendChainStateRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.Trace(fmt.Sprintf("Failed to reset stream with protocol %s,%v", stream.Protocol(), err))
-		}
-	}()
+	defer resetSteam(stream, s.p2p)
 
-	code, errMsg, err := ReadRspCode(stream, s.Encoding())
+	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
 		return err
 	}
@@ -55,7 +52,7 @@ func (s *Sync) sendChainStateRequest(ctx context.Context, id peer.ID) error {
 	}
 
 	msg := &pb.ChainState{}
-	if err := s.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return err
 	}
 
@@ -123,6 +120,7 @@ func (s *Sync) chainStateHandler(ctx context.Context, msg interface{}, stream li
 func (s *Sync) UpdateChainState(pe *peers.Peer, chainState *pb.ChainState, action bool) {
 	pe.SetChainState(chainState)
 	if !action {
+		go s.peerSync.immediatelyDisconnected(pe)
 		return
 	}
 	go s.peerSync.immediatelyConnected(pe)
@@ -200,8 +198,13 @@ func (s *Sync) getGraphState() *pb.GraphState {
 		MainOrder:  uint32(bs.GraphState.GetMainOrder()),
 		Tips:       []*pb.Hash{},
 	}
-	for tip := range bs.GraphState.GetTips().GetMap() {
+	count := 0
+	for _, tip := range bs.GraphState.GetTipsList() {
 		gs.Tips = append(gs.Tips, &pb.Hash{Hash: tip.Bytes()})
+		count++
+		if count >= MaxPBGraphStateTips {
+			break
+		}
 	}
 
 	return gs

@@ -3,8 +3,8 @@ package blockchain
 import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/meerdag"
 	"math"
 	"sort"
 	"time"
@@ -93,10 +93,11 @@ func (b *BlockChain) GetOrphansTotal() int {
 	return ol
 }
 
-func (b *BlockChain) GetRecentOrphansParents() []*hash.Hash {
-	b.orphanLock.RLock()
-	defer b.orphanLock.RUnlock()
+func (b *BlockChain) CheckRecentOrphansParents() []*hash.Hash {
+	b.searchOrphansParentsInDB()
 
+	b.orphanLock.Lock()
+	defer b.orphanLock.Unlock()
 	result := meerdag.NewHashSet()
 	mh := b.BestSnapshot().GraphState.GetMainHeight()
 	for _, v := range b.orphans {
@@ -114,7 +115,55 @@ func (b *BlockChain) GetRecentOrphansParents() []*hash.Hash {
 		}
 
 	}
+	if result.IsEmpty() && len(b.orphans) > 0 {
+		b.orphans = map[hash.Hash]*orphanBlock{}
+	}
 	return result.List()
+}
+
+func (b *BlockChain) searchOrphansParentsInDB() {
+	for {
+		inBlockHashs := []*hash.Hash{}
+		b.orphanLock.Lock()
+		for _, v := range b.orphans {
+			for _, h := range v.block.Block().Parents {
+				if b.HasBlockInDB(h) && !b.isOrphan(h) {
+					bh := *h
+					inBlockHashs = append(inBlockHashs, &bh)
+				}
+			}
+		}
+		b.orphanLock.Unlock()
+
+		if len(inBlockHashs) > 0 {
+			hasBlock := false
+			for _, bh := range inBlockHashs {
+				block, err := b.FetchBlockByHash(bh)
+				if err != nil {
+					continue
+				}
+				serializedHeight, err := ExtractCoinbaseHeight(block.Block().Transactions[0])
+				if err != nil {
+					continue
+				}
+				hasBlock = true
+				expiration := roughtime.Now().Add(MaxOrphanStallDuration)
+				oBlock := &orphanBlock{
+					block:      block,
+					expiration: expiration,
+					height:     serializedHeight,
+				}
+				b.orphanLock.Lock()
+				b.orphans[*block.Hash()] = oBlock
+				b.orphanLock.Unlock()
+			}
+			if !hasBlock {
+				return
+			}
+		} else {
+			return
+		}
+	}
 }
 
 func (b *BlockChain) IsOrphanOK(serializedHeight uint64) bool {
@@ -186,13 +235,17 @@ func (b *BlockChain) addOrphanBlock(block *types.SerializedBlock) {
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) processOrphans(flags BehaviorFlags) error {
+	b.orphanLock.Lock()
 	if len(b.orphans) <= 0 {
+		b.orphanLock.Unlock()
 		return nil
 	}
 	queue := orphanBlockSlice{}
 	for _, v := range b.orphans {
 		queue = append(queue, v)
 	}
+	b.orphanLock.Unlock()
+
 	if len(queue) >= 2 {
 		sort.Sort(queue)
 	}

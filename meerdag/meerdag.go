@@ -272,29 +272,33 @@ func (bd *MeerDAG) Init(dagType string, calcWeight CalcWeight, blockRate float64
 func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool) {
 	bd.stateLock.Lock()
 	defer bd.stateLock.Unlock()
-
 	if b == nil {
+		log.Error("block data is nil")
 		return nil, nil, nil, false
 	}
 	// Must keep no block in outside.
 	if bd.hasBlock(b.GetHash()) {
+		log.Error(fmt.Sprintf("Already own this block:%s", b.GetHash()))
 		return nil, nil, nil, false
 	}
 	parents := []IBlock{}
 	if bd.blockTotal > 0 {
 		parentsIds := b.GetParents()
 		if len(parentsIds) == 0 {
+			log.Error(fmt.Sprintf("No paretns:%s", b.GetHash()))
 			return nil, nil, nil, false
 		}
 		for _, v := range parentsIds {
 			pib := bd.getBlock(v)
 			if pib == nil {
+				log.Error(fmt.Sprintf("No parent:%s about parent(%s)", b.GetHash(), v.String()))
 				return nil, nil, nil, false
 			}
 			parents = append(parents, pib)
 		}
 
 		if !bd.isDAG(parents, b) {
+			log.Error(fmt.Sprintf("Not DAG block:%s", b.GetHash()))
 			return nil, nil, nil, false
 		}
 	}
@@ -485,17 +489,15 @@ func (bd *MeerDAG) getGraphState() *GraphState {
 	gs.SetLayer(0)
 
 	tips := bd.getValidTips(false)
+	tipsH := []*hash.Hash{}
 	for i := 0; i < len(tips); i++ {
 		tip := tips[i]
-		if i == 0 {
-			gs.GetTips().AddPair(tip.GetHash(), true)
-		} else {
-			gs.GetTips().Add(tip.GetHash())
-		}
+		tipsH = append(tipsH, tip.GetHash())
 		if tip.GetLayer() > gs.GetLayer() {
 			gs.SetLayer(tip.GetLayer())
 		}
 	}
+	gs.SetTips(tipsH)
 	gs.SetTotal(bd.blockTotal)
 	gs.SetMainHeight(bd.getMainChainTip().GetHeight())
 	gs.SetMainOrder(bd.getMainChainTip().GetOrder())
@@ -807,23 +809,27 @@ func (bd *MeerDAG) checkLayerGap(parentsNode []IBlock) bool {
 }
 
 // Checking the sub main chain for the parents of tip
-func (bd *MeerDAG) CheckSubMainChainTip(parents []*hash.Hash) (uint, bool) {
+func (bd *MeerDAG) CheckSubMainChainTip(parents []*hash.Hash) error {
 	bd.stateLock.Lock()
 	defer bd.stateLock.Unlock()
 
 	if len(parents) == 0 {
-		return 0, false
+		return fmt.Errorf("Parents is empty")
 	}
-	mainParent := bd.getBlock(parents[0])
-	if mainParent == nil {
-		return 0, false
+	mainTip := bd.getMainChainTip()
+	if mainTip.GetHash().String() != parents[0].String() {
+		return fmt.Errorf("Main chain tip is overdue")
 	}
-	virtualHeight := mainParent.GetHeight() + 1
-
-	if virtualHeight > bd.getMainChainTip().GetHeight() {
-		return virtualHeight, true
+	for _, pa := range parents {
+		ib := bd.getBlock(pa)
+		if ib == nil {
+			return fmt.Errorf("Parent(%s) is overdue\n", pa.String())
+		}
+		if ib.HasChildren() {
+			return fmt.Errorf("Parent(%s) is not legal tip\n", pa.String())
+		}
 	}
-	return 0, false
+	return nil
 }
 
 // Checking the parents of block legitimacy

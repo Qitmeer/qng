@@ -2,6 +2,7 @@ package qx
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -9,42 +10,45 @@ import (
 
 func TestTxSign(t *testing.T) {
 	k := "c39fb9103419af8be42385f3d6390b4c0c8f2cb67cf24dd43a059c4045d1a409"
-	tx := "0100000001255fea249c9747f7f4a8c432ca6f6bbed20db023fa9101288cad1a4e8056a5f600000000ffffffff01000000943577000000001976a914c50b62be2f7c23cf0b9d904fa9984efbdb75859888ac0000000000000000a2b54c5e0100"
-	net := "testnet"
-	pks := make([]string, 0)
-	script, _ := DecodePkString("OP_DUP OP_HASH160 864c051cdb39c31f21924a5ac88b4cf82124d2c1 OP_EQUALVERIFY OP_CHECKSIG")
-	//
-	pks = append(pks, script)
-	rs, err := TxSign([]string{k}, tx, net, pks)
+	tx := "0100000001ca0265bbe73e89220da12dcfed31fb45ec3d18b60ea161036b418167bbd6da5f00000000ffffffff010100f0a29a3b000000001976a914864c051cdb39c31f21924a5ac88b4cf82124d2c188ac0000000000000000a5f2b962011976a914864c051cdb39c31f21924a5ac88b4cf82124d2c188ac"
+	net := "mixnet"
+	rs, err := TxSign([]string{k}, tx, net)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
 	fmt.Println(rs)
-	assert.Equal(t, rs, "0100000001255fea249c9747f7f4a8c432ca6f6bbed20db023fa9101288cad1a4e8056a5f600000000ffffffff01000000943577000000001976a914c50b62be2f7c23cf0b9d904fa9984efbdb75859888ac0000000000000000a2b54c5e016b483045022100fae2248ae8f68854f5f5a522caa326f14e6ed9fa55c1a6da0cc0ad7659ec0e100220784c0f325fdb53be1fbf6466dc8a26297696fcebf3dffbc57a3a1fa0f9a96d42012102b3e7c21a906433171cad38589335002c34a6928e19b7798224077c30f03e835e")
+	assert.Equal(t, rs, "0100000001ca0265bbe73e89220da12dcfed31fb45ec3d18b60ea161036b418167bbd6da5f00000000ffffffff010100f0a29a3b000000001976a914864c051cdb39c31f21924a5ac88b4cf82124d2c188ac0000000000000000a5f2b962016a473044022061f466219e378f46dd242c9328d55254f713a73b86a92b71fdc813c4aaa261e9022038e08edcd6fb1c2f02a5c1fda3506b1d2b3f1ab470dca46c36bde7289757d427012102b3e7c21a906433171cad38589335002c34a6928e19b7798224077c30f03e835e")
 }
 
 func TestTxEncode(t *testing.T) {
 	inputs := make([]Input, 0)
-	outputs := make(map[string]Amount)
+	outputs := make([]Output, 0)
 	inputs = append(inputs, Input{
 		TxID:     "25517e3b3759365e80a164a3d4d2db2462c5d6888e4bd874c5fbfbb6fb130b41",
 		OutIndex: 0,
 	})
-	outputs["TnTf7hM9kzm7ssvQ7RAcrjni5jGQbVykd2w"] = Amount{
-		0,
-		2083509771,
-		0,
-	}
-	outputs["TnU8gXq9xHFrfchwk2bjyGHR2HMswANsVU5"] = Amount{
-		0,
-		100000000,
-		0,
-	}
+	outputs = append(outputs, Output{
+		TargetAddress: "TnTf7hM9kzm7ssvQ7RAcrjni5jGQbVykd2w",
+		Amount: types.Amount{
+			Value: 2083509771,
+			Id:    0,
+		},
+		OutputType:     types.TxTypeRegular,
+		TargetLockTime: 0,
+	}, Output{
+		TargetAddress: "TnU8gXq9xHFrfchwk2bjyGHR2HMswANsVU5",
+		Amount: types.Amount{
+			Value: 100000000,
+			Id:    0,
+		},
+		OutputType:     types.TxTypeRegular,
+		TargetLockTime: 0,
+	})
 	timestamp, _ := time.Parse("2016-01-02 15:04:05", "2019-13-14 00:00:00")
 	rs, _ := TxEncode(1, 0, &timestamp, inputs, outputs)
 
 	fmt.Println(rs)
-	assert.Equal(t, rs, "0100000001410b13fbb6fbfbc574d84b8e88d6c56224dbd2d4a364a1805e3659373b7e512500000000ffffffff0200000bd62f7c000000001976a914afda839fa515ffdbcbc8630b60909c64cfd73f7a88ac000000e1f505000000001976a914b51127b89f9b704e7cfbc69286f0de2e00e7196988ac000000000000000000096e880100")
+	assert.Equal(t, rs, "0100000001410b13fbb6fbfbc574d84b8e88d6c56224dbd2d4a364a1805e3659373b7e512500000000ffffffff0200000bd62f7c000000001976a914afda839fa515ffdbcbc8630b60909c64cfd73f7a88ac000000e1f505000000001976a914b51127b89f9b704e7cfbc69286f0de2e00e7196988ac000000000000000000096e880100-7b22696e707574223a7b2230223a307d2c226f7574707574223a7b2230223a302c2231223a307d7d")
 }
 
 func TestNewEntropy(t *testing.T) {

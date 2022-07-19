@@ -19,6 +19,7 @@ import (
 )
 
 var ErrSameWork = fmt.Errorf("Same work, Had Submitted!")
+var ErrLimitWork = fmt.Errorf("Submission interval Limited")
 
 type QitmeerWork struct {
 	core.Work
@@ -90,6 +91,9 @@ func (this *QitmeerWork) Submit(header *types.BlockHeader, gbtID string) (string
 		}
 		if strings.Contains(err.Error(), "worthless") {
 			return "", 0, ErrSameWork
+		}
+		if strings.Contains(err.Error(), "Submission interval Limited") {
+			return "", 0, ErrLimitWork
 		}
 		return "", 0, errors.New("[submit data failed]" + err.Error())
 	}

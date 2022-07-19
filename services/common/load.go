@@ -108,6 +108,7 @@ var (
 	BootstrapNodes    cli.StringSlice
 	Whitelist         cli.StringSlice
 	Blacklist         cli.StringSlice
+	GBTNotify         cli.StringSlice
 
 	Flags = []cli.Flag{
 		&cli.StringFlag{
@@ -526,6 +527,11 @@ var (
 			Usage:       "Enable estimate fee",
 			Destination: &cfg.Estimatefee,
 		},
+		&cli.StringSliceFlag{
+			Name:  "gbtnotify",
+			Usage: "HTTP URL list to be notified of new block template",
+			Value: &GBTNotify,
+		},
 	}
 )
 
@@ -542,6 +548,7 @@ func LoadConfig(ctx *cli.Context) (*config.Config, error) {
 	cfg.BootstrapNodes = BootstrapNodes.Value()
 	cfg.Whitelist = Whitelist.Value()
 	cfg.Blacklist = Blacklist.Value()
+	cfg.GBTNotify = GBTNotify.Value()
 
 	// Show the version and exit if the version flag was specified.
 	appName := filepath.Base(os.Args[0])

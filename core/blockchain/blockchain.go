@@ -122,6 +122,8 @@ type BlockChain struct {
 	unknownRulesWarned bool
 
 	VMService consensus.VMI
+
+	Acct ACCTI
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.
@@ -259,8 +261,8 @@ func (b *BlockChain) OrderRange(startOrder, endOrder uint64) ([]hash.Hash, error
 
 	// Grab a lock on the chain view to prevent it from changing due to a
 	// reorg while building the hashes.
-	b.chainLock.Lock()
-	defer b.chainLock.Unlock()
+	b.ChainLock()
+	defer b.ChainUnlock()
 
 	// When the requested start order is after the most recent best chain
 	// order, there is nothing to do.
@@ -804,7 +806,7 @@ func panicf(format string, args ...interface{}) {
 //    This is useful when using checkpoints.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedBlock, newOrders *list.List, oldOrders *list.List) (bool, error) {
+func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedBlock, newOrders *list.List, oldOrders *list.List, connectedBlocks *list.List) (bool, error) {
 	//Fast double spent check
 	b.fastDoubleSpentCheck(ib, block)
 
@@ -844,7 +846,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 		// this block.
 
 		// Connect the block to the main chain.
-		err = b.connectBlock(ib, block, view, stxos)
+		err = b.connectBlock(ib, block, view, stxos, connectedBlocks)
 		if err != nil {
 			b.bd.InvalidBlock(ib)
 			return true, err
@@ -868,7 +870,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 
 	// Reorganize the chain.
 	log.Debug(fmt.Sprintf("Start DAG REORGANIZE: Block %v is causing a reorganize.", ib.GetHash()))
-	err := b.reorganizeChain(ib, oldOrders, newOrders, block)
+	err := b.reorganizeChain(ib, oldOrders, newOrders, block, connectedBlocks)
 	if err != nil {
 		return false, err
 	}
@@ -977,7 +979,7 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 // it would be inefficient to repeat it.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
+func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut, connectedBlocks *list.List) error {
 	if !node.GetStatus().KnownInvalid() {
 		err := b.VMService.ConnectBlock(block)
 		if err != nil {
@@ -989,7 +991,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 			// Update the utxo set using the state of the utxo view.  This
 			// entails removing all of the utxos spent and adding the new
 			// ones created by the block.
-			err := dbPutUtxoView(dbTx, view)
+			err := b.dbPutUtxoView(dbTx, view)
 			if err != nil {
 				return err
 			}
@@ -1038,10 +1040,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 			return err
 		}
 	}
-
-	b.ChainUnlock()
-	b.sendNotification(BlockConnected, []interface{}{block, b.bd.IsOnMainChain(node.GetID())})
-	b.ChainLock()
+	connectedBlocks.PushBack([]interface{}{block, b.bd.IsOnMainChain(node.GetID())})
 	return nil
 }
 
@@ -1059,7 +1058,7 @@ func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoVie
 		// Update the utxo set using the state of the utxo view.  This
 		// entails restoring all of the utxos spent and removing the new
 		// ones created by the block.
-		err := dbPutUtxoView(dbTx, view)
+		err := b.dbPutUtxoView(dbTx, view)
 		if err != nil {
 			return err
 		}
@@ -1088,9 +1087,7 @@ func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoVie
 	// now that the modifications have been committed to the database.
 	view.commit()
 
-	b.ChainUnlock()
 	b.sendNotification(BlockDisconnected, block)
-	b.ChainLock()
 	return nil
 }
 
@@ -1111,20 +1108,18 @@ func (b *BlockChain) FetchSubsidyCache() *SubsidyCache {
 //
 // This function MUST be called with the chain state lock held (for writes).
 
-func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, attachNodes *list.List, newBlock *types.SerializedBlock) error {
+func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, attachNodes *list.List, newBlock *types.SerializedBlock, connectedBlocks *list.List) error {
 	oldBlocks := []*hash.Hash{}
 	for e := detachNodes.Front(); e != nil; e = e.Next() {
 		ob := e.Value.(*meerdag.BlockOrderHelp)
 		oldBlocks = append(oldBlocks, ob.Block.GetHash())
 	}
 
-	b.ChainUnlock()
 	b.sendNotification(Reorganization, &ReorganizationNotifyData{
 		OldBlocks: oldBlocks,
 		NewBlock:  newBlock.Hash(),
 		NewOrder:  uint64(ib.GetOrder()),
 	})
-	b.ChainLock()
 
 	// Why the old order is the order that was removed by the new block, because the new block
 	// must be one of the tip of the dag.This is very important for the following understanding.
@@ -1136,13 +1131,13 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 	for e := detachNodes.Back(); e != nil; e = e.Prev() {
 		n := e.Value.(*meerdag.BlockOrderHelp)
 		if n == nil {
-			panic(err.Error())
+			panic(fmt.Errorf("No BlockOrderHelp"))
 		}
 		b.updateTokenState(n.Block, nil, true)
 		//
 		block, err = b.fetchBlockByHash(n.Block.GetHash())
 		if err != nil {
-			panic(err.Error())
+			panic(err)
 		}
 
 		block.SetOrder(uint64(n.OldOrder))
@@ -1213,7 +1208,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			view.Clean()
 			log.Info(fmt.Sprintf("%s", err))
 		}
-		err = b.connectBlock(nodeBlock, block, view, stxos)
+		err = b.connectBlock(nodeBlock, block, view, stxos, connectedBlocks)
 		if err != nil {
 			b.bd.InvalidBlock(nodeBlock)
 			return err
@@ -1245,6 +1240,11 @@ func (b *BlockChain) countSpentOutputs(block *types.SerializedBlock) int {
 			} else {
 				continue
 			}
+		} else if types.IsCrossChainImportTx(tx.Tx) {
+			numSpent++
+			continue
+		} else if types.IsCrossChainVMTx(tx.Tx) {
+			continue
 		}
 		numSpent += len(tx.Transaction().TxIn)
 
@@ -1292,7 +1292,6 @@ func (b *BlockChain) GetMiningTips(expectPriority int) []*hash.Hash {
 
 func (b *BlockChain) ChainLock() {
 	b.chainLock.Lock()
-
 }
 
 func (b *BlockChain) ChainUnlock() {
@@ -1530,4 +1529,8 @@ func (b *BlockChain) GetSubsidyCache() *SubsidyCache {
 
 func (b *BlockChain) HasTx(txid *hash.Hash) bool {
 	return b.indexManager.HasTx(txid)
+}
+
+func (b *BlockChain) DB() database.DB {
+	return b.db
 }

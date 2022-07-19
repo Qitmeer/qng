@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"crypto/ecdsa"
 	"encoding/base64"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
@@ -21,12 +20,14 @@ import (
 	"github.com/Qitmeer/qng/p2p/runutil"
 	"github.com/Qitmeer/qng/p2p/synch"
 	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/services/notifymgr/notify"
 	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-discovery"
@@ -34,7 +35,6 @@ import (
 	"github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/multiformats/go-multiaddr"
-	ma "github.com/multiformats/go-multiaddr"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"math/rand"
@@ -66,7 +66,7 @@ type Service struct {
 	cfg           *common.Config
 	exclusionList *ristretto.Cache
 	isPreGenesis  bool
-	privKey       *ecdsa.PrivateKey
+	privKey       crypto.PrivKey
 	metaData      *pb.MetaData
 	addrFilter    *multiaddr.Filters
 	host          host.Host
@@ -80,6 +80,7 @@ type Service struct {
 	sy     *synch.Sync
 
 	blockChain  *blockchain.BlockChain
+	blkMgr      *blkmgr.BlockManager
 	timeSource  blockchain.MedianTimeSource
 	txMemPool   *mempool.TxPool
 	notify      consensus.Notify
@@ -99,13 +100,6 @@ func (s *Service) Start() error {
 
 	s.isPreGenesis = false
 
-	var peersToWatch []string
-	if s.cfg.RelayNodeAddr != "" {
-		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
-		if err := dialRelayNode(s.Context(), s.host, s.cfg.RelayNodeAddr); err != nil {
-			log.Warn(fmt.Sprintf("Could not dial relay node:%v", err))
-		}
-	}
 	if !s.cfg.NoDiscovery {
 		err := s.startKademliaDHT()
 		if err != nil {
@@ -114,6 +108,13 @@ func (s *Service) Start() error {
 		}
 	}
 
+	var peersToWatch []string
+	if s.cfg.RelayNodeAddr != "" {
+		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
+		if err := dialRelayNode(s.Context(), s.host, s.cfg.RelayNodeAddr); err != nil {
+			log.Warn(fmt.Sprintf("Could not dial relay node:%v", err))
+		}
+	}
 	_, bootstrapAddrs := parseGenericAddrs(s.cfg.BootstrapNodeAddr)
 	if len(bootstrapAddrs) > 0 {
 		peersToWatch = append(peersToWatch, bootstrapAddrs...)
@@ -221,8 +222,8 @@ func (s *Service) connectWithAllPeers(multiAddrs []multiaddr.Multiaddr) {
 	}
 }
 
-func (s *Service) ConnectToPeerByAddress(address string) error {
-	mulAddr, err := MultiAddrFromString(address)
+func (s *Service) ConnectToPeer(qmaddr string, force bool) error {
+	mulAddr, err := MultiAddrFromString(qmaddr)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -233,14 +234,11 @@ func (s *Service) ConnectToPeerByAddress(address string) error {
 		log.Error(err.Error())
 		return err
 	}
-	go func(info peer.AddrInfo) {
-		err := s.connectWithPeer(info, false)
-		if err != nil {
-			log.Error(fmt.Sprintf("Could not connect with peer %s :%v", info.String(), err))
-		}
-	}(*addrInfo)
-
-	return nil
+	err = s.connectWithPeer(*addrInfo, false)
+	if err != nil {
+		log.Error(fmt.Sprintf("Could not connect with peer %s :%v", addrInfo.String(), err))
+	}
+	return err
 }
 
 func (s *Service) connectFromPeerStore() {
@@ -434,8 +432,16 @@ func (s *Service) SetBlockChain(blockChain *blockchain.BlockChain) {
 	s.blockChain = blockChain
 }
 
+func (s *Service) SetBLKManager(blkMgr *blkmgr.BlockManager) {
+	s.blkMgr = blkMgr
+}
+
 func (s *Service) BlockChain() *blockchain.BlockChain {
 	return s.blockChain
+}
+
+func (s *Service) BLKManager() *blkmgr.BlockManager {
+	return s.blkMgr
 }
 
 func (s *Service) SetTxMemPool(txMemPool *mempool.TxPool) {
@@ -503,7 +509,7 @@ func (s *Service) RemoveBan(id string) {
 }
 
 func (s *Service) ConnectTo(node *qnode.Node) {
-	addr, err := convertToSingleMultiAddr(node)
+	addr, err := ConvertToSingleMultiAddr(node)
 	if err != nil {
 		log.Error(err.Error())
 		return
@@ -530,11 +536,11 @@ func (s *Service) HostAddress() []string {
 	return result
 }
 
-func (s *Service) HostDNS() ma.Multiaddr {
+func (s *Service) HostDNS() multiaddr.Multiaddr {
 	if len(s.cfg.HostDNS) <= 0 {
 		return nil
 	}
-	external, err := ma.NewMultiaddr(fmt.Sprintf("/dns4/%s/tcp/%d/p2p/%s", s.cfg.HostDNS, s.cfg.TCPPort, s.Host().ID().String()))
+	external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/dns4/%s/tcp/%d/p2p/%s", s.cfg.HostDNS, s.cfg.TCPPort, s.Host().ID().String()))
 	if err != nil {
 		log.Error(err.Error())
 		return nil
@@ -556,6 +562,14 @@ func (s *Service) RelayNodeInfo() *peer.AddrInfo {
 
 func (s *Service) Rebroadcast() *Rebroadcast {
 	return s.rebroadcast
+}
+
+func (s *Service) RegainMempool() {
+	s.Rebroadcast().RegainMempool()
+}
+
+func (s *Service) IsCurrent() bool {
+	return s.PeerSync().IsCurrent()
 }
 
 func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*Service, error) {
@@ -669,7 +683,7 @@ func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*
 		return nil, err
 	}
 	opts := s.buildOptions(ipAddr, s.privKey)
-	h, err := libp2p.New(s.Context(), opts...)
+	h, err := libp2p.New(opts...)
 	if err != nil {
 		log.Error("Failed to create p2p host")
 		return nil, err

@@ -14,4 +14,5 @@ type VM interface {
 	Shutdown() error
 	Version() string
 	RegisterAPIs(apis []api.API)
+	SetLogLevel(level string)
 }

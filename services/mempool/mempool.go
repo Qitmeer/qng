@@ -42,6 +42,8 @@ type TxPool struct {
 
 	pennyTotal    float64 // exponentially decaying total for penny spends.
 	lastPennyUnix int64   // unix time of last ``penny spend''
+
+	notifyT *time.Timer
 }
 
 // New returns a new memory pool for validating and storing standalone
@@ -143,15 +145,14 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 	// Protect concurrent access.
 	mp.mtx.Lock()
-	mp.removeTransaction(tx, removeRedeemers)
-
 	if opreturn.IsMeerEVMTx(tx.Tx) {
 		err := mp.cfg.BC.VMService.RemoveTxFromMempool(tx.Tx)
 		if err != nil {
 			log.Error(err.Error())
 		}
+	} else {
+		mp.removeTransaction(tx, removeRedeemers)
 	}
-
 	mp.mtx.Unlock()
 }
 
@@ -235,8 +236,25 @@ func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
 		mp.cfg.FeeEstimator.ObserveTransaction(txD)
 	}
 
-	go mp.cfg.Events.Send(event.New(MempoolTxAdd))
+	mp.notify()
+
 	return txD
+}
+
+func (mp *TxPool) notify() {
+	DELAY := time.Second * 2
+	if mp.notifyT == nil {
+		mp.notifyT = time.NewTimer(DELAY)
+		go func() {
+			select {
+			case <-mp.notifyT.C:
+			}
+			mp.cfg.Events.Send(event.New(MempoolTxAdd))
+			mp.notifyT.Stop()
+			mp.notifyT = nil
+		}()
+		return
+	}
 }
 
 //Call addTransaction
@@ -268,7 +286,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	// Perform preliminary sanity checks on the transaction.  This makes
 	// use of chain which contains the invariant rules for what
 	// transactions are allowed into blocks.
-	err := blockchain.CheckTransactionSanity(msgTx, mp.cfg.ChainParams, false)
+	err := blockchain.CheckTransactionSanity(msgTx, mp.cfg.ChainParams, nil, mp.cfg.BC)
 	if err != nil {
 		if cerr, ok := err.(blockchain.RuleError); ok {
 			return nil, nil, chainRuleError(cerr)
@@ -304,6 +322,13 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			txHash, msgTx.Expire)
 		return nil, nil, txRuleError(message.RejectInvalid, str)
 	}
+
+	if !tx.Tx.ValidTime(mp.cfg.Policy.TxTimeScope) {
+		str := fmt.Sprintf("transaction %v with tx time %s is invalid",
+			txHash.String(), tx.Tx.Timestamp.Format(time.RFC3339))
+		return nil, nil, txRuleError(message.RejectTxTimestamp, str)
+	}
+
 	// Don't allow non-standard transactions if the mempool config forbids
 	// their acceptance and relaying.
 	medianTime := mp.cfg.PastMedianTime()
@@ -1240,4 +1265,8 @@ func (mp *TxPool) GetConfig() *Config {
 
 func (mp *TxPool) GetMainHeight() int64 {
 	return int64(mp.cfg.BestHeight() + 1)
+}
+
+func (mp *TxPool) IsSupportVMTx() bool {
+	return mp.cfg.BC.IsValidTxType(types.TxTypeCrossChainVM)
 }

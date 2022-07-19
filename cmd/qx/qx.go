@@ -75,8 +75,10 @@ entropy (seed) & mnemoic & hd & ec :
 
 addr & tx & sign :
     ec-to-addr            convert an EC public key to a paymant address. default is qx address
-	ec-to-pkaddr          convert an EC public key to a paymant public key address. default is qx address
-	ec-to-ethaddr         convert an EC public key to a ethereum address.
+    ec-to-pkaddr          convert an EC public key to a paymant public key address. default is qx address
+    ec-to-ethaddr         convert an EC public key to a ethereum address.
+    pkaddr-to-public      convert an pkaddress to EC public key (the uncompressed format by default )
+    pkaddr-to-ethaddr     convert an pkaddress to ethereum address
     tx-encode             encode a unsigned transaction.
     tx-decode             decode a transaction in base16 to json format.
     tx-sign               sign a transactions using a private key.
@@ -124,6 +126,7 @@ var derivePath qx.DerivePathFlag
 var mnemoicSeedPassphrase string
 var curve string
 var uncompressedPKFormat bool
+var compressedPKFormat bool
 var network string
 var powType string
 var txInputs qx.TxInputsFlag
@@ -131,7 +134,6 @@ var txOutputs qx.TxOutputsFlag
 var txVersion qx.TxVersionFlag
 var txLockTime qx.TxLockTimeFlag
 var privateKey string
-var pkScripts string
 var msgSignatureMode string
 
 func main() {
@@ -143,6 +145,7 @@ func main() {
 	base58CheckEncodeCommand := flag.NewFlagSet("base58check-encode", flag.ExitOnError)
 	base58checkVersion = qx.QitmeerBase58checkVersionFlag{}
 	base58checkVersion.Set("mainnet")
+	base58CheckEncodeCommand.BoolVar(&base58checkVersion.PK, "pk", false, "Input is public key")
 	base58CheckEncodeCommand.Var(&base58checkVersion, "v", "base58check `version` [mainnet|testnet|privnet")
 	base58CheckEncodeCommand.StringVar(&base58checkMode, "m", "qitmeer", "base58check encode mode : [qitmeer|btc]")
 	base58CheckEncodeCommand.StringVar(&base58checkHasher, "a", "", "base58check hasher")
@@ -393,10 +396,22 @@ func main() {
 	}
 	ecToPKAddrCmd.Var(&base58checkVersion, "v", "base58check `version` [mainnet|testnet|privnet]")
 
-	// PKAddress
+	// ETHAddress
 	ecToETHAddrCmd := flag.NewFlagSet("ec-to-ethaddr", flag.ExitOnError)
 	ecToETHAddrCmd.Usage = func() {
 		cmdUsage(ecToETHAddrCmd, "Usage: qx ec-to-ethaddr [ec_public_key] \n")
+	}
+
+	//
+	pkaddrToPubCmd := flag.NewFlagSet("pkaddr-to-public", flag.ExitOnError)
+	pkaddrToPubCmd.Usage = func() {
+		cmdUsage(pkaddrToPubCmd, "Usage: qx pkaddr-to-public [pk address] \n")
+	}
+	pkaddrToPubCmd.BoolVar(&compressedPKFormat, "c", false, "using the compressed public key format")
+
+	pkaddrToETHAddrCmd := flag.NewFlagSet("pkaddr-to-ethaddr", flag.ExitOnError)
+	pkaddrToETHAddrCmd.Usage = func() {
+		cmdUsage(pkaddrToETHAddrCmd, "Usage: qx pkaddr-to-ethaddr [pk address] \n")
 	}
 
 	// Transaction
@@ -413,20 +428,25 @@ func main() {
 	txVersion = qx.TxVersionFlag(TX_VERION) //set default tx version
 	txEncodeCmd.Var(&txVersion, "v", "the transaction version")
 	txEncodeCmd.Var(&txLockTime, "l", "the transaction lock time")
-	txEncodeCmd.Var(&txInputs, "i", `The set of transaction input points encoded as TXHASH:INDEX:SEQUENCE. 
+	txEncodeCmd.Var(&txInputs, "i", `The set of transaction input points encoded as TXHASH:INDEX:SEQUENCE:TXTYPE. 
 TXHASH is a Base16 transaction hash. INDEX is the 32 bit input index
 in the context of the transaction. SEQUENCE is the optional 32 bit 
-input sequence and defaults to the maximum value.`)
-	txEncodeCmd.Var(&txOutputs, "o", `The set of transaction output data encoded as TARGET:MEER. 
+input sequence and defaults to the maximum value.
+TXTYPE is type type
+TxTypeRegular the standard tx
+TxTypeGenesisLock the tx try to lock the genesis output to the stake pool
+TxTypeCrossChainExport Cross chain by import tx
+TxTypeCrossChainImport Cross chain by vm tx
+`)
+	txEncodeCmd.Var(&txOutputs, "o", `The set of transaction output data encoded as TARGET:MEER:COINID:TXTYPE. 
 TARGET is an address (pay-to-pubkey-hash or pay-to-script-hash).
-MEER is the 64 bit spend amount in qitmeer.`)
+MEER is the 64 bit spend amount in qitmeer.COINID enum {0 => MEER,1=>ETHID}`)
 
 	txSignCmd := flag.NewFlagSet("tx-sign", flag.ExitOnError)
 	txSignCmd.Usage = func() {
 		cmdUsage(txSignCmd, "Usage: qx tx-sign [raw_tx_base16_string] \n")
 	}
 	txSignCmd.StringVar(&privateKey, "k", "", "the ec private key to sign the raw transaction")
-	txSignCmd.StringVar(&pkScripts, "p", "", "the vin pkScripts in order")
 	txSignCmd.StringVar(&network, "n", "mainnet", "decode rawtx for the target network. (mainnet, testnet, privnet)")
 
 	msgSignCmd := flag.NewFlagSet("msg-sign", flag.ExitOnError)
@@ -494,6 +514,8 @@ MEER is the 64 bit spend amount in qitmeer.`)
 		ecToAddrCmd,
 		ecToPKAddrCmd,
 		ecToETHAddrCmd,
+		pkaddrToPubCmd,
+		pkaddrToETHAddrCmd,
 		txEncodeCmd,
 		txDecodeCmd,
 		txSignCmd,
@@ -532,6 +554,7 @@ MEER is the 64 bit spend amount in qitmeer.`)
 	}
 	// Handle base58check-encode
 	if base58CheckEncodeCommand.Parsed() {
+		base58checkVersion.Update()
 		stat, _ := os.Stdin.Stat()
 		if (stat.Mode() & os.ModeNamedPipe) == 0 {
 			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
@@ -1313,6 +1336,51 @@ MEER is the 64 bit spend amount in qitmeer.`)
 		}
 	}
 
+	if pkaddrToPubCmd.Parsed() {
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeNamedPipe) == 0 {
+			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
+				pkaddrToPubCmd.Usage()
+			} else {
+				key, err := qx.PKAddressToPubKey(os.Args[len(os.Args)-1], compressedPKFormat)
+				if err != nil {
+					qx.ErrExit(err)
+				}
+				fmt.Printf("%s\n", key)
+
+			}
+		} else { //try from STDIN
+			src, err := ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				errExit(err)
+			}
+			str := strings.TrimSpace(string(src))
+			key, err := qx.PKAddressToPubKey(str, compressedPKFormat)
+			if err != nil {
+				qx.ErrExit(err)
+			}
+			fmt.Printf("%s\n", key)
+		}
+	}
+
+	if pkaddrToETHAddrCmd.Parsed() {
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeNamedPipe) == 0 {
+			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
+				pkaddrToETHAddrCmd.Usage()
+			} else {
+				qx.PKAddressToETHAddressSTDO(os.Args[len(os.Args)-1])
+			}
+		} else { //try from STDIN
+			src, err := ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				errExit(err)
+			}
+			str := strings.TrimSpace(string(src))
+			qx.PKAddressToETHAddressSTDO(str)
+		}
+	}
+
 	if txDecodeCmd.Parsed() {
 		stat, _ := os.Stdin.Stat()
 		if (stat.Mode() & os.ModeNamedPipe) == 0 {
@@ -1348,8 +1416,7 @@ MEER is the 64 bit spend amount in qitmeer.`)
 			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
 				txSignCmd.Usage()
 			} else {
-				pks := strings.Split(pkScripts, ",")
-				qx.TxSignSTDO(privateKey, os.Args[len(os.Args)-1], network, pks)
+				qx.TxSignSTDO(privateKey, os.Args[len(os.Args)-1], network)
 			}
 		} else { //try from STDIN
 			src, err := ioutil.ReadAll(os.Stdin)
@@ -1357,8 +1424,7 @@ MEER is the 64 bit spend amount in qitmeer.`)
 				errExit(err)
 			}
 			str := strings.TrimSpace(string(src))
-			pks := strings.Split(pkScripts, ",")
-			qx.TxSignSTDO(privateKey, str, network, pks)
+			qx.TxSignSTDO(privateKey, str, network)
 		}
 	}
 

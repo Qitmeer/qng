@@ -5,16 +5,14 @@ package address
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/common"
-	"github.com/Qitmeer/qng/meerevm/evm"
 	"github.com/Qitmeer/qng/common/encode/base58"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/address"
-	qjson "github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/crypto/ecc"
-	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/core/blockchain"
+	qjson "github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/crypto/ecc"
+	"github.com/Qitmeer/qng/meerevm/common"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -85,17 +83,6 @@ func (api *PublicAddressAPI) CheckAddress(address string, network string) (inter
 	return true, nil
 }
 
-func (api *PublicAddressAPI) GetBalance(pkAddress string, coinID types.CoinID) (interface{}, error) {
-	if coinID != types.ETHID {
-		return nil, fmt.Errorf("Not support %v", coinID)
-	}
-	cv, err := api.addressApi.chain.VMService.GetVM(evm.MeerEVMID)
-	if err != nil {
-		return nil, err
-	}
-	return cv.GetBalance(pkAddress)
-}
-
 // private
 type PrivateAddressAPI struct {
 	addressApi *AddressApi
@@ -109,27 +96,27 @@ func NewPrivateAddressAPI(ai *AddressApi) *PrivateAddressAPI {
 func (api *PrivateAddressAPI) GetAddresses(privateKeyHex string) (interface{}, error) {
 	privkeyByte, err := hex.DecodeString(privateKeyHex)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	if len(privkeyByte) != 32 {
-		return nil,fmt.Errorf("error length:%d", len(privkeyByte))
+		return nil, fmt.Errorf("error length:%d", len(privkeyByte))
 	}
 	privateKey, pubKey := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
 
 	serializedKey := pubKey.SerializeCompressed()
 	addr, err := address.NewSecpPubKeyAddress(serializedKey, params.ActiveNetParams.Params)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	eaddr,err:=common.NewMeerEVMAddress(hex.EncodeToString(pubKey.SerializeUncompressed()))
+	eaddr, err := common.NewMeerEVMAddress(hex.EncodeToString(pubKey.SerializeUncompressed()))
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	result := qjson.OrderedResult{
-		qjson.KV{Key:"PrivateKey",Val:hex.EncodeToString(privateKey.Serialize())},
-		qjson.KV{Key:"PKHAddress",Val:addr.PKHAddress().String()},
-		qjson.KV{Key:"PKAddress",Val:addr.String()},
-		qjson.KV{Key:"MeerEVM Address",Val:eaddr.String()},
+		qjson.KV{Key: "PrivateKey", Val: hex.EncodeToString(privateKey.Serialize())},
+		qjson.KV{Key: "PKHAddress", Val: addr.PKHAddress().String()},
+		qjson.KV{Key: "PKAddress", Val: addr.String()},
+		qjson.KV{Key: "MeerEVM Address", Val: eaddr.String()},
 	}
 
 	return result, nil

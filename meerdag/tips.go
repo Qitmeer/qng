@@ -74,12 +74,14 @@ func (bd *MeerDAG) getValidTips(limit bool) []IBlock {
 	temp.Remove(mainParent.GetID())
 	var parents []uint
 	if temp.Size() > 1 {
-		parents = temp.SortHashList(false)
+		parents = temp.SortHeightList(true)
 	} else {
 		parents = temp.List()
 	}
 
 	tips := []IBlock{mainParent}
+	tipsM := map[string]struct{}{}
+
 	for i := 0; i < len(parents); i++ {
 		if mainParent.GetID() == parents[i] {
 			continue
@@ -88,7 +90,12 @@ func (bd *MeerDAG) getValidTips(limit bool) []IBlock {
 		if math.Abs(float64(block.GetLayer())-float64(mainParent.GetLayer())) > MaxTipLayerGap {
 			continue
 		}
+		_, exist := tipsM[block.GetHash().String()]
+		if exist {
+			continue
+		}
 		tips = append(tips, block)
+		tipsM[block.GetHash().String()] = struct{}{}
 		if limit && len(tips) >= bd.getMaxParents() {
 			break
 		}
@@ -170,6 +177,7 @@ func (bd *MeerDAG) removeTip(dbTx database.Tx, b IBlock) error {
 			}
 		}
 	}
+	delete(bd.blocks, b.GetID())
 
 	ph, ok := bd.instance.(*Phantom)
 	if !ok {

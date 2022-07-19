@@ -36,12 +36,12 @@ func TestHDPathParsing(t *testing.T) {
 		{"m/2147483692/2147483708/2147483648/0", DerivationPath{0x80000000 + 44, 0x80000000 + 60, 0x80000000 + 0, 0}},
 		{"m/2147483692/2147483708/2147483648/2147483648", DerivationPath{0x80000000 + 44, 0x80000000 + 60, 0x80000000 + 0, 0x80000000 + 0}},
 
-		// Plain relative derivation paths -> default to 223
-		{"0", DerivationPath{0x80000000 + 44, 0x80000000 + 223, 0x80000000 + 0, 0, 0}},
-		{"128", DerivationPath{0x80000000 + 44, 0x80000000 + 223, 0x80000000 + 0, 0, 128}},
-		{"0'", DerivationPath{0x80000000 + 44, 0x80000000 + 223, 0x80000000 + 0, 0, 0x80000000 + 0}},
-		{"128'", DerivationPath{0x80000000 + 44, 0x80000000 + 223, 0x80000000 + 0, 0, 0x80000000 + 128}},
-		{"2147483648", DerivationPath{0x80000000 + 44, 0x80000000 + 223, 0x80000000 + 0, 0, 0x80000000 + 0}},
+		// Plain relative derivation paths -> default to 813
+		{"0", DerivationPath{0x80000000 + 44, 0x80000000 + 813, 0x80000000 + 0, 0, 0}},
+		{"128", DerivationPath{0x80000000 + 44, 0x80000000 + 813, 0x80000000 + 0, 0, 128}},
+		{"0'", DerivationPath{0x80000000 + 44, 0x80000000 + 813, 0x80000000 + 0, 0, 0x80000000 + 0}},
+		{"128'", DerivationPath{0x80000000 + 44, 0x80000000 + 813, 0x80000000 + 0, 0, 0x80000000 + 128}},
+		{"2147483648", DerivationPath{0x80000000 + 44, 0x80000000 + 813, 0x80000000 + 0, 0, 0x80000000 + 0}},
 
 		// Hexadecimal absolute derivation paths
 		{"m/0x2C'/0x3c'/0x00'/0x00", DerivationPath{0x80000000 + 44, 0x80000000 + 60, 0x80000000 + 0, 0}},
@@ -51,12 +51,12 @@ func TestHDPathParsing(t *testing.T) {
 		{"m/0x8000002C/0x8000003c/0x80000000/0x00", DerivationPath{0x80000000 + 44, 0x80000000 + 60, 0x80000000 + 0, 0}},
 		{"m/0x8000002C/0x8000003c/0x80000000/0x80000000", DerivationPath{0x80000000 + 44, 0x80000000 + 60, 0x80000000 + 0, 0x80000000 + 0}},
 
-		// Hexadecimal relative derivation paths -> default to 233
-		{"0x00", DerivationPath{0x80000000 + 44, 0x80000000 + 223, 0x80000000 + 0, 0, 0}},
-		{"0x80", DerivationPath{0x80000000 + 44, 0x80000000 + 223, 0x80000000 + 0, 0, 128}},
-		{"0x00'", DerivationPath{0x80000000 + 44, 0x80000000 + 223, 0x80000000 + 0, 0, 0x80000000 + 0}},
-		{"0x80'", DerivationPath{0x80000000 + 44, 0x80000000 + 223, 0x80000000 + 0, 0, 0x80000000 + 128}},
-		{"0x80000000", DerivationPath{0x80000000 + 44, 0x80000000 + 223, 0x80000000 + 0, 0, 0x80000000 + 0}},
+		// Hexadecimal relative derivation paths -> default to 813
+		{"0x00", DerivationPath{0x80000000 + 44, 0x80000000 + 813, 0x80000000 + 0, 0, 0}},
+		{"0x80", DerivationPath{0x80000000 + 44, 0x80000000 + 813, 0x80000000 + 0, 0, 128}},
+		{"0x00'", DerivationPath{0x80000000 + 44, 0x80000000 + 813, 0x80000000 + 0, 0, 0x80000000 + 0}},
+		{"0x80'", DerivationPath{0x80000000 + 44, 0x80000000 + 813, 0x80000000 + 0, 0, 0x80000000 + 128}},
+		{"0x80000000", DerivationPath{0x80000000 + 44, 0x80000000 + 813, 0x80000000 + 0, 0, 0x80000000 + 0}},
 
 		// Weird inputs just to ensure they work
 		{"	m  /   44			'\n/\n   60	\n\n\t'   /\n0 ' /\t\t	0", DerivationPath{0x80000000 + 44, 0x80000000 + 60, 0x80000000 + 0, 0}},

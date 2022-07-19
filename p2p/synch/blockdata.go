@@ -10,6 +10,6 @@ import (
 )
 
 type BlockData struct {
-	Hash *hash.Hash
+	Hash  *hash.Hash
 	Block *types.SerializedBlock
 }

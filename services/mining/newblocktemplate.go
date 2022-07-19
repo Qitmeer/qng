@@ -15,6 +15,7 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"golang.org/x/net/context"
+	"time"
 )
 
 // NewBlockTemplate returns a new block template that is ready to be solved
@@ -215,7 +216,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 					"would exceed the max block size; cur block "+
 					"size %v, cur num tx %v", tx.Hash(), txSize,
 					blockSize, len(blockTxns)))
-				continue
+				break
 			}
 
 			blockTxns = append(blockTxns, tx)
@@ -245,7 +246,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 					"would exceed the max block size; cur block "+
 					"size %v, cur num tx %v", tx.Hash(), txSize,
 					blockSize, len(blockTxns)))
-				continue
+				break
 			}
 			if types.IsCrossChainImportTx(tx.Tx) {
 				if hasCrossTx {
@@ -398,6 +399,15 @@ mempool:
 			continue
 		}
 
+		// Skip transactions once the tx time is invalid
+		// minimum block size.
+		if !tx.Tx.ValidTime(policy.TxTimeScope) {
+			log.Trace(fmt.Sprintf("Skipping tx %s with tx time %s is invalid", tx.Hash().String(),
+				tx.Tx.Timestamp.Format(time.RFC3339)))
+			logSkippedDeps(tx, deps)
+			continue
+		}
+
 		// Ensure the transaction inputs pass all of the necessary
 		// preconditions before allowing it to be added to the block.
 		txFeesMap, err := blockManager.GetChain().CheckTransactionInputs(tx, blockUtxos)
@@ -488,6 +498,8 @@ mempool:
 	// Create a new block ready to be solved.
 	merkles := merkle.BuildMerkleTreeStore(blockTxns, false)
 
+	blockManager.GetChain().ChainLock()
+	defer blockManager.GetChain().ChainUnlock()
 	if parents == nil {
 		parents = blockManager.GetChain().GetMiningTips(len(blockTxns))
 	}

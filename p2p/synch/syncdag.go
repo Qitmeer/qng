@@ -30,13 +30,9 @@ func (s *Sync) sendSyncDAGRequest(ctx context.Context, id peer.ID, sd *pb.SyncDA
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.Error(fmt.Sprintf("Failed to reset stream with protocol %s,%v", stream.Protocol(), err))
-		}
-	}()
+	defer resetSteam(stream, s.p2p)
 
-	code, errMsg, err := ReadRspCode(stream, s.Encoding())
+	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +43,7 @@ func (s *Sync) sendSyncDAGRequest(ctx context.Context, id peer.ID, sd *pb.SyncDA
 	}
 	msg := &pb.SubDAG{}
 
-	if err := s.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
 
@@ -120,7 +116,7 @@ func (ps *PeerSync) processSyncDAGBlocks(pe *peers.Peer) error {
 	subd, err := ps.sy.sendSyncDAGRequest(ps.sy.p2p.Context(), pe.GetID(), sd)
 	if err != nil {
 		log.Trace(fmt.Sprintf("processSyncDAGBlocks err=%v ", err.Error()))
-		ps.updateSyncPeer(true)
+		go ps.TryAgainUpdateSyncPeer()
 		return err
 	}
 	log.Trace(fmt.Sprintf("processSyncDAGBlocks result graphstate=(%v,%v,%v), blocks=%v ",
@@ -130,7 +126,7 @@ func (ps *PeerSync) processSyncDAGBlocks(pe *peers.Peer) error {
 	pe.UpdateGraphState(subd.GraphState)
 
 	if len(subd.Blocks) <= 0 {
-		ps.updateSyncPeer(true)
+		go ps.TryAgainUpdateSyncPeer()
 		return fmt.Errorf("No sync dag blocks")
 	}
 	log.Trace(fmt.Sprintf("processSyncDAGBlocks do GetBlockDatas blocks=%v ", len(subd.Blocks)))

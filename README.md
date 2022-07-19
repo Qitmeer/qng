@@ -12,13 +12,19 @@ or
 * Install the latest qng available here:
 https://github.com/Qitmeer/qng/releases 
 
+or
+* Build with Docker:
+```bash
+~ docker build -t qng .
+```
+
 
 ### Getting Started
 * We take the construction of test network nodes as an example:
 ```
 ~ cd ./build/bin
 ~ ./qng --testnet
-~ 
+~ docker run --rm -it --name qng qng:latest ./build/bin/qng --mixnet --acceptnonstd --modules=qitmeer --modules=p2p
 ``` 
 
 ### Miner
@@ -47,7 +53,12 @@ https://github.com/Qitmeer/qng/releases
 * MeerDAG Address:
 ```
 ~ ./qx ec-to-public [Your_Private_Key] | ./qx ec-to-ethaddr
+or
+~ ./qx pkaddr-to-public [Your_pkaddress] | ./qx ec-to-ethaddr
+or
+~ ./qx pkaddr-to-ethaddr [Your_pkaddress]
 ```
+
 
 ##### Use qng RPC 
 * All addresses corresponding to the same private key: 

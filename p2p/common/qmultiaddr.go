@@ -1,15 +1,19 @@
 package common
 
-import iaddr "github.com/ipfs/go-ipfs-addr"
+import "github.com/multiformats/go-multiaddr"
 
-type QMultiaddr interface {
-	iaddr.IPFSAddr
+type QMultiaddr struct {
+	ma multiaddr.Multiaddr
 }
 
-func QMultiAddrFromString(address string) (QMultiaddr, error) {
-	addr, err := iaddr.ParseString(address)
+func (qm *QMultiaddr) String() string {
+	return qm.ma.String()
+}
+
+func QMultiAddrFromString(address string) (*QMultiaddr, error) {
+	ma,err:=multiaddr.NewMultiaddr(address)
 	if err != nil {
-		return nil, err
+		return nil,err
 	}
-	return addr, nil
+	return &QMultiaddr{ma: ma},nil
 }

@@ -15,21 +15,17 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 )
 
-func (s *Sync) SendMempoolRequest(ctx context.Context, pe *peers.Peer,count uint64) error {
+func (s *Sync) SendMempoolRequest(ctx context.Context, pe *peers.Peer, count uint64) error {
 	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
 	defer cancel()
 
-	stream, err := s.Send(ctx, &pb.MemPoolRequest{TxsNum:count}, RPCMemPool, pe.GetID())
+	stream, err := s.Send(ctx, &pb.MemPoolRequest{TxsNum: count}, RPCMemPool, pe.GetID())
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.Error(fmt.Sprintf("Failed to reset stream with protocol %s,%v", stream.Protocol(), err))
-		}
-	}()
+	defer resetSteam(stream, s.p2p)
 
-	code, errMsg, err := ReadRspCode(stream, s.Encoding())
+	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
 		return err
 	}
@@ -55,7 +51,7 @@ func (s *Sync) HandlerMemPool(ctx context.Context, msg interface{}, stream libp2
 		err = fmt.Errorf("message is not type *MsgFilterLoad")
 		return ErrMessage(err)
 	}
-	curCount:=uint64(s.p2p.TxMemPool().Count())
+	curCount := uint64(s.p2p.TxMemPool().Count())
 	if mpr.TxsNum == curCount || curCount == 0 {
 		return nil
 	}
@@ -86,7 +82,7 @@ func (ps *PeerSync) OnMemPool(sp *peers.Peer, msg *MsgMemPool) {
 	// without double checking it here.
 	txDescs := ps.sy.p2p.TxMemPool().TxDescs()
 
-	invs:=[]*pb.InvVect{}
+	invs := []*pb.InvVect{}
 	for _, txDesc := range txDescs {
 		// Either add all transactions when there is no bloom filter,
 		// or only the transactions that match the filter when there is
@@ -97,5 +93,5 @@ func (ps *PeerSync) OnMemPool(sp *peers.Peer, msg *MsgMemPool) {
 		}
 	}
 	// Send the inventory message if there is anything to send.
-	ps.sy.tryToSendInventoryRequest(sp,invs)
+	ps.sy.tryToSendInventoryRequest(sp, invs)
 }

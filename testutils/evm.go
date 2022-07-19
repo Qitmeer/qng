@@ -9,6 +9,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/swap/factory"
 	"github.com/Qitmeer/qng/testutils/swap/router"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -21,7 +22,8 @@ import (
 	"strings"
 )
 
-const CHAIN_ID = 223
+var CHAIN_ID = params.PrivNetParams.MeerEVMCfg.ChainID
+
 const GAS_LIMIT = 8000000
 
 var MAX_UINT256 = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 255), common.Big1)

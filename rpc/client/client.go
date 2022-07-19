@@ -421,6 +421,20 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 		}
 
 		c.ntfnHandlers.OnNodeExit(&cmds.NodeExitNtfn{})
+	// OnBlockTemplate
+	case cmds.BlockTemplateNtfnMethod:
+		// Ignore the notification if the client is not interested in
+		// it.
+		if c.ntfnHandlers.OnBlockTemplate == nil {
+			return
+		}
+		bt, err := parseBlockTemplateNtfnParams(ntfn.Params)
+		if err != nil {
+			log.Warn(fmt.Sprintf("Received invalid block connected "+
+				"notification: %v", err))
+			return
+		}
+		c.ntfnHandlers.OnBlockTemplate(bt)
 
 	// OnUnknownNotification
 	default:

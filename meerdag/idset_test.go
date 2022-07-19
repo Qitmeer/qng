@@ -157,3 +157,30 @@ func Test_SortListPriority(t *testing.T) {
 		}
 	}
 }
+
+func Test_SortListHeight(t *testing.T) {
+	hs := NewIdSet()
+	hl := BlockHeightSlice{}
+	var hashNum uint = 5
+	for i := uint(0); i < hashNum; i++ {
+		hashStr := fmt.Sprintf("%d", i)
+		h := hash.MustHexToDecodedHash(hashStr)
+		block := &Block{id: i, hash: h, height: i}
+		hs.AddPair(block.GetID(), block)
+		hl = append(hl, block)
+	}
+	shs := hs.SortHeightList(false)
+
+	for i := uint(0); i < hashNum; i++ {
+		if hl[i].GetID() != shs[i] {
+			t.FailNow()
+		}
+	}
+	rshs := hs.SortHeightList(true)
+
+	for i := uint(0); i < hashNum; i++ {
+		if hl[i].GetID() != rshs[hashNum-i-1] {
+			t.FailNow()
+		}
+	}
+}

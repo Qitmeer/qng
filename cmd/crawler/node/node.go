@@ -6,7 +6,6 @@ package node
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"fmt"
 	"github.com/Qitmeer/qng/cmd/crawler/config"
 	"github.com/Qitmeer/qng/cmd/crawler/log"
@@ -14,7 +13,6 @@ import (
 	"github.com/Qitmeer/qng/cmd/crawler/rpc"
 	"github.com/Qitmeer/qng/common/roughtime"
 	pv "github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/encoder"
@@ -23,7 +21,6 @@ import (
 	"github.com/Qitmeer/qng/p2p/synch"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
-	iaddr "github.com/ipfs/go-ipfs-addr"
 	"github.com/libp2p/go-libp2p"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -31,9 +28,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/libp2p/go-libp2p-kad-dht/opts"
-	"github.com/libp2p/go-libp2p-noise"
-	"github.com/libp2p/go-libp2p-secio"
 	"github.com/multiformats/go-multiaddr"
 	"sync"
 	"time"
@@ -57,7 +51,7 @@ type Node struct {
 	cfg        *config.Config
 	ctx        context.Context
 	cancel     context.CancelFunc
-	privateKey *ecdsa.PrivateKey
+	privateKey crypto.PrivKey
 	peers      *peers.Peers
 	rpcServer  *rpc.RpcServer
 	interrupt  chan struct{}
@@ -164,19 +158,10 @@ func (node *Node) Run() error {
 	opts := []libp2p.Option{
 		//libp2p.EnableRelay(relay.OptHop),
 		libp2p.ListenAddrs(srcMAddr, eMAddr),
-		libp2p.Identity(p2p.ConvertToInterfacePrivkey(node.privateKey)),
+		libp2p.Identity(node.privateKey),
 	}
 
-	if node.cfg.EnableNoise {
-		opts = append(opts, libp2p.Security(noise.ID, noise.New), libp2p.Security(secio.ID, secio.New))
-	} else {
-		opts = append(opts, libp2p.Security(secio.ID, secio.New))
-	}
-
-	node.host, err = libp2p.New(
-		node.ctx,
-		opts...,
-	)
+	node.host, err = libp2p.New(opts...)
 	if err != nil {
 		log.Log.Error("Failed to create host %v", err)
 		return err
@@ -188,7 +173,7 @@ func (node *Node) Run() error {
 		return err
 	}
 
-	kademliaDHT, err := dht.New(node.ctx, node.host, dhtopts.Protocols(p2p.ProtocolDHT))
+	kademliaDHT, err := dht.New(node.ctx, node.host, dht.V1ProtocolOverride(p2p.ProtocolDHT))
 	if err != nil {
 		return err
 	}
@@ -284,7 +269,7 @@ func (node *Node) connectWithPeer(info peer.AddrInfo, force bool) error {
 
 func (node *Node) connectWithAddr(id string, addr string) {
 	formatStr := getConnPeerAddress(id, addr)
-	maAddr, err := multiAddrFromString(formatStr)
+	maAddr, err := p2p.MultiAddrFromString(formatStr)
 	if err != nil {
 		log.Log.Trace(fmt.Sprintf("Wrong remote address %s to p2p address, %v", formatStr, err))
 		return
@@ -426,7 +411,7 @@ func parseGenericAddrs(addrs []string) (qnodeString []string, multiAddrString []
 			qnodeString = append(qnodeString, addr)
 			continue
 		}
-		_, err = multiAddrFromString(addr)
+		_, err = p2p.MultiAddrFromString(addr)
 		if err == nil {
 			multiAddrString = append(multiAddrString, addr)
 			continue
@@ -436,19 +421,11 @@ func parseGenericAddrs(addrs []string) (qnodeString []string, multiAddrString []
 	return qnodeString, multiAddrString
 }
 
-func multiAddrFromString(address string) (multiaddr.Multiaddr, error) {
-	addr, err := iaddr.ParseString(address)
-	if err != nil {
-		return nil, err
-	}
-	return addr.Multiaddr(), nil
-}
-
 func peersFromStringAddrs(addrs []string) ([]multiaddr.Multiaddr, error) {
 	var allAddrs []multiaddr.Multiaddr
 	qnodeString, multiAddrString := parseGenericAddrs(addrs)
 	for _, stringAddr := range multiAddrString {
-		addr, err := multiAddrFromString(stringAddr)
+		addr, err := p2p.MultiAddrFromString(stringAddr)
 		if err != nil {
 			return nil, fmt.Errorf("could not get multiaddr from string : %w", err)
 		}
@@ -474,7 +451,7 @@ func convertToSingleMultiAddr(node *qnode.Node) (multiaddr.Multiaddr, error) {
 		return nil, fmt.Errorf("node doesn't have an ip4 address, it's stated IP is %s", node.IP().String())
 	}
 	pubkey := node.Pubkey()
-	assertedKey := convertToInterfacePubkey(pubkey)
+	assertedKey := p2p.ConvertToInterfacePubkey(pubkey)
 	id, err := peer.IDFromPublicKey(assertedKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not get peer id : %w", err)
@@ -485,16 +462,6 @@ func convertToSingleMultiAddr(node *qnode.Node) (multiaddr.Multiaddr, error) {
 		return nil, fmt.Errorf("could not get multiaddr : %w", err)
 	}
 	return multiAddr, nil
-}
-
-func ConvertToInterfacePrivkey(privkey *ecdsa.PrivateKey) crypto.PrivKey {
-	typeAssertedKey := crypto.PrivKey((*crypto.Secp256k1PrivateKey)((*secp256k1.PrivateKey)(privkey)))
-	return typeAssertedKey
-}
-
-func convertToInterfacePubkey(pubkey *ecdsa.PublicKey) crypto.PubKey {
-	typeAssertedKey := crypto.PubKey((*crypto.Secp256k1PublicKey)((*secp256k1.PublicKey)(pubkey)))
-	return typeAssertedKey
 }
 
 func getConnPeerAddress(id, addr string) string {

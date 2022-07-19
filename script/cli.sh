@@ -398,10 +398,17 @@ function get_peer_info(){
   get_result "$data"
 }
 
-function get_add_peer(){
+function add_peer(){
   local address=$1
 
   local data='{"jsonrpc":"2.0","method":"p2p_addPeer","params":["'$address'"],"id":null}'
+  get_result "$data"
+}
+
+function del_peer(){
+  local pid=$1
+
+  local data='{"jsonrpc":"2.0","method":"p2p_delPeer","params":["'$pid'"],"id":null}'
   get_result "$data"
 }
 
@@ -422,15 +429,25 @@ function pause() {
   get_result "$data"
 }
 
+function reset_peers() {
+  local data='{"jsonrpc":"2.0","method":"p2p_resetPeers","params":[],"id":null}'
+  get_result "$data"
+}
+
 function get_balance() {
-  local pkAddress=$1
+  local address=$1
   local coinID=$2
   if [ "$coinID" == "" ]; then
-    coinID=1
+    coinID=0
   fi
 
-  local data='{"jsonrpc":"2.0","method":"getBalance","params":["'$pkAddress'",'$coinID'],"id":null}'
+  local data='{"jsonrpc":"2.0","method":"getBalance","params":["'$address'",'$coinID'],"id":null}'
   get_result "$data"
+}
+
+function get_acctinfo() {
+   local data='{"jsonrpc":"2.0","method":"getAcctInfo","params":[],"id":null}'
+   get_result "$data"
 }
 
 function get_network_info(){
@@ -662,9 +679,11 @@ function usage(){
   echo "chain  :"
   echo "  nodeinfo"
   echo "  peerinfo"
-  echo "  addpeer"
+  echo "  addpeer <p2p address>"
+  echo "  delpeer <p2p id>"
   echo "  ping"
   echo "  pause"
+  echo "  resetpeers"
   echo "  networkinfo"
   echo "  rpcinfo"
   echo "  rpcmax <max>"
@@ -676,7 +695,8 @@ function usage(){
   echo "  timeinfo"
   echo "  subsidy"
   echo "  vmsinfo"
-  echo "  getbalance <PKAddress> <coinID>"
+  echo "  acctinfo"
+  echo "  getbalance <address> <coinID>"
   echo "  getaddresses <private key>"
   echo "  modules"
   echo "block  :"
@@ -1038,14 +1058,19 @@ elif [ "$1" == "peerinfo" ]; then
   get_peer_info $@
 elif [ "$1" == "addpeer" ]; then
   shift
-  get_add_peer $@
+  add_peer $@
+elif [ "$1" == "delpeer" ]; then
+  shift
+  del_peer $@
 elif [ "$1" == "ping" ]; then
   shift
   ping $@
 elif [ "$1" == "pause" ]; then
   shift
   pause $@
-
+elif [ "$1" == "resetpeers" ]; then
+  shift
+  reset_peers
 elif [ "$1" == "networkinfo" ]; then
   shift
   get_network_info $@
@@ -1053,7 +1078,9 @@ elif [ "$1" == "networkinfo" ]; then
 elif [ "$1" == "rpcinfo" ]; then
   shift
   get_rpc_info
-
+elif [ "$1" == "acctinfo" ]; then
+  shift
+  get_acctinfo $@
 elif [ "$1" == "getbalance" ]; then
   shift
   get_balance $@

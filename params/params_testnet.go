@@ -22,10 +22,10 @@ var testNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 242), commo
 var maxNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 0), common.Big1)
 
 // target time per block unit second(s)
-const testTargetTimePerBlock = 30
+const testTargetTimePerBlock = 15
 
-// Difficulty check interval is about 60*30 = 30 mins
-const testWorkDiffWindowSize = 60
+// Difficulty check interval is about 15*30 = 7.5 mins
+const testWorkDiffWindowSize = 30
 
 // TestNetParams defines the network parameters for the test network.
 var TestNetParams = Params{
@@ -111,21 +111,21 @@ var TestNetParams = Params{
 	//
 	// The miner confirmation window is defined as:
 	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 57,
-	MinerConfirmationWindow:       mainWorkDiffWindowSize,
+	RuleChangeActivationThreshold: 1,
+	MinerConfirmationWindow:       testWorkDiffWindowSize,
 	Deployments: []ConsensusDeployment{
 		DeploymentTestDummy: {
 			BitNumber: 28,
 		},
 		DeploymentToken: {
 			BitNumber:  0,
-			StartTime:  2880,
-			ExpireTime: 28800,
+			StartTime:  1,
+			ExpireTime: testWorkDiffWindowSize*2,
 		},
 		DeploymentMeerEVM: {
 			BitNumber:  1,
-			StartTime:  270561, // =270561+2880
-			ExpireTime: 270661,
+			StartTime:  testWorkDiffWindowSize*2, //
+			ExpireTime: testWorkDiffWindowSize*4,
 		},
 	},
 
@@ -144,9 +144,12 @@ var TestNetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType:           223,
+	SLIP0044CoinType:     813,
+	LegacyCoinType:       223,
 	OrganizationPkScript: hexMustDecode("76a91429209320e66d96839785dd07e643a7f1592edc5a88ac"),
 	TokenAdminPkScript:   hexMustDecode("00000000c96d6d76a914b8834294977b26a44094fe2216f8a7d59af1130888ac"),
 
+	// TODO: The testnet EVM ChainID has to remain 223 for the old compatibility.
+	//       Change to 8131 when the testnet do the next fresh relaunch.
 	MeerEVMCfg: MeerEVMConfig{ChainID: 223},
 }

@@ -36,6 +36,8 @@ type notificationTxByBlock struct {
 	tx  *types.Tx
 }
 
+type notificationBlockTemplate json.RemoteGBTResult
+
 // Notification control requests
 type notificationRegisterClient wsClient
 type notificationUnregisterClient wsClient
@@ -132,6 +134,11 @@ out:
 
 				if n.isNew && len(txNotifications) != 0 {
 					m.notifyForNewTx(txNotifications, n.tx)
+				}
+			case *notificationBlockTemplate:
+				bt := (*json.RemoteGBTResult)(n)
+				if len(blockNotifications) != 0 {
+					m.notifyBlockTemplate(blockNotifications, bt)
 				}
 
 			case *notificationRegisterBlocks:
@@ -556,6 +563,26 @@ func (m *wsNotificationManager) notifyForBlockTx(wsc *wsClient, tx *types.Tx,
 		return
 	}
 	wsc.QueueNotification(marshalledJSONVerbose)
+}
+
+func (m *wsNotificationManager) NotifyBlockTemplate(bt *json.RemoteGBTResult) {
+	select {
+	case m.queueNotification <- (*notificationBlockTemplate)(bt):
+	case <-m.quit:
+	}
+}
+
+func (m *wsNotificationManager) notifyBlockTemplate(clients map[chan struct{}]*wsClient, bt *json.RemoteGBTResult) {
+	ntfn := &cmds.BlockTemplateNtfn{Result: *bt}
+	marshalledJSON, err := cmds.MarshalCmd(nil, ntfn)
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
+	for _, wsc := range clients {
+		// Marshal and queue notification.
+		wsc.QueueNotification(marshalledJSON)
+	}
 }
 
 func newWsNotificationManager(server *RpcServer) *wsNotificationManager {

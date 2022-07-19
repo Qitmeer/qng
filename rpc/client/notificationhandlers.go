@@ -27,6 +27,7 @@ type NotificationHandlers struct {
 	OnRescanProgress    func(param *cmds.RescanProgressNtfn)
 	OnRescanFinish      func(param *cmds.RescanFinishedNtfn)
 	OnNodeExit          func(nodeExit *cmds.NodeExitNtfn)
+	OnBlockTemplate     func(bt *j.RemoteGBTResult)
 
 	OnUnknownNotification func(method string, params []json.RawMessage)
 }
@@ -261,4 +262,18 @@ func parseRescanFinish(params []json.RawMessage) (*cmds.RescanFinishedNtfn,
 		Time:       tim,
 		LastTxHash: lastTxHash,
 	}, nil
+}
+
+func parseBlockTemplateNtfnParams(params []json.RawMessage) (*j.RemoteGBTResult, error) {
+	if len(params) != 1 {
+		return nil, wrongNumParams(len(params))
+	}
+	// Unmarshal first parameter as a raw transaction result object.
+	var rawTx j.RemoteGBTResult
+	err := json.Unmarshal(params[0], &rawTx)
+	if err != nil {
+		log.Error("Unmarshal Tx Error", "err", err)
+		return nil, err
+	}
+	return &rawTx, nil
 }

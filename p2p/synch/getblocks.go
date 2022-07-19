@@ -26,13 +26,9 @@ func (s *Sync) sendGetBlocksRequest(ctx context.Context, id peer.ID, blocks *pb.
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.Error(fmt.Sprintf("Failed to reset stream with protocol %s,%v", stream.Protocol(), err))
-		}
-	}()
+	defer resetSteam(stream, s.p2p)
 
-	code, errMsg, err := ReadRspCode(stream, s.Encoding())
+	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +39,7 @@ func (s *Sync) sendGetBlocksRequest(ctx context.Context, id peer.ID, blocks *pb.
 	}
 
 	msg := &pb.DagBlocks{}
-	if err := s.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
 
@@ -53,9 +49,7 @@ func (s *Sync) sendGetBlocksRequest(ctx context.Context, id peer.ID, blocks *pb.
 func (s *Sync) getBlocksHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
 	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
 	var err error
-	defer func() {
-		cancel()
-	}()
+	defer cancel()
 
 	m, ok := msg.(*pb.GetBlocks)
 	if !ok {
