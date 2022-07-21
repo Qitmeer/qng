@@ -38,4 +38,6 @@ type ChainVM interface {
 	ConnectBlock(block Block) error
 
 	DisconnectBlock(block Block) error
+
+	ResetTemplate() error
 }

@@ -651,3 +651,9 @@ func (m *MeerPool) GetSealingBlockAsync(parent common.Hash, timestamp uint64, co
 func (m *MeerPool) GetSealingBlockSync(parent common.Hash, timestamp uint64, coinbase common.Address, random common.Hash, noTxs bool) (*types.Block, error) {
 	return nil, nil
 }
+
+func (m *MeerPool) ResetTemplate() error {
+	log.Debug("Try to reset meer pool")
+	go m.updateTemplate(time.Now().Unix())
+	return nil
+}
