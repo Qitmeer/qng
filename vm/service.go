@@ -337,6 +337,14 @@ func (s *Service) RegisterAPIs(apis []api.API) {
 	s.apis = append(s.apis, apis...)
 }
 
+func (s *Service) ResetTemplate() error {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return err
+	}
+	return vm.ResetTemplate()
+}
+
 func NewService(cfg *config.Config, events *event.Feed, tp consensus.TxPool, Notify consensus.Notify) (*Service, error) {
 	ser := Service{
 		events: events,
