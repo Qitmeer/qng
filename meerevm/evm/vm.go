@@ -301,6 +301,10 @@ func (vm *VM) SetLogLevel(level string) {
 	util.InitLog(level, vm.ctx.GetConfig().DebugPrintOrigins)
 }
 
+func (vm *VM) ResetTemplate() error {
+	return vm.mchain.MeerPool().ResetTemplate()
+}
+
 func New() *VM {
 	return &VM{}
 }
