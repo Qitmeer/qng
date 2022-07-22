@@ -9,8 +9,10 @@ import (
 const (
 	AddressUTXOsSuffix = "-utxos"
 
-	NormalUTXOType = 0
-	LockedUTXOType = 1
+	NormalUTXOType   = 0
+	CoinbaseUTXOType = 1
+	CLTVUTXOType     = 2
+	TokenUTXOType    = 3
 )
 
 type AcctUTXO struct {
@@ -51,14 +53,22 @@ func (au *AcctUTXO) TypeStr() string {
 	switch au.typ {
 	case NormalUTXOType:
 		return "normal"
-	case LockedUTXOType:
-		return "locked"
+	case CoinbaseUTXOType:
+		return "coinbase"
+	case CLTVUTXOType:
+		return "CLTV"
+	case TokenUTXOType:
+		return "token"
 	}
 	return "unknown"
 }
 
-func (au *AcctUTXO) Lock() {
-	au.typ = LockedUTXOType
+func (au *AcctUTXO) SetCoinbase() {
+	au.typ = CoinbaseUTXOType
+}
+
+func (au *AcctUTXO) IsCoinbase() bool {
+	return au.typ == CoinbaseUTXOType
 }
 
 func (au *AcctUTXO) SetBalance(balance uint64) {
