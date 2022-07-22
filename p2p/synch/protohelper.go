@@ -54,70 +54,70 @@ func changePBTxToTx(tx *pb.Transaction) *types.Transaction {
 }
 
 func getMessageString(message interface{}) string {
-	str:=fmt.Sprintf("%v:",reflect.TypeOf(message))
+	str := fmt.Sprintf("%v:", reflect.TypeOf(message))
 	switch msg := message.(type) {
 	case *pb.ChainState:
-		gh:=changePBHashToHash(msg.GenesisHash)
-		gs:=changePBGraphStateToGraphState(msg.GraphState)
-		str+= fmt.Sprintf(" genesis:%s version:%d timestamp:%d services:%d disableRelayTx:%v useragent:%s",
-			gh.String(),msg.ProtocolVersion,msg.Timestamp,msg.Services,msg.DisableRelayTx,string(msg.UserAgent))
+		gh := changePBHashToHash(msg.GenesisHash)
+		gs := changePBGraphStateToGraphState(msg.GraphState)
+		str += fmt.Sprintf(" genesis:%s version:%d timestamp:%d services:%d disableRelayTx:%v useragent:%s",
+			gh.String(), msg.ProtocolVersion, msg.Timestamp, msg.Services, msg.DisableRelayTx, string(msg.UserAgent))
 		if gs != nil {
-			str += fmt.Sprintf(" graphstate:%s",gs.String())
+			str += fmt.Sprintf(" graphstate:%s", gs.String())
 		}
 		return str
 	case pb.GetBlockDatas:
-		locs:=changePBHashsToHashs(msg.Locator)
-		str+=fmt.Sprintf(" locator:")
-		for _,loc:=range locs {
-			str+=" "
-			str+=loc.String()
+		locs := changePBHashsToHashs(msg.Locator)
+		str += fmt.Sprintf(" locator:")
+		for _, loc := range locs {
+			str += " "
+			str += loc.String()
 		}
 		return str
 	case pb.GetBlocks:
-		locs:=changePBHashsToHashs(msg.Locator)
-		str+=fmt.Sprintf(" locator:")
-		for _,loc:=range locs {
-			str+=" "
-			str+=loc.String()
+		locs := changePBHashsToHashs(msg.Locator)
+		str += fmt.Sprintf(" locator:")
+		for _, loc := range locs {
+			str += " "
+			str += loc.String()
 		}
 		return str
 	case *pb.GraphState:
-		gs:=changePBGraphStateToGraphState(msg)
+		gs := changePBGraphStateToGraphState(msg)
 		if gs != nil {
-			str += fmt.Sprintf(" graphstate:%s",gs.String())
+			str += fmt.Sprintf(" graphstate:%s", gs.String())
 		}
 		return str
 	case *pb.Inventory:
-		str+=" invs:"
-		for _,inv:=range msg.Invs {
-			str+=fmt.Sprintf(" %d:%s",inv.Type,changePBHashToHash(inv.Hash))
+		str += " invs:"
+		for _, inv := range msg.Invs {
+			str += fmt.Sprintf(" %d:%s", inv.Type, changePBHashToHash(inv.Hash))
 		}
 		return str
 	case *pb.MemPoolRequest:
-		str+=fmt.Sprintf(" txsNum:%d",msg.TxsNum)
+		str += fmt.Sprintf(" txsNum:%d", msg.TxsNum)
 		return str
 	case *pb.SyncDAG:
-		mls:=changePBHashsToHashs(msg.MainLocator)
-		gs:=changePBGraphStateToGraphState(msg.GraphState)
-		str+=fmt.Sprintf(" mainlocator:")
-		for _,loc:=range mls {
-			str+=" "
-			str+=loc.String()
+		mls := changePBHashsToHashs(msg.MainLocator)
+		gs := changePBGraphStateToGraphState(msg.GraphState)
+		str += fmt.Sprintf(" mainlocator:")
+		for _, loc := range mls {
+			str += " "
+			str += loc.String()
 		}
 		if gs != nil {
-			str += fmt.Sprintf(" graphstate:%s",gs.String())
+			str += fmt.Sprintf(" graphstate:%s", gs.String())
 		}
 		return str
 	case *pb.GetTxs:
-		txs:=changePBHashsToHashs(msg.Txs)
-		str+=fmt.Sprintf(" txs:")
-		for _,tx:=range txs {
-			str+=" "
-			str+=tx.String()
+		txs := changePBHashsToHashs(msg.Txs)
+		str += fmt.Sprintf(" txs:")
+		for _, tx := range txs {
+			str += " "
+			str += tx.String()
 		}
 		return str
 	}
-	str+=fmt.Sprintf("%v",message)
+	str += fmt.Sprintf("%v", message)
 	return str
 }
 
