@@ -170,6 +170,9 @@ func (a *AccountManager) rebuild() error {
 			if err != nil {
 				return err
 			}
+			if entry.IsSpent() {
+				continue
+			}
 			err = a.apply(true, types.NewOutPoint(txhash, uint32(txOutIdex)), entry)
 			if err != nil {
 				return err
@@ -184,6 +187,9 @@ func (a *AccountManager) rebuild() error {
 }
 
 func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain.UtxoEntry) error {
+	if entry.Amount().Id != types.MEERID {
+		return nil
+	}
 	scriptClass, addrs, _, err := txscript.ExtractPkScriptAddrs(entry.PkScript(), params.ActiveNetParams.Params)
 	if err != nil {
 		return err
@@ -198,6 +204,9 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 
 	if add {
 		if entry.Amount().Value == 0 && !entry.IsCoinBase() {
+			return nil
+		}
+		if entry.IsCoinBase() && op.OutIndex != blockchain.CoinbaseOutput_subsidy {
 			return nil
 		}
 		err = a.db.Update(func(dbTx database.Tx) error {
@@ -239,9 +248,11 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 				au.SetCoinbase()
 				//
 				if !exist {
-					wb = NewAcctBalanceWatcher(balance)
+					wb = NewAcctBalanceWatcher(addrStr, balance)
+					a.watchers[addrStr] = wb
 				}
-				wb.Add(OutpointKey(op), &CoinbaseWatcher{au: au})
+				opk := OutpointKey(op)
+				wb.Add(opk, BuildUTXOWatcher(opk, au, entry, a))
 			} else {
 				if exist {
 					wb.ab = balance
@@ -366,9 +377,10 @@ func (a *AccountManager) initWatchers(dbTx database.Tx) error {
 			addrStr := string(k)
 			wb, exist := a.watchers[addrStr]
 			if !exist {
-				wb = NewAcctBalanceWatcher(balance)
+				wb = NewAcctBalanceWatcher(addrStr, balance)
+				a.watchers[addrStr] = wb
 			}
-			wb.Add(ku, &CoinbaseWatcher{au: au})
+			wb.Add(ku, BuildUTXOWatcher(ku, au, nil, a))
 
 			return nil
 		})
@@ -376,6 +388,14 @@ func (a *AccountManager) initWatchers(dbTx database.Tx) error {
 	})
 	if err != nil {
 		return err
+	}
+	if len(a.watchers) > 0 {
+		for _, w := range a.watchers {
+			err = w.Update(a)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -438,7 +458,9 @@ func (a *AccountManager) GetBalance(address string) (uint64, error) {
 		if err != nil {
 			return err
 		}
-		result = balance.normal
+		if balance != nil {
+			result = balance.normal
+		}
 		return nil
 	})
 	if err != nil {
