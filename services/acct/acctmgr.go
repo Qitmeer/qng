@@ -1,6 +1,7 @@
 package acct
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
@@ -19,11 +20,12 @@ import (
 // account manager communicate with various backends for signing transactions.
 type AccountManager struct {
 	service.Service
-	chain   *blockchain.BlockChain
-	cfg     *config.Config
-	db      database.DB
-	info    *AcctInfo
-	utxoops []*UTXOOP
+	chain    *blockchain.BlockChain
+	cfg      *config.Config
+	db       database.DB
+	info     *AcctInfo
+	utxoops  []*UTXOOP
+	watchers map[string]*AcctBalanceWatcher
 }
 
 func (a *AccountManager) Start() error {
@@ -87,6 +89,7 @@ func (a *AccountManager) initDB(first bool) error {
 					return fmt.Errorf("update dag id is inconformity:%d != %d", curDAGID, a.info.updateDAGID)
 				}
 			}
+			return a.initWatchers(dbTx)
 		}
 		return nil
 	})
@@ -167,6 +170,9 @@ func (a *AccountManager) rebuild() error {
 			if err != nil {
 				return err
 			}
+			if entry.IsSpent() {
+				continue
+			}
 			err = a.apply(true, types.NewOutPoint(txhash, uint32(txOutIdex)), entry)
 			if err != nil {
 				return err
@@ -181,6 +187,9 @@ func (a *AccountManager) rebuild() error {
 }
 
 func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain.UtxoEntry) error {
+	if entry.Amount().Id != types.MEERID {
+		return nil
+	}
 	scriptClass, addrs, _, err := txscript.ExtractPkScriptAddrs(entry.PkScript(), params.ActiveNetParams.Params)
 	if err != nil {
 		return err
@@ -195,6 +204,9 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 
 	if add {
 		if entry.Amount().Value == 0 && !entry.IsCoinBase() {
+			return nil
+		}
+		if entry.IsCoinBase() && op.OutIndex != blockchain.CoinbaseOutput_subsidy {
 			return nil
 		}
 		err = a.db.Update(func(dbTx database.Tx) error {
@@ -230,8 +242,21 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 			}
 			au := NewAcctUTXO()
 			au.SetBalance(uint64(entry.Amount().Value))
+
+			wb, exist := a.watchers[addrStr]
 			if entry.IsCoinBase() {
-				au.Lock()
+				au.SetCoinbase()
+				//
+				if !exist {
+					wb = NewAcctBalanceWatcher(addrStr, balance)
+					a.watchers[addrStr] = wb
+				}
+				opk := OutpointKey(op)
+				wb.Add(opk, BuildUTXOWatcher(opk, au, entry, a))
+			} else {
+				if exist {
+					wb.ab = balance
+				}
 			}
 			er = DBPutACCTUTXO(dbTx, addrStr, op, au)
 			if er != nil {
@@ -249,6 +274,7 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 				return er
 			}
 			if balance == nil {
+				a.DelWatcher(addrStr, nil)
 				return nil
 			} else {
 				amount := uint64(entry.Amount().Value)
@@ -263,7 +289,7 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 					}
 				} else {
 					if balance.normal <= amount {
-						balance.locked = 0
+						balance.normal = 0
 					} else {
 						balance.normal -= amount
 					}
@@ -299,10 +325,79 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 					return er
 				}
 			}
+			if balance.locUTXONum <= 0 {
+				a.DelWatcher(addrStr, nil)
+			} else if entry.IsCoinBase() {
+				a.DelWatcher(addrStr, op)
+			}
 			return nil
 		})
 		return err
 	}
+}
+
+func (a *AccountManager) DelWatcher(addr string, op *types.TxOutPoint) {
+	if op != nil {
+		wb, exist := a.watchers[addr]
+		if !exist {
+			return
+		}
+		wb.Del(OutpointKey(op))
+	} else {
+		delete(a.watchers, addr)
+	}
+}
+
+func (a *AccountManager) initWatchers(dbTx database.Tx) error {
+	meta := dbTx.Metadata()
+	balBucket := meta.Bucket(BalanceBucketName)
+
+	err := balBucket.ForEach(func(k, v []byte) error {
+		balance := &AcctBalance{}
+		err := balance.Decode(bytes.NewReader(v))
+		if err != nil {
+			return err
+		}
+		if balance.locUTXONum <= 0 {
+			return nil
+		}
+		balUTXOBucket := balBucket.Bucket(GetACCTUTXOKey(string(k)))
+		if balUTXOBucket == nil {
+			return nil
+		}
+		balUTXOBucket.ForEach(func(ku, vu []byte) error {
+			au := NewAcctUTXO()
+			err := au.Decode(bytes.NewReader(vu))
+			if err != nil {
+				return err
+			}
+			if !au.IsCoinbase() {
+				return nil
+			}
+			addrStr := string(k)
+			wb, exist := a.watchers[addrStr]
+			if !exist {
+				wb = NewAcctBalanceWatcher(addrStr, balance)
+				a.watchers[addrStr] = wb
+			}
+			wb.Add(ku, BuildUTXOWatcher(ku, au, nil, a))
+
+			return nil
+		})
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if len(a.watchers) > 0 {
+		for _, w := range a.watchers {
+			err = w.Update(a)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (a *AccountManager) Apply(add bool, op *types.TxOutPoint, entry *blockchain.UtxoEntry) error {
@@ -336,6 +431,15 @@ func (a *AccountManager) Commit() error {
 			return err
 		}
 	}
+
+	if len(a.watchers) > 0 {
+		for _, w := range a.watchers {
+			err = w.Update(a)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -344,12 +448,19 @@ func (a *AccountManager) GetBalance(address string) (uint64, error) {
 		return 0, fmt.Errorf("Please enable --acctmode")
 	}
 	result := uint64(0)
+	wb, exist := a.watchers[address]
+	if exist {
+		return wb.GetBalance(), nil
+	}
+
 	err := a.db.Update(func(dbTx database.Tx) error {
 		balance, err := DBGetACCTBalance(dbTx, address)
 		if err != nil {
 			return err
 		}
-		result = balance.normal
+		if balance != nil {
+			result = balance.normal
+		}
 		return nil
 	})
 	if err != nil {
@@ -370,10 +481,11 @@ func (a *AccountManager) APIs() []api.API {
 
 func New(chain *blockchain.BlockChain, cfg *config.Config) (*AccountManager, error) {
 	a := AccountManager{
-		chain:   chain,
-		cfg:     cfg,
-		info:    NewAcctInfo(),
-		utxoops: []*UTXOOP{},
+		chain:    chain,
+		cfg:      cfg,
+		info:     NewAcctInfo(),
+		utxoops:  []*UTXOOP{},
+		watchers: map[string]*AcctBalanceWatcher{},
 	}
 	return &a, nil
 }

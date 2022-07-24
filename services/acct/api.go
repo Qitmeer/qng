@@ -36,5 +36,6 @@ func (api *PublicAccountManagerAPI) GetAcctInfo() (interface{}, error) {
 		Mode:    api.a.cfg.AcctMode,
 		Version: api.a.info.version,
 		Total:   api.a.info.addrTotal,
+		Watcher: uint32(len(api.a.watchers)),
 	}, nil
 }

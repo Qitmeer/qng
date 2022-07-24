@@ -109,4 +109,5 @@ type AcctInfo struct {
 	Mode    bool   `json:"mode"`
 	Version uint32 `json:"version"`
 	Total   uint32 `json:"total"`
+	Watcher uint32 `json:"watcher"`
 }
