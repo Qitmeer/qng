@@ -8,19 +8,20 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/common/math"
+	qconsensus "github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/core/blockchain/token"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/core/message"
+	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/rpc/api"
-	qconsensus "github.com/Qitmeer/qng/consensus"
-	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng/core/message"
 	"github.com/Qitmeer/qng/rpc"
+	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/services/mempool"
 	"strconv"
@@ -1307,8 +1308,14 @@ func (api *PublicTxAPI) CreateImportRawTransaction(pkAddress string, amount int6
 		return nil, fmt.Errorf("Amount is empty")
 	}
 	mtx := types.NewTransaction()
+	var buff bytes.Buffer
+	err := s.WriteElements(&buff, mtx.Timestamp.Unix())
+	if err != nil {
+		return nil, err
+	}
+	th := hash.MustBytesToHash(buff.Bytes())
 	mtx.AddTxIn(&types.TxInput{
-		PreviousOut: *types.NewOutPoint(&hash.ZeroHash, types.SupperPrevOutIndex),
+		PreviousOut: *types.NewOutPoint(&th, types.SupperPrevOutIndex),
 		Sequence:    uint32(types.TxTypeCrossChainImport),
 	})
 
