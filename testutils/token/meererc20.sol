@@ -1,10 +1,7 @@
-/**
- *Submitted for verification at BscScan.com on 2020-09-04
-*/
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.3;
 
-pragma solidity 0.5.16;
-
-interface IBEP20 {
+interface IMEER20 {
     /**
      * @dev Returns the amount of tokens in existence.
      */
@@ -108,10 +105,10 @@ interface IBEP20 {
 contract Context {
     // Empty internal constructor, to prevent people from mistakenly deploying
     // an instance of this contract, which should be used via inheritance.
-    constructor () internal { }
+    constructor () { }
 
     function _msgSender() internal view returns (address payable) {
-        return msg.sender;
+        return payable(msg.sender);
     }
 
     function _msgData() internal view returns (bytes memory) {
@@ -289,7 +286,7 @@ contract Ownable is Context {
     /**
      * @dev Initializes the contract setting the deployer as the initial owner.
      */
-    constructor () internal {
+    constructor () {
         address msgSender = _msgSender();
         _owner = msgSender;
         emit OwnershipTransferred(address(0), msgSender);
@@ -340,7 +337,7 @@ contract Ownable is Context {
     }
 }
 
-contract MEER20USDT is Context, IBEP20, Ownable {
+contract MEER20USDT is Context, IMEER20, Ownable {
     using SafeMath for uint256;
 
     mapping (address => uint256) private _balances;
@@ -352,7 +349,7 @@ contract MEER20USDT is Context, IBEP20, Ownable {
     string private _symbol;
     string private _name;
 
-    constructor() public {
+    constructor() {
         _name = "Meer Tether USD";
         _symbol = "USDT";
         _decimals = 18;
@@ -365,42 +362,42 @@ contract MEER20USDT is Context, IBEP20, Ownable {
     /**
      * @dev Returns the bep token owner.
      */
-    function getOwner() external view returns (address) {
+    function getOwner() external override view returns (address) {
         return owner();
     }
 
     /**
      * @dev Returns the token decimals.
      */
-    function decimals() external view returns (uint8) {
+    function decimals() external override view returns (uint8) {
         return _decimals;
     }
 
     /**
      * @dev Returns the token symbol.
      */
-    function symbol() external view returns (string memory) {
+    function symbol() external override view returns (string memory) {
         return _symbol;
     }
 
     /**
     * @dev Returns the token name.
     */
-    function name() external view returns (string memory) {
+    function name() external override view returns (string memory) {
         return _name;
     }
 
     /**
      * @dev See {BEP20-totalSupply}.
      */
-    function totalSupply() external view returns (uint256) {
+    function totalSupply() external override view returns (uint256) {
         return _totalSupply;
     }
 
     /**
      * @dev See {BEP20-balanceOf}.
      */
-    function balanceOf(address account) external view returns (uint256) {
+    function balanceOf(address account) external override view returns (uint256) {
         return _balances[account];
     }
 
@@ -412,7 +409,7 @@ contract MEER20USDT is Context, IBEP20, Ownable {
      * - `recipient` cannot be the zero address.
      * - the caller must have a balance of at least `amount`.
      */
-    function transfer(address recipient, uint256 amount) external returns (bool) {
+    function transfer(address recipient, uint256 amount) external override returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
@@ -420,7 +417,7 @@ contract MEER20USDT is Context, IBEP20, Ownable {
     /**
      * @dev See {BEP20-allowance}.
      */
-    function allowance(address owner, address spender) external view returns (uint256) {
+    function allowance(address owner, address spender) external override view returns (uint256) {
         return _allowances[owner][spender];
     }
 
@@ -431,7 +428,7 @@ contract MEER20USDT is Context, IBEP20, Ownable {
      *
      * - `spender` cannot be the zero address.
      */
-    function approve(address spender, uint256 amount) external returns (bool) {
+    function approve(address spender, uint256 amount) external override returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
@@ -448,7 +445,7 @@ contract MEER20USDT is Context, IBEP20, Ownable {
      * - the caller must have allowance for `sender`'s tokens of at least
      * `amount`.
      */
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "BEP20: transfer amount exceeds allowance"));
         return true;
@@ -604,7 +601,7 @@ contract MEER20USDT is Context, IBEP20, Ownable {
 }
 
 contract Factory {
-    function getCode() external view returns(bytes memory){
+    function getCode() external pure returns(bytes memory){
         return type(MEER20USDT).creationCode;
     }
 }
