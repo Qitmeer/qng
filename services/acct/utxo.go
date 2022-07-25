@@ -71,6 +71,14 @@ func (au *AcctUTXO) IsCoinbase() bool {
 	return au.typ == CoinbaseUTXOType
 }
 
+func (au *AcctUTXO) SetCLTV() {
+	au.typ = CLTVUTXOType
+}
+
+func (au *AcctUTXO) IsCLTV() bool {
+	return au.typ == CLTVUTXOType
+}
+
 func (au *AcctUTXO) SetBalance(balance uint64) {
 	au.balance = balance
 }

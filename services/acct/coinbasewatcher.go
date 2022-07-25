@@ -50,6 +50,10 @@ func (cw *CoinbaseWatcher) IsUnlocked() bool {
 	return cw.unlocked
 }
 
+func (cw *CoinbaseWatcher) GetName() string {
+	return cw.au.TypeStr()
+}
+
 func NewCoinbaseWatcher(au *AcctUTXO, target meerdag.IBlock) *CoinbaseWatcher {
 	cw := &CoinbaseWatcher{au: au, target: target}
 	return cw
