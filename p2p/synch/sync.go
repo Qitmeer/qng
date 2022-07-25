@@ -374,7 +374,7 @@ func Send(pctx context.Context, rpc common.P2PRPC, message interface{}, baseTopi
 	}
 	size, err := EncodeMessage(stream, rpc, message)
 	if err != nil {
-		log.Error(fmt.Sprintf("encocde rpc message %v to stream failed:%v", message, err))
+		log.Error(fmt.Sprintf("encocde rpc message %v to stream failed:%v", getMessageString(message), err))
 		return nil, err
 	}
 	rpc.IncreaseBytesSent(pid, size)

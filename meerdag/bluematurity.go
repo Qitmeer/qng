@@ -215,3 +215,67 @@ func (bd *MeerDAG) processMaturity(target IBlock, views []IBlock, mainViewIB IBl
 	}
 	return connected, viewMainFork, targetMainFork
 }
+
+// processMaturity
+func (bd *MeerDAG) CheckMainBlueAndMature(target IBlock, targetMainFork IBlock, max uint) (bool, IBlock) {
+	//
+	mainTip := bd.GetMainChainTip()
+	if mainTip == nil {
+		return false, targetMainFork
+	}
+	if int64(mainTip.GetLayer())-int64(target.GetLayer()) < int64(max) {
+		return false, targetMainFork
+	}
+
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+
+	if targetMainFork == nil {
+		if bd.instance.IsOnMainChain(target) {
+			targetMainFork = target
+		} else {
+			targetMainFork = bd.getMainFork(target, true)
+		}
+	}
+
+	if targetMainFork == nil {
+		return false, targetMainFork
+	}
+	if int64(mainTip.GetLayer())-int64(targetMainFork.GetLayer()) >= int64(max) {
+		return bd.instance.(*Phantom).doIsBlue(target, targetMainFork), targetMainFork
+	}
+	//
+	queueSet := NewIdSet()
+	queue := []IBlock{}
+	queue = append(queue, mainTip)
+	queueSet.Add(mainTip.GetID())
+
+	connected := false
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		if cur.GetID() == target.GetID() {
+			connected = true
+			break
+		}
+		if !cur.HasParents() {
+			continue
+		}
+		if cur.GetLayer() <= target.GetLayer() {
+			continue
+		}
+
+		for _, v := range cur.GetParents().GetMap() {
+			ib := v.(IBlock)
+			if queueSet.Has(ib.GetID()) {
+				continue
+			}
+			queue = append(queue, ib)
+			queueSet.Add(ib.GetID())
+		}
+	}
+	if connected {
+		return bd.instance.(*Phantom).doIsBlue(target, targetMainFork), targetMainFork
+	}
+	return connected, targetMainFork
+}

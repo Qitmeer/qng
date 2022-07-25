@@ -80,13 +80,16 @@ out:
 			}
 
 		case <-timer.C:
-
+			isCurrent := r.s.PeerSync().IsCurrent()
 			nds := []*notify.NotifyData{}
 			for h, data := range pendingInvs {
 				dh := h
 				if _, ok := data.(*types.TxDesc); ok {
 					if !r.s.TxMemPool().HaveTransaction(&dh) {
-						delete(pendingInvs,dh)
+						delete(pendingInvs, dh)
+						continue
+					}
+					if !isCurrent {
 						continue
 					}
 				}
@@ -150,9 +153,9 @@ func (r *Rebroadcast) RegainMempool() {
 }
 
 func (r *Rebroadcast) onRegainMempool() {
-	mptxCount:=r.s.TxMemPool().Count()
+	mptxCount := r.s.TxMemPool().Count()
 	if !r.regainMP {
-		if  mptxCount> 0 {
+		if mptxCount > 0 {
 			return
 		}
 	}
@@ -166,7 +169,7 @@ func (r *Rebroadcast) onRegainMempool() {
 		if !protocol.HasServices(pe.Services(), protocol.Full) {
 			return
 		}
-		go r.s.sy.SendMempoolRequest(r.s.Context(), pe,uint64(mptxCount))
+		go r.s.sy.SendMempoolRequest(r.s.Context(), pe, uint64(mptxCount))
 	})
 }
 

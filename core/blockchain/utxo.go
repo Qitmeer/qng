@@ -679,6 +679,10 @@ func (b *BlockChain) FetchUtxoEntry(outpoint types.TxOutPoint) (*UtxoEntry, erro
 	return entry, nil
 }
 
+func DBFetchUtxoEntry(dbTx database.Tx, outpoint types.TxOutPoint) (*UtxoEntry, error) {
+	return dbFetchUtxoEntry(dbTx, outpoint)
+}
+
 // dbFetchUtxoEntry uses an existing database transaction to fetch all unspent
 // outputs for the provided Bitcoin transaction hash from the utxo set.
 //
