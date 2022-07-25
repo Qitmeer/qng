@@ -78,6 +78,9 @@ func (s *Sync) sendChainStateRequest(pctx context.Context, id peer.ID) error {
 }
 
 func (s *Sync) chainStateHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
+	if !s.peerSync.IsRunning() {
+		return ErrMessage(fmt.Errorf("No run\n"))
+	}
 	pe := s.peers.Get(stream.Conn().RemotePeer())
 	if pe == nil {
 		return ErrPeerUnknown
