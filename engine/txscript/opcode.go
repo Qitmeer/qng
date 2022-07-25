@@ -1041,6 +1041,10 @@ func verifyLockTime(txLockTime, threshold, lockTime int64) error {
 	return nil
 }
 
+func VerifyLockTime(txLockTime, threshold, lockTime int64) error {
+	return verifyLockTime(txLockTime, threshold, lockTime)
+}
+
 // opcodeCheckLockTimeVerify compares the top item on the data stack to the
 // LockTime field of the transaction containing the script signature
 // validating if the transaction outputs are spendable yet.  If flag

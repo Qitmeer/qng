@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/engine/txscript"
 )
 
 type AcctBalanceWatcher struct {
@@ -25,7 +26,7 @@ func (aw *AcctBalanceWatcher) Add(op []byte, au AcctUTXOIWatcher) {
 	}
 	key := hex.EncodeToString(op)
 	aw.watchers[key] = au
-	log.Trace(fmt.Sprintf("Balance (%s) add utxo watcher:%s", aw.address, key))
+	log.Trace(fmt.Sprintf("Balance (%s) add utxo watcher:%s %s", aw.address, key, au.GetName()))
 }
 
 func (aw *AcctBalanceWatcher) Del(op []byte) {
@@ -72,6 +73,7 @@ type AcctUTXOIWatcher interface {
 	Update(am *AccountManager) error
 	GetBalance() uint64
 	IsUnlocked() bool
+	GetName() string
 }
 
 func BuildUTXOWatcher(op []byte, au *AcctUTXO, entry *blockchain.UtxoEntry, am *AccountManager) AcctUTXOIWatcher {
@@ -110,6 +112,17 @@ func BuildUTXOWatcher(op []byte, au *AcctUTXO, entry *blockchain.UtxoEntry, am *
 	}
 	if au.IsCoinbase() {
 		return NewCoinbaseWatcher(au, ib)
+	} else if au.IsCLTV() {
+		ops, err := txscript.ParseScript(entry.PkScript())
+		if err != nil {
+			log.Error(err.Error())
+			return nil
+		}
+		if len(ops) < 2 {
+			return nil
+		}
+		lockTime := txscript.GetInt64FromOpcode(ops[0])
+		return NewCLTVWatcher(au, lockTime)
 	}
 	return nil
 }

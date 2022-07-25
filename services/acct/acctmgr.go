@@ -198,7 +198,8 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 		return nil
 	}
 	if scriptClass != txscript.PubKeyHashTy &&
-		scriptClass != txscript.PubKeyTy {
+		scriptClass != txscript.PubKeyTy &&
+		scriptClass != txscript.CLTVPubKeyHashTy {
 		return nil
 	}
 
@@ -216,7 +217,8 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 				return er
 			}
 			if balance == nil {
-				if entry.IsCoinBase() {
+				if entry.IsCoinBase() ||
+					scriptClass == txscript.CLTVPubKeyHashTy {
 					balance = NewAcctBalance(0, 0, uint64(entry.Amount().Value), 1)
 				} else {
 					balance = NewAcctBalance(uint64(entry.Amount().Value), 1, 0, 0)
@@ -227,7 +229,8 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 					return er
 				}
 			} else {
-				if entry.IsCoinBase() {
+				if entry.IsCoinBase() ||
+					scriptClass == txscript.CLTVPubKeyHashTy {
 					balance.locked += uint64(entry.Amount().Value)
 					balance.locUTXONum++
 				} else {
@@ -247,6 +250,14 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 			if entry.IsCoinBase() {
 				au.SetCoinbase()
 				//
+				if !exist {
+					wb = NewAcctBalanceWatcher(addrStr, balance)
+					a.watchers[addrStr] = wb
+				}
+				opk := OutpointKey(op)
+				wb.Add(opk, BuildUTXOWatcher(opk, au, entry, a))
+			} else if scriptClass == txscript.CLTVPubKeyHashTy {
+				au.SetCLTV()
 				if !exist {
 					wb = NewAcctBalanceWatcher(addrStr, balance)
 					a.watchers[addrStr] = wb
@@ -371,7 +382,8 @@ func (a *AccountManager) initWatchers(dbTx database.Tx) error {
 			if err != nil {
 				return err
 			}
-			if !au.IsCoinbase() {
+			if !au.IsCoinbase() &&
+				!au.IsCLTV() {
 				return nil
 			}
 			addrStr := string(k)
