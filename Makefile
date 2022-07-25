@@ -3,7 +3,9 @@ EXECUTABLE := qng
 GITVER := $(shell git rev-parse --short=7 HEAD )
 GITDIRTY := $(shell git diff --quiet || echo '-dirty')
 GITVERSION = "$(GITVER)$(GITDIRTY)"
-DEV=dev
+ifeq ($(DEV),)
+	DEV := dev
+endif
 RELEASE=release
 LDFLAG_DEV = -X github.com/Qitmeer/qng/version.Build=$(DEV)-$(GITVERSION)
 LDFLAG_RELEASE = -X github.com/Qitmeer/qng/version.Build=$(RELEASE)-$(GITVERSION)
