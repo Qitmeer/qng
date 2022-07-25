@@ -35,6 +35,9 @@ func (s *Sync) tryToSendInventoryRequest(pe *peers.Peer, invs []*pb.InvVect) err
 }
 
 func (s *Sync) sendInventoryRequest(ctx context.Context, pe *peers.Peer, inv *pb.Inventory) error {
+	if !s.peerSync.IsRunning() {
+		return fmt.Errorf("No run\n")
+	}
 	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
 	defer cancel()
 
@@ -58,6 +61,10 @@ func (s *Sync) sendInventoryRequest(ctx context.Context, pe *peers.Peer, inv *pb
 }
 
 func (s *Sync) inventoryHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
+	if !s.peerSync.IsRunning() {
+		return ErrMessage(fmt.Errorf("No run\n"))
+	}
+
 	pe := s.peers.Get(stream.Conn().RemotePeer())
 	if pe == nil {
 		return ErrPeerUnknown
@@ -97,7 +104,8 @@ func (s *Sync) handleInventory(msg *pb.Inventory, pe *peers.Peer) error {
 		if InvType(inv.Type) == InvTypeBlock {
 			hasBlocks = true
 		} else if InvType(inv.Type) == InvTypeTx {
-			if s.p2p.Config().DisableRelayTx {
+			if s.p2p.Config().DisableRelayTx ||
+				!s.peerSync.IsCurrent() {
 				continue
 			}
 			if s.haveInventory(inv) {

@@ -37,6 +37,12 @@ func (s *Sync) SendMempoolRequest(ctx context.Context, pe *peers.Peer, count uin
 }
 
 func (s *Sync) HandlerMemPool(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
+	if !s.peerSync.IsRunning() {
+		return ErrMessage(fmt.Errorf("No run\n"))
+	}
+	if !s.PeerSync().IsCurrent() {
+		return s.EncodeResponseMsg(stream, nil)
+	}
 	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
 	var err error
 	defer func() {
