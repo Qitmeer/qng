@@ -144,8 +144,12 @@ func (ps *PeerSync) processGetTxs(pe *peers.Peer, otxs []*hash.Hash) error {
 			}
 		}
 
-		if !needSend && len(gtxs.Txs) > 0 {
-			needSend = true
+		if !needSend {
+			if len(gtxs.Txs) > 0 {
+				needSend = true
+			} else {
+				break
+			}
 		}
 
 		if needSend {
