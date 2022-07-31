@@ -117,9 +117,7 @@ type BlockChain struct {
 	// The ID of token state tip for the chain.
 	TokenTipID uint32
 
-	warningCaches      []thresholdStateCache
 	deploymentCaches   []thresholdStateCache
-	unknownRulesWarned bool
 
 	VMService consensus.VMI
 
@@ -347,7 +345,6 @@ func New(config *Config) (*BlockChain, error) {
 		orphans:            make(map[hash.Hash]*orphanBlock),
 		CacheInvalidTx:     config.CacheInvalidTx,
 		CacheNotifications: []*Notification{},
-		warningCaches:      newThresholdCaches(VBNumBits),
 		deploymentCaches:   newThresholdCaches(params.DefinedDeployments),
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
@@ -912,14 +909,6 @@ func (b *BlockChain) fastDoubleSpentCheck(ib meerdag.IBlock, block *types.Serial
 }
 
 func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedBlock, attachNodes *list.List) error {
-	// No warnings about unknown rules until the chain is current.
-	if b.isCurrent() {
-		// Warn if any unknown new rules are either about to activate or
-		// have already been activated.
-		if err := b.warnUnknownRuleActivations(ib); err != nil {
-			return err
-		}
-	}
 	// Must be end node of sequence in dag
 	// Generate a new best state snapshot that will be used to update the
 	// database and later memory if all database updates are successful.

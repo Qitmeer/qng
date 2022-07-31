@@ -6,6 +6,8 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/core/dbnamespace"
+	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/meerdag"
 )
 
@@ -129,6 +131,10 @@ func (c *thresholdStateCache) Update(id uint, state ThresholdState) {
 	c.entries[id] = state
 }
 
+func (c *thresholdStateCache) Reset() {
+	c.entries = map[uint]ThresholdState{}
+}
+
 // newThresholdCaches returns a new array of caches to be used when calculating
 // threshold states.
 func newThresholdCaches(numCaches uint32) []thresholdStateCache {
@@ -150,7 +156,11 @@ func isCheckerTimeMode(checker thresholdConditionChecker) bool {
 // threshold states for previous windows are only calculated once.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) thresholdState(prevNode meerdag.IBlock, checker thresholdConditionChecker, cache *thresholdStateCache) (ThresholdState, error) {
+func (b *BlockChain) thresholdState(prevNode meerdag.IBlock, checker thresholdConditionChecker, cache *thresholdStateCache, deploymentID uint32) (ThresholdState, error) {
+	dts := b.getDeploymentStateFromDB(deploymentID)
+	if dts != ThresholdDefined {
+		return dts, nil
+	}
 	// The threshold state for the window that contains the genesis block is
 	// defined by definition.
 	confirmationWindow := int64(checker.MinerConfirmationWindow())
@@ -312,7 +322,13 @@ func (b *BlockChain) thresholdState(prevNode meerdag.IBlock, checker thresholdCo
 		// Nothing to do if the previous state is active or failed since
 		// they are both terminal states.
 		case ThresholdActive:
+			b.updateDeploymentDB(deploymentID, state)
+			cache.Reset()
+			return state, nil
 		case ThresholdFailed:
+			b.updateDeploymentDB(deploymentID, state)
+			cache.Reset()
+			return state, nil
 		}
 
 		// Update the cache to avoid recalculating the state in the
@@ -374,7 +390,7 @@ func (b *BlockChain) deploymentState(prevNode meerdag.IBlock, deploymentID uint3
 	checker := deploymentChecker{deployment: deployment, chain: b}
 	cache := &b.deploymentCaches[deploymentID]
 
-	return b.thresholdState(prevNode, checker, cache)
+	return b.thresholdState(prevNode, checker, cache, deploymentID)
 }
 
 // initThresholdCaches initializes the threshold state caches for each warning
@@ -387,32 +403,50 @@ func (b *BlockChain) initThresholdCaches() error {
 	// definition changes is done now.
 	prevNode := b.bd.GetBlockById(b.bd.GetMainChainTip().GetMainParent())
 
-	for bit := uint32(0); bit < VBNumBits; bit++ {
-		checker := bitConditionChecker{bit: bit, chain: b}
-		cache := &b.warningCaches[bit]
-		_, err := b.thresholdState(prevNode, checker, cache)
-		if err != nil {
-			return err
-		}
-	}
 	for id := 0; id < len(b.params.Deployments); id++ {
 		deployment := &b.params.Deployments[id]
 		cache := &b.deploymentCaches[id]
 		checker := deploymentChecker{deployment: deployment, chain: b}
-		_, err := b.thresholdState(prevNode, checker, cache)
+		_, err := b.thresholdState(prevNode, checker, cache, uint32(id))
 		if err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
-	// No warnings about unknown rules until the chain is current.
-	if b.isCurrent() {
-		// Warn if any unknown new rules are either about to activate or
-		// have already been activated.
-		if err := b.warnUnknownRuleActivations(b.bd.GetMainChainTip()); err != nil {
+func (b *BlockChain) getDeploymentStateFromDB(deploymentID uint32) ThresholdState {
+	ts := ThresholdDefined
+	b.db.View(func(dbTx database.Tx) error {
+		meta := dbTx.Metadata()
+		bucket := meta.Bucket(dbnamespace.DeploymentsBucketName)
+		if bucket == nil {
+			return nil
+		}
+		var serializedID [4]byte
+		dbnamespace.ByteOrder.PutUint32(serializedID[:], deploymentID)
+
+		key := serializedID[:]
+		tsv := bucket.Get(key)
+		if tsv == nil || len(tsv) <= 0 {
+			return nil
+		}
+		ts = ThresholdState(tsv[0])
+		return nil
+	})
+	return ts
+}
+
+func (b *BlockChain) updateDeploymentDB(deploymentID uint32, ts ThresholdState) error {
+	return b.db.Update(func(dbTx database.Tx) error {
+		meta := dbTx.Metadata()
+		bucket, err := meta.CreateBucketIfNotExists(dbnamespace.DeploymentsBucketName)
+		if err != nil {
 			return err
 		}
-	}
-
-	return nil
+		var serializedID [4]byte
+		dbnamespace.ByteOrder.PutUint32(serializedID[:], deploymentID)
+		key := serializedID[:]
+		return bucket.Put(key, []byte{byte(ts)})
+	})
 }

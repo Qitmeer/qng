@@ -5,7 +5,6 @@
 package blockchain
 
 import (
-	"fmt"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"math"
@@ -221,7 +220,7 @@ func (b *BlockChain) calcNextBlockVersion(prevNode meerdag.IBlock) (uint32, erro
 		deployment := &b.params.Deployments[id]
 		cache := &b.deploymentCaches[id]
 		checker := deploymentChecker{deployment: deployment, chain: b}
-		state, err := b.thresholdState(prevNode, checker, cache)
+		state, err := b.thresholdState(prevNode, checker, cache, uint32(id))
 		if err != nil {
 			return 0, err
 		}
@@ -242,45 +241,4 @@ func (b *BlockChain) CalcNextBlockVersion() (uint32, error) {
 	version, err := b.calcNextBlockVersion(b.bd.GetMainChainTip())
 	b.ChainUnlock()
 	return version, err
-}
-
-// warnUnknownRuleActivations displays a warning when any unknown new rules are
-// either about to activate or have been activated.  This will only happen once
-// when new rules have been activated and every block for those about to be
-// activated.
-//
-// This function MUST be called with the chain state lock held (for writes)
-func (b *BlockChain) warnUnknownRuleActivations(node meerdag.IBlock) error {
-	if node == nil {
-		return fmt.Errorf("No block:%s\n", node.GetHash())
-	}
-	mp := b.bd.GetBlockById(node.GetMainParent())
-	// Warn if any unknown new rules are either about to activate or have
-	// already been activated.
-	for bit := uint32(0); bit < VBNumBits; bit++ {
-		checker := bitConditionChecker{bit: bit, chain: b}
-		cache := &b.warningCaches[bit]
-
-		state, err := b.thresholdState(mp, checker, cache)
-		if err != nil {
-			return err
-		}
-
-		switch state {
-		case ThresholdActive:
-			if !b.unknownRulesWarned {
-				log.Warn(fmt.Sprintf("Unknown new rules activated (bit %d)",
-					bit))
-				b.unknownRulesWarned = true
-			}
-
-		case ThresholdLockedIn:
-			window := int32(checker.MinerConfirmationWindow())
-			activationHeight := window - (int32(node.GetHeight()) % window)
-			log.Warn(fmt.Sprintf("Unknown new rules are about to activate in "+
-				"%d blocks (bit %d)", activationHeight, bit))
-		}
-	}
-
-	return nil
 }
