@@ -8,6 +8,7 @@ import (
 	"context"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
+	abi "github.com/Qitmeer/qng/testutils/contract"
 	"github.com/Qitmeer/qng/testutils/swap/factory"
 	"github.com/Qitmeer/qng/testutils/swap/pair"
 	"github.com/Qitmeer/qng/testutils/swap/router"
@@ -367,4 +368,85 @@ func TestSwap(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, txRemoveD.Status, uint64(0x1))
+}
+
+func TestWMEER(t *testing.T) {
+	args := []string{"--modules=miner", "--modules=qitmeer",
+		"--modules=test"}
+	h, err := NewHarness(t, params.PrivNetParam.Params, args...)
+	defer h.Teardown()
+	if err != nil {
+		t.Errorf("new harness failed: %v", err)
+		h.Teardown()
+	}
+	err = h.Setup()
+	if err != nil {
+		t.Fatalf("setup harness failed:%v", err)
+	}
+	GenerateBlock(t, h, 20)
+	AssertBlockOrderAndHeight(t, h, 21, 21, 20)
+
+	lockTime := int64(20)
+	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERID}
+	txid := SendSelf(t, h, spendAmt, nil, &lockTime)
+	GenerateBlock(t, h, 10)
+	fee := int64(2200)
+	txStr, err := h.Wallet.CreateExportRawTx(txid.String(), spendAmt.Value, fee)
+	if err != nil {
+		t.Fatalf("createExportRawTx failed:%v", err)
+	}
+	log.Println("send tx", txStr)
+	GenerateBlock(t, h, 2)
+	ba, err := h.Wallet.GetBalance(h.Wallet.ethAddrs[0].String())
+	if err != nil {
+		t.Fatalf("GetBalance failed:%v", err)
+	}
+	assert.Equal(t, ba, big.NewInt(spendAmt.Value-fee))
+	txWMEER, err := h.Wallet.CreateWMEER()
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Println("create WMEER contract tx:", txWMEER)
+	GenerateBlock(t, h, 2)
+	// token addr
+	txWMEERD, err := h.Wallet.evmClient.TransactionReceipt(context.Background(), common.HexToHash(txWMEER))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if txWMEERD == nil {
+		t.Fatal("create WMEER failed")
+	}
+	assert.Equal(t, txWMEERD.Status, uint64(0x1))
+	log.Println("new WMEER address:", txWMEERD.ContractAddress)
+
+	authCaller, err := h.Wallet.AuthTrans(h.Wallet.privkeys[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	WMEERCall, err := abi.NewWMEER(txWMEERD.ContractAddress, h.Wallet.evmClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authCaller.Value = big.NewInt(1e18)
+	_, err = WMEERCall.Deposit(authCaller)
+	if err != nil {
+		t.Fatal("Deposit error", err)
+	}
+	GenerateBlock(t, h, 1)
+	balance, err := WMEERCall.BalanceOf(nil, authCaller.From)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, balance.String(), authCaller.Value.String())
+	authCaller.Value = big.NewInt(0)
+	_, err = WMEERCall.Withdraw(authCaller, big.NewInt(1e18))
+	if err != nil {
+		t.Fatal(err)
+	}
+	GenerateBlock(t, h, 1)
+	balance2, err := WMEERCall.BalanceOf(nil, authCaller.From)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, balance2.String(), authCaller.Value.String())
 }
