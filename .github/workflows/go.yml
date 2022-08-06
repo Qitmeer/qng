@@ -23,7 +23,7 @@ jobs:
         run: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
 
       - name: npm
-        run: nvm use 12
+        run: sh ~/.nvm/nvm.sh && nvm use 12
 
       - name: solc
         run: npm install solc -g
