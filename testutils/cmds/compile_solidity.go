@@ -45,6 +45,8 @@ func main() {
 
 func compileToken() {
 	if execCompileSolidity("../token/meererc20.sol") {
+		execCMD("ls")
+		execCMD("ls", "./build")
 		// ___{dir}_{filename}_sol_{contractname}.bin
 		b, err := ioutil.ReadFile("./build/___token_meererc20_sol_MEER20USDT.bin")
 		if err != nil {
@@ -60,8 +62,6 @@ const ERC20Code ="%s"
 
 func compileWETH() {
 	if execCompileSolidity("../swap/weth.sol") {
-		execCMD("ls")
-		execCMD("ls", "./build")
 		b, err := ioutil.ReadFile("./build/___swap_weth_sol_MockWETH.bin")
 		if err != nil {
 			log.Fatal(err)
