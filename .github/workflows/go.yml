@@ -19,11 +19,8 @@ jobs:
         with:
           go-version: 1.17
 
-      - name: nvm
-        run: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
-
       - name: npm
-        run: sh ~/.nvm/nvm.sh && nvm use 12
+        run: apt -y install nodejs
 
       - name: solc
         run: npm install solc -g
