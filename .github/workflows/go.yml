@@ -29,10 +29,10 @@ jobs:
         run: sudo apt install git
 
       - name: abigen
-        run: git clone https://github.com/ethereum/go-ethereum.git && cd go-ethereum/cmd/abigen && go build && cd ../../..
+        run: git clone https://github.com/ethereum/go-ethereum.git && cd go-ethereum/cmd/abigen && go build && sudo cp abigen /usr/local/bin/ && cd ../../..
 
       - name: compileSolidity
-        run: cd testutils/cmds/ && go run compile_solidity.go && cd ../../
+        run: pwd && cd testutils/cmds/ && go run compile_solidity.go && cd ../../
 
       - name: linter
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.46.2
