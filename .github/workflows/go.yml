@@ -23,7 +23,7 @@ jobs:
         run: sudo apt -y install nodejs
 
       - name: solc
-        run: sudo npm install solc -g
+        run: sudo npm install solc@0.8.3 -g
 
       - name: git
         run: sudo apt install git
