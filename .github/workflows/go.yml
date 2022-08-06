@@ -31,6 +31,9 @@ jobs:
       - name: abigen
         run: git clone https://github.com/ethereum/go-ethereum.git && cd go-ethereum/cmd/abigen && go build && sudo cp abigen /usr/local/bin/ && cd ../../..
 
+      - name: compileSolidity1
+        run: cd testutils/cmds/ && solcjs --optimize --bin --abi ../token/meererc20.sol -o build && cd ../../
+
       - name: compileSolidity
         run: solcjs --version && ls && cd testutils/cmds/ && sudo go run compile_solidity.go && cd ../../
 
