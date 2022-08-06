@@ -38,6 +38,7 @@ func main() {
 	compileWETH()
 	compileSwapFactory()
 	compileSwapRouter()
+	compileRelease()
 	// generate file
 	f.WriteString(fileContent)
 	fmt.Println("Successfully updated:", filepath)
@@ -57,6 +58,21 @@ const ERC20Code ="%s"
 `, string(b))
 		// generate abi.go
 		execABIGO("./build/___token_meererc20_sol_MEER20USDT.abi", "token", "../token/meererc20.go")
+	}
+}
+
+func compileRelease() {
+	if execCompileSolidity("../release/release.sol") {
+		// ___{dir}_{filename}_sol_{contractname}.bin
+		b, err := ioutil.ReadFile("./build/___release_release_sol_MeerRelease.bin")
+		if err != nil {
+			log.Fatal(err)
+		}
+		fileContent += fmt.Sprintf(`
+const RELEASECode ="%s"
+`, string(b))
+		// generate abi.go
+		execABIGO("./build/___release_release_sol_MeerRelease.abi", "release", "../release/release.go")
 	}
 }
 

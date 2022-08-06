@@ -61,6 +61,10 @@ func (w *testWallet) CreateErc20() (string, error) {
 	return w.CreateLegacyTx(w.privkeys[0], nil, 0, 0, big.NewInt(0), common.FromHex(ERC20Code))
 }
 
+func (w *testWallet) CreateRelease() (string, error) {
+	return w.CreateLegacyTx(w.privkeys[0], nil, 0, 0, big.NewInt(0), common.FromHex(RELEASECode))
+}
+
 func (w *testWallet) CreateWETH() (string, error) {
 	return w.CreateLegacyTx(w.privkeys[0], nil, 0, 0, big.NewInt(0), common.FromHex(WETH))
 }
