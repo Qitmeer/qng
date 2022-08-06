@@ -1,5 +1,5 @@
 //go:build none
-//+build none
+// +build none
 
 // Copyright (c) 2020 The qitmeer developers
 // Use of this source code is governed by an ISC
@@ -60,6 +60,8 @@ const ERC20Code ="%s"
 
 func compileWETH() {
 	if execCompileSolidity("../swap/weth.sol") {
+		execCMD("ls")
+		execCMD("ls", "./build")
 		b, err := ioutil.ReadFile("./build/___swap_weth_sol_MockWETH.bin")
 		if err != nil {
 			log.Fatal(err)
@@ -127,8 +129,10 @@ func execCMD(name string, arg ...string) bool {
 	if err := cmd.Start(); err != nil {
 		log.Fatal(err)
 	}
-	if _, err := ioutil.ReadAll(stdout); err != nil {
+	b, err := ioutil.ReadAll(stdout)
+	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println(name, string(b))
 	return true
 }
