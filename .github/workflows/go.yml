@@ -29,7 +29,7 @@ jobs:
         run: sudo apt install git
 
       - name: abigen
-        run: git clone https://github.com/Qitmeer/go-etherum && cd cmd/abigen && go build && cd ../../
+        run: git clone https://github.com/ethereum/go-ethereum.git && cd cmd/abigen && go build && cd ../../
 
       - name: compileSolidity
         run: cd testutils/cmds/ && go run compile_solidity.go && cd ../../
