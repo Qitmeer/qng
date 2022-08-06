@@ -20,13 +20,13 @@ jobs:
           go-version: 1.17
 
       - name: npm
-        run: apt -y install nodejs
+        run: sudo apt -y install nodejs
 
       - name: solc
-        run: npm install solc -g
+        run: sudo npm install solc -g
 
       - name: git
-        run: apt install git
+        run: sudo apt install git
 
       - name: abigen
         run: git clone github.com/Qitmeer/go-etherum && cd cmd/abigen && go build && cd ../../
