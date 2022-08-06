@@ -19,6 +19,24 @@ jobs:
         with:
           go-version: 1.17
 
+      - name: nvm
+        run: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+
+      - name: npm
+        run: nvm use 12
+
+      - name: solc
+        run: npm install solc -g
+
+      - name: git
+        run: apt install git
+
+      - name: abigen
+        run: git clone github.com/Qitmeer/go-etherum && cd cmd/abigen && go build && cd ../../
+
+      - name: compileSolidity
+        run: cd testutils/cmds/ && go run compile_solidity.go && cd ../../
+
       - name: linter
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.46.2
 
