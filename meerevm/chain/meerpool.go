@@ -159,6 +159,9 @@ func (m *MeerPool) handler() {
 	for {
 		select {
 		case ev := <-m.txsCh:
+			if m.ctx.GetTxPool() == nil {
+				continue
+			}
 			if !m.ctx.GetTxPool().IsSupportVMTx() {
 				for _, tx := range ev.Txs {
 					m.eth.TxPool().RemoveTx(tx.Hash(), false)
@@ -384,7 +387,7 @@ func (m *MeerPool) updateTemplate(timestamp int64) {
 	}
 
 	m.commit(false, tstart)
-	if !m.ctx.GetTxPool().IsSupportVMTx() {
+	if m.ctx.GetTxPool() != nil && !m.ctx.GetTxPool().IsSupportVMTx() {
 		m.updateSnapshot()
 		return
 	}
