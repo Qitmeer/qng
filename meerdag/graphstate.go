@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"io"
+	"sync"
 )
 
 // A general description of the whole state of DAG
@@ -24,6 +25,8 @@ type GraphState struct {
 
 	// The order of main chain tip
 	mainOrder uint
+
+	sync.RWMutex
 }
 
 // Return the DAG layer
@@ -63,6 +66,9 @@ func (gs *GraphState) GetTipsList() []*hash.Hash {
 }
 
 func (gs *GraphState) SetTips(tips []*hash.Hash) {
+	gs.Lock()
+	defer gs.Unlock()
+
 	gs.tipsSet = nil
 	gs.tips = []hash.Hash{}
 	for _, h := range tips {
@@ -71,6 +77,9 @@ func (gs *GraphState) SetTips(tips []*hash.Hash) {
 }
 
 func (gs *GraphState) GetTips() *HashSet {
+	gs.Lock()
+	defer gs.Unlock()
+
 	if gs.tipsSet != nil {
 		return gs.tipsSet
 	}
