@@ -67,7 +67,7 @@ return true;
 }
 
 contract Factory {
-function getCode() external view returns(bytes memory){
+function getCode() external pure returns(bytes memory){
 return type(MockWETH).creationCode;
 }
 }

@@ -9,7 +9,9 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/testutils/release"
 	"github.com/Qitmeer/qng/testutils/swap/factory"
 	"github.com/Qitmeer/qng/testutils/swap/router"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -62,7 +64,12 @@ func (w *testWallet) CreateErc20() (string, error) {
 }
 
 func (w *testWallet) CreateRelease() (string, error) {
-	return w.CreateLegacyTx(w.privkeys[0], nil, 0, 0, big.NewInt(0), common.FromHex(RELEASECode))
+	parsed, _ := abi.JSON(strings.NewReader(release.TokenMetaData.ABI))
+	// constructor params
+	initP, _ := parsed.Pack("", w.ethAddrs[0],
+		big.NewInt(1659715200), big.NewInt(1659715200))
+	fmt.Println("==========0000000", hex.EncodeToString(initP))
+	return w.CreateLegacyTx(w.privkeys[0], nil, 0, 0, big.NewInt(0), append(common.FromHex(RELEASECode), initP...))
 }
 
 func (w *testWallet) CreateWETH() (string, error) {

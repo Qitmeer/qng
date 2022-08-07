@@ -24,7 +24,6 @@ contract MeerRelease {
     event Lock(address indexed _user,uint256 endTime, uint256 _value);
 
     constructor() {
-        owner = msg.sender;
     }
 
     modifier onlyOwner() {
