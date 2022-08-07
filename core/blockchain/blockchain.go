@@ -729,6 +729,10 @@ func (b *BlockChain) FetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, 
 	return b.fetchBlockByHash(hash)
 }
 
+func (b *BlockChain) FetchBlockBytesByHash(hash *hash.Hash) ([]byte, error) {
+	return b.fetchBlockBytesByHash(hash)
+}
+
 // fetchMainChainBlockByHash returns the block from the main chain with the
 // given hash.  It first attempts to use cache and then falls back to loading it
 // from the database.
@@ -778,6 +782,26 @@ func (b *BlockChain) fetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, 
 		return block, nil
 	}
 	return nil, fmt.Errorf("unable to find block %v db", hash)
+}
+
+func (b *BlockChain) fetchBlockBytesByHash(hash *hash.Hash) ([]byte, error) {
+	// Check orphan cache.
+	block := b.GetOrphan(hash)
+	if block != nil {
+		return block.Bytes()
+	}
+
+	var bytes []byte
+	var err error
+	// Load the block from the database.
+	err = b.db.View(func(dbTx database.Tx) error {
+		bytes, err = dbTx.FetchBlock(hash)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return bytes, err
 }
 
 // TODO, refactor to more general method for panic handling
