@@ -95,12 +95,7 @@ func (s *Sync) getBlockDataHandler(ctx context.Context, msg interface{}, stream 
 			err = fmt.Errorf("invalid block hash")
 			return ErrMessage(err)
 		}
-		block, err := s.p2p.BlockChain().FetchBlockByHash(blockHash)
-		if err != nil {
-			return ErrMessage(err)
-		}
-
-		blocks, err := block.Bytes()
+		blocks, err := s.p2p.BlockChain().FetchBlockBytesByHash(blockHash)
 		if err != nil {
 			return ErrMessage(err)
 		}
