@@ -54,8 +54,10 @@ func TestReleaseContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// 0000000000000000000000000000000000000000000000000000000000000000
 	// hash160
-	hash160 := "bef272d0be043949ce88ec01602cb1d3bce9aade"
+	hash160 := "bef272d0be043949ce88ec01602cb1d3bce9aade0000000000000000000000000000000000000000000000000000000000000000"
+	// storage key = keccak256(hash160+position)
 	GenerateBlock(t, h, 1)
 	b0, _ := hex.DecodeString(hash160)
 	GenerateBlock(t, h, 1)
