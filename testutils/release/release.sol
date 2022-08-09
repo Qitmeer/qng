@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.3;
 
-contract MeerRelease {
+import "./tool.sol";
+import "./blake2b.sol";
+
+contract MeerRelease is BLAKE2b{
     // var
-    uint256 public startTime; // release start time
-    uint256 public endTime; // release end time
-    address public owner; // contract owner
+    uint256 public startTime; // release start time index 0
+    uint256 public endTime; // release end time index 1
+
+    // all lockUsers mapping Amounts
+    mapping(bytes => uint256) public meerLockAmounts; // index 2
 
     struct MeerLockUser {
-        address addr;
         uint256 amount;
+        address addr;
         uint256 lastReleaseTime;
         uint256 releaseAmount;
         uint256 releasePerSec;
@@ -23,29 +28,18 @@ contract MeerRelease {
     event Claim(address indexed _user, uint256 _value);
     event Lock(address indexed _user,uint256 endTime, uint256 _value);
 
-    constructor() {
-    }
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, 'not owner!!!');
-        _;
+    function toBytes(bytes32 _data) public pure returns (bytes memory) {
+        return abi.encodePacked(_data);
     }
 
     // contract can receive meer
     receive() external payable {
         emit Deposit(msg.sender, msg.value);
     }
-    // set release start time
-    function setStartTime(uint256 _start) external onlyOwner {
-        startTime = _start;
-    }
-    // set release end time
-    function setEndTime(uint256 _end) external onlyOwner {
-        endTime = _end;
-    }
 
     // lock user amount
-    function lock(address _user ,uint256 _value) external onlyOwner {
+    function lock(address _user ,uint256 _value) internal {
         require(endTime > startTime && startTime >0 && endTime > 0,"time not set");
         if(meerLockUsers[_user].amount <= 0){
             // first lock
@@ -75,11 +69,19 @@ contract MeerRelease {
     }
 
     // claim meer
-    function claim(address _user) external payable returns(uint256){
+    function claim(bytes memory _pubkey) external payable returns(uint256){
+        address _user = CheckBitcoinSigs.accountFromPubkey(_pubkey);
+        bytes32 h = blake2b_256(_pubkey);
+        bytes memory _qngHash160 =  CheckBitcoinSigs.p2wpkhFromPubkey(toBytes(h));
+        if(meerLockUsers[_user].amount <= 0 && meerLockAmounts[_qngHash160] > 0){
+            // first lock
+            lock(_user,meerLockAmounts[_qngHash160]);
+        }
         uint256 amount = canRelease(_user);
         if (amount <= 0){
             return 0;
         }
+
         meerLockUsers[_user].releaseAmount += amount;
         meerLockUsers[_user].lastReleaseTime = block.timestamp;
         payable(_user).transfer(amount);

@@ -6,6 +6,8 @@ package testutils
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/release"
@@ -79,6 +81,13 @@ func TestReleaseContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	GenerateBlock(t, h, 1)
+	b, err := h.Wallet.evmClient.StorageAt(context.Background(),
+		contract,
+		common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000003"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(hex.EncodeToString(b))
 	cr, err := tokenCall.CanRelease(&bind.CallOpts{}, h.Wallet.ethAddrs[0])
 	if err != nil {
 		t.Fatal(err)
