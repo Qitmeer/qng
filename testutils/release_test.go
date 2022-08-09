@@ -5,9 +5,7 @@
 package testutils
 
 import (
-	"context"
 	"encoding/hex"
-	"fmt"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/release"
@@ -17,7 +15,6 @@ import (
 	"log"
 	"math/big"
 	"testing"
-	"time"
 )
 
 func TestReleaseContract(t *testing.T) {
@@ -57,50 +54,11 @@ func TestReleaseContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	ba, err = h.Wallet.evmClient.BalanceAt(context.Background(), contract, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	authCaller, err := h.Wallet.AuthTrans(h.Wallet.privkeys[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = tokenCall.SetStartTime(authCaller, big.NewInt(time.Now().Unix()-86400))
-	if err != nil {
-		t.Fatal(err)
-	}
+	// hash160
+	hash160 := "bef272d0be043949ce88ec01602cb1d3bce9aade"
 	GenerateBlock(t, h, 1)
-	_, err = tokenCall.SetEndTime(authCaller, big.NewInt(time.Now().Unix()+86400))
-	if err != nil {
-		t.Fatal(err)
-	}
+	b0, _ := hex.DecodeString(hash160)
 	GenerateBlock(t, h, 1)
-	_, err = tokenCall.Lock(authCaller, h.Wallet.ethAddrs[0], big.NewInt(1e18))
-	if err != nil {
-		t.Fatal(err)
-	}
-	GenerateBlock(t, h, 1)
-	b, err := h.Wallet.evmClient.StorageAt(context.Background(),
-		contract,
-		common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000003"), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println(hex.EncodeToString(b))
-	cr, err := tokenCall.CanRelease(&bind.CallOpts{}, h.Wallet.ethAddrs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	log.Println(cr.String())
-	_, err = tokenCall.Claim(authCaller, h.Wallet.ethAddrs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	GenerateBlock(t, h, 1)
-	cr, err = tokenCall.CanRelease(&bind.CallOpts{}, h.Wallet.ethAddrs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	log.Println(cr.String())
+	a, _ := tokenCall.QueryAmount(&bind.CallOpts{}, b0)
+	assert.Equal(t, a.String(), 1659715200)
 }

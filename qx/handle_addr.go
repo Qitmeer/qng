@@ -36,7 +36,7 @@ func EcPubKeyToAddress(version string, pubkey string) (string, error) {
 		return "", err
 	}
 	h := hash.Hash160(data)
-
+	fmt.Println("hash160:", hex.EncodeToString(h))
 	address, err := base58.QitmeerCheckEncode(h, ver[:])
 	if err != nil {
 		return "", err
