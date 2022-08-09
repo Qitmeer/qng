@@ -120,6 +120,7 @@ type BlockChain struct {
 	warningCaches      []thresholdStateCache
 	deploymentCaches   []thresholdStateCache
 	unknownRulesWarned bool
+	deploymentMux      sync.RWMutex
 
 	VMService consensus.VMI
 
