@@ -60,5 +60,5 @@ func TestReleaseContract(t *testing.T) {
 	b0, _ := hex.DecodeString(hash160)
 	GenerateBlock(t, h, 1)
 	a, _ := tokenCall.QueryAmount(&bind.CallOpts{}, b0)
-	assert.Equal(t, a.String(), 1659715200)
+	assert.Equal(t, a.String(), "1659715200")
 }
