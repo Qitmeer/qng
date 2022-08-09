@@ -68,15 +68,29 @@ contract MeerRelease is BLAKE2b{
         return canReleaseAmount;
     }
 
-    // claim meer
-    function claim(bytes memory _pubkey) external payable returns(uint256){
-        address _user = CheckBitcoinSigs.accountFromPubkey(_pubkey);
+
+    // init meer
+    function init(address _user,bytes memory _pubkey) public {
         bytes32 h = blake2b_256(_pubkey);
-        bytes memory _qngHash160 =  CheckBitcoinSigs.p2wpkhFromPubkey(toBytes(h));
+        bytes memory _qngHash160 = CheckBitcoinSigs.p2wpkhFromPubkey(toBytes(h));
         if(meerLockUsers[_user].amount <= 0 && meerLockAmounts[_qngHash160] > 0){
             // first lock
             lock(_user,meerLockAmounts[_qngHash160]);
         }
+    }
+
+
+    // query lock meer
+    function query(bytes memory _pubkey) external view returns(uint256){
+        bytes32 h = blake2b_256(_pubkey);
+        bytes memory _qngHash160 =  CheckBitcoinSigs.p2wpkhFromPubkey(toBytes(h));
+        return meerLockAmounts[_qngHash160];
+    }
+
+    // claim meer
+    function claim(bytes memory _pubkey) external payable returns(uint256){
+        address _user = CheckBitcoinSigs.accountFromPubkey(_pubkey);
+        init(_user,_pubkey);
         uint256 amount = canRelease(_user);
         if (amount <= 0){
             return 0;
