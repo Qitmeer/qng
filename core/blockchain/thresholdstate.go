@@ -329,9 +329,9 @@ func (b *BlockChain) thresholdState(prevNode meerdag.IBlock, checker thresholdCo
 // This function is safe for concurrent access.
 func (b *BlockChain) ThresholdState(deploymentID uint32) (ThresholdState, error) {
 	mtip := b.bd.GetMainChainTip()
-	b.ChainLock()
+	b.deploymentMux.Lock()
 	state, err := b.deploymentState(mtip, deploymentID)
-	b.ChainUnlock()
+	b.deploymentMux.Unlock()
 
 	return state, err
 }
