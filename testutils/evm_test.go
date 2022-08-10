@@ -121,6 +121,7 @@ func TestCallErc20Contract(t *testing.T) {
 			t.Fatal(err)
 		}
 		log.Println(i, "address", h.Wallet.ethAddrs[uint32(i)].String(), "balance", ba)
+		assert.Equal(t, ba, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 		_, _ = h.Wallet.NewAddress()
 		authCaller, err := h.Wallet.AuthTrans(h.Wallet.privkeys[uint32(i)])
 		if err != nil {
