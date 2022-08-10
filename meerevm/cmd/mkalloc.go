@@ -64,39 +64,51 @@ func main() {
 	if len(os.Args) >= 2 {
 		privateKeyHex = os.Args[1]
 	}
-	if len(os.Args) >= 3 {
-		network := os.Args[2]
-		if network == params.TestNetParam.Name {
-			params.ActiveNetParams = &params.TestNetParam
-		} else if network == params.PrivNetParam.Name {
-			params.ActiveNetParams = &params.PrivNetParam
-		} else if network == params.MixNetParam.Name {
-			params.ActiveNetParams = &params.MixNetParam
-		} else {
-			params.ActiveNetParams = &params.MainNetParam
-		}
-	}
 
-	gd := new(chain.GenesisData)
+	gds := []chain.NetGenesisData{}
 	file, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
 	}
-	if err := json.NewDecoder(file).Decode(gd); err != nil {
+	if err := json.NewDecoder(file).Decode(&gds); err != nil {
 		panic(err)
 	}
-	chain.ChainConfig.ChainID = big.NewInt(params.ActiveNetParams.MeerEVMCfg.ChainID)
-	genesis := chain.DefaultGenesisBlock(chain.ChainConfig)
-	genesis.Alloc = gd.Genesis.Alloc
 
-	if len(gd.Contracts) > 0 {
-		if len(privateKeyHex) <= 0 {
-			panic("You must enter a private key")
+	if len(gds) != 4 {
+		panic(fmt.Errorf("Error genesis data config"))
+	}
+	fileContent := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go [privateKey] \npackage chain\n\n"
+
+	for _, ngd := range gds {
+		networkTag := ""
+		if ngd.Network == params.TestNetParam.Name {
+			params.ActiveNetParams = &params.TestNetParam
+			networkTag = "testAllocData"
+		} else if ngd.Network == params.PrivNetParam.Name {
+			params.ActiveNetParams = &params.PrivNetParam
+			networkTag = "privAllocData"
+		} else if ngd.Network == params.MixNetParam.Name {
+			params.ActiveNetParams = &params.MixNetParam
+			networkTag = "mixAllocData"
+		} else {
+			params.ActiveNetParams = &params.MainNetParam
+			networkTag = "mainAllocData"
 		}
-		err = chain.UpdateAlloc(genesis, gd.Contracts, privateKeyHex)
-		if err != nil {
-			panic(err)
+
+		chain.ChainConfig.ChainID = big.NewInt(params.ActiveNetParams.MeerEVMCfg.ChainID)
+		genesis := chain.DefaultGenesisBlock(chain.ChainConfig)
+		genesis.Alloc = ngd.Data.Genesis.Alloc
+
+		if len(ngd.Data.Contracts) > 0 {
+			if len(privateKeyHex) <= 0 {
+				panic("You must enter a private key")
+			}
+			err = chain.UpdateAlloc(genesis, ngd.Data.Contracts, privateKeyHex)
+			if err != nil {
+				panic(err)
+			}
 		}
+		fileContent += fmt.Sprintf("\nconst %s = %s", networkTag, makealloc(genesis))
 	}
 
 	fileName := "./../chain/genesis_alloc.go"
@@ -109,9 +121,6 @@ func main() {
 	defer func() {
 		err = f.Close()
 	}()
-
-	fileContent := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go [privateKey] \npackage chain\n\n"
-	fileContent += fmt.Sprintf("const allocData = %s", makealloc(genesis))
 
 	f.WriteString(fileContent)
 

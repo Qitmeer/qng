@@ -362,12 +362,12 @@ func (b *BlockChain) CheckTokenState(block *types.SerializedBlock) error {
 
 func (b *BlockChain) IsValidTxType(tt types.TxType) bool {
 	txTypesCfg := types.StdTxs
-	ok, err := b.isDeploymentActive(params.DeploymentToken)
+	ok, err := b.IsDeploymentActive(params.DeploymentToken)
 	if err == nil && ok && len(types.TokenTxs) > 0 {
 		txTypesCfg = append(txTypesCfg, types.TokenTxs...)
 	}
 
-	ok, err = b.isDeploymentActive(params.DeploymentMeerEVM)
+	ok, err = b.IsDeploymentActive(params.DeploymentMeerEVM)
 	if err == nil && ok && len(types.MeerEVMTxs) > 0 {
 		txTypesCfg = append(txTypesCfg, types.MeerEVMTxs...)
 	}

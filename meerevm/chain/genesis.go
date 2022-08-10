@@ -20,7 +20,7 @@ func DefaultGenesisBlock(cfg *params.ChainConfig) *core.Genesis {
 		ExtraData:  hexutil.MustDecode("0x00"),
 		GasLimit:   100000000,
 		Difficulty: big.NewInt(0),
-		Alloc:      DecodePrealloc(allocData),
+		Alloc:      DecodePrealloc(getAllocData(qparams.ActiveNetParams.Name)),
 		Timestamp:  uint64(qparams.ActiveNetParams.GenesisBlock.Header.Timestamp.Unix()),
 	}
 }
@@ -64,8 +64,24 @@ type GenesisData struct {
 	Contracts []Contract   `json:"contracts"`
 }
 
+type NetGenesisData struct {
+	Network string      `json:"network"`
+	Data    GenesisData `json:"data"`
+}
+
 type Contract struct {
 	ABI   string `json:"abi"`
 	BIN   string `json:"bin"`
 	Input string `json:"input"`
+}
+
+func getAllocData(network string) string {
+	if network == qparams.TestNetParam.Name {
+		return testAllocData
+	} else if network == qparams.PrivNetParam.Name {
+		return privAllocData
+	} else if network == qparams.MixNetParam.Name {
+		return mixAllocData
+	}
+	return mainAllocData
 }

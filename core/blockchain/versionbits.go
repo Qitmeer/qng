@@ -239,8 +239,11 @@ func (b *BlockChain) calcNextBlockVersion(prevNode meerdag.IBlock) (uint32, erro
 // This function is safe for concurrent access.
 func (b *BlockChain) CalcNextBlockVersion() (uint32, error) {
 	b.ChainLock()
+	defer b.ChainUnlock()
+
+	b.deploymentMux.Lock()
 	version, err := b.calcNextBlockVersion(b.bd.GetMainChainTip())
-	b.ChainUnlock()
+	b.deploymentMux.Unlock()
 	return version, err
 }
 
