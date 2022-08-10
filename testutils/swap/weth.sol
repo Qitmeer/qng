@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.3;
 
 contract MockWETH {
     string public name = 'Wrapped Ether';
@@ -67,7 +67,7 @@ return true;
 }
 
 contract Factory {
-function getCode() external view returns(bytes memory){
+function getCode() external pure returns(bytes memory){
 return type(MockWETH).creationCode;
 }
 }
