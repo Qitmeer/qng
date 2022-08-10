@@ -62,6 +62,7 @@ func TestReleaseContract(t *testing.T) {
 	b2, _ := hex.DecodeString("bef272d0be043949ce88ec01602cb1d3bce9aade0000000000000000000000000000000000000000000000000000000000000000")
 	key := crypto.Keccak256(b2)
 	fmt.Println(hex.EncodeToString(key))
+	assert.Equal(t, hex.EncodeToString(key), "b10439c65f41b7610690ce809de35d0d5e6d45cbad599e9974738128ca9484ba")
 	GenerateBlock(t, h, 1)
 	b0, _ := hex.DecodeString(hash160)
 	GenerateBlock(t, h, 1)
