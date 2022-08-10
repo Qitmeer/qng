@@ -1,12 +1,62 @@
-{
-  "genesis":{
-    "difficulty": "",
-    "gasLimit": "",
+[
+  {
+    "network": "mainnet",
+    "data": {
+      "genesis":{
+        "difficulty": "",
+        "gasLimit": "",
 
-    "alloc": {
-      "0x71bc4403Af41634Cda7C32600A8024d54e7F6499": {
-        "balance": "1000000000000000000"
+        "alloc": {
+          "0x71bc4403Af41634Cda7C32600A8024d54e7F6499": {
+            "balance": "1000000000000000000"
+          }
+        }
+      }
+    }
+  },
+  {
+    "network": "privnet",
+    "data": {
+      "genesis":{
+        "difficulty": "",
+        "gasLimit": "",
+
+        "alloc": {
+          "0x71bc4403Af41634Cda7C32600A8024d54e7F6499": {
+            "balance": "1000000000000000000"
+          }
+        }
+      }
+    }
+  },
+  {
+    "network": "testnet",
+    "data": {
+      "genesis":{
+        "difficulty": "",
+        "gasLimit": "",
+
+        "alloc": {
+          "0x71bc4403Af41634Cda7C32600A8024d54e7F6499": {
+            "balance": "1000000000000000000"
+          }
+        }
+      }
+    }
+  },
+  {
+    "network": "mixnet",
+    "data": {
+      "genesis":{
+        "difficulty": "",
+        "gasLimit": "",
+
+        "alloc": {
+          "0x71bc4403Af41634Cda7C32600A8024d54e7F6499": {
+            "balance": "1000000000000000000"
+          }
+        }
       }
     }
   }
-}
+]
