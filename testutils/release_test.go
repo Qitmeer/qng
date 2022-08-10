@@ -6,11 +6,13 @@ package testutils
 
 import (
 	"encoding/hex"
+	"fmt"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/release"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"math/big"
@@ -57,7 +59,9 @@ func TestReleaseContract(t *testing.T) {
 	// 0000000000000000000000000000000000000000000000000000000000000000
 	// hash160
 	hash160 := "bef272d0be043949ce88ec01602cb1d3bce9aade"
-	// storage key = keccak256(hash160+position)
+	b2, _ := hex.DecodeString("bef272d0be043949ce88ec01602cb1d3bce9aade0000000000000000000000000000000000000000000000000000000000000000")
+	key := crypto.Keccak256(b2)
+	fmt.Println(hex.EncodeToString(key))
 	GenerateBlock(t, h, 1)
 	b0, _ := hex.DecodeString(hash160)
 	GenerateBlock(t, h, 1)
