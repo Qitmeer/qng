@@ -1,6 +1,6 @@
 // It is called by go generate and used to automatically generate pre-computed 
 // Copyright 2017-2022 The qitmeer developers 
-// This file is auto generate by : go run mkalloc.go [privateKey] 
+// This file is auto generate by : go run mkalloc.go 
 package chain
 
 
