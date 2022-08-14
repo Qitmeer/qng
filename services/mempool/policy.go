@@ -144,4 +144,7 @@ type Policy struct {
 	//
 	// This function must be safe for concurrent access.
 	StandardVerifyFlags func() (txscript.ScriptFlags, error)
+
+	// max mempool tx size
+	MaxTxSize int64
 }

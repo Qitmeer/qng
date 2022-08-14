@@ -67,11 +67,6 @@ func makealloc(g *core.Genesis) string {
 
 func main() {
 	filePath := "./../chain/genesis.json"
-	privateKeyHex := ""
-	if len(os.Args) >= 2 {
-		privateKeyHex = os.Args[1]
-	}
-
 	gds := []chain.NetGenesisData{}
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -84,8 +79,9 @@ func main() {
 	if len(gds) != 4 {
 		panic(fmt.Errorf("Error genesis data config"))
 	}
-	fileContent := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go [privateKey] \npackage chain\n\n"
 	burnList := BuildBurnBalance()
+	fileContent := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go \npackage chain\n\n"
+
 	for _, ngd := range gds {
 		networkTag := ""
 		if ngd.Network == params.TestNetParam.Name {
@@ -115,10 +111,7 @@ func main() {
 			genesis.Alloc[common.HexToAddress(RELEASE_ADDR)] = releaseAccount
 		}
 		if len(ngd.Data.Contracts) > 0 {
-			if len(privateKeyHex) <= 0 {
-				panic("You must enter a private key")
-			}
-			err = chain.UpdateAlloc(genesis, ngd.Data.Contracts, privateKeyHex)
+			err = chain.UpdateAlloc(genesis, ngd.Data.Contracts)
 			if err != nil {
 				panic(err)
 			}

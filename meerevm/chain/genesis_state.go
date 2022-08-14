@@ -1,12 +1,14 @@
 package chain
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -17,6 +19,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/params"
 	"math/big"
+)
+
+var (
+	SysContractDeployerAddress = common.Address{}
 )
 
 type Alloc map[common.Address]core.GenesisAccount
@@ -41,7 +47,12 @@ func (g Alloc) OnAccount(addr common.Address, dumpAccount state.DumpAccount) {
 	g[addr] = genesisAccount
 }
 
-func Apply(genesis *core.Genesis, txs types.Transactions) (Alloc, error) {
+type GenTransaction struct {
+	*types.Transaction
+	From common.Address
+}
+
+func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 	if genesis.Config.IsLondon(big.NewInt(int64(0))) {
 		if genesis.BaseFee == nil {
 			return nil, fmt.Errorf("EIP-1559 config but missing 'currentBaseFee' in env section")
@@ -54,7 +65,6 @@ func Apply(genesis *core.Genesis, txs types.Transactions) (Alloc, error) {
 	}
 	var (
 		statedb     = MakePreState(rawdb.NewMemoryDatabase(), genesis.Alloc)
-		signer      = types.MakeSigner(chainConfig, new(big.Int).SetUint64(0))
 		gaspool     = new(core.GasPool)
 		blockHash   = common.Hash{0x13, 0x37}
 		includedTxs types.Transactions
@@ -90,7 +100,7 @@ func Apply(genesis *core.Genesis, txs types.Transactions) (Alloc, error) {
 		Debug:  false,
 	}
 	for i, tx := range txs {
-		msg, err := tx.AsMessage(signer, genesis.BaseFee)
+		msg, err := AsMessage(tx, genesis.BaseFee)
 		if err != nil {
 			log.Error(fmt.Sprintf("rejected tx index:%d hash:%s error:%s", i, tx.Hash(), err))
 			return nil, err
@@ -107,7 +117,7 @@ func Apply(genesis *core.Genesis, txs types.Transactions) (Alloc, error) {
 			log.Error(fmt.Sprintf("rejected tx index:%d hash:%s from:%s error:%s", i, tx.Hash(), msg.From(), err))
 			return nil, err
 		}
-		includedTxs = append(includedTxs, tx)
+		includedTxs = append(includedTxs, tx.Transaction)
 
 		gasUsed += msgResult.UsedGas
 
@@ -160,6 +170,19 @@ func Apply(genesis *core.Genesis, txs types.Transactions) (Alloc, error) {
 	return collector, nil
 }
 
+func AsMessage(tx *GenTransaction, baseFee *big.Int) (types.Message, error) {
+	gasPrice := new(big.Int).Set(tx.GasPrice())
+	gasFeeCap := new(big.Int).Set(tx.GasFeeCap())
+	gasTipCap := new(big.Int).Set(tx.GasTipCap())
+	// If baseFee provided, set gasPrice to effectiveGasPrice.
+	if baseFee != nil {
+		gasPrice = math.BigMin(gasPrice.Add(gasTipCap, baseFee), gasFeeCap)
+	}
+	msg := types.NewMessage(tx.From, tx.To(), tx.Nonce(), tx.Value(), tx.Gas(),
+		gasPrice, gasFeeCap, gasTipCap, tx.Data(), tx.AccessList(), false)
+	return msg, nil
+}
+
 func MakePreState(db ethdb.Database, accounts core.GenesisAlloc) *state.StateDB {
 	sdb := state.NewDatabase(db)
 	statedb, _ := state.New(common.Hash{}, sdb, nil)
@@ -177,13 +200,9 @@ func MakePreState(db ethdb.Database, accounts core.GenesisAlloc) *state.StateDB 
 	return statedb
 }
 
-func UpdateAlloc(genesis *core.Genesis, contracts []Contract, privateKeyHex string) error {
-	privateKey, err := crypto.HexToECDSA(privateKeyHex)
-	if err != nil {
-		return fmt.Errorf("could not generate key: %v", err)
-	}
+func UpdateAlloc(genesis *core.Genesis, contracts []Contract) error {
 	// tx
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, genesis.Config.ChainID)
+	auth, err := NewTransactorWithChainID(SysContractDeployerAddress, genesis.Config.ChainID)
 	if err != nil {
 		return err
 	}
@@ -192,7 +211,7 @@ func UpdateAlloc(genesis *core.Genesis, contracts []Contract, privateKeyHex stri
 	auth.GasLimit = uint64(params.GenesisGasLimit) // in units
 	auth.GasPrice = big.NewInt(0)
 
-	txs := types.Transactions{}
+	txs := []*GenTransaction{}
 	for _, con := range contracts {
 		if len(con.BIN) <= 0 {
 			continue
@@ -239,15 +258,13 @@ func UpdateAlloc(genesis *core.Genesis, contracts []Contract, privateKeyHex stri
 	return nil
 }
 
-func transact(opts *bind.TransactOpts, input []byte) (*types.Transaction, error) {
-	var err error
+func transact(opts *bind.TransactOpts, input []byte) (*GenTransaction, error) {
 	value := opts.Value
 	nonce := opts.Nonce.Uint64()
 	if opts.GasPrice != nil && (opts.GasFeeCap != nil || opts.GasTipCap != nil) {
 		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
 	}
 	gasLimit := opts.GasLimit
-	var rawTx *types.Transaction
 	baseTx := &types.LegacyTx{
 		Nonce:    nonce,
 		GasPrice: opts.GasPrice,
@@ -255,14 +272,18 @@ func transact(opts *bind.TransactOpts, input []byte) (*types.Transaction, error)
 		Value:    value,
 		Data:     input,
 	}
-	rawTx = types.NewTx(baseTx)
+	return &GenTransaction{
+		Transaction: types.NewTx(baseTx),
+		From:        opts.From,
+	}, nil
+}
 
-	if opts.Signer == nil {
-		return nil, errors.New("no signer to authorize the transaction with")
+func NewTransactorWithChainID(addr common.Address, chainID *big.Int) (*bind.TransactOpts, error) {
+	if chainID == nil {
+		return nil, bind.ErrNoChainID
 	}
-	signedTx, err := opts.Signer(opts.From, rawTx)
-	if err != nil {
-		return nil, err
-	}
-	return signedTx, nil
+	return &bind.TransactOpts{
+		From:    addr,
+		Context: context.Background(),
+	}, nil
 }

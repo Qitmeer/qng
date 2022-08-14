@@ -371,7 +371,7 @@ mempool:
 				"size %v, cur num tx %v", tx.Hash(), txSize,
 				blockSize, len(blockTxns)))
 			logSkippedDeps(tx, deps)
-			break
+			continue
 		}
 
 		// Enforce maximum signature operation cost per block.  Also
@@ -382,7 +382,7 @@ mempool:
 			log.Trace(fmt.Sprintf("Skipping tx %s because it would "+
 				"exceed the maximum sigops per block", tx.Hash()))
 			logSkippedDeps(tx, deps)
-			break
+			continue
 		}
 
 		// Skip free transactions once the block is larger than the
