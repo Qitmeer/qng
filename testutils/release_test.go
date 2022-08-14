@@ -7,6 +7,7 @@ package testutils
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/release"
@@ -68,4 +69,13 @@ func TestReleaseContract(t *testing.T) {
 	GenerateBlock(t, h, 1)
 	a, _ := tokenCall.QueryAmount(&bind.CallOpts{}, b0)
 	assert.Equal(t, a.String(), "1659715200")
+	maddr := "Mmf93CE9Cvvf3chYYn1okcBFB22u5wH2dyg"
+	addr, _ := address.DecodeAddress(maddr)
+	hash160 = hex.EncodeToString(addr.Hash160()[:])
+	b0, _ = hex.DecodeString(hash160)
+	b, err := tokenCall.QueryAmount(&bind.CallOpts{}, b0)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	assert.Equal(t, b.String(), "100000000000")
 }
