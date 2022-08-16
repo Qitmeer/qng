@@ -1503,7 +1503,6 @@ func (b *BlockChain) CalculateStateRoot(block *types.SerializedBlock, vmStateRoo
 		}
 		return merkle.HashMerkleBranches(tokenStateRoot, vmStateRoot)
 	}
-	return &hash.ZeroHash
 }
 
 func (b *BlockChain) getBlockData(hash *hash.Hash) meerdag.IBlockData {
