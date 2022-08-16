@@ -4,18 +4,25 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/meerevm/chain"
+	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/testutils/release"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
+	"log"
 	"math/big"
 	"os"
 	"sort"
 	"strconv"
-
-	"github.com/Qitmeer/qng/params"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/rlp"
 )
+
+const RELEASE_CONTRACT_ADDR = "0x1000000000000000000000000000000000000000"
 
 type allocItem struct {
 	Addr         *big.Int
@@ -72,6 +79,7 @@ func main() {
 	if len(gds) != 4 {
 		panic(fmt.Errorf("Error genesis data config"))
 	}
+	burnList := BuildBurnBalance()
 	fileContent := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go \npackage chain\n\n"
 
 	for _, ngd := range gds {
@@ -93,7 +101,15 @@ func main() {
 		chain.ChainConfig.ChainID = big.NewInt(params.ActiveNetParams.MeerEVMCfg.ChainID)
 		genesis := chain.DefaultGenesisBlock(chain.ChainConfig)
 		genesis.Alloc = ngd.Data.Genesis.Alloc
-
+		if _, ok := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]; ok {
+			releaseAccount := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]
+			storage := releaseAccount.Storage
+			for k, v := range burnList {
+				storage[k] = v
+			}
+			releaseAccount.Storage = storage
+			genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)] = releaseAccount
+		}
 		if len(ngd.Data.Contracts) > 0 {
 			err = chain.UpdateAlloc(genesis, ngd.Data.Contracts)
 			if err != nil {
@@ -118,3 +134,111 @@ func main() {
 
 	fmt.Println("Successfully updated:", fileName)
 }
+
+type BurnDetail struct {
+	Order  int64  `json:"order"`
+	Height int64  `json:"height"`
+	From   string `json:"from"`
+	Amount int64  `json:"amount"`
+	Time   int64  `json:"time"`
+}
+
+// 2022/08/14 17:43:57 MmQitmeerMainNetGuardAddressXd7b76q burn amount 641194999865334
+// 2022/08/14 17:43:57 MmQitmeerMainNetHonorAddressXY9JH2y burn amount 522926594198330
+// 2022/08/14 17:43:57 All burn amount 1164121594063664
+// 2022/08/14 17:43:57 end height 910000
+// 2022/08/14 17:43:57 end order 1013260
+// 2022/08/14 17:43:57 end blockhash efc89d8b4ef5733b6e566d9f06c0596075100f8406d3a9b581c74d42fb99dd79
+// 2022/08/14 17:43:57 pow meer amount 1013260* 10 = 10132600
+// all amount 1013260000000000+1164121594063664 = 2177381594063664
+
+func BuildBurnBalance() map[common.Hash]common.Hash {
+	filePath := "./../chain/burn_list.json"
+	storage := map[common.Hash]common.Hash{}
+	gds := map[string][]BurnDetail{}
+	file, err := os.Open(filePath)
+	if err != nil {
+		panic(err)
+	}
+	if err := json.NewDecoder(file).Decode(&gds); err != nil {
+		panic(err)
+	}
+	bas := map[string][]release.MeerMappingBurnDetail{}
+	allBurnAmount := uint64(0)
+	burnM := map[string]uint64{}
+	for k, v := range gds {
+		for _, vv := range v {
+			addr, err := address.DecodeAddress(vv.From)
+			if err != nil {
+				panic(vv.From + "meer address err" + err.Error())
+			}
+			d := release.MeerMappingBurnDetail{
+				big.NewInt(vv.Amount),
+				big.NewInt(vv.Time),
+				big.NewInt(vv.Order),
+				big.NewInt(vv.Height),
+			}
+			//parsed, _ := abi.JSON(strings.NewReader(release.TokenMetaData.ABI))
+			//// constructor params
+			//hexData, _ := parsed.Pack("", d)
+			h16 := addr.Hash160()
+			h16hex := hex.EncodeToString(h16[:])
+			if _, ok := bas[h16hex]; !ok {
+				bas[h16hex] = []release.MeerMappingBurnDetail{}
+			}
+			bas[h16hex] = append(bas[h16hex], d)
+			allBurnAmount += uint64(vv.Amount)
+			burnM[k] += uint64(vv.Amount)
+		}
+	}
+	for k, v := range burnM {
+		log.Println(k, "burn amount", v)
+	}
+	log.Println("All burn amount", allBurnAmount)
+	for k, v := range bas {
+		for i, vv := range v {
+			// amount
+			s := k + fmt.Sprintf("%064x", big.NewInt(1))
+			b, _ := hex.DecodeString(s)
+			key0 := crypto.Keccak256(b)
+			s = fmt.Sprintf("%064x", big.NewInt(int64(i))) + hex.EncodeToString(key0)
+			b, _ = hex.DecodeString(s)
+			key0 = crypto.Keccak256(b)
+			key0Big := new(big.Int).Add(new(big.Int).SetBytes(key0), big.NewInt(0))
+			storage[common.HexToHash(fmt.Sprintf("%064x", key0Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Amount))
+			// time
+			s = k + fmt.Sprintf("%064x", big.NewInt(1))
+			b, _ = hex.DecodeString(s)
+			key1 := crypto.Keccak256(b)
+			s = fmt.Sprintf("%064x", big.NewInt(int64(i))) + hex.EncodeToString(key1)
+			b, _ = hex.DecodeString(s)
+			key1 = crypto.Keccak256(b)
+			key1Big := new(big.Int).Add(new(big.Int).SetBytes(key1), big.NewInt(1))
+			storage[common.HexToHash(fmt.Sprintf("%064x", key1Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Time))
+			// order
+			s = k + fmt.Sprintf("%064x", big.NewInt(1))
+			b, _ = hex.DecodeString(s)
+			key2 := crypto.Keccak256(b)
+			s = fmt.Sprintf("%064x", big.NewInt(int64(i))) + hex.EncodeToString(key2)
+			b, _ = hex.DecodeString(s)
+			key2 = crypto.Keccak256(b)
+			key2Big := new(big.Int).Add(new(big.Int).SetBytes(key2), big.NewInt(2))
+			storage[common.HexToHash(fmt.Sprintf("%064x", key2Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Order))
+			// height
+			s = k + fmt.Sprintf("%064x", big.NewInt(1))
+			b, _ = hex.DecodeString(s)
+			key3 := crypto.Keccak256(b)
+			s = fmt.Sprintf("%064x", big.NewInt(int64(i))) + hex.EncodeToString(key3)
+			b, _ = hex.DecodeString(s)
+			key3 = crypto.Keccak256(b)
+			key3Big := new(big.Int).Add(new(big.Int).SetBytes(key3), big.NewInt(3))
+			storage[common.HexToHash(fmt.Sprintf("%064x", key3Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Height))
+		}
+		kk, _ := hex.DecodeString(k + fmt.Sprintf("%064x", big.NewInt(0)))
+		kb := crypto.Keccak256(kk)
+		storage[common.BytesToHash(kb)] = common.HexToHash(fmt.Sprintf("%064x", len(v)))
+	}
+	return storage
+}
+
+// a[xxxx][0].
