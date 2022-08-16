@@ -6,6 +6,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
 	"testing"
@@ -74,9 +75,18 @@ func checkTransactionSanityForAllNet(tx *types.Transaction) error {
 func TestTokenStateRoot(t *testing.T) {
 	bc := BlockChain{}
 	expected := "5b7d48b6c505d90b21355081cf4f5a332a925ac87e24ceedd3ddf02e0f387cc3"
-	block := &types.Block{}
-	block.AddTransaction(createTx())
-	stateRoot := bc.CalculateTokenStateRoot(types.NewBlock(block))
+
+	stateRoot := bc.CalculateTokenStateRoot(types.NewBlock(createBlock()))
+	if stateRoot.String() != expected {
+		t.Fatalf("token state root is %s, but expected is %s", stateRoot, expected)
+	}
+}
+
+func TestStateRoot(t *testing.T) {
+	bc := BlockChain{}
+	expected := "c1648d3a01c609b87305e3b550bb4fbff26c75fa1068d6c3a90c40dff40d7671"
+	vmStateRoot := hash.MustHexToHash("063f955120a5d9701bbb83f83f324d6f0cd52eef938a2855dfaa6a146d46eae8")
+	stateRoot := bc.CalculateStateRoot(types.NewBlock(createBlock()), &vmStateRoot)
 	if stateRoot.String() != expected {
 		t.Fatalf("token state root is %s, but expected is %s", stateRoot, expected)
 	}
@@ -159,4 +169,14 @@ func createTx() *types.Transaction {
 	copy(tokenChangeScript[1:], p2pkhScript)
 	tx.AddTxOut(&types.TxOutput{Amount: types.Amount{Value: 1 * 1e8, Id: QITID}, PkScript: tokenChangeScript})
 	return tx
+}
+
+func createBlock() *types.Block {
+	var block types.Block
+	block.Header = types.BlockHeader{
+		Pow: pow.GetInstance(pow.BLAKE2BD, 0, []byte{}),
+	}
+	block.Parents = []*hash.Hash{}
+	block.AddTransaction(createTx())
+	return &block
 }
