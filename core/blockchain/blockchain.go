@@ -858,7 +858,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 		view.SetViewpoints([]*hash.Hash{ib.GetHash()})
 
 		stxos := []SpentTxOut{}
-		err := b.checkConnectBlock(ib, block, view, &stxos)
+		_, err := b.CheckConnectBlock(ib, block, view, &stxos)
 		if err != nil {
 			log.Trace(err.Error())
 			b.bd.InvalidBlock(ib)
@@ -1226,7 +1226,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		view := NewUtxoViewpoint()
 		view.SetViewpoints([]*hash.Hash{nodeBlock.GetHash()})
 		stxos := []SpentTxOut{}
-		err = b.checkConnectBlock(nodeBlock, block, view, &stxos)
+		_, err = b.CheckConnectBlock(nodeBlock, block, view, &stxos)
 		if err != nil {
 			b.bd.InvalidBlock(nodeBlock)
 			stxos = []SpentTxOut{}
@@ -1465,7 +1465,8 @@ func (b *BlockChain) GetTokenTipHash() *hash.Hash {
 	return ib.GetHash()
 }
 
-func (b *BlockChain) CalculateTokenStateRoot(txs []*types.Tx, parents []*hash.Hash) hash.Hash {
+func (b *BlockChain) CalculateTokenStateRoot(block *types.SerializedBlock) *hash.Hash {
+	txs := block.Transactions()
 	updates := []token.ITokenUpdate{}
 	for _, tx := range txs {
 		if types.IsTokenTx(tx.Tx) {
@@ -1478,14 +1479,7 @@ func (b *BlockChain) CalculateTokenStateRoot(txs []*types.Tx, parents []*hash.Ha
 		}
 	}
 	if len(updates) <= 0 {
-		if len(parents) <= 0 {
-			return hash.ZeroHash
-		}
-		block, err := b.fetchBlockByHash(parents[0])
-		if err != nil {
-			return hash.ZeroHash
-		}
-		return block.Block().Header.StateRoot
+		return &hash.ZeroHash
 	}
 	balanceUpdate := []*hash.Hash{}
 	for _, u := range updates {
@@ -1493,7 +1487,22 @@ func (b *BlockChain) CalculateTokenStateRoot(txs []*types.Tx, parents []*hash.Ha
 	}
 	tsMerkle := merkle.BuildTokenBalanceMerkleTreeStore(balanceUpdate)
 
-	return *tsMerkle[0]
+	return tsMerkle[0]
+}
+
+func (b *BlockChain) CalculateStateRoot(block *types.SerializedBlock, vmStateRoot *hash.Hash) *hash.Hash {
+	tokenStateRoot := b.CalculateTokenStateRoot(block)
+	if tokenStateRoot.IsEqual(zeroHash) {
+		if vmStateRoot == nil || vmStateRoot.IsEqual(zeroHash) {
+			return &hash.ZeroHash
+		}
+		return vmStateRoot
+	} else {
+		if vmStateRoot == nil || vmStateRoot.IsEqual(zeroHash) {
+			return tokenStateRoot
+		}
+		return merkle.HashMerkleBranches(tokenStateRoot, vmStateRoot)
+	}
 }
 
 func (b *BlockChain) getBlockData(hash *hash.Hash) meerdag.IBlockData {
