@@ -183,16 +183,9 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource M
 		return ruleError(ErrBadMerkleRoot, str)
 	}
 
-	// Build merkle tree and ensure the calculated merkle root matches the
-	// entry in the block header.  This also has the effect of caching all
-	// of the token balance hashes in the block to speed up future hash
-	// checks.
-	calculatedTokenStateRoot := b.CalculateTokenStateRoot(block.Transactions(), msgBlock.Parents)
-	if !header.StateRoot.IsEqual(&calculatedTokenStateRoot) {
-		str := fmt.Sprintf("block merkle state root is invalid - block "+
-			"header indicates %s, but calculated value is %s",
-			header.StateRoot, calculatedTokenStateRoot)
-		return ruleError(ErrBadMerkleRoot, str)
+	err = b.CheckStateRoot(block)
+	if err != nil {
+		return err
 	}
 
 	// Check for duplicate transactions.  This check will be fairly quick
@@ -1523,5 +1516,20 @@ func (b *BlockChain) CheckTokenTransactionInputs(tx *types.Tx, utxoView *UtxoVie
 		return fmt.Errorf("Token transaction mint (%d) exceeds the maximum (%d)\n", totalAtomOut, tt.UpLimit)
 	}
 
+	return nil
+}
+
+func (b *BlockChain) CheckStateRoot(block *types.SerializedBlock) error {
+	// Build merkle tree and ensure the calculated merkle root matches the
+	// entry in the block header.  This also has the effect of caching all
+	// of the hashes in the block to speed up future hash
+	// checks.
+	calculatedStateRoot := b.CalculateStateRoot(block.Transactions())
+	if !block.Block().Header.StateRoot.IsEqual(calculatedStateRoot) {
+		str := fmt.Sprintf("block merkle state root is invalid - block "+
+			"header indicates %s, but calculated value is %s",
+			block.Block().Header.StateRoot, calculatedStateRoot)
+		return ruleError(ErrBadMerkleRoot, str)
+	}
 	return nil
 }

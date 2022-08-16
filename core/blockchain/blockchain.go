@@ -1465,7 +1465,7 @@ func (b *BlockChain) GetTokenTipHash() *hash.Hash {
 	return ib.GetHash()
 }
 
-func (b *BlockChain) CalculateTokenStateRoot(txs []*types.Tx, parents []*hash.Hash) hash.Hash {
+func (b *BlockChain) CalculateTokenStateRoot(txs []*types.Tx) *hash.Hash {
 	updates := []token.ITokenUpdate{}
 	for _, tx := range txs {
 		if types.IsTokenTx(tx.Tx) {
@@ -1478,14 +1478,7 @@ func (b *BlockChain) CalculateTokenStateRoot(txs []*types.Tx, parents []*hash.Ha
 		}
 	}
 	if len(updates) <= 0 {
-		if len(parents) <= 0 {
-			return hash.ZeroHash
-		}
-		block, err := b.fetchBlockByHash(parents[0])
-		if err != nil {
-			return hash.ZeroHash
-		}
-		return block.Block().Header.StateRoot
+		return &hash.ZeroHash
 	}
 	balanceUpdate := []*hash.Hash{}
 	for _, u := range updates {
@@ -1493,7 +1486,26 @@ func (b *BlockChain) CalculateTokenStateRoot(txs []*types.Tx, parents []*hash.Ha
 	}
 	tsMerkle := merkle.BuildTokenBalanceMerkleTreeStore(balanceUpdate)
 
-	return *tsMerkle[0]
+	return tsMerkle[0]
+}
+
+func (b *BlockChain) CalculateStateRoot(txs []*types.Tx) *hash.Hash {
+	var vmGenesis *hash.Hash
+	if b.VMService != nil {
+		vmGenesis = b.VMService.Genesis(txs)
+	}
+	tokenStateRoot := b.CalculateTokenStateRoot(txs)
+	if tokenStateRoot.IsEqual(zeroHash) {
+		if vmGenesis == nil || vmGenesis.IsEqual(zeroHash) {
+			return &hash.ZeroHash
+		}
+		return vmGenesis
+	} else {
+		if vmGenesis == nil || vmGenesis.IsEqual(zeroHash) {
+			return tokenStateRoot
+		}
+		return merkle.HashMerkleBranches(tokenStateRoot, vmGenesis)
+	}
 }
 
 func (b *BlockChain) getBlockData(hash *hash.Hash) meerdag.IBlockData {

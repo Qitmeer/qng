@@ -510,7 +510,7 @@ mempool:
 		Version:    blockVersion,
 		ParentRoot: *paMerkles[len(paMerkles)-1],
 		TxRoot:     *merkles[len(merkles)-1],
-		StateRoot:  blockManager.GetChain().CalculateTokenStateRoot(blockTxns, parents),
+		StateRoot:  *blockManager.GetChain().CalculateStateRoot(blockTxns),
 		Timestamp:  ts,
 		Difficulty: reqCompactDifficulty,
 		Pow:        pow.GetInstance(powType, 0, []byte{}),
