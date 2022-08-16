@@ -13,7 +13,6 @@ import (
 	"github.com/Qitmeer/qng/testutils/release"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"math/big"
@@ -58,24 +57,26 @@ func TestReleaseContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	// 0000000000000000000000000000000000000000000000000000000000000000
-	// hash160
-	hash160 := "bef272d0be043949ce88ec01602cb1d3bce9aade"
-	b2, _ := hex.DecodeString("bef272d0be043949ce88ec01602cb1d3bce9aade0000000000000000000000000000000000000000000000000000000000000000")
-	key := crypto.Keccak256(b2)
-	fmt.Println(hex.EncodeToString(key))
-	assert.Equal(t, hex.EncodeToString(key), "b10439c65f41b7610690ce809de35d0d5e6d45cbad599e9974738128ca9484ba")
 	GenerateBlock(t, h, 1)
-	b0, _ := hex.DecodeString(hash160)
-	GenerateBlock(t, h, 1)
-	a, _ := tokenCall.QueryAmount(&bind.CallOpts{}, b0)
-	assert.Equal(t, a.String(), "1659715200")
 	maddr := "Mmf93CE9Cvvf3chYYn1okcBFB22u5wH2dyg"
 	addr, _ := address.DecodeAddress(maddr)
-	hash160 = hex.EncodeToString(addr.Hash160()[:])
-	b0, _ = hex.DecodeString(hash160)
+	hash160 := hex.EncodeToString(addr.Hash160()[:])
+	fmt.Println("hash160", hash160)
+
+	b0, _ := hex.DecodeString(hash160)
 	b, err := tokenCall.QueryAmount(&bind.CallOpts{}, b0)
 	if err != nil {
 		log.Fatalln(err)
 	}
+	b3, err := tokenCall.MeerMappingCount(&bind.CallOpts{}, b0)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	assert.Equal(t, b3.String(), "1")
+	b1, err := tokenCall.QueryBurnDetails(&bind.CallOpts{}, b0)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println(b1)
 	assert.Equal(t, b.String(), "100000000000")
 }
