@@ -183,6 +183,18 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource M
 		return ruleError(ErrBadMerkleRoot, str)
 	}
 
+	// Build merkle tree and ensure the calculated merkle root matches the
+	// entry in the block header.  This also has the effect of caching all
+	// of the token balance hashes in the block to speed up future hash
+	// checks.
+	calculatedTokenStateRoot := b.CalculateTokenStateRoot(block.Transactions(), msgBlock.Parents)
+	if !header.StateRoot.IsEqual(&calculatedTokenStateRoot) {
+		str := fmt.Sprintf("block merkle state root is invalid - block "+
+			"header indicates %s, but calculated value is %s",
+			header.StateRoot, calculatedTokenStateRoot)
+		return ruleError(ErrBadMerkleRoot, str)
+	}
+
 	// Check for duplicate transactions.  This check will be fairly quick
 	// since the transaction hashes are already cached due to building the
 	// merkle trees above.
@@ -824,7 +836,7 @@ func (b *BlockChain) checkBlockHeaderContext(block *types.SerializedBlock, prevN
 // the bulk of its work.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, utxoView *UtxoViewpoint, stxos *[]SpentTxOut) (*hash.Hash, error) {
+func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, utxoView *UtxoViewpoint, stxos *[]SpentTxOut) error {
 	// If the side chain blocks end up in the database, a call to
 	// CheckBlockSanity should be done here in case a previous version
 	// allowed a block that is no longer valid.  However, since the
@@ -835,7 +847,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 	// an error now.
 	if ib.GetHash().IsEqual(b.params.GenesisHash) {
 		str := "the coinbase for the genesis block is not spendable"
-		return nil, ruleError(ErrMissingTxOut, str)
+		return ruleError(ErrMissingTxOut, str)
 	}
 	// Don't run scripts if this node is before the latest known good
 	// checkpoint since the validity is verified via the checkpoints (all
@@ -853,7 +865,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 	if runScripts {
 		scriptFlags, err = b.consensusScriptVerifyFlags()
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
@@ -870,17 +882,17 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 
 	err = utxoView.fetchInputUtxos(b.db, block, b)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	node := b.GetBlockNode(ib)
 	if node == nil {
-		return nil, fmt.Errorf("Block Node error:%s\n", ib.GetHash().String())
+		return fmt.Errorf("Block Node error:%s\n", ib.GetHash().String())
 	}
 	err = b.checkTransactionsAndConnect(node, block, b.subsidyCache, utxoView, stxos)
 	if err != nil {
 		log.Trace("checkTransactionsAndConnect failed", "err", err)
-		return nil, err
+		return err
 	}
 
 	// Enforce all relative lock times via sequence numbers for the regular
@@ -891,7 +903,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 	// final.
 	mainParent := b.bd.GetBlockById(ib.GetMainParent())
 	if mainParent == nil {
-		return nil, fmt.Errorf("Block Main Parent error:%s\n", ib.GetHash().String())
+		return fmt.Errorf("Block Main Parent error:%s\n", ib.GetHash().String())
 	}
 	prevMedianTime := b.CalcPastMedianTime(mainParent)
 
@@ -901,7 +913,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 		sequenceLock, err := b.calcSequenceLock(tx,
 			utxoView, false)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if !SequenceLockActive(sequenceLock, int64(ib.GetHeight()), //TODO, remove type conversion
@@ -910,7 +922,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 			str := fmt.Sprintf("block contains " +
 				"transaction whose input sequence " +
 				"locks are not met")
-			return nil, ruleError(ErrUnfinalizedTx, str)
+			return ruleError(ErrUnfinalizedTx, str)
 		}
 	}
 
@@ -920,23 +932,15 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 		if err != nil {
 			log.Trace("checkBlockScripts failed; error returned "+
 				"on txtreeregular of cur block: %v", err)
-			return nil, err
+			return err
 		}
 	}
 
 	err = b.CheckTokenState(block)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return b.VMService.CheckConnectBlock(block)
-}
-
-func (b *BlockChain) CheckConnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, utxoView *UtxoViewpoint, stxos *[]SpentTxOut) (*hash.Hash, error) {
-	vmStateRoot, err := b.checkConnectBlock(ib, block, utxoView, stxos)
-	if err != nil {
-		return nil, err
-	}
-	return b.CheckStateRoot(block, vmStateRoot)
 }
 
 // consensusScriptVerifyFlags returns the script flags that must be used when
@@ -1339,7 +1343,7 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 // the current tip of the main chain or its parent.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) (*hash.Hash, error) {
+func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) error {
 	// Skip the proof of work check as this is just a block template.
 	flags := BFNoPoWCheck
 
@@ -1349,32 +1353,36 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) (*h
 	// Perform context-free sanity checks on the block and its transactions.
 	err := b.checkBlockSanity(block, b.timeSource, flags, b.params)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	newNode := NewBlockNode(block, block.Block().Parents)
 	virBlock := b.bd.CreateVirtualBlock(newNode)
 	if virBlock == nil {
-		return nil, ruleError(ErrPrevBlockNotBest, "tipsNode")
+		return ruleError(ErrPrevBlockNotBest, "tipsNode")
 	}
 	virBlock.SetOrder(uint(block.Order()))
 	if virBlock.GetHeight() != block.Height() {
-		return nil, ruleError(ErrPrevBlockNotBest, "tipsNode height")
+		return ruleError(ErrPrevBlockNotBest, "tipsNode height")
 	}
 	mainParent := b.bd.GetBlockById(virBlock.GetMainParent())
 	if mainParent == nil {
-		return nil, ruleError(ErrPrevBlockNotBest, "main parent")
+		return ruleError(ErrPrevBlockNotBest, "main parent")
 	}
 
 	err = b.checkBlockContext(block, mainParent, flags)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	view := NewUtxoViewpoint()
 	view.SetViewpoints(block.Block().Parents)
 
-	return b.checkConnectBlock(virBlock, block, view, nil)
+	err = b.checkConnectBlock(virBlock, block, view, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func ExtractCoinbaseHeight(coinbaseTx *types.Transaction) (uint64, error) {
@@ -1516,19 +1524,4 @@ func (b *BlockChain) CheckTokenTransactionInputs(tx *types.Tx, utxoView *UtxoVie
 	}
 
 	return nil
-}
-
-func (b *BlockChain) CheckStateRoot(block *types.SerializedBlock, vmStateRoot *hash.Hash) (*hash.Hash, error) {
-	// Build merkle tree and ensure the calculated merkle root matches the
-	// entry in the block header.  This also has the effect of caching all
-	// of the hashes in the block to speed up future hash
-	// checks.
-	calculatedStateRoot := b.CalculateStateRoot(block, vmStateRoot)
-	if !block.Block().Header.StateRoot.IsEqual(calculatedStateRoot) {
-		str := fmt.Sprintf("block merkle state root is invalid - block "+
-			"header indicates %s, but calculated value is %s",
-			block.Block().Header.StateRoot, calculatedStateRoot)
-		return calculatedStateRoot, ruleError(ErrBadMerkleRoot, str)
-	}
-	return calculatedStateRoot, nil
 }

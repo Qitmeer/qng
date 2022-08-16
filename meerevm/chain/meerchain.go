@@ -7,7 +7,6 @@ package chain
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	qparams "github.com/Qitmeer/qng/params"
@@ -33,14 +32,12 @@ type MeerChain struct {
 	meerpool *MeerPool
 }
 
-func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) (*hash.Hash, error) {
-	mblock, _, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
+func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
+	_, _, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	mbb := mblock.Header().Root.Bytes()
-	qcommon.ReverseBytes(&mbb)
-	return hash.NewHash(mbb)
+	return nil
 }
 
 func (b *MeerChain) ConnectBlock(block qconsensus.Block) error {

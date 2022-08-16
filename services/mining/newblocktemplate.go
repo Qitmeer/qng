@@ -510,6 +510,7 @@ mempool:
 		Version:    blockVersion,
 		ParentRoot: *paMerkles[len(paMerkles)-1],
 		TxRoot:     *merkles[len(merkles)-1],
+		StateRoot:  blockManager.GetChain().CalculateTokenStateRoot(blockTxns, parents),
 		Timestamp:  ts,
 		Difficulty: reqCompactDifficulty,
 		Pow:        pow.GetInstance(powType, 0, []byte{}),
@@ -528,14 +529,14 @@ mempool:
 	sblock := types.NewBlock(&block)
 	sblock.SetOrder(nextBlockOrder)
 	sblock.SetHeight(uint(nextBlockHeight))
-	vmStateRoot, err := blockManager.GetChain().CheckConnectBlockTemplate(sblock)
+	err = blockManager.GetChain().CheckConnectBlockTemplate(sblock)
 	if err != nil {
 		str := fmt.Sprintf("failed to do final check for check connect "+
 			"block when making new block template: %v",
 			err.Error())
 		return nil, miningRuleError(ErrCheckConnectBlock, str)
 	}
-	sblock.Block().Header.StateRoot = *blockManager.GetChain().CalculateStateRoot(sblock, vmStateRoot)
+
 	log.Debug("Created new block template",
 		"transactions", len(block.Transactions),
 		"expect fees", totalFees,
@@ -544,8 +545,7 @@ mempool:
 		"target",
 		fmt.Sprintf("%064x", pow.CompactToBig(block.Header.Difficulty)),
 		"timestamp", block.Header.Timestamp,
-		"parents root", block.Header.ParentRoot.String(),
-		"state root", block.Header.StateRoot)
+		"parents root", block.Header.ParentRoot.String())
 
 	return &types.BlockTemplate{
 		Block:           &block,
