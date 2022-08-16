@@ -40,4 +40,6 @@ type ChainVM interface {
 	DisconnectBlock(block Block) error
 
 	ResetTemplate() error
+
+	Genesis() *hash.Hash
 }

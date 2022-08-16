@@ -74,9 +74,18 @@ func checkTransactionSanityForAllNet(tx *types.Transaction) error {
 func TestTokenStateRoot(t *testing.T) {
 	bc := BlockChain{}
 	expected := "5b7d48b6c505d90b21355081cf4f5a332a925ac87e24ceedd3ddf02e0f387cc3"
-	stateRoot := bc.CalculateTokenStateRoot([]*types.Tx{types.NewTx(createTx())}, nil)
+	stateRoot := bc.CalculateTokenStateRoot([]*types.Tx{types.NewTx(createTx())})
 	if stateRoot.String() != expected {
 		t.Fatalf("token state root is %s, but expected is %s", stateRoot, expected)
+	}
+}
+
+func TestStateRoot(t *testing.T) {
+	bc := BlockChain{}
+	expected := "5b7d48b6c505d90b21355081cf4f5a332a925ac87e24ceedd3ddf02e0f387cc3"
+	stateRoot := bc.CalculateStateRoot([]*types.Tx{types.NewTx(createTx())})
+	if stateRoot.String() != expected {
+		t.Fatalf("state root is %s, but expected is %s", stateRoot, expected)
 	}
 }
 

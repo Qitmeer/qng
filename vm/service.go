@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	qconfig "github.com/Qitmeer/qng/config"
 	qconsensus "github.com/Qitmeer/qng/consensus"
@@ -343,6 +344,36 @@ func (s *Service) ResetTemplate() error {
 		return err
 	}
 	return vm.ResetTemplate()
+}
+
+func (s *Service) Genesis(txs []*types.Tx) *hash.Hash {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil
+	}
+	hasVM := false
+	for idx, tx := range txs {
+		if idx == 0 {
+			continue
+		}
+		if tx.IsDuplicate {
+			continue
+		}
+		if types.IsCrossChainExportTx(tx.Tx) {
+			hasVM = true
+			break
+		} else if types.IsCrossChainImportTx(tx.Tx) {
+			hasVM = true
+			break
+		} else if types.IsCrossChainVMTx(tx.Tx) {
+			hasVM = true
+			break
+		}
+	}
+	if !hasVM {
+		return nil
+	}
+	return vm.Genesis()
 }
 
 func NewService(cfg *config.Config, events *event.Feed, tp consensus.TxPool, Notify consensus.Notify) (*Service, error) {

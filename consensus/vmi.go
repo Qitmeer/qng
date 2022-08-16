@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/vm/consensus"
 )
@@ -17,4 +18,5 @@ type VMI interface {
 	GetTxsFromMempool() ([]*types.Transaction, error)
 	GetMempoolSize() int64
 	ResetTemplate() error
+	Genesis(txs []*types.Tx) *hash.Hash
 }

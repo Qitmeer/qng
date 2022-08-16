@@ -305,6 +305,16 @@ func (vm *VM) ResetTemplate() error {
 	return vm.mchain.MeerPool().ResetTemplate()
 }
 
+func (vm *VM) Genesis() *hash.Hash {
+	mbb := vm.chain.Ether().BlockChain().Genesis().Hash().Bytes()
+	qcommon.ReverseBytes(&mbb)
+	nmbb, err := hash.NewHash(mbb)
+	if err != nil {
+		return nil
+	}
+	return nmbb
+}
+
 func New() *VM {
 	return &VM{}
 }
