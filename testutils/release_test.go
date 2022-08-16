@@ -5,6 +5,7 @@
 package testutils
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/core/address"
@@ -79,4 +80,10 @@ func TestReleaseContract(t *testing.T) {
 	}
 	fmt.Println(b1)
 	assert.Equal(t, b.String(), "100000000000")
+
+	b4, err := h.EVMClient.BalanceAt(context.Background(), common.HexToAddress(RELEASE_ADDR), nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	assert.Equal(t, b4.String(), RELEASE_AMOUNT)
 }

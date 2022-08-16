@@ -26,6 +26,10 @@ var CHAIN_ID = params.PrivNetParams.MeerEVMCfg.ChainID
 
 const GAS_LIMIT = 8000000
 
+const RELEASE_ADDR = "0xB191d00579ba344565637468e0CCbD6f161C0333"
+
+const RELEASE_AMOUNT = "1641215940636640000000000"
+
 var MAX_UINT256 = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 255), common.Big1)
 
 func (w *testWallet) CreateExportRawTx(txid string, amount, fee int64) (string, error) {

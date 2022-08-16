@@ -9,19 +9,17 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/meerevm/chain"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/release"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
 	"log"
 	"math/big"
 	"os"
 	"sort"
 	"strconv"
-	"time"
-
-	"github.com/Qitmeer/qng/params"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const RELEASE_CONTRACT_ADDR = "0x1000000000000000000000000000000000000000"
@@ -142,7 +140,7 @@ type BurnDetail struct {
 	Height int64  `json:"height"`
 	From   string `json:"from"`
 	Amount int64  `json:"amount"`
-	Time   string `json:"time"`
+	Time   int64  `json:"time"`
 }
 
 // 2022/08/14 17:43:57 MmQitmeerMainNetGuardAddressXd7b76q burn amount 641194999865334
@@ -169,13 +167,9 @@ func BuildBurnBalance() map[common.Hash]common.Hash {
 			if err != nil {
 				panic(vv.From + "meer address err" + err.Error())
 			}
-			tm, err := time.Parse("2006-01-02T15:04:05+08:00", vv.Time)
-			if err != nil {
-				panic(err)
-			}
 			d := release.MeerMappingBurnDetail{
 				big.NewInt(vv.Amount),
-				big.NewInt(tm.Unix()),
+				big.NewInt(vv.Time),
 				big.NewInt(vv.Order),
 				big.NewInt(vv.Height),
 			}
