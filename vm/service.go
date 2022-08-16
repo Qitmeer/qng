@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	qconfig "github.com/Qitmeer/qng/config"
 	qconsensus "github.com/Qitmeer/qng/consensus"
@@ -247,18 +248,18 @@ func (s *Service) GetMempoolSize() int64 {
 	return v.GetMempoolSize()
 }
 
-func (s *Service) CheckConnectBlock(block *types.SerializedBlock) error {
+func (s *Service) CheckConnectBlock(block *types.SerializedBlock) (*hash.Hash, error) {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	b, err := s.normalizeBlock(block, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(b.Txs) <= 0 {
-		return nil
+		return nil, nil
 	}
 	return vm.CheckConnectBlock(b)
 }

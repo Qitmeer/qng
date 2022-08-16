@@ -33,7 +33,7 @@ type ChainVM interface {
 
 	RemoveTxFromMempool(tx *types.Transaction) error
 
-	CheckConnectBlock(block Block) error
+	CheckConnectBlock(block Block) (*hash.Hash, error)
 
 	ConnectBlock(block Block) error
 
