@@ -156,7 +156,7 @@ func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
 	return nil, nil
 }
 
-func (vm *VM) CheckConnectBlock(block consensus.Block) (*hash.Hash, error) {
+func (vm *VM) CheckConnectBlock(block consensus.Block) error {
 	return vm.mchain.CheckConnectBlock(block)
 }
 
