@@ -4,11 +4,11 @@ package cmd
 
 import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
-	Commands = []cli.Command{
+	Commands = []*cli.Command{
 		removedbCommand,
 		// See accountcmd.go:
 		accountCommand,

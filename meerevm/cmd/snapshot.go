@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/chain"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/meerevm/chain"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/node"
@@ -27,7 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
-	cli "gopkg.in/urfave/cli.v1"
+	cli "github.com/urfave/cli/v2"
 )
 
 var (
@@ -39,17 +39,17 @@ var (
 )
 
 var (
-	snapshotCommand = cli.Command{
+	snapshotCommand = &cli.Command{
 		Name:        "snapshot",
 		Usage:       "A set of commands based on the snapshot",
 		Category:    "MISCELLANEOUS COMMANDS",
 		Description: "",
-		Subcommands: []cli.Command{
+		Subcommands: []*cli.Command{
 			{
 				Name:      "prune-state",
 				Usage:     "Prune stale ethereum state data based on the snapshot",
 				ArgsUsage: "<root>",
-				Action:    utils.MigrateFlags(pruneState),
+				Action:    pruneState,
 				Category:  "MISCELLANEOUS COMMANDS",
 				Flags: []cli.Flag{
 					utils.DataDirFlag,
@@ -79,7 +79,7 @@ the trie clean cache with default directory will be deleted.
 				Name:      "verify-state",
 				Usage:     "Recalculate state hash based on the snapshot for verification",
 				ArgsUsage: "<root>",
-				Action:    utils.MigrateFlags(verifyState),
+				Action:    verifyState,
 				Category:  "MISCELLANEOUS COMMANDS",
 				Flags: []cli.Flag{
 					utils.DataDirFlag,
@@ -99,7 +99,7 @@ In other words, this command does the snapshot to trie conversion.
 				Name:      "traverse-state",
 				Usage:     "Traverse the state with given root hash for verification",
 				ArgsUsage: "<root>",
-				Action:    utils.MigrateFlags(traverseState),
+				Action:    traverseState,
 				Category:  "MISCELLANEOUS COMMANDS",
 				Flags: []cli.Flag{
 					utils.DataDirFlag,
@@ -121,7 +121,7 @@ It's also usable without snapshot enabled.
 				Name:      "traverse-rawstate",
 				Usage:     "Traverse the state with given root hash for verification",
 				ArgsUsage: "<root>",
-				Action:    utils.MigrateFlags(traverseRawState),
+				Action:    traverseRawState,
 				Category:  "MISCELLANEOUS COMMANDS",
 				Flags: []cli.Flag{
 					utils.DataDirFlag,
@@ -144,7 +144,7 @@ It's also usable without snapshot enabled.
 				Name:      "dump",
 				Usage:     "Dump a specific block from storage (same as 'geth dump' but using snapshots)",
 				ArgsUsage: "[? <blockHash> | <blockNum>]",
-				Action:    utils.MigrateFlags(dumpState),
+				Action:    dumpState,
 				Category:  "MISCELLANEOUS COMMANDS",
 				Flags: []cli.Flag{
 					utils.DataDirFlag,
@@ -174,7 +174,7 @@ func pruneState(ctx *cli.Context) error {
 	defer stack.Close()
 
 	chaindb := utils.MakeChainDatabase(ctx, stack, false)
-	pruner, err := pruner.NewPruner(chaindb, stack.ResolvePath(""), stack.ResolvePath(config.Eth.TrieCleanCacheJournal), ctx.GlobalUint64(utils.BloomFilterSizeFlag.Name))
+	pruner, err := pruner.NewPruner(chaindb, stack.ResolvePath(""), stack.ResolvePath(config.Eth.TrieCleanCacheJournal), ctx.Uint64(utils.BloomFilterSizeFlag.Name))
 	if err != nil {
 		log.Error("Failed to open snapshot tree", "err", err)
 		return err
@@ -185,7 +185,7 @@ func pruneState(ctx *cli.Context) error {
 	}
 	var targetRoot common.Hash
 	if ctx.NArg() == 1 {
-		targetRoot, err = parseRoot(ctx.Args()[0])
+		targetRoot, err = parseRoot(ctx.Args().First())
 		if err != nil {
 			log.Error("Failed to resolve state root", "err", err)
 			return err
@@ -219,7 +219,7 @@ func verifyState(ctx *cli.Context) error {
 	}
 	var root = headBlock.Root()
 	if ctx.NArg() == 1 {
-		root, err = parseRoot(ctx.Args()[0])
+		root, err = parseRoot(ctx.Args().First())
 		if err != nil {
 			log.Error("Failed to resolve state root", "err", err)
 			return err
@@ -255,7 +255,7 @@ func traverseState(ctx *cli.Context) error {
 		err  error
 	)
 	if ctx.NArg() == 1 {
-		root, err = parseRoot(ctx.Args()[0])
+		root, err = parseRoot(ctx.Args().First())
 		if err != nil {
 			log.Error("Failed to resolve state root", "err", err)
 			return err
@@ -266,7 +266,7 @@ func traverseState(ctx *cli.Context) error {
 		log.Info("Start traversing the state", "root", root, "number", headBlock.NumberU64())
 	}
 	triedb := trie.NewDatabase(chaindb)
-	t, err := trie.NewSecure(root, triedb)
+	t, err := trie.NewSecure(common.Hash{}, root, triedb)
 	if err != nil {
 		log.Error("Failed to open trie", "root", root, "err", err)
 		return err
@@ -287,7 +287,7 @@ func traverseState(ctx *cli.Context) error {
 			return err
 		}
 		if acc.Root != emptyRoot {
-			storageTrie, err := trie.NewSecure(acc.Root, triedb)
+			storageTrie, err := trie.NewSecure(common.BytesToHash(accIter.Key), acc.Root, triedb)
 			if err != nil {
 				log.Error("Failed to open storage trie", "root", acc.Root, "err", err)
 				return err
@@ -345,7 +345,7 @@ func traverseRawState(ctx *cli.Context) error {
 		err  error
 	)
 	if ctx.NArg() == 1 {
-		root, err = parseRoot(ctx.Args()[0])
+		root, err = parseRoot(ctx.Args().First())
 		if err != nil {
 			log.Error("Failed to resolve state root", "err", err)
 			return err
@@ -356,7 +356,7 @@ func traverseRawState(ctx *cli.Context) error {
 		log.Info("Start traversing the state", "root", root, "number", headBlock.NumberU64())
 	}
 	triedb := trie.NewDatabase(chaindb)
-	t, err := trie.NewSecure(root, triedb)
+	t, err := trie.NewSecure(common.Hash{}, root, triedb)
 	if err != nil {
 		log.Error("Failed to open trie", "root", root, "err", err)
 		return err
@@ -393,7 +393,7 @@ func traverseRawState(ctx *cli.Context) error {
 				return errors.New("invalid account")
 			}
 			if acc.Root != emptyRoot {
-				storageTrie, err := trie.NewSecure(acc.Root, triedb)
+				storageTrie, err := trie.NewSecure(common.BytesToHash(accIter.LeafKey()), acc.Root, triedb)
 				if err != nil {
 					log.Error("Failed to open storage trie", "root", acc.Root, "err", err)
 					return errors.New("missing storage trie")

@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/naoina/toml"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 	"os"
 	"reflect"
 	"unicode"
