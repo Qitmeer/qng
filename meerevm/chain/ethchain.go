@@ -9,6 +9,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/Qitmeer/qng/core/protocol"
+	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/evm/engine"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -30,7 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 	"math/big"
 	"path/filepath"
 	"strconv"
@@ -133,6 +134,10 @@ var (
 		utils.HTTPListenAddrFlag,
 		utils.HTTPPortFlag,
 		utils.HTTPCORSDomainFlag,
+		utils.AuthListenFlag,
+		utils.AuthPortFlag,
+		utils.AuthVirtualHostsFlag,
+		utils.JWTSecretFlag,
 		utils.HTTPVirtualHostsFlag,
 		utils.GraphQLEnabledFlag,
 		utils.GraphQLCORSDomainFlag,
@@ -301,7 +306,7 @@ func (ec *ETHChain) startNode() error {
 		}
 	}()
 
-	if ctx.GlobalBool(utils.ExitWhenSyncedFlag.Name) {
+	if ctx.Bool(utils.ExitWhenSyncedFlag.Name) {
 		go func() {
 			sub := stack.EventMux().Subscribe(downloader.DoneEvent{})
 			defer sub.Unsubscribe()
@@ -323,14 +328,14 @@ func (ec *ETHChain) startNode() error {
 		}()
 	}
 
-	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
-		if ctx.GlobalString(utils.SyncModeFlag.Name) == "light" {
+	if ctx.Bool(utils.MiningEnabledFlag.Name) || ctx.Bool(utils.DeveloperFlag.Name) {
+		if ctx.String(utils.SyncModeFlag.Name) == "light" {
 			utils.Fatalf("Light clients do not support mining")
 		}
 
-		gasprice := utils.GlobalBig(ctx, utils.MinerGasPriceFlag.Name)
+		gasprice := qcommon.GlobalBig(ctx, utils.MinerGasPriceFlag.Name)
 		ec.backend.TxPool().SetGasPrice(gasprice)
-		threads := ctx.GlobalInt(utils.MinerThreadsFlag.Name)
+		threads := ctx.Int(utils.MinerThreadsFlag.Name)
 		if err := ec.backend.StartMining(threads); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
@@ -342,7 +347,7 @@ func (ec *ETHChain) startNode() error {
 func (ec *ETHChain) unlockAccounts() {
 	stack := ec.node
 	var unlocks []string
-	inputs := strings.Split(ec.ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
+	inputs := strings.Split(ec.ctx.String(utils.UnlockedAccountFlag.Name), ",")
 	for _, input := range inputs {
 		if trimmed := strings.TrimSpace(input); trimmed != "" {
 			unlocks = append(unlocks, trimmed)
@@ -370,8 +375,9 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain, error) {
 	//
 	app := cli.NewApp()
 	app.Name = ClientIdentifier
-	app.Author = ClientIdentifier
-	app.Email = ClientIdentifier
+	app.Authors = []*cli.Author{
+		{Name: ClientIdentifier, Email: ClientIdentifier},
+	}
 	app.Version = params.VersionWithMeta
 	app.Usage = ClientIdentifier
 
@@ -379,9 +385,10 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain, error) {
 
 	utils.CacheFlag.Value = 4096
 
-	app.Action = func(ctx *cli.Context) {
+	app.Action = func(ctx *cli.Context) error {
 		ec.ctx = ctx
 		ec.node, ec.backend, ec.ether = makeFullNode(ec.ctx, ec.config)
+		return nil
 	}
 	app.HideVersion = true
 	app.Copyright = ClientIdentifier
@@ -440,7 +447,7 @@ func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
 	nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
 	//nodeConf.HTTPHost = node.DefaultHTTPHost
 	//nodeConf.WSHost = node.DefaultWSHost
-	nodeConf.HTTPPort, nodeConf.WSPort = getDefaultRPCPort()
+	nodeConf.HTTPPort, nodeConf.WSPort, nodeConf.AuthPort = getDefaultRPCPort()
 
 	nodeConf.P2P.MaxPeers = 0
 	nodeConf.P2P.DiscoveryV5 = false
@@ -459,11 +466,11 @@ func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
 
 func makeFullNode(ctx *cli.Context, cfg *MeerethConfig) (*node.Node, *eth.EthAPIBackend, *eth.Ethereum) {
 	stack := makeConfigNode(ctx, cfg)
-	if ctx.GlobalIsSet(utils.OverrideArrowGlacierFlag.Name) {
-		cfg.Eth.OverrideArrowGlacier = new(big.Int).SetUint64(ctx.GlobalUint64(utils.OverrideArrowGlacierFlag.Name))
+	if ctx.IsSet(utils.OverrideGrayGlacierFlag.Name) {
+		cfg.Eth.OverrideGrayGlacier = new(big.Int).SetUint64(ctx.Uint64(utils.OverrideGrayGlacierFlag.Name))
 	}
-	if ctx.GlobalIsSet(utils.OverrideTerminalTotalDifficulty.Name) {
-		cfg.Eth.OverrideTerminalTotalDifficulty = utils.GlobalBig(ctx, utils.OverrideTerminalTotalDifficulty.Name)
+	if ctx.IsSet(utils.OverrideTerminalTotalDifficulty.Name) {
+		cfg.Eth.OverrideTerminalTotalDifficulty = qcommon.GlobalBig(ctx, utils.OverrideTerminalTotalDifficulty.Name)
 	}
 	backend, ethe := utils.RegisterEthService(stack, &cfg.Eth)
 
@@ -483,7 +490,7 @@ func makeFullNode(ctx *cli.Context, cfg *MeerethConfig) (*node.Node, *eth.EthAPI
 		}
 	}
 
-	if ctx.GlobalIsSet(utils.GraphQLEnabledFlag.Name) {
+	if ctx.IsSet(utils.GraphQLEnabledFlag.Name) {
 		utils.RegisterGraphQLService(stack, backend, cfg.Node)
 	}
 	if cfg.Ethstats.URL != "" {
@@ -504,8 +511,8 @@ func makeConfigNode(ctx *cli.Context, cfg *MeerethConfig) *node.Node {
 	}
 
 	utils.SetEthConfig(ctx, stack, &cfg.Eth)
-	if ctx.GlobalIsSet(utils.EthStatsURLFlag.Name) {
-		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
+	if ctx.IsSet(utils.EthStatsURLFlag.Name) {
+		cfg.Ethstats.URL = ctx.String(utils.EthStatsURLFlag.Name)
 	}
 	applyMetricConfig(ctx, cfg)
 
@@ -572,47 +579,47 @@ func setAccountManagerBackends(stack *node.Node) error {
 }
 
 func applyMetricConfig(ctx *cli.Context, cfg *MeerethConfig) {
-	if ctx.GlobalIsSet(utils.MetricsEnabledFlag.Name) {
-		cfg.Metrics.Enabled = ctx.GlobalBool(utils.MetricsEnabledFlag.Name)
+	if ctx.IsSet(utils.MetricsEnabledFlag.Name) {
+		cfg.Metrics.Enabled = ctx.Bool(utils.MetricsEnabledFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsEnabledExpensiveFlag.Name) {
-		cfg.Metrics.EnabledExpensive = ctx.GlobalBool(utils.MetricsEnabledExpensiveFlag.Name)
+	if ctx.IsSet(utils.MetricsEnabledExpensiveFlag.Name) {
+		cfg.Metrics.EnabledExpensive = ctx.Bool(utils.MetricsEnabledExpensiveFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsHTTPFlag.Name) {
-		cfg.Metrics.HTTP = ctx.GlobalString(utils.MetricsHTTPFlag.Name)
+	if ctx.IsSet(utils.MetricsHTTPFlag.Name) {
+		cfg.Metrics.HTTP = ctx.String(utils.MetricsHTTPFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsPortFlag.Name) {
-		cfg.Metrics.Port = ctx.GlobalInt(utils.MetricsPortFlag.Name)
+	if ctx.IsSet(utils.MetricsPortFlag.Name) {
+		cfg.Metrics.Port = ctx.Int(utils.MetricsPortFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsEnableInfluxDBFlag.Name) {
-		cfg.Metrics.EnableInfluxDB = ctx.GlobalBool(utils.MetricsEnableInfluxDBFlag.Name)
+	if ctx.IsSet(utils.MetricsEnableInfluxDBFlag.Name) {
+		cfg.Metrics.EnableInfluxDB = ctx.Bool(utils.MetricsEnableInfluxDBFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBEndpointFlag.Name) {
-		cfg.Metrics.InfluxDBEndpoint = ctx.GlobalString(utils.MetricsInfluxDBEndpointFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBEndpointFlag.Name) {
+		cfg.Metrics.InfluxDBEndpoint = ctx.String(utils.MetricsInfluxDBEndpointFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBDatabaseFlag.Name) {
-		cfg.Metrics.InfluxDBDatabase = ctx.GlobalString(utils.MetricsInfluxDBDatabaseFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBDatabaseFlag.Name) {
+		cfg.Metrics.InfluxDBDatabase = ctx.String(utils.MetricsInfluxDBDatabaseFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBUsernameFlag.Name) {
-		cfg.Metrics.InfluxDBUsername = ctx.GlobalString(utils.MetricsInfluxDBUsernameFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBUsernameFlag.Name) {
+		cfg.Metrics.InfluxDBUsername = ctx.String(utils.MetricsInfluxDBUsernameFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBPasswordFlag.Name) {
-		cfg.Metrics.InfluxDBPassword = ctx.GlobalString(utils.MetricsInfluxDBPasswordFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBPasswordFlag.Name) {
+		cfg.Metrics.InfluxDBPassword = ctx.String(utils.MetricsInfluxDBPasswordFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBTagsFlag.Name) {
-		cfg.Metrics.InfluxDBTags = ctx.GlobalString(utils.MetricsInfluxDBTagsFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBTagsFlag.Name) {
+		cfg.Metrics.InfluxDBTags = ctx.String(utils.MetricsInfluxDBTagsFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsEnableInfluxDBV2Flag.Name) {
-		cfg.Metrics.EnableInfluxDBV2 = ctx.GlobalBool(utils.MetricsEnableInfluxDBV2Flag.Name)
+	if ctx.IsSet(utils.MetricsEnableInfluxDBV2Flag.Name) {
+		cfg.Metrics.EnableInfluxDBV2 = ctx.Bool(utils.MetricsEnableInfluxDBV2Flag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBTokenFlag.Name) {
-		cfg.Metrics.InfluxDBToken = ctx.GlobalString(utils.MetricsInfluxDBTokenFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBTokenFlag.Name) {
+		cfg.Metrics.InfluxDBToken = ctx.String(utils.MetricsInfluxDBTokenFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBBucketFlag.Name) {
-		cfg.Metrics.InfluxDBBucket = ctx.GlobalString(utils.MetricsInfluxDBBucketFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBBucketFlag.Name) {
+		cfg.Metrics.InfluxDBBucket = ctx.String(utils.MetricsInfluxDBBucketFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBOrganizationFlag.Name) {
-		cfg.Metrics.InfluxDBOrganization = ctx.GlobalString(utils.MetricsInfluxDBOrganizationFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBOrganizationFlag.Name) {
+		cfg.Metrics.InfluxDBOrganization = ctx.String(utils.MetricsInfluxDBOrganizationFlag.Name)
 	}
 }
 
@@ -702,7 +709,7 @@ func InitEnv(env string) {
 }
 
 func filterConfig(ctx *cli.Context) {
-	hms := ctx.GlobalString(utils.HTTPApiFlag.Name)
+	hms := ctx.String(utils.HTTPApiFlag.Name)
 	if len(hms) > 0 {
 		modules := utils.SplitAndTrim(hms)
 		nmodules := ""
@@ -716,10 +723,10 @@ func filterConfig(ctx *cli.Context) {
 				nmodules = mod
 			}
 		}
-		ctx.GlobalSet(utils.HTTPApiFlag.Name, nmodules)
+		ctx.Set(utils.HTTPApiFlag.Name, nmodules)
 	}
 
-	wms := ctx.GlobalString(utils.WSApiFlag.Name)
+	wms := ctx.String(utils.WSApiFlag.Name)
 	if len(hms) > 0 {
 		modules := utils.SplitAndTrim(wms)
 		nmodules := ""
@@ -733,20 +740,20 @@ func filterConfig(ctx *cli.Context) {
 				nmodules = mod
 			}
 		}
-		ctx.GlobalSet(utils.WSApiFlag.Name, nmodules)
+		ctx.Set(utils.WSApiFlag.Name, nmodules)
 	}
 }
 
-func getDefaultRPCPort() (int, int) {
+func getDefaultRPCPort() (int, int, int) {
 	switch qparams.ActiveNetParams.Net {
 	case protocol.MainNet:
-		return 8535, 8536
+		return 8535, 8536, 8537
 	case protocol.TestNet:
-		return 18535, 18536
+		return 18535, 18536, 18537
 	case protocol.MixNet:
-		return 28535, 28536
+		return 28535, 28536, 28537
 	default:
-		return 38535, 38536
+		return 38535, 38536, 38537
 	}
 }
 

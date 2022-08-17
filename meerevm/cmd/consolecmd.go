@@ -4,22 +4,22 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/chain"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/meerevm/chain"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/console"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
 	consoleFlags = []cli.Flag{utils.JSpathFlag, utils.ExecFlag, utils.PreloadJSFlag}
 
-	attachCommand = cli.Command{
-		Action:    utils.MigrateFlags(remoteConsole),
+	attachCommand = &cli.Command{
+		Action:    remoteConsole,
 		Name:      "attach",
 		Usage:     "Start an interactive JavaScript environment (connect to node)",
 		ArgsUsage: "[endpoint]",
@@ -40,8 +40,8 @@ func remoteConsole(ctx *cli.Context) error {
 	endpoint := ctx.Args().First()
 	if endpoint == "" {
 		path := config.Cfg.DataDir
-		if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
-			path = ctx.GlobalString(utils.DataDirFlag.Name)
+		if ctx.IsSet(utils.DataDirFlag.Name) {
+			path = ctx.String(utils.DataDirFlag.Name)
 		}
 		endpoint = fmt.Sprintf("%s/qng.ipc", path)
 	}
@@ -51,7 +51,7 @@ func remoteConsole(ctx *cli.Context) error {
 	}
 	config := console.Config{
 		DataDir: utils.MakeDataDir(ctx),
-		DocRoot: ctx.GlobalString(utils.JSpathFlag.Name),
+		DocRoot: ctx.String(utils.JSpathFlag.Name),
 		Client:  client,
 		Preload: utils.MakeConsolePreloads(ctx),
 	}
@@ -62,7 +62,7 @@ func remoteConsole(ctx *cli.Context) error {
 	}
 	defer console.Stop(false)
 
-	if script := ctx.GlobalString(utils.ExecFlag.Name); script != "" {
+	if script := ctx.String(utils.ExecFlag.Name); script != "" {
 		console.Evaluate(script)
 		return nil
 	}

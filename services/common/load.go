@@ -16,7 +16,7 @@ import (
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/version"
 	"github.com/jessevdk/go-flags"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 	"net"
 	"os"
 	"path/filepath"
@@ -112,24 +112,28 @@ var (
 
 	Flags = []cli.Flag{
 		&cli.StringFlag{
-			Name:        "appdata, A",
+			Name:        "appdata",
+			Aliases:     []string{"A"},
 			Usage:       "Path to application home directory",
 			Value:       defaultHomeDir,
 			Destination: &cfg.HomeDir,
 		},
 		&cli.BoolFlag{
-			Name:        "ShowVersion, V",
+			Name:        "ShowVersion",
+			Aliases:     []string{"V"},
 			Usage:       "Display version information and exit",
 			Destination: &cfg.ShowVersion,
 		},
 		&cli.StringFlag{
-			Name:        "configfile, C",
+			Name:        "configfile",
+			Aliases:     []string{"C"},
 			Usage:       "Path to configuration file",
 			Value:       defaultConfigFile,
 			Destination: &cfg.ConfigFile,
 		},
 		&cli.StringFlag{
-			Name:        "datadir, b",
+			Name:        "datadir",
+			Aliases:     []string{"b"},
 			Usage:       "Directory to store data",
 			Value:       defaultDataDir,
 			Destination: &cfg.DataDir,
@@ -172,13 +176,15 @@ var (
 			Destination: &cfg.DisableListen,
 		},
 		&cli.StringFlag{
-			Name:        "rpcuser, u",
+			Name:        "rpcuser",
+			Aliases:     []string{"u"},
 			Usage:       "Username for RPC connections",
 			Value:       defaultRPCUser,
 			Destination: &cfg.RPCUser,
 		},
 		&cli.StringFlag{
-			Name:        "rpcpass, P",
+			Name:        "rpcpass",
+			Aliases:     []string{"P"},
 			Usage:       "Password for RPC connections",
 			Value:       defaultRPCPass,
 			Destination: &cfg.RPCPass,
@@ -279,7 +285,8 @@ var (
 			Destination: &cfg.Profile,
 		},
 		&cli.StringFlag{
-			Name:        "debuglevel, d",
+			Name:        "debuglevel",
+			Aliases:     []string{"d"},
 			Usage:       "Logging level {trace, debug, info, warn, error, critical}",
 			Value:       defaultLogLevel,
 			Destination: &cfg.DebugLevel,
@@ -299,10 +306,11 @@ var (
 			Usage:       "Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute",
 			Destination: &cfg.FreeTxRelayLimit,
 		},
-		&cli.BoolTFlag{
+		&cli.BoolFlag{
 			Name:        "acceptnonstd",
 			Usage:       "Accept and relay non-standard transactions to the network regardless of the default settings for the active network.",
 			Destination: &cfg.AcceptNonStd,
+			Value:       true,
 		},
 		&cli.IntFlag{
 			Name:        "maxorphantx",
@@ -391,9 +399,10 @@ var (
 			Destination: &cfg.MiningStateSync,
 		},
 		&cli.StringSliceFlag{
-			Name:  "addpeer, a",
-			Usage: "Add a peer to connect with at startup",
-			Value: &AddPeers,
+			Name:    "addpeer",
+			Aliases: []string{"a"},
+			Usage:   "Add a peer to connect with at startup",
+			Value:   &AddPeers,
 		},
 		&cli.BoolFlag{
 			Name:        "upnp",
@@ -406,19 +415,22 @@ var (
 			Value:       defaultMaxInboundPeersPerHost,
 			Destination: &cfg.MaxInbound,
 		},
-		&cli.BoolTFlag{
+		&cli.BoolFlag{
 			Name:        "banning",
 			Usage:       "Enable banning of misbehaving peers",
 			Destination: &cfg.Banning,
+			Value:       true,
 		},
 		&cli.StringFlag{
-			Name:        "dagtype, G",
+			Name:        "dagtype",
+			Aliases:     []string{"G"},
 			Usage:       "DAG type {phantom,spectre}",
 			Value:       defaultDAGType,
 			Destination: &cfg.DAGType,
 		},
 		&cli.BoolFlag{
-			Name:        "cleanup, L",
+			Name:        "cleanup",
+			Aliases:     []string{"L"},
 			Usage:       "Cleanup the block database",
 			Destination: &cfg.Cleanup,
 		},
@@ -596,7 +608,7 @@ func LoadConfig(ctx *cli.Context) (*config.Config, error) {
 	// not specify an override.
 	// TODO
 
-	if ctx.GlobalIsSet("configfile") {
+	if ctx.IsSet("configfile") {
 		// Load additional config from file.
 		parser := newConfigParser(&cfg, flags.Default)
 		err := flags.NewIniParser(parser).ParseFile(cfg.ConfigFile)
