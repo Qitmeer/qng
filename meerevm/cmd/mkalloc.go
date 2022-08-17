@@ -143,14 +143,15 @@ type BurnDetail struct {
 	Time   int64  `json:"time"`
 }
 
-// 2022/08/14 17:43:57 MmQitmeerMainNetGuardAddressXd7b76q burn amount 641194999865334
-// 2022/08/14 17:43:57 MmQitmeerMainNetHonorAddressXY9JH2y burn amount 522926594198330
-// 2022/08/14 17:43:57 All burn amount 1164121594063664
+// 2022/08/17 20:35:36 MmQitmeerMainNetHonorAddressXY9JH2y burn amount 408011208230864
+// 2022/08/17 20:35:36 MmQitmeerMainNetGuardAddressXd7b76q burn amount 514790066054534
+// 2022/08/17 20:35:36 All burn amount 922801274285398
 // 2022/08/14 17:43:57 end height 910000
 // 2022/08/14 17:43:57 end order 1013260
 // 2022/08/14 17:43:57 end blockhash efc89d8b4ef5733b6e566d9f06c0596075100f8406d3a9b581c74d42fb99dd79
 // 2022/08/14 17:43:57 pow meer amount 1013260* 10 = 10132600
-// all amount 1013260000000000+1164121594063664 = 2177381594063664
+// 2022/08/14 17:43:57 pow meer amount (10132600 /10) * 12 * 10 = 1013260 * 12 = 121591200
+// all amount 12159120000000000+922801274285398 = 13081921274285398
 
 func BuildBurnBalance() map[common.Hash]common.Hash {
 	filePath := "./../chain/burn_list.json"
