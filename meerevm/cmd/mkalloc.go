@@ -81,7 +81,7 @@ func main() {
 	if len(gds) != 4 {
 		panic(fmt.Errorf("Error genesis data config"))
 	}
-	burnList := BuildBurnBalance()
+	burnKeys, burnList := BuildBurnBalance()
 	fileContent := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go \npackage chain\n\n"
 
 	for k := 0; k < len(gds); k++ {
@@ -107,8 +107,10 @@ func main() {
 		if _, ok := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]; ok {
 			releaseAccount := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]
 			storage := releaseAccount.Storage
-			for k, v := range burnList {
-				storage[k] = v
+
+			for j := 0; j < len(burnKeys); j++ {
+				m := burnKeys[j]
+				storage[m] = burnList[m]
 			}
 			releaseAccount.Storage = storage
 			genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)] = releaseAccount
@@ -155,7 +157,7 @@ type BurnDetail struct {
 // 2022/08/14 17:43:57 pow meer amount (1013260 /10) * 12 * 10 = 1013260 * 12 = 12159120
 // all amount 1215912000000000+922801274285398 = 2138713274285398
 
-func BuildBurnBalance() map[common.Hash]common.Hash {
+func BuildBurnBalance() ([]common.Hash, map[common.Hash]common.Hash) {
 	filePath := "./../chain/burn_list.json"
 	storage := map[common.Hash]common.Hash{}
 	gds := map[string][]BurnDetail{}
@@ -204,6 +206,7 @@ func BuildBurnBalance() map[common.Hash]common.Hash {
 		log.Println(k, "burn amount", v)
 	}
 	log.Println("All burn amount", allBurnAmount)
+	burnKeys := []common.Hash{}
 	for j := 0; j < len(keys); j++ {
 		k := keys[j]
 		v := bas[k]
@@ -245,12 +248,14 @@ func BuildBurnBalance() map[common.Hash]common.Hash {
 			key3 = crypto.Keccak256(b)
 			key3Big := new(big.Int).Add(new(big.Int).SetBytes(key3), big.NewInt(3))
 			storage[common.HexToHash(fmt.Sprintf("%064x", key3Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Height))
+			burnKeys = append(burnKeys, common.HexToHash(fmt.Sprintf("%064x", key3Big)))
 		}
 		kk, _ := hex.DecodeString(k + fmt.Sprintf("%064x", big.NewInt(0)))
 		kb := crypto.Keccak256(kk)
 		storage[common.BytesToHash(kb)] = common.HexToHash(fmt.Sprintf("%064x", len(v)))
+		burnKeys = append(burnKeys, common.BytesToHash(kb))
 	}
-	return storage
+	return burnKeys, storage
 }
 
 // a[xxxx][0].
