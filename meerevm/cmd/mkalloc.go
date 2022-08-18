@@ -49,6 +49,7 @@ func makelist(g *core.Genesis) allocList {
 		for hk := range account.Storage {
 			hm = append(hm, hk.String())
 		}
+		sort.Strings(hm)
 		for kk := 0; kk < len(hm); kk++ {
 			k := common.HexToHash(hm[kk])
 			v := account.Storage[k]
