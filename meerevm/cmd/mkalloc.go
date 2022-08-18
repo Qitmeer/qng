@@ -84,7 +84,8 @@ func main() {
 	burnList := BuildBurnBalance()
 	fileContent := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go \npackage chain\n\n"
 
-	for _, ngd := range gds {
+	for k := 0; k < len(gds); k++ {
+		ngd := gds[k]
 		networkTag := ""
 		if ngd.Network == params.TestNetParam.Name {
 			params.ActiveNetParams = &params.TestNetParam
@@ -249,6 +250,7 @@ func BuildBurnBalance() map[common.Hash]common.Hash {
 		kb := crypto.Keccak256(kk)
 		storage[common.BytesToHash(kb)] = common.HexToHash(fmt.Sprintf("%064x", len(v)))
 	}
+	bbb, _ := json.Marshal(storage)
 	return storage
 }
 
