@@ -52,6 +52,8 @@ func makelist(g *core.Genesis) allocList {
 			sks = append(sks, k.String())
 			svs = append(svs, v.String())
 		}
+		sort.Strings(sks)
+		sort.Strings(svs)
 		a = append(a, allocItem{Addr: bigAddr, Balance: account.Balance, Code: account.Code, Nonce: account.Nonce, StorageKey: sks, StorageValue: svs})
 	}
 	sort.Sort(a)
@@ -112,6 +114,7 @@ func main() {
 				m := burnKeys[j]
 				storage[m] = burnList[m]
 			}
+
 			releaseAccount.Storage = storage
 			genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)] = releaseAccount
 		}
