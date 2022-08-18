@@ -250,7 +250,6 @@ func BuildBurnBalance() map[common.Hash]common.Hash {
 		kb := crypto.Keccak256(kk)
 		storage[common.BytesToHash(kb)] = common.HexToHash(fmt.Sprintf("%064x", len(v)))
 	}
-	bbb, _ := json.Marshal(storage)
 	return storage
 }
 
