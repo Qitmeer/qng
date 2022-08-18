@@ -28,9 +28,17 @@ var (
 	_ = event.NewSubscription
 )
 
+// MeerMappingBurnDetail is an auto generated low-level Go binding around an user-defined struct.
+type MeerMappingBurnDetail struct {
+	Amount *big.Int
+	Time   *big.Int
+	Order  *big.Int
+	Height *big.Int
+}
+
 // TokenMetaData contains all meta data concerning the Token contract.
 var TokenMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"name\":\"meerMappingAmounts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_qngHash160\",\"type\":\"bytes\"}],\"name\":\"queryAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"meerMappingAmounts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"Amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Time\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Order\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Height\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"name\":\"meerMappingCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_qngHash160\",\"type\":\"bytes\"}],\"name\":\"queryAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_qngHash160\",\"type\":\"bytes\"}],\"name\":\"queryBurnDetails\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"Amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Time\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Order\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Height\",\"type\":\"uint256\"}],\"internalType\":\"structMeerMapping.BurnDetail[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // TokenABI is the input ABI used to generate the binding from.
@@ -179,12 +187,67 @@ func (_Token *TokenTransactorRaw) Transact(opts *bind.TransactOpts, method strin
 	return _Token.Contract.contract.Transact(opts, method, params...)
 }
 
-// MeerMappingAmounts is a free data retrieval call binding the contract method 0x772b8378.
+// MeerMappingAmounts is a free data retrieval call binding the contract method 0xdac86377.
 //
-// Solidity: function meerMappingAmounts(bytes ) view returns(uint256)
-func (_Token *TokenCaller) MeerMappingAmounts(opts *bind.CallOpts, arg0 []byte) (*big.Int, error) {
+// Solidity: function meerMappingAmounts(bytes , uint256 ) view returns(uint256 Amount, uint256 Time, uint256 Order, uint256 Height)
+func (_Token *TokenCaller) MeerMappingAmounts(opts *bind.CallOpts, arg0 []byte, arg1 *big.Int) (struct {
+	Amount *big.Int
+	Time   *big.Int
+	Order  *big.Int
+	Height *big.Int
+}, error) {
 	var out []interface{}
-	err := _Token.contract.Call(opts, &out, "meerMappingAmounts", arg0)
+	err := _Token.contract.Call(opts, &out, "meerMappingAmounts", arg0, arg1)
+
+	outstruct := new(struct {
+		Amount *big.Int
+		Time   *big.Int
+		Order  *big.Int
+		Height *big.Int
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.Amount = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.Time = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.Order = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
+	outstruct.Height = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
+
+	return *outstruct, err
+
+}
+
+// MeerMappingAmounts is a free data retrieval call binding the contract method 0xdac86377.
+//
+// Solidity: function meerMappingAmounts(bytes , uint256 ) view returns(uint256 Amount, uint256 Time, uint256 Order, uint256 Height)
+func (_Token *TokenSession) MeerMappingAmounts(arg0 []byte, arg1 *big.Int) (struct {
+	Amount *big.Int
+	Time   *big.Int
+	Order  *big.Int
+	Height *big.Int
+}, error) {
+	return _Token.Contract.MeerMappingAmounts(&_Token.CallOpts, arg0, arg1)
+}
+
+// MeerMappingAmounts is a free data retrieval call binding the contract method 0xdac86377.
+//
+// Solidity: function meerMappingAmounts(bytes , uint256 ) view returns(uint256 Amount, uint256 Time, uint256 Order, uint256 Height)
+func (_Token *TokenCallerSession) MeerMappingAmounts(arg0 []byte, arg1 *big.Int) (struct {
+	Amount *big.Int
+	Time   *big.Int
+	Order  *big.Int
+	Height *big.Int
+}, error) {
+	return _Token.Contract.MeerMappingAmounts(&_Token.CallOpts, arg0, arg1)
+}
+
+// MeerMappingCount is a free data retrieval call binding the contract method 0xf96eb242.
+//
+// Solidity: function meerMappingCount(bytes ) view returns(uint256)
+func (_Token *TokenCaller) MeerMappingCount(opts *bind.CallOpts, arg0 []byte) (*big.Int, error) {
+	var out []interface{}
+	err := _Token.contract.Call(opts, &out, "meerMappingCount", arg0)
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -196,18 +259,18 @@ func (_Token *TokenCaller) MeerMappingAmounts(opts *bind.CallOpts, arg0 []byte) 
 
 }
 
-// MeerMappingAmounts is a free data retrieval call binding the contract method 0x772b8378.
+// MeerMappingCount is a free data retrieval call binding the contract method 0xf96eb242.
 //
-// Solidity: function meerMappingAmounts(bytes ) view returns(uint256)
-func (_Token *TokenSession) MeerMappingAmounts(arg0 []byte) (*big.Int, error) {
-	return _Token.Contract.MeerMappingAmounts(&_Token.CallOpts, arg0)
+// Solidity: function meerMappingCount(bytes ) view returns(uint256)
+func (_Token *TokenSession) MeerMappingCount(arg0 []byte) (*big.Int, error) {
+	return _Token.Contract.MeerMappingCount(&_Token.CallOpts, arg0)
 }
 
-// MeerMappingAmounts is a free data retrieval call binding the contract method 0x772b8378.
+// MeerMappingCount is a free data retrieval call binding the contract method 0xf96eb242.
 //
-// Solidity: function meerMappingAmounts(bytes ) view returns(uint256)
-func (_Token *TokenCallerSession) MeerMappingAmounts(arg0 []byte) (*big.Int, error) {
-	return _Token.Contract.MeerMappingAmounts(&_Token.CallOpts, arg0)
+// Solidity: function meerMappingCount(bytes ) view returns(uint256)
+func (_Token *TokenCallerSession) MeerMappingCount(arg0 []byte) (*big.Int, error) {
+	return _Token.Contract.MeerMappingCount(&_Token.CallOpts, arg0)
 }
 
 // QueryAmount is a free data retrieval call binding the contract method 0xe944dec8.
@@ -239,4 +302,35 @@ func (_Token *TokenSession) QueryAmount(_qngHash160 []byte) (*big.Int, error) {
 // Solidity: function queryAmount(bytes _qngHash160) view returns(uint256)
 func (_Token *TokenCallerSession) QueryAmount(_qngHash160 []byte) (*big.Int, error) {
 	return _Token.Contract.QueryAmount(&_Token.CallOpts, _qngHash160)
+}
+
+// QueryBurnDetails is a free data retrieval call binding the contract method 0xcc53ccf3.
+//
+// Solidity: function queryBurnDetails(bytes _qngHash160) view returns((uint256,uint256,uint256,uint256)[])
+func (_Token *TokenCaller) QueryBurnDetails(opts *bind.CallOpts, _qngHash160 []byte) ([]MeerMappingBurnDetail, error) {
+	var out []interface{}
+	err := _Token.contract.Call(opts, &out, "queryBurnDetails", _qngHash160)
+
+	if err != nil {
+		return *new([]MeerMappingBurnDetail), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]MeerMappingBurnDetail)).(*[]MeerMappingBurnDetail)
+
+	return out0, err
+
+}
+
+// QueryBurnDetails is a free data retrieval call binding the contract method 0xcc53ccf3.
+//
+// Solidity: function queryBurnDetails(bytes _qngHash160) view returns((uint256,uint256,uint256,uint256)[])
+func (_Token *TokenSession) QueryBurnDetails(_qngHash160 []byte) ([]MeerMappingBurnDetail, error) {
+	return _Token.Contract.QueryBurnDetails(&_Token.CallOpts, _qngHash160)
+}
+
+// QueryBurnDetails is a free data retrieval call binding the contract method 0xcc53ccf3.
+//
+// Solidity: function queryBurnDetails(bytes _qngHash160) view returns((uint256,uint256,uint256,uint256)[])
+func (_Token *TokenCallerSession) QueryBurnDetails(_qngHash160 []byte) ([]MeerMappingBurnDetail, error) {
+	return _Token.Contract.QueryBurnDetails(&_Token.CallOpts, _qngHash160)
 }
