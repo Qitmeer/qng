@@ -160,9 +160,9 @@ var (
 			Destination: &cfg.DefaultPort,
 		},
 		&cli.StringSliceFlag{
-			Name:  "rpclisten",
-			Usage: "Add an interface/port to listen for RPC connections",
-			Value: &RPCListeners,
+			Name:        "rpclisten",
+			Usage:       "Add an interface/port to listen for RPC connections",
+			Destination: &RPCListeners,
 		},
 		&cli.IntFlag{
 			Name:        "maxpeers",
@@ -218,9 +218,9 @@ var (
 			Destination: &cfg.DisableTLS,
 		},
 		&cli.StringSliceFlag{
-			Name:  "modules",
-			Usage: "Modules is a list of API modules(See GetNodeInfo) to expose via the HTTP RPC interface. If the module list is empty, all RPC API endpoints designated public will be exposed.",
-			Value: &Modules,
+			Name:        "modules",
+			Usage:       "Modules is a list of API modules(See GetNodeInfo) to expose via the HTTP RPC interface. If the module list is empty, all RPC API endpoints designated public will be exposed.",
+			Destination: &Modules,
 		},
 		&cli.BoolFlag{
 			Name:        "nocheckpoints",
@@ -350,9 +350,9 @@ var (
 			Destination: &cfg.Generate,
 		},
 		&cli.StringSliceFlag{
-			Name:  "miningaddr",
-			Usage: "Add the specified payment address to the list of addresses to use for generated blocks -- At least one address is required if the generate option is set",
-			Value: &MiningAddrs,
+			Name:        "miningaddr",
+			Usage:       "Add the specified payment address to the list of addresses to use for generated blocks -- At least one address is required if the generate option is set",
+			Destination: &MiningAddrs,
 		},
 		&cli.IntFlag{
 			Name:        "miningtimeoffset",
@@ -399,10 +399,10 @@ var (
 			Destination: &cfg.MiningStateSync,
 		},
 		&cli.StringSliceFlag{
-			Name:    "addpeer",
-			Aliases: []string{"a"},
-			Usage:   "Add a peer to connect with at startup",
-			Value:   &AddPeers,
+			Name:        "addpeer",
+			Aliases:     []string{"a"},
+			Usage:       "Add a peer to connect with at startup",
+			Destination: &AddPeers,
 		},
 		&cli.BoolFlag{
 			Name:        "upnp",
@@ -470,9 +470,9 @@ var (
 			Destination: &cfg.NTP,
 		},
 		&cli.StringSliceFlag{
-			Name:  "bootstrapnode",
-			Usage: "The address of bootstrap node.",
-			Value: &BootstrapNodes,
+			Name:        "bootstrapnode",
+			Usage:       "The address of bootstrap node.",
+			Destination: &BootstrapNodes,
 		},
 		&cli.BoolFlag{
 			Name:        "nodiscovery",
@@ -510,14 +510,14 @@ var (
 			Destination: &cfg.RelayNode,
 		},
 		&cli.StringSliceFlag{
-			Name:  "whitelist",
-			Usage: "Add an IP network or IP,PeerID that will not be banned or ignore dual channel mode detection. (eg. 192.168.1.0/24 or ::1 or [peer id])",
-			Value: &Whitelist,
+			Name:        "whitelist",
+			Usage:       "Add an IP network or IP,PeerID that will not be banned or ignore dual channel mode detection. (eg. 192.168.1.0/24 or ::1 or [peer id])",
+			Destination: &Whitelist,
 		},
 		&cli.StringSliceFlag{
-			Name:  "blacklist",
-			Usage: "Add some IP network or IP that will be banned. (eg. 192.168.1.0/24 or ::1)",
-			Value: &Blacklist,
+			Name:        "blacklist",
+			Usage:       "Add some IP network or IP that will be banned. (eg. 192.168.1.0/24 or ::1)",
+			Destination: &Blacklist,
 		},
 		&cli.IntFlag{
 			Name:        "maxbadresp",
@@ -540,9 +540,9 @@ var (
 			Destination: &cfg.Estimatefee,
 		},
 		&cli.StringSliceFlag{
-			Name:  "gbtnotify",
-			Usage: "HTTP URL list to be notified of new block template",
-			Value: &GBTNotify,
+			Name:        "gbtnotify",
+			Usage:       "HTTP URL list to be notified of new block template",
+			Destination: &GBTNotify,
 		},
 	}
 )
