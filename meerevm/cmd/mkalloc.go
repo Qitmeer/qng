@@ -23,6 +23,8 @@ import (
 )
 
 const RELEASE_CONTRACT_ADDR = "0x1000000000000000000000000000000000000000"
+const BURN_ADDR1 = "MmQitmeerMainNetGuardAddressXd7b76q"
+const BURN_ADDR2 = "MmQitmeerMainNetHonorAddressXY9JH2y"
 
 type allocItem struct {
 	Addr         *big.Int
@@ -166,8 +168,13 @@ func BuildBurnBalance() map[common.Hash]common.Hash {
 	bas := map[string][]release.MeerMappingBurnDetail{}
 	allBurnAmount := uint64(0)
 	burnM := map[string]uint64{}
-	for k, v := range gds {
-		for _, vv := range v {
+	keys := make([]string, 0)
+	burns := []string{BURN_ADDR1, BURN_ADDR2}
+	for i := 0; i < len(burns); i++ {
+		k := burns[i]
+		v := gds[k]
+		for i := 0; i < len(v); i++ {
+			vv := v[i]
 			addr, err := address.DecodeAddress(vv.From)
 			if err != nil {
 				panic(vv.From + "meer address err" + err.Error())
@@ -185,6 +192,7 @@ func BuildBurnBalance() map[common.Hash]common.Hash {
 			h16hex := hex.EncodeToString(h16[:])
 			if _, ok := bas[h16hex]; !ok {
 				bas[h16hex] = []release.MeerMappingBurnDetail{}
+				keys = append(keys, h16hex)
 			}
 			bas[h16hex] = append(bas[h16hex], d)
 			allBurnAmount += uint64(vv.Amount)
@@ -195,8 +203,11 @@ func BuildBurnBalance() map[common.Hash]common.Hash {
 		log.Println(k, "burn amount", v)
 	}
 	log.Println("All burn amount", allBurnAmount)
-	for k, v := range bas {
-		for i, vv := range v {
+	for j := 0; j < len(keys); j++ {
+		k := keys[j]
+		v := bas[k]
+		for i := 0; i < len(v); i++ {
+			vv := v[i]
 			// amount
 			s := k + fmt.Sprintf("%064x", big.NewInt(1))
 			b, _ := hex.DecodeString(s)
