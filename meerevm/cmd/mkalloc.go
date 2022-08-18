@@ -122,7 +122,9 @@ func main() {
 				panic(err)
 			}
 		}
-		fileContent += fmt.Sprintf("\nconst %s = %s", networkTag, makealloc(genesis))
+		alloc := makealloc(genesis)
+		log.Printf("network=%s genesisHash=%s\n", networkTag, hex.EncodeToString(crypto.Keccak256([]byte(alloc))))
+		fileContent += fmt.Sprintf("\nconst %s = %s", networkTag, alloc)
 	}
 
 	fileName := "./../chain/genesis_alloc.go"
