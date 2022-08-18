@@ -23,6 +23,8 @@ import (
 )
 
 const RELEASE_CONTRACT_ADDR = "0x1000000000000000000000000000000000000000"
+const BURN_ADDR1 = "MmQitmeerMainNetGuardAddressXd7b76q"
+const BURN_ADDR2 = "MmQitmeerMainNetHonorAddressXY9JH2y"
 
 type allocItem struct {
 	Addr         *big.Int
@@ -50,6 +52,8 @@ func makelist(g *core.Genesis) allocList {
 			sks = append(sks, k.String())
 			svs = append(svs, v.String())
 		}
+		sort.Strings(sks)
+		sort.Strings(svs)
 		a = append(a, allocItem{Addr: bigAddr, Balance: account.Balance, Code: account.Code, Nonce: account.Nonce, StorageKey: sks, StorageValue: svs})
 	}
 	sort.Sort(a)
@@ -79,10 +83,11 @@ func main() {
 	if len(gds) != 4 {
 		panic(fmt.Errorf("Error genesis data config"))
 	}
-	burnList := BuildBurnBalance()
+	burnKeys, burnList := BuildBurnBalance()
 	fileContent := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go \npackage chain\n\n"
 
-	for _, ngd := range gds {
+	for k := 0; k < len(gds); k++ {
+		ngd := gds[k]
 		networkTag := ""
 		if ngd.Network == params.TestNetParam.Name {
 			params.ActiveNetParams = &params.TestNetParam
@@ -104,9 +109,12 @@ func main() {
 		if _, ok := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]; ok {
 			releaseAccount := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]
 			storage := releaseAccount.Storage
-			for k, v := range burnList {
-				storage[k] = v
+
+			for j := 0; j < len(burnKeys); j++ {
+				m := burnKeys[j]
+				storage[m] = burnList[m]
 			}
+
 			releaseAccount.Storage = storage
 			genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)] = releaseAccount
 		}
@@ -143,16 +151,16 @@ type BurnDetail struct {
 	Time   int64  `json:"time"`
 }
 
-// 2022/08/14 17:43:57 MmQitmeerMainNetGuardAddressXd7b76q burn amount 641194999865334
-// 2022/08/14 17:43:57 MmQitmeerMainNetHonorAddressXY9JH2y burn amount 522926594198330
-// 2022/08/14 17:43:57 All burn amount 1164121594063664
+// 2022/08/17 20:35:36 MmQitmeerMainNetHonorAddressXY9JH2y burn amount 408011208230864
+// 2022/08/17 20:35:36 MmQitmeerMainNetGuardAddressXd7b76q burn amount 514790066054534
+// 2022/08/17 20:35:36 All burn amount 922801274285398
 // 2022/08/14 17:43:57 end height 910000
 // 2022/08/14 17:43:57 end order 1013260
 // 2022/08/14 17:43:57 end blockhash efc89d8b4ef5733b6e566d9f06c0596075100f8406d3a9b581c74d42fb99dd79
-// 2022/08/14 17:43:57 pow meer amount 1013260* 10 = 10132600
-// all amount 1013260000000000+1164121594063664 = 2177381594063664
+// 2022/08/14 17:43:57 pow meer amount (1013260 /10) * 12 * 10 = 1013260 * 12 = 12159120
+// all amount 1215912000000000+922801274285398 = 2138713274285398
 
-func BuildBurnBalance() map[common.Hash]common.Hash {
+func BuildBurnBalance() ([]common.Hash, map[common.Hash]common.Hash) {
 	filePath := "./../chain/burn_list.json"
 	storage := map[common.Hash]common.Hash{}
 	gds := map[string][]BurnDetail{}
@@ -166,8 +174,13 @@ func BuildBurnBalance() map[common.Hash]common.Hash {
 	bas := map[string][]release.MeerMappingBurnDetail{}
 	allBurnAmount := uint64(0)
 	burnM := map[string]uint64{}
-	for k, v := range gds {
-		for _, vv := range v {
+	keys := make([]string, 0)
+	burns := []string{BURN_ADDR1, BURN_ADDR2}
+	for i := 0; i < len(burns); i++ {
+		k := burns[i]
+		v := gds[k]
+		for i := 0; i < len(v); i++ {
+			vv := v[i]
 			addr, err := address.DecodeAddress(vv.From)
 			if err != nil {
 				panic(vv.From + "meer address err" + err.Error())
@@ -185,6 +198,7 @@ func BuildBurnBalance() map[common.Hash]common.Hash {
 			h16hex := hex.EncodeToString(h16[:])
 			if _, ok := bas[h16hex]; !ok {
 				bas[h16hex] = []release.MeerMappingBurnDetail{}
+				keys = append(keys, h16hex)
 			}
 			bas[h16hex] = append(bas[h16hex], d)
 			allBurnAmount += uint64(vv.Amount)
@@ -195,8 +209,12 @@ func BuildBurnBalance() map[common.Hash]common.Hash {
 		log.Println(k, "burn amount", v)
 	}
 	log.Println("All burn amount", allBurnAmount)
-	for k, v := range bas {
-		for i, vv := range v {
+	burnKeys := []common.Hash{}
+	for j := 0; j < len(keys); j++ {
+		k := keys[j]
+		v := bas[k]
+		for i := 0; i < len(v); i++ {
+			vv := v[i]
 			// amount
 			s := k + fmt.Sprintf("%064x", big.NewInt(1))
 			b, _ := hex.DecodeString(s)
@@ -233,12 +251,14 @@ func BuildBurnBalance() map[common.Hash]common.Hash {
 			key3 = crypto.Keccak256(b)
 			key3Big := new(big.Int).Add(new(big.Int).SetBytes(key3), big.NewInt(3))
 			storage[common.HexToHash(fmt.Sprintf("%064x", key3Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Height))
+			burnKeys = append(burnKeys, common.HexToHash(fmt.Sprintf("%064x", key3Big)))
 		}
 		kk, _ := hex.DecodeString(k + fmt.Sprintf("%064x", big.NewInt(0)))
 		kb := crypto.Keccak256(kk)
 		storage[common.BytesToHash(kb)] = common.HexToHash(fmt.Sprintf("%064x", len(v)))
+		burnKeys = append(burnKeys, common.BytesToHash(kb))
 	}
-	return storage
+	return burnKeys, storage
 }
 
 // a[xxxx][0].
