@@ -44,6 +44,11 @@ jobs:
           go mod tidy -compat=1.17
           make qng
 
+      - name: BaseTest
+        run: |
+          PATH=$PATH:$(pwd)/build/bin
+          go test basetest/base_test.go
+
       - name: Test
         run: |
           PATH=$PATH:$(pwd)/build/bin
