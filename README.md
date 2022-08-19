@@ -67,13 +67,13 @@ or
 ```
 (Due to safety reasons, you need to actively open the private module by `./qng --modules=test`)
 
-### MeerVM
-* If you want to use our MeerVM function, the required interface information can be queried in this RPC:
+### MeerEVM
+* If you want to use our MeerEVM function, the required interface information can be queried in this RPC:
 ```
 ~ cd ./script
 ~ ./cli.sh vmsinfo
 ``` 
-* If you don't need the default configuration, we provide an environment configuration parameter to meet your custom configuration for MeerVM:
+* If you don't need the default configuration, we provide an environment configuration parameter to meet your custom configuration for MeerEVM:
 ```
 ~ ./qng --testnet --evmenv="--http"
 or
@@ -82,7 +82,7 @@ or
 ``` 
 
 
-* You first need to transfer your money in qitmeer to MeerVM:`createExportRawTx <txid> <vout> <PKAdress> <amount>`
+* You first need to transfer your money in qitmeer to MeerEVM:`createExportRawTx <txid> <vout> <PKAdress> <amount>`
 ``` 
 ~ ./cli.sh createExportRawTx ce28ec92cc99b13d9f7a658d2f1e08aa9e4f27ebcfaf5344750bb77484a79657 0 Tk6uXJ3kjh3yA4q94KQF9DTL14rDbd4vb2kztbkfhMBziR35HYkkx 11000000000
 ~ ./cli.sh txSign [Your_Private_Key] [rawTx]
@@ -94,10 +94,10 @@ or
 ~ ./cli.sh txSign [Your_Private_Key] [rawTx]
 ~ ./cli.sh sendRawTx [signRawTx]
 ``` 
-* Finally, wait for the miner to pack your transaction into the block. Then you have the money to start operating your MeerVM ecosystem.
+* Finally, wait for the miner to pack your transaction into the block. Then you have the money to start operating your MeerEVM ecosystem.
 
 
-### How can I transfer my money in MeerVM to the qitmeer account system ?
+### How can I transfer my money in MeerEVM to the qitmeer account system ?
 ```
 ~ ./cli.sh createImportRawTx Tk6uXJ3kjh3yA4q94KQF9DTL14rDbd4vb2kztbkfhMBziR35HYkkx [amount] 
 ~ ./cli.sh txSign [Your_Private_Key] [rawTx]
@@ -105,7 +105,7 @@ or
 ``` 
 * Finally, wait for the miner to pack your transaction into the block. 
 
-### How to call QNG's RPC in the JavaScript runtime environment of MeerVM ?
+### How to call QNG's RPC in the JavaScript runtime environment of MeerEVM ?
 ```
 ~ ./qng --testnet --evmenv="--http --http.port=18545 --http.api=net,web3,eth,qng"
 ~ ./qng attach http://127.0.0.1:18545
