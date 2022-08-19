@@ -9,6 +9,7 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"math"
 	"runtime"
 
@@ -183,7 +184,7 @@ func newTxValidator(utxoView *UtxoViewpoint, flags txscript.ScriptFlags, sigCach
 
 // ValidateTransactionScripts validates the scripts for the passed transaction
 // using multiple goroutines.
-func ValidateTransactionScripts(tx *types.Tx, utxoView *UtxoViewpoint, flags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
+func ValidateTransactionScripts(tx *types.Tx, utxoView *UtxoViewpoint, flags txscript.ScriptFlags, sigCache *txscript.SigCache, height int64) error {
 	// Collect all of the transaction inputs and required information for
 	// validation.
 	txIns := tx.Transaction().TxIn
@@ -193,7 +194,9 @@ func ValidateTransactionScripts(tx *types.Tx, utxoView *UtxoViewpoint, flags txs
 		if txIn.PreviousOut.OutIndex == math.MaxUint32 {
 			continue
 		}
-
+		if forks.IsExportUTXOFork(tx.Tx, txIn, height) {
+			txIn.AmountIn.Value = types.ExportMaxLockUTXOFork
+		}
 		txVI := &txValidateItem{
 			txInIndex: txInIdx,
 			txIn:      txIn,
@@ -218,7 +221,7 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *U
 	numInputs := 0
 	txs := block.Transactions()
 	for _, tx := range txs {
-		if tx.IsDuplicate || types.IsCrossChainVMTx(tx.Tx)  {
+		if tx.IsDuplicate || types.IsCrossChainVMTx(tx.Tx) {
 			continue
 		}
 		numInputs += len(tx.Transaction().TxIn)
@@ -255,7 +258,9 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *U
 			if txIn.PreviousOut.OutIndex == math.MaxUint32 {
 				continue
 			}
-
+			if forks.IsExportUTXOFork(tx.Tx, txIn, int64(block.Height())) {
+				txIn.AmountIn.Value = types.ExportMaxLockUTXOFork
+			}
 			txVI := &txValidateItem{
 				txInIndex: txInIdx,
 				txIn:      txIn,

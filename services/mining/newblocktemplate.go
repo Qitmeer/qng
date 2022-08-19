@@ -418,7 +418,7 @@ mempool:
 			continue
 		}
 		err = blockchain.ValidateTransactionScripts(tx, blockUtxos,
-			scriptFlags, sigCache)
+			scriptFlags, sigCache, int64(nextBlockHeight))
 		if err != nil {
 			log.Trace(fmt.Sprintf("Skipping tx %s due to error in "+
 				"ValidateTransactionScripts: %v", tx.Hash(), err))
