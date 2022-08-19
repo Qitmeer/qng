@@ -184,6 +184,4 @@ var PrivNetParams = Params{
 	},
 
 	MeerEVMCfg: MeerEVMConfig{ChainID: 8133},
-
-	ExportUTXOForkMainHeight: 1,
 }

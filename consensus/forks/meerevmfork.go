@@ -1,16 +1,22 @@
 package forks
 
 import (
+	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
 )
 
-func IsExportUTXOFork(tx *types.Transaction, ip *types.TxInput, mainHeight int64) bool {
-	if params.ActiveNetParams.ExportUTXOForkMainHeight == 0 {
+const (
+	// What main height can transfer the locked utxo in genesis to MeerVM
+	MeerEVMForkMainHeight = 959000
+)
+
+func IsMeerEVMFork(tx *types.Transaction, ip *types.TxInput, mainHeight int64) bool {
+	if params.ActiveNetParams.Net != protocol.MainNet {
 		return false
 	}
-	if mainHeight < params.ActiveNetParams.ExportUTXOForkMainHeight {
+	if mainHeight < MeerEVMForkMainHeight {
 		return false
 	}
 	if !types.IsCrossChainExportTx(tx) {

@@ -194,8 +194,8 @@ func ValidateTransactionScripts(tx *types.Tx, utxoView *UtxoViewpoint, flags txs
 		if txIn.PreviousOut.OutIndex == math.MaxUint32 {
 			continue
 		}
-		if forks.IsExportUTXOFork(tx.Tx, txIn, height) {
-			txIn.AmountIn.Value = types.ExportMaxLockUTXOFork
+		if forks.IsMeerEVMFork(tx.Tx, txIn, height) {
+			txIn.AmountIn.Value = types.MeerEVMForkInput
 		}
 		txVI := &txValidateItem{
 			txInIndex: txInIdx,
@@ -258,8 +258,8 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *U
 			if txIn.PreviousOut.OutIndex == math.MaxUint32 {
 				continue
 			}
-			if forks.IsExportUTXOFork(tx.Tx, txIn, int64(block.Height())) {
-				txIn.AmountIn.Value = types.ExportMaxLockUTXOFork
+			if forks.IsMeerEVMFork(tx.Tx, txIn, int64(block.Height())) {
+				txIn.AmountIn.Value = types.MeerEVMForkInput
 			}
 			txVI := &txValidateItem{
 				txInIndex: txInIdx,

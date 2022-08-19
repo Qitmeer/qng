@@ -1060,7 +1060,7 @@ func opcodeCheckLockTimeVerify(op *ParsedOpcode, vm *Engine) error {
 		}
 		return nil
 	}
-	if types.IsExportUTXOForkInput(vm.tx.TxIn[vm.txIdx]) {
+	if types.IsMeerEVMForkInput(vm.tx.TxIn[vm.txIdx]) {
 		return nil
 	}
 	// The current transaction locktime is a uint32 resulting in a maximum
