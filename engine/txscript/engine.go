@@ -96,19 +96,20 @@ type Engine struct {
 	savedFirstStack [][]byte // stack from first script for bip16 scripts
 	sigCache        *SigCache
 
-	scriptIdx   int
-	scriptOff   int
-	lastCodeSep int
-	dstack      stack // data stack
-	astack      stack // alt stack
-	tx          types.Transaction
-	scriptTx    types.ScriptTx
-	txIdx       int
-	condStack   []int
-	numOps      int
-	flags       ScriptFlags
-	version     uint16
-	bip16       bool // treat execution as pay-to-script-hash
+	scriptIdx        int
+	scriptOff        int
+	lastCodeSep      int
+	dstack           stack // data stack
+	astack           stack // alt stack
+	tx               types.Transaction
+	scriptTx         types.ScriptTx
+	txIdx            int
+	condStack        []int
+	numOps           int
+	flags            ScriptFlags
+	version          uint16
+	bip16            bool // treat execution as pay-to-script-hash
+	isExportUTXOFork bool
 }
 
 // hasFlag returns whether the script engine instance has the passed flag set.
@@ -602,7 +603,7 @@ func (vm *Engine) SetAltStack(data [][]byte) {
 // transaction, and input index.  The flags modify the behavior of the script
 // engine according to the description provided by each flag.
 func NewEngine(scriptPubKey []byte, tx *types.Transaction, txIdx int,
-	flags ScriptFlags, scriptVersion uint16, sigCache *SigCache) (*Engine, error) {
+	flags ScriptFlags, scriptVersion uint16, sigCache *SigCache, isExportUTXOFork bool) (*Engine, error) {
 
 	// The provided transaction input index must refer to a valid input.
 	if txIdx < 0 || txIdx >= len(tx.TxIn) {
@@ -677,7 +678,7 @@ func NewEngine(scriptPubKey []byte, tx *types.Transaction, txIdx int,
 
 	vm.tx = *tx
 	vm.txIdx = txIdx
-
+	vm.isExportUTXOFork = isExportUTXOFork
 	return &vm, nil
 }
 

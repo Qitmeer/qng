@@ -311,6 +311,9 @@ type Params struct {
 	CoinbaseConfig CoinbaseConfigs
 
 	MeerEVMCfg MeerEVMConfig
+
+	// What main height can transfer the locked utxo in genesis to MeerVM
+	ExportUTXOForkMainHeight int64
 }
 
 type CoinbaseConfig struct {

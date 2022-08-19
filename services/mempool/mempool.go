@@ -401,7 +401,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		}
 
 		err = blockchain.ValidateTransactionScripts(tx, utxoView, flags,
-			mp.cfg.SigCache)
+			mp.cfg.SigCache, int64(nextBlockHeight))
 		if err != nil {
 			if cerr, ok := err.(blockchain.RuleError); ok {
 				return nil, nil, chainRuleError(cerr)
@@ -434,7 +434,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			return nil, nil, err
 		}
 		err = blockchain.ValidateTransactionScripts(types.NewTx(vtsTx), utxoView, flags,
-			mp.cfg.SigCache)
+			mp.cfg.SigCache, int64(nextBlockHeight))
 		if err != nil {
 			if cerr, ok := err.(blockchain.RuleError); ok {
 				return nil, nil, chainRuleError(cerr)
@@ -677,7 +677,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	// any don't verify.
 
 	err = blockchain.ValidateTransactionScripts(tx, utxoView, flags,
-		mp.cfg.SigCache)
+		mp.cfg.SigCache, int64(nextBlockHeight))
 	if err != nil {
 		if cerr, ok := err.(blockchain.RuleError); ok {
 			return nil, nil, chainRuleError(cerr)

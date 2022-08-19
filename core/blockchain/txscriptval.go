@@ -9,6 +9,7 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"math"
 	"runtime"
 
@@ -18,9 +19,10 @@ import (
 
 // txValidateItem holds a transaction along with which input to validate.
 type txValidateItem struct {
-	txInIndex int
-	txIn      *types.TxInput
-	tx        *types.Tx
+	txInIndex        int
+	txIn             *types.TxInput
+	tx               *types.Tx
+	isExportUTXOFork bool
 }
 
 // txValidator provides a type which asynchronously validates transaction
@@ -73,7 +75,7 @@ out:
 			pkScript := utxo.PkScript()
 			sigScript := txIn.SignScript
 			vm, err := txscript.NewEngine(pkScript, txVI.tx.Transaction(),
-				txVI.txInIndex, v.flags, txscript.DefaultScriptVersion, v.sigCache)
+				txVI.txInIndex, v.flags, txscript.DefaultScriptVersion, v.sigCache, txVI.isExportUTXOFork)
 			if err != nil {
 				str := fmt.Sprintf("failed to parse input "+
 					"%s:%d which references output %v - "+
@@ -183,7 +185,7 @@ func newTxValidator(utxoView *UtxoViewpoint, flags txscript.ScriptFlags, sigCach
 
 // ValidateTransactionScripts validates the scripts for the passed transaction
 // using multiple goroutines.
-func ValidateTransactionScripts(tx *types.Tx, utxoView *UtxoViewpoint, flags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
+func ValidateTransactionScripts(tx *types.Tx, utxoView *UtxoViewpoint, flags txscript.ScriptFlags, sigCache *txscript.SigCache, height int64) error {
 	// Collect all of the transaction inputs and required information for
 	// validation.
 	txIns := tx.Transaction().TxIn
@@ -195,9 +197,10 @@ func ValidateTransactionScripts(tx *types.Tx, utxoView *UtxoViewpoint, flags txs
 		}
 
 		txVI := &txValidateItem{
-			txInIndex: txInIdx,
-			txIn:      txIn,
-			tx:        tx,
+			txInIndex:        txInIdx,
+			txIn:             txIn,
+			tx:               tx,
+			isExportUTXOFork: forks.IsExportUTXOFork(tx.Tx, txIn, height),
 		}
 		txValItems = append(txValItems, txVI)
 	}
@@ -218,7 +221,7 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *U
 	numInputs := 0
 	txs := block.Transactions()
 	for _, tx := range txs {
-		if tx.IsDuplicate || types.IsCrossChainVMTx(tx.Tx)  {
+		if tx.IsDuplicate || types.IsCrossChainVMTx(tx.Tx) {
 			continue
 		}
 		numInputs += len(tx.Transaction().TxIn)
@@ -257,9 +260,10 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *U
 			}
 
 			txVI := &txValidateItem{
-				txInIndex: txInIdx,
-				txIn:      txIn,
-				tx:        tx,
+				txInIndex:        txInIdx,
+				txIn:             txIn,
+				tx:               tx,
+				isExportUTXOFork: forks.IsExportUTXOFork(tx.Tx, txIn, int64(block.Height())),
 			}
 			txValItems = append(txValItems, txVI)
 		}
