@@ -2,7 +2,7 @@ package chain
 
 import (
 	"encoding/hex"
-	"fmt"
+	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -11,17 +11,18 @@ const MixAllocHash = "e380c81b956194ce4e38c218f9b99300ef725f58b7ec13963fea763c83
 const TestAllocHash = "e380c81b956194ce4e38c218f9b99300ef725f58b7ec13963fea763c8379446f"
 const PrivAllocHash = "e380c81b956194ce4e38c218f9b99300ef725f58b7ec13963fea763c8379446f"
 
-func Check() bool {
-	mainAllocDataHash := crypto.Keccak256([]byte(mainAllocData))
-	mixAllocDataHash := crypto.Keccak256([]byte(mixAllocData))
-	testAllocDataHash := crypto.Keccak256([]byte(testAllocData))
-	privAllocDataHash := crypto.Keccak256([]byte(privAllocData))
-	fmt.Printf("mainHash:\n%v\nmixHash:%v\ntestHash:%v\nprivHash:%v\n", hex.EncodeToString(mainAllocDataHash), hex.EncodeToString(mixAllocDataHash),
-		hex.EncodeToString(testAllocDataHash), hex.EncodeToString(privAllocDataHash))
+func BuildGenesisHash(network string) string {
+	switch network {
+	case params.MainNetParams.Name:
+		return hex.EncodeToString(crypto.Keccak256([]byte(mainAllocData)))
+	case params.MixNetParams.Name:
+		return hex.EncodeToString(crypto.Keccak256([]byte(mixAllocData)))
+	case params.TestNetParams.Name:
+		return hex.EncodeToString(crypto.Keccak256([]byte(testAllocData)))
+	case params.PrivNetParams.Name:
+		return hex.EncodeToString(crypto.Keccak256([]byte(privAllocData)))
+	default:
+		return ""
 
-	if MainAllocHash != hex.EncodeToString(mainAllocDataHash) || MixAllocHash != hex.EncodeToString(mixAllocDataHash) ||
-		TestAllocHash != hex.EncodeToString(testAllocDataHash) || PrivAllocHash != hex.EncodeToString(privAllocDataHash) {
-		return false
 	}
-	return true
 }
