@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-const MainAllocHash = "204bb2f79e29453543b74b620533c854ddd327603fdcadb5c938b4e29e2cbd0b1"
+const MainAllocHash = "204bb2f79e29453543b74b620533c854ddd327603fdcadb5c938b4e29e2cbd0b"
 const MixAllocHash = "e380c81b956194ce4e38c218f9b99300ef725f58b7ec13963fea763c8379446f"
 const TestAllocHash = "e380c81b956194ce4e38c218f9b99300ef725f58b7ec13963fea763c8379446f"
 const PrivAllocHash = "e380c81b956194ce4e38c218f9b99300ef725f58b7ec13963fea763c8379446f"
