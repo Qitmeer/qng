@@ -97,7 +97,7 @@ or
 * Finally, wait for the miner to pack your transaction into the block. Then you have the money to start operating your MeerEVM ecosystem.
 
 
-### How can I transfer my money in MeerEVM to the qitmeer account system ?
+### How can I transfer my money in meerevm to the qitmeer account system ?
 ```
 ~ ./cli.sh createImportRawTx Tk6uXJ3kjh3yA4q94KQF9DTL14rDbd4vb2kztbkfhMBziR35HYkkx [amount] 
 ~ ./cli.sh txSign [Your_Private_Key] [rawTx]
@@ -105,7 +105,7 @@ or
 ``` 
 * Finally, wait for the miner to pack your transaction into the block. 
 
-### How to call QNG's RPC in the JavaScript runtime environment of MeerEVM ?
+### How to call QNG's RPC in the JavaScript runtime environment of meerevm ?
 ```
 ~ ./qng --testnet --evmenv="--http --http.port=18545 --http.api=net,web3,eth,qng"
 ~ ./qng attach http://127.0.0.1:18545
