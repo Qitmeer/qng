@@ -41,7 +41,7 @@ var MainNetParams = Params{
 		"/dns4/boot.qitmir.info/tcp/2001/p2p/16Uiu2HAmJ8qBBgoNoHH84ntLuXB9sqDngh82zZgaEejdFUYGR59Y",
 	},
 	LedgerParams: ledger.LedgerParams{
-		GenesisAmountUnit: 1000 * 1e8,                              // 1000 MEER every utxo
+		GenesisAmountUnit: 1000 * 1e8,                               // 1000 MEER every utxo
 		MaxLockHeight:     86400 / mainTargetTimePerBlock * 365 * 5, // max lock height
 	},
 	// Chain parameters
@@ -112,11 +112,6 @@ var MainNetParams = Params{
 			BitNumber:  0,
 			StartTime:  0,
 			ExpireTime: mainWorkDiffWindowSize * 2,
-		},
-		DeploymentMeerEVM: {
-			BitNumber:  1,
-			StartTime:  0,
-			ExpireTime: 0,
 		},
 	},
 

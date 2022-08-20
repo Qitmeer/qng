@@ -48,3 +48,10 @@ func IsMaxLockUTXOInGenesis(op *types.TxOutPoint) bool {
 	}
 	return false
 }
+
+func IsMeerEVMForkHeight(mainHeight int64) bool {
+	if params.ActiveNetParams.Net != protocol.MainNet {
+		return false
+	}
+	return mainHeight >= MeerEVMForkMainHeight
+}
