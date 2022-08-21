@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/common/math"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/protocol"
@@ -257,10 +258,17 @@ func (api *PublicBlockChainAPI) GetNetworkInfo() (interface{}, error) {
 func (api *PublicBlockChainAPI) GetSubsidy() (interface{}, error) {
 	best := api.node.GetBlockManager().GetChain().BestSnapshot()
 	sc := api.node.GetBlockManager().GetChain().GetSubsidyCache()
+	mainHeight := int64(best.GraphState.GetMainHeight())
 
-	info := &json.SubsidyInfo{Mode: sc.GetMode(), TotalSubsidy: best.TotalSubsidy, BaseSubsidy: params.ActiveNetParams.BaseSubsidy}
+	info := &json.SubsidyInfo{Mode: sc.GetMode(mainHeight), TotalSubsidy: best.TotalSubsidy, BaseSubsidy: params.ActiveNetParams.BaseSubsidy}
 
-	if params.ActiveNetParams.TargetTotalSubsidy > 0 {
+	if forks.IsMeerEVMForkHeight(mainHeight) {
+		info.TargetTotalSubsidy = params.ActiveNetParams.TargetTotalSubsidy
+		info.LeftTotalSubsidy = info.TargetTotalSubsidy - int64(info.TotalSubsidy)
+		if info.LeftTotalSubsidy < 0 {
+			info.TargetTotalSubsidy = 0
+		}
+	} else if params.ActiveNetParams.TargetTotalSubsidy > 0 {
 		info.TargetTotalSubsidy = params.ActiveNetParams.TargetTotalSubsidy
 		info.LeftTotalSubsidy = info.TargetTotalSubsidy - int64(info.TotalSubsidy)
 		if info.LeftTotalSubsidy < 0 {
