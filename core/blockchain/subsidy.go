@@ -140,16 +140,14 @@ func (s *SubsidyCache) GetMode(height int64) string {
 }
 
 func (s *SubsidyCache) CalcBlockSubsidyByMeerEVMFork(bi *meerdag.BlueInfo) int64 {
-	if s.params.TargetTotalSubsidy <= 0 {
-		s.params.TargetTotalSubsidy = forks.MeerEVMForkTotalSubsidy
-	}
-	if bi.GetWeight() >= s.params.TargetTotalSubsidy {
+	targetTotalSubsidy := int64(forks.MeerEVMForkTotalSubsidy)
+	if bi.GetWeight() >= targetTotalSubsidy {
 		return 0
 	}
 	realHeight := bi.GetHeight() - forks.MeerEVMForkMainHeight
 	blockSubsidy := s.params.BaseSubsidy >> uint(realHeight/forks.SubsidyReductionInterval)
-	if bi.GetWeight()+blockSubsidy > s.params.TargetTotalSubsidy {
-		blockSubsidy = s.params.TargetTotalSubsidy - bi.GetWeight()
+	if bi.GetWeight()+blockSubsidy > targetTotalSubsidy {
+		blockSubsidy = targetTotalSubsidy - bi.GetWeight()
 	}
 	return blockSubsidy
 }
