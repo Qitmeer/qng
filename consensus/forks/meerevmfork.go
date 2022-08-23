@@ -11,8 +11,8 @@ const (
 	// What main height can transfer the locked utxo in genesis to MeerVM
 	MeerEVMForkMainHeight = 959000
 
-	// 21024000000000000 (Total)-5051813000000000 (locked genesis)-2138713274285398 (meerevm genesis) = 13833473725714602
-	MeerEVMForkTotalSubsidy = 13833473725714602
+	// 21024000000000000 (Total)-5051813000000000 (locked genesis)-1215912000000000 (meerevm genesis) = 14756275000000000
+	MeerEVMForkTotalSubsidy = 14756275000000000
 
 	// subsidy reduction interval
 	SubsidyReductionInterval = 7358400
