@@ -17,8 +17,8 @@ const (
 	// 21024000000000000 (Total)-5051813000000000 (locked genesis)-1215912000000000 (meerevm genesis) = 14756275000000000
 	MeerEVMForkTotalSubsidy = 14756275000000000
 
-	// subsidy reduction interval
-	SubsidyReductionInterval = 7358400
+	// subsidy reduction interval  48 days
+	SubsidyReductionInterval = 138240
 
 	// Subsidy reduction multiplier.
 	MulSubsidy = 100
