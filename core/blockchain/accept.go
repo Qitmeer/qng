@@ -369,7 +369,7 @@ func (b *BlockChain) IsValidTxType(tt types.TxType) bool {
 	if err == nil && ok && len(types.TokenTxs) > 0 {
 		txTypesCfg = append(txTypesCfg, types.TokenTxs...)
 	}
-	if forks.IsMeerEVMForkHeight(int64(b.BestSnapshot().GraphState.GetMainHeight())) {
+	if forks.IsMeerEVMValidHeight(int64(b.BestSnapshot().GraphState.GetMainHeight())) {
 		ok = true
 		err = nil
 	} else {

@@ -73,6 +73,31 @@ func (s *SubsidyCache) CalcBlockSubsidy(bi *meerdag.BlueInfo) int64 {
 		return s.CalcTotalControlBlockSubsidy(bi)
 	}
 	iteration := uint64(int64(bi.GetNum()) / s.params.SubsidyReductionInterval)
+	return s.mulDivSubsidy(iteration, s.params.MulSubsidy, s.params.DivSubsidy)
+}
+
+func (s *SubsidyCache) CalcTotalControlBlockSubsidy(bi *meerdag.BlueInfo) int64 {
+	if bi.GetNum() <= 1 {
+		return s.params.BaseSubsidy
+	}
+	blockSubsidy := int64(float64(s.params.BaseSubsidy) / float64(s.params.TargetTimePerBlock) * float64(bi.GetRate()))
+	if bi.GetWeight() >= s.params.TargetTotalSubsidy {
+		return 0
+	}
+	return blockSubsidy
+}
+
+func (s *SubsidyCache) GetMode(height int64) string {
+	if forks.IsMeerEVMForkHeight(height) {
+		return "meerevmfork"
+	}
+	if s.params.TargetTotalSubsidy > 0 {
+		return "dynamic"
+	}
+	return "static"
+}
+
+func (s *SubsidyCache) mulDivSubsidy(iteration uint64, mul int64, div int64) int64 {
 	if iteration == 0 {
 		return s.params.BaseSubsidy
 	}
@@ -92,8 +117,8 @@ func (s *SubsidyCache) CalcBlockSubsidy(bi *meerdag.BlueInfo) int64 {
 	cachedValue, existsInCache = s.subsidyCache[iteration-1]
 	s.subsidyCacheLock.RUnlock()
 	if existsInCache {
-		cachedValue *= s.params.MulSubsidy
-		cachedValue /= s.params.DivSubsidy
+		cachedValue *= mul
+		cachedValue /= div
 
 		s.subsidyCacheLock.Lock()
 		s.subsidyCache[iteration] = cachedValue
@@ -118,34 +143,14 @@ func (s *SubsidyCache) CalcBlockSubsidy(bi *meerdag.BlueInfo) int64 {
 	return subsidy
 }
 
-func (s *SubsidyCache) CalcTotalControlBlockSubsidy(bi *meerdag.BlueInfo) int64 {
-	if bi.GetNum() <= 1 {
-		return s.params.BaseSubsidy
-	}
-	blockSubsidy := int64(float64(s.params.BaseSubsidy) / float64(s.params.TargetTimePerBlock) * float64(bi.GetRate()))
-	if bi.GetWeight() >= s.params.TargetTotalSubsidy {
-		return 0
-	}
-	return blockSubsidy
-}
-
-func (s *SubsidyCache) GetMode(height int64) string {
-	if forks.IsMeerEVMForkHeight(height) {
-		return "meerevmfork"
-	}
-	if s.params.TargetTotalSubsidy > 0 {
-		return "dynamic"
-	}
-	return "static"
-}
-
 func (s *SubsidyCache) CalcBlockSubsidyByMeerEVMFork(bi *meerdag.BlueInfo) int64 {
 	targetTotalSubsidy := int64(forks.MeerEVMForkTotalSubsidy)
 	if bi.GetWeight() >= targetTotalSubsidy {
 		return 0
 	}
 	realHeight := bi.GetHeight() - forks.MeerEVMForkMainHeight
-	blockSubsidy := s.params.BaseSubsidy >> uint(realHeight/forks.SubsidyReductionInterval)
+	iteration := uint64(realHeight) / forks.SubsidyReductionInterval
+	blockSubsidy := s.mulDivSubsidy(iteration, forks.MulSubsidy, forks.DivSubsidy)
 	if bi.GetWeight()+blockSubsidy > targetTotalSubsidy {
 		blockSubsidy = targetTotalSubsidy - bi.GetWeight()
 	}
