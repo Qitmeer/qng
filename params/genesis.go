@@ -134,7 +134,7 @@ var genesisBlock = types.Block{
 var genesisHash = genesisBlock.BlockHash()
 
 // TestNet ------------------------------------------------------------------------
-
+var testnetGenesisTime = time.Unix(1661184000, 0) // 2022-08-23
 // testNetGenesisCoinbaseTx is the coinbase transaction for the genesis blocks for
 // the test network.
 func buildTestNetGenesisCoinbaseTx(net protocol.Network) types.Transaction {
@@ -187,7 +187,7 @@ func buildTestNetGenesisCoinbaseTx(net protocol.Network) types.Transaction {
 		},
 		LockTime:  0,
 		Expire:    0,
-		Timestamp: time.Unix(1627203600, 0), // 2021/07/25 17:00:00 AM GMT+08:00
+		Timestamp: testnetGenesisTime,
 	}
 	ledger.Ledger(&tx, net)
 	return tx
