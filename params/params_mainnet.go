@@ -115,7 +115,7 @@ var MainNetParams = Params{
 		},
 		DeploymentMeerEVM: {
 			BitNumber:  1,
-			StartTime:  959000,   //forks.MeerEVMValidMainHeight
+			StartTime:  959000, //forks.MeerEVMForkMainHeight
 			ExpireTime: 959000 + mainWorkDiffWindowSize*2,
 		},
 	},
