@@ -58,6 +58,7 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 		{height: 1, expectSubsidy: blockOneSubsidy, expectTotalSubsidy: 1000000000, expectMode: "static"},
 		{height: 2, expectSubsidy: blockTwoSubsidy, expectTotalSubsidy: 2000000000, expectMode: "static"},
 		{height: forks.MeerEVMForkMainHeight, expectSubsidy: 1000000000, expectTotalSubsidy: 959000000000000, expectMode: "meerevmfork"},
+		{height: forks.MeerEVMForkMainHeight+forks.SubsidyReductionInterval, expectSubsidy: 990099009, expectTotalSubsidy: 1097239990099009, expectMode: "meerevmfork"},
 		{height: 4686074, expectSubsidy: 772047951, expectTotalSubsidy: 4244275010176525, expectMode: "meerevmfork"},  // Half of the total subsidy
 		{height: 10635800, expectSubsidy: 498314832, expectTotalSubsidy: 7963647733148752, expectMode: "meerevmfork"}, // 10 years
 		{height: 42154520, expectSubsidy: 51550180, expectTotalSubsidy: 14201480957219300, expectMode: "meerevmfork"}, // 40 years

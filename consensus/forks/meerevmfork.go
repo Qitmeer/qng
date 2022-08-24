@@ -28,7 +28,7 @@ const (
 	DivSubsidy = 101
 )
 
-func IsMeerEVMValid(tx *types.Transaction, ip *types.TxInput, mainHeight int64) bool {
+func IsVaildEVMUTXOUnlockTx(tx *types.Transaction, ip *types.TxInput, mainHeight int64) bool {
 	if params.ActiveNetParams.Net != protocol.MainNet {
 		return false
 	}
