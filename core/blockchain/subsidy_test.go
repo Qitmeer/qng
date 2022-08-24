@@ -9,10 +9,14 @@ import (
 
 // TestEstimateSupply ensures the supply estimation function defined by MeerEVM-fork works as expected.
 func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
+	params.ActiveNetParams = &params.MainNetParam
 	param := params.MainNetParam.Params
 	baseSubsidy := param.BaseSubsidy
-	endBlockHeight := int64(62621828)
+	endBlockHeight := int64(62621743)
 	expectTotalSubsidy := int64(forks.MeerEVMForkTotalSubsidy)
+	halfTotalSubsidy := int64(21024000000000000) / 2
+	halfTotalSubsidyHeight := int64(0)
+	forkMainHeight := int64(0)
 	totalSubsidy := int64(0)
 	bis := map[int64]*meerdag.BlueInfo{}
 	subsidyCache := NewSubsidyCache(0, param)
@@ -26,30 +30,44 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 
 	for i := int64(0); i <= endBlockHeight; i++ {
 		var weight int64
+		var bs int64
 		if i > 0 {
 			pheight := i - 1
 			pbi, ok := bis[pheight]
 			if !ok {
 				t.Fatal("No test bi")
 			}
-			weight = pbi.GetWeight() + calcBlockSubsidy(pheight)
-		}
-		bis[i] = meerdag.NewBlueInfo(uint(i), 0, weight, i)
-		totalSubsidy += weight
-	}
+			bs = calcBlockSubsidy(pheight)
+			weight = pbi.GetWeight() + bs
 
+			if pheight == forks.MeerEVMForkTotalSubsidy {
+				forkMainHeight = bs
+			}
+		} else {
+			weight = subsidyCache.CalcBlockSubsidy(meerdag.NewBlueInfo(0, 0, 0, 0))
+		}
+		bis[i] = meerdag.NewBlueInfo(0, 0, weight, i)
+		totalSubsidy = weight
+		if halfTotalSubsidyHeight == 0 && totalSubsidy >= halfTotalSubsidy {
+			halfTotalSubsidyHeight = i
+			halfTotalSubsidy = totalSubsidy
+		}
+	}
 	blockOneSubsidy := calcBlockSubsidy(1)
 	blockTwoSubsidy := calcBlockSubsidy(2)
 
 	tests := []struct {
-		height        int64
-		expectSubsidy int64
-		expectMode    string
+		height             int64
+		expectSubsidy      int64
+		expectMode         string
+		expectTotalSubsidy int64
 	}{
 		{height: 0, expectSubsidy: baseSubsidy},
 		{height: 1, expectSubsidy: blockOneSubsidy},
 		{height: 2, expectSubsidy: blockTwoSubsidy},
+		{height: forks.MeerEVMForkMainHeight, expectSubsidy: forkMainHeight},
 		{height: forks.MeerEVMForkMainHeight, expectMode: "meerevmfork"},
+		{height: halfTotalSubsidyHeight, expectTotalSubsidy: halfTotalSubsidy},
 	}
 
 	for _, test := range tests {
@@ -65,6 +83,15 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 			cm := subsidyCache.GetMode(test.height)
 			if cm != test.expectMode {
 				t.Fatalf("subsidy mode is %s ,want %s", cm, test.expectMode)
+			}
+		}
+		if test.expectTotalSubsidy > 0 {
+			bi, ok := bis[test.height]
+			if !ok {
+				t.Fatal("No test bi")
+			}
+			if bi.GetWeight() != test.expectTotalSubsidy {
+				t.Fatalf("half total subsidy:%d != %d", bi.GetWeight(), halfTotalSubsidy)
 			}
 		}
 	}
