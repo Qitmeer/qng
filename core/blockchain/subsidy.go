@@ -126,7 +126,6 @@ func (s *SubsidyCache) estimateSupply(iteration uint64, mul int64, div int64) in
 		s.subsidyCacheLock.Lock()
 		s.subsidyCache[iteration] = cachedValue
 		s.subsidyCacheLock.Unlock()
-
 		return cachedValue
 	}
 
@@ -135,14 +134,13 @@ func (s *SubsidyCache) estimateSupply(iteration uint64, mul int64, div int64) in
 	// calculate it from that to save time.
 	subsidy := s.params.BaseSubsidy
 	for i := uint64(0); i < iteration; i++ {
-		subsidy *= s.params.MulSubsidy
-		subsidy /= s.params.DivSubsidy
+		subsidy *= mul
+		subsidy /= div
 	}
 
 	s.subsidyCacheLock.Lock()
 	s.subsidyCache[iteration] = subsidy
 	s.subsidyCacheLock.Unlock()
-
 	return subsidy
 }
 
