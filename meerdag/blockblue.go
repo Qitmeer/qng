@@ -62,20 +62,20 @@ func (bd *MeerDAG) GetBlueInfo(ib IBlock) *BlueInfo {
 
 func (bd *MeerDAG) getBlueInfo(ib IBlock) *BlueInfo {
 	if ib == nil {
-		return NewBlueInfo(0, 0, 0)
+		return NewBlueInfo(0, 0, 0, int64(ib.GetHeight()))
 	}
 	if ib.GetID() == 0 {
-		return NewBlueInfo(0, 0, 0)
+		return NewBlueInfo(0, 0, 0, int64(ib.GetHeight()))
 	}
 	if !ib.HasParents() {
-		return NewBlueInfo(0, 0, 0)
+		return NewBlueInfo(0, 0, 0, int64(ib.GetHeight()))
 	}
 	if ib.GetMainParent() == 0 {
-		return NewBlueInfo(1, 0, 0)
+		return NewBlueInfo(1, 0, 0, int64(ib.GetHeight()))
 	}
 	mainIB, ok := ib.GetParents().Get(ib.GetMainParent()).(IBlock)
 	if !ok {
-		return NewBlueInfo(1, 0, 0)
+		return NewBlueInfo(1, 0, 0, int64(ib.GetHeight()))
 	}
 	mt := ib.GetData().GetTimestamp() - mainIB.GetData().GetTimestamp()
 	if mt <= 0 {
@@ -85,11 +85,11 @@ func (bd *MeerDAG) getBlueInfo(ib IBlock) *BlueInfo {
 
 	pb, ok := ib.(*PhantomBlock)
 	if !ok {
-		return NewBlueInfo(1, 0, 0)
+		return NewBlueInfo(1, 0, 0, int64(ib.GetHeight()))
 	}
 	blues := 1
 	if pb.blueDiffAnticone != nil && !pb.blueDiffAnticone.IsEmpty() {
 		blues += pb.blueDiffAnticone.Size()
 	}
-	return NewBlueInfo(pb.blueNum+1, mt/int64(blues), int64(mainIB.GetWeight()))
+	return NewBlueInfo(pb.blueNum+1, mt/int64(blues), int64(mainIB.GetWeight()), int64(ib.GetHeight()))
 }

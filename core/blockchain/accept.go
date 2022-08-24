@@ -9,6 +9,7 @@ package blockchain
 import (
 	"container/list"
 	"fmt"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
@@ -362,12 +363,18 @@ func (b *BlockChain) CheckTokenState(block *types.SerializedBlock) error {
 
 func (b *BlockChain) IsValidTxType(tt types.TxType) bool {
 	txTypesCfg := types.StdTxs
-	ok, err := b.IsDeploymentActive(params.DeploymentToken)
+	var ok bool
+	var err error
+	ok, err = b.IsDeploymentActive(params.DeploymentToken)
 	if err == nil && ok && len(types.TokenTxs) > 0 {
 		txTypesCfg = append(txTypesCfg, types.TokenTxs...)
 	}
-
-	ok, err = b.IsDeploymentActive(params.DeploymentMeerEVM)
+	if forks.IsMeerEVMForkHeight(int64(b.BestSnapshot().GraphState.GetMainHeight())) {
+		ok = true
+		err = nil
+	} else {
+		ok, err = b.IsDeploymentActive(params.DeploymentMeerEVM)
+	}
 	if err == nil && ok && len(types.MeerEVMTxs) > 0 {
 		txTypesCfg = append(txTypesCfg, types.MeerEVMTxs...)
 	}
