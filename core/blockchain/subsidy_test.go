@@ -14,9 +14,6 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 	baseSubsidy := param.BaseSubsidy
 	endBlockHeight := int64(62621743)
 	expectTotalSubsidy := int64(forks.MeerEVMForkTotalSubsidy)
-	halfTotalSubsidy := int64(21024000000000000) / 2
-	halfTotalSubsidyHeight := int64(0)
-	forkMainHeight := int64(0)
 	totalSubsidy := int64(0)
 	bis := map[int64]*meerdag.BlueInfo{}
 	subsidyCache := NewSubsidyCache(0, param)
@@ -39,19 +36,11 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 			}
 			bs = calcBlockSubsidy(pheight)
 			weight = pbi.GetWeight() + bs
-
-			if pheight == forks.MeerEVMForkTotalSubsidy {
-				forkMainHeight = bs
-			}
 		} else {
 			weight = subsidyCache.CalcBlockSubsidy(meerdag.NewBlueInfo(0, 0, 0, 0))
 		}
 		bis[i] = meerdag.NewBlueInfo(0, 0, weight, i)
 		totalSubsidy = weight
-		if halfTotalSubsidyHeight == 0 && totalSubsidy >= halfTotalSubsidy {
-			halfTotalSubsidyHeight = i
-			halfTotalSubsidy = totalSubsidy
-		}
 	}
 	blockOneSubsidy := calcBlockSubsidy(1)
 	blockTwoSubsidy := calcBlockSubsidy(2)
@@ -65,9 +54,10 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 		{height: 0, expectSubsidy: baseSubsidy},
 		{height: 1, expectSubsidy: blockOneSubsidy},
 		{height: 2, expectSubsidy: blockTwoSubsidy},
-		{height: forks.MeerEVMForkMainHeight, expectSubsidy: forkMainHeight},
+		{height: forks.MeerEVMForkMainHeight, expectSubsidy: 1000000000},
 		{height: forks.MeerEVMForkMainHeight, expectMode: "meerevmfork"},
-		{height: halfTotalSubsidyHeight, expectTotalSubsidy: halfTotalSubsidy},
+		{height: 16972921, expectTotalSubsidy: 10512000033067166},
+		{height: 16972921, expectSubsidy: 318450526},
 	}
 
 	for _, test := range tests {
@@ -91,7 +81,7 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 				t.Fatal("No test bi")
 			}
 			if bi.GetWeight() != test.expectTotalSubsidy {
-				t.Fatalf("half total subsidy:%d != %d", bi.GetWeight(), halfTotalSubsidy)
+				t.Fatalf("half total subsidy:%d != %d", bi.GetWeight(), test.expectTotalSubsidy)
 			}
 		}
 	}
