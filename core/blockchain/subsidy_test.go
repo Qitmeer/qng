@@ -54,8 +54,8 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 		{height: 0, expectSubsidy: baseSubsidy},
 		{height: 1, expectSubsidy: blockOneSubsidy},
 		{height: 2, expectSubsidy: blockTwoSubsidy},
-		{height: forks.MeerEVMForkMainHeight, expectSubsidy: 1000000000},
-		{height: forks.MeerEVMForkMainHeight, expectMode: "meerevmfork"},
+		{height: forks.MeerEVMUTXOUnlockMainHeight, expectSubsidy: 1000000000},
+		{height: forks.MeerEVMUTXOUnlockMainHeight, expectMode: "meerevmfork"},
 		{height: 16972921, expectTotalSubsidy: 10512000033067166},
 		{height: 16972921, expectSubsidy: 318450526},
 	}

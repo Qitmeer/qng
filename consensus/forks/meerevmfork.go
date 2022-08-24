@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	// What main height qng fork
-	MeerEVMForkMainHeight = 959000
-
 	// What main height can transfer the locked utxo in genesis to MeerVM
+	MeerEVMUTXOUnlockMainHeight = 959000
+
+	// meerevm is enabled
 	MeerEVMValidMainHeight = 959000
 
 	// 21024000000000000 (Total)-5051813000000000 (locked genesis)-1215912000000000 (meerevm genesis) = 14756275000000000
@@ -30,7 +30,7 @@ func IsMeerEVMValid(tx *types.Transaction, ip *types.TxInput, mainHeight int64) 
 	if params.ActiveNetParams.Net != protocol.MainNet {
 		return false
 	}
-	if mainHeight < MeerEVMForkMainHeight ||
+	if mainHeight < MeerEVMUTXOUnlockMainHeight ||
 		mainHeight < MeerEVMValidMainHeight {
 		return false
 	}
@@ -68,7 +68,7 @@ func IsMeerEVMForkHeight(mainHeight int64) bool {
 	if params.ActiveNetParams.Net != protocol.MainNet {
 		return false
 	}
-	return mainHeight >= MeerEVMForkMainHeight
+	return mainHeight >= MeerEVMUTXOUnlockMainHeight
 }
 
 func IsMeerEVMValidHeight(mainHeight int64) bool {
