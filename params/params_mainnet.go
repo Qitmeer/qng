@@ -113,6 +113,11 @@ var MainNetParams = Params{
 			StartTime:  0,
 			ExpireTime: mainWorkDiffWindowSize * 2,
 		},
+		DeploymentMeerEVM: {
+			BitNumber:  1,
+			StartTime:  959000,   //forks.MeerEVMValidMainHeight
+			ExpireTime: 959000 + mainWorkDiffWindowSize*2,
+		},
 	},
 
 	// Address encoding magics
