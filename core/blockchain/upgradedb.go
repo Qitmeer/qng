@@ -3,9 +3,11 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/meerdag"
 )
 
 // update db to new version
@@ -39,6 +41,33 @@ func (b *BlockChain) upgradeDB() error {
 			if err != nil {
 				return err
 			}
+		}
+
+		// token
+		tokenTipID := meerdag.MaxId
+		bid, er := meerdag.DBGetBlockIdByHash(dbTx, &state.tokenTipHash)
+		if er == nil {
+			tokenTipID = uint(bid)
+		}
+		if tokenTipID != meerdag.MaxId {
+			ts := b.GetTokenState(uint32(tokenTipID))
+			if ts == nil {
+				return fmt.Errorf("token state error:%d", tokenTipID)
+			}
+			oldIds := ts.Types.Ids()
+			genTS := token.BuildGenesisTokenState()
+			for _, ty := range genTS.Types {
+				_, ok := ts.Types[ty.Id]
+				if !ok {
+					ts.Types[ty.Id] = ty
+				}
+			}
+			err = token.DBPutTokenState(dbTx, uint32(tokenTipID), ts)
+			if err != nil {
+				return err
+			}
+			ts.Commit()
+			log.Info(fmt.Sprintf("Upgrade token state(%s)(id=%d):%v => %v", state.tokenTipHash, tokenTipID, oldIds, ts.Types.Ids()))
 		}
 
 		// save
