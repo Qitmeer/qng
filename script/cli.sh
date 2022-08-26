@@ -327,7 +327,7 @@ function generate() {
   local count=$1
   local powtype=$2
   if [ "$powtype" == "" ]; then
-    powtype=6
+    powtype=8
   fi
   local data='{"jsonrpc":"2.0","method":"miner_generate","params":['$count','$powtype'],"id":null}'
   get_result "$data"
