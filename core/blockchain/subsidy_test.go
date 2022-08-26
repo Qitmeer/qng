@@ -1,17 +1,20 @@
 package blockchain
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"testing"
+	"time"
 )
 
 // TestEstimateSupply ensures the supply estimation function defined by MeerEVM-fork works as expected.
 func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 	params.ActiveNetParams = &params.MainNetParam
 	param := params.MainNetParam.Params
-	endBlockHeight := int64(62621744)
+	maxTestInterval := int64(28)
+	endBlockHeight := int64(forks.MeerEVMForkMainHeight + forks.SubsidyReductionInterval*maxTestInterval + 1)
 	bis := map[int64]*meerdag.BlueInfo{}
 
 	subsidyCache := NewSubsidyCache(0, param)
@@ -48,22 +51,41 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 	blockOneSubsidy := calcBlockSubsidy(1)
 	blockTwoSubsidy := calcBlockSubsidy(2)
 
-	tests := []struct {
+	baseSubsidy := int64(1000000000)
+	forkSubsidy := int64(forks.MeerEVMForkMainHeight * baseSubsidy)
+
+	type testData struct {
 		height             int64
 		expectSubsidy      int64
 		expectMode         string
 		expectTotalSubsidy int64
-	}{
+	}
+	tests := []testData{
 		{height: 0, expectSubsidy: 0, expectTotalSubsidy: 0, expectMode: "static"},
 		{height: 1, expectSubsidy: blockOneSubsidy, expectTotalSubsidy: 1000000000, expectMode: "static"},
 		{height: 2, expectSubsidy: blockTwoSubsidy, expectTotalSubsidy: 2000000000, expectMode: "static"},
-		{height: forks.MeerEVMForkMainHeight, expectSubsidy: 1000000000, expectTotalSubsidy: 959000000000000, expectMode: "meerevmfork"},
-		{height: forks.MeerEVMForkMainHeight+forks.SubsidyReductionInterval, expectSubsidy: 990099009, expectTotalSubsidy: 1097239990099009, expectMode: "meerevmfork"},
-		{height: 4686074, expectSubsidy: 772047951, expectTotalSubsidy: 4244275010176525, expectMode: "meerevmfork"},  // Half of the total subsidy
-		{height: 10635800, expectSubsidy: 498314832, expectTotalSubsidy: 7963647733148752, expectMode: "meerevmfork"}, // 10 years
-		{height: 42154520, expectSubsidy: 51550180, expectTotalSubsidy: 14201480957219300, expectMode: "meerevmfork"}, // 40 years
-		{height: 62621742, expectSubsidy: 11821302, expectTotalSubsidy: 14756274989081626, expectMode: "meerevmfork"}, // before end point
-		{height: 62621743, expectSubsidy: 10918374, expectTotalSubsidy: 14756275000000000, expectMode: "meerevmfork"}, // end point
+	}
+
+	firstIndex := len(tests)
+	for i := int64(0); i < maxTestInterval; i++ {
+		td := testData{height: forks.MeerEVMForkMainHeight + forks.SubsidyReductionInterval*i, expectSubsidy: subsidyCache.subsidyCache[uint64(i)], expectMode: "meerevmfork"}
+		if i == 0 {
+			td.expectTotalSubsidy = forkSubsidy
+			td.expectSubsidy = baseSubsidy
+		} else {
+			pidx := firstIndex + int(i) - 1
+			td.expectTotalSubsidy = tests[pidx].expectTotalSubsidy + tests[pidx].expectSubsidy*(forks.SubsidyReductionInterval-1) + td.expectSubsidy
+		}
+		tests = append(tests, td)
+	}
+
+	getTime := func(height int64) string {
+		bt := param.TargetTimePerBlock * time.Duration(height)
+		oneYear := time.Hour * 24 * 365
+		if bt < oneYear {
+			return bt.String()
+		}
+		return fmt.Sprintf("%d years", bt/oneYear)
 	}
 
 	for _, test := range tests {
@@ -90,5 +112,7 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 				t.Fatalf("height: %d,total subsidy:%d != %d", test.height, nbi.GetWeight(), test.expectTotalSubsidy)
 			}
 		}
+		t.Logf("height:%d subsidy:%d total:%d left:%d mode:%s time:%s", test.height, test.expectSubsidy,
+			test.expectTotalSubsidy, int64(forks.MeerEVMForkTotalSubsidy)-test.expectTotalSubsidy, test.expectMode, getTime(test.height))
 	}
 }
