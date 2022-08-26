@@ -366,6 +366,9 @@ func (p *Peer) genesis() *hash.Hash {
 	if p.chainState == nil {
 		return nil
 	}
+	if p.chainState.GenesisHash == nil {
+		return nil
+	}
 	genesisHash, err := hash.NewHash(p.chainState.GenesisHash.Hash)
 	if err != nil {
 		return nil
