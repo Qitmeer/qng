@@ -6,7 +6,6 @@ require (
 	github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a
 	github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a
 	github.com/aristanetworks/goarista v0.0.0-20220314170124-2797d9e951fe
-	github.com/cloudflare/roughtime v0.0.0-20210217223727-1fe56bcbcfd4
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dchest/blake256 v1.1.0
 	github.com/deckarep/golang-set v1.8.0
@@ -74,7 +73,6 @@ require (
 	github.com/opencontainers/runtime-spec v1.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/spacemonkeygo/spacelog v0.0.0-20180420211403-2296661a0572 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
@@ -96,7 +94,6 @@ require (
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/deepmap/oapi-codegen v1.8.2 // indirect
-	github.com/dindinw/go-duktape v0.0.0-20211014112850-ba2007c86288 // indirect
 	github.com/dlclark/regexp2 v1.4.1-0.20201116162257-a2a8dda75c91 // indirect
 	github.com/docker/docker v20.10.13+incompatible // indirect
 	github.com/dop251/goja v0.0.0-20220405120441-9037c2b61cbf // indirect
