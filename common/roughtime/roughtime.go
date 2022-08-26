@@ -8,8 +8,6 @@ package roughtime
 import (
 	"log"
 	"time"
-
-	rt "github.com/cloudflare/roughtime"
 )
 
 const RecalibrationInterval = time.Hour
@@ -31,18 +29,6 @@ func Init() {
 }
 
 func recalibrateRoughtime() {
-	t0 := time.Now()
-	results := rt.Do(rt.Ecosystem, rt.DefaultQueryAttempts, rt.DefaultQueryTimeout, nil)
-	// Compute the average difference between the system's time and the
-	// Roughtime responses from the servers, rejecting responses whose radii
-	// are larger than 2 seconds.
-	var err error
-	offset, err = rt.AvgDeltaWithRadiusThresh(results, t0, 2*time.Second)
-	if err != nil {
-		log.Printf("Failed to calculate roughtime offset, system time will be used by default.(%s)", err)
-	} else {
-		log.Printf("Roughtime offset:%s", offset)
-	}
 }
 
 // Since returns the duration since t, based on the roughtime response
