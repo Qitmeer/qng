@@ -363,7 +363,7 @@ func Send(pctx context.Context, rpc common.P2PRPC, message interface{}, baseTopi
 
 	stream, err := rpc.Host().NewStream(ctx, pid, protocol.ID(topic))
 	if err != nil {
-		log.Error(fmt.Sprintf("open stream on topic %v failed", topic))
+		log.Warn(fmt.Sprintf("open stream on topic %v failed", topic))
 		processUnderlyingError(rpc, pid, err)
 		return nil, err
 	}
@@ -374,7 +374,7 @@ func Send(pctx context.Context, rpc common.P2PRPC, message interface{}, baseTopi
 	}
 	size, err := EncodeMessage(stream, rpc, message)
 	if err != nil {
-		log.Error(fmt.Sprintf("encocde rpc message %v to stream failed:%v", getMessageString(message), err))
+		log.Warn(fmt.Sprintf("encocde rpc message %v to stream failed:%v", getMessageString(message), err))
 		return nil, err
 	}
 	rpc.IncreaseBytesSent(pid, size)

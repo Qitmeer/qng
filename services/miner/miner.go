@@ -314,7 +314,7 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 		template, err := mining.NewBlockTemplate(m.policy, params.ActiveNetParams.Params, m.sigCache, m.txSource, m.timeSource, m.blockManager, m.coinbaseAddress, nil, m.powType, m.coinbaseFlags)
 		if err != nil {
 			e := fmt.Errorf("Failed to create new block template: %s", err.Error())
-			log.Error(e.Error())
+			log.Warn(e.Error())
 			m.blockManager.GetChain().VMService.ResetTemplate()
 			return e
 		}
