@@ -16,6 +16,7 @@ GOBIN = ./build/bin
 
 UNIX_EXECUTABLES := \
 	build/release/darwin/amd64/bin/$(EXECUTABLE) \
+	build/release/darwin/arm64/bin/$(EXECUTABLE) \
 	build/release/linux/amd64/bin/$(EXECUTABLE)
 WIN_EXECUTABLES := \
 	build/release/windows/amd64/bin/$(EXECUTABLE).exe
@@ -24,6 +25,7 @@ EXECUTABLES=$(UNIX_EXECUTABLES) $(WIN_EXECUTABLES)
 
 DEV_EXECUTABLES := \
 	build/dev/darwin/amd64/bin/$(EXECUTABLE) \
+	build/dev/darwin/arm64/bin/$(EXECUTABLE) \
 	build/dev/linux/amd64/bin/$(EXECUTABLE) \
 	build/dev/windows/amd64/bin/$(EXECUTABLE).exe
 
