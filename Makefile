@@ -11,7 +11,7 @@ LDFLAG_DEV = -X github.com/Qitmeer/qng/version.Build=$(DEV)-$(GITVERSION)
 LDFLAG_RELEASE = -X github.com/Qitmeer/qng/version.Build=$(RELEASE)-$(GITVERSION)
 GOFLAGS_DEV = -ldflags "$(LDFLAG_DEV)"
 GOFLAGS_RELEASE = -ldflags "$(LDFLAG_RELEASE)"
-VERSION=$(shell ./build/bin/qng --version | grep ^qng | cut -d' ' -f3|cut -d'+' -f1)
+VERSION=$(shell ./build/bin/qng --version | grep ^QNG | cut -d' ' -f3|cut -d'+' -f1)
 GOBIN = ./build/bin
 
 UNIX_EXECUTABLES := \
