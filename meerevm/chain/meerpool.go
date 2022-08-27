@@ -88,6 +88,8 @@ type MeerPool struct {
 
 	// Feeds
 	pendingLogsFeed event.Feed
+
+	resetTemplate chan struct{}
 }
 
 func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux, ctx qconsensus.Context) error {
@@ -103,6 +105,7 @@ func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, e
 	m.txsCh = make(chan core.NewTxsEvent, txChanSize)
 	m.chainHeadCh = make(chan core.ChainHeadEvent, chainHeadChanSize)
 	m.quit = make(chan struct{})
+	m.resetTemplate = make(chan struct{})
 	m.remoteTxsQM = map[string]*qtypes.Transaction{}
 	m.remoteTxsM = map[string]*qtypes.Transaction{}
 	m.txsSub = eth.TxPool().SubscribeNewTxsEvent(m.txsCh)
@@ -199,6 +202,8 @@ func (m *MeerPool) handler() {
 			return
 		case <-m.chainHeadSub.Err():
 			return
+		case <-m.resetTemplate:
+			m.updateTemplate(time.Now().Unix())
 		}
 	}
 }
@@ -656,7 +661,9 @@ func (m *MeerPool) GetSealingBlockSync(parent common.Hash, timestamp uint64, coi
 }
 
 func (m *MeerPool) ResetTemplate() error {
-	log.Debug("Try to reset meer pool")
-	go m.updateTemplate(time.Now().Unix())
+	go func() {
+		log.Debug("Try to reset meer pool")
+		m.resetTemplate <- struct{}{}
+	}()
 	return nil
 }
