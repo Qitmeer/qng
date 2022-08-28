@@ -1359,9 +1359,10 @@ func (b *BlockChain) CalculateFees(block *types.SerializedBlock) types.AmountMap
 		}
 		for k, txOut := range tx.Transaction().TxOut {
 			if k == 0 && types.IsCrossChainExportTx(tx.Tx) {
-				continue
+				totalAtomOut[types.MEERID] += int64(txOut.Amount.Value)
+			} else {
+				totalAtomOut[txOut.Amount.Id] += int64(txOut.Amount.Value)
 			}
-			totalAtomOut[txOut.Amount.Id] += int64(txOut.Amount.Value)
 		}
 	}
 	spentTxos, err := b.fetchSpendJournal(block)
