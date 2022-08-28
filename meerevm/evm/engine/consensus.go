@@ -243,8 +243,8 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 		state.AddBalance(*tx.To(), tx.Value())
 		me.config.Log.Debug(fmt.Sprintf("Cross chain(%s):%s(MEER) => %s(ETH)", tx.To().String(), tx.Value().String(), tx.Value().String()))
 	} else {
-		state.SubBalance(*tx.To(), tx.Value())
-		me.config.Log.Debug(fmt.Sprintf("Cross chain(%s):%s(ETH) => %s(MEER)", tx.To().String(), tx.Value().String(), tx.Value().String()))
+		state.SubBalance(*tx.To(), oldBalance)
+		me.config.Log.Debug(fmt.Sprintf("Cross chain(%s):%s(ETH) => %s(MEER) + %s(MEER)", tx.To().String(), oldBalance.String(), tx.Value().String(), oldBalance.Sub(oldBalance, tx.Value()).String()))
 	}
 
 	newBalance := state.GetBalance(*tx.To())
