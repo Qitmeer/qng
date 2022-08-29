@@ -26,6 +26,9 @@ const (
 
 	// Subsidy reduction divisor.
 	DivSubsidy = 101
+
+	// TODO Temporary code to be deleted later
+	BadBlockHashHex = "f258088b0422b2a52f8c0aae7225fc15b8508e33cf17f873e88a51fae634d45d"
 )
 
 func IsVaildEVMUTXOUnlockTx(tx *types.Transaction, ip *types.TxInput, mainHeight int64) bool {
