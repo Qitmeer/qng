@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
@@ -1510,6 +1511,9 @@ func (b *BlockChain) CalculateStateRoot(txs []*types.Tx) *hash.Hash {
 }
 
 func (b *BlockChain) getBlockData(hash *hash.Hash) meerdag.IBlockData {
+	if hash.String() == forks.BadBlockHashHex {
+		panic(fmt.Sprintf("The dag data was damaged (Has bad block %s). you can cleanup your block data base by '--cleanup'.", hash.String()))
+	}
 	block, err := b.fetchBlockByHash(hash)
 	if err != nil {
 		log.Error(err.Error())

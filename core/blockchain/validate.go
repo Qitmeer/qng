@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
@@ -75,6 +76,10 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource M
 	// TODO this hard code fork
 	if !chainParams.CoinbaseConfig.CheckVersion(int64(height), block.Block().Transactions[0].TxIn[0].GetSignScript()) {
 		return ruleError(ErrorCoinbaseBlockVersion, "block coinbase version error")
+	}
+
+	if block.Hash().String() == forks.BadBlockHashHex {
+		return fmt.Errorf("Bad block:%s\n", block.Hash().String())
 	}
 
 	err = checkBlockHeaderSanity(header, timeSource, flags, chainParams, uint(height))
