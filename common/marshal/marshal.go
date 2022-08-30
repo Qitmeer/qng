@@ -103,6 +103,12 @@ func MarshJsonVin(tx *types.Transaction) []json.Vin {
 		return vinList
 	} else if types.IsCrossChainImportTx(tx) || types.IsCrossChainVMTx(tx) {
 		vinList[0].TxType = types.DetermineTxType(tx).String()
+		sig := tx.TxIn[0].SignScript
+		// disbuf, _ := txscript.DisasmString(sig)  //TODO, the Disasm is not fully work for the cross-chain tx
+		vinList[0].ScriptSig = &json.ScriptSig{
+			// Asm: disbuf,
+			Hex: hex.EncodeToString(sig),
+		}
 		return vinList
 	}
 
