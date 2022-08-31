@@ -318,6 +318,10 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*
 			if err != nil {
 				return nil, err
 			}
+			err = ctx.SetCoinbaseTx(block.Transactions()[0].Tx)
+			if err != nil {
+				return nil, err
+			}
 			result.Txs = append(result.Txs, ctx)
 		} else if types.IsCrossChainVMTx(tx.Tx) {
 			ctx, err := qconsensus.NewVMTx(tx.Tx)
