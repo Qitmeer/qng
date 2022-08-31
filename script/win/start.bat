@@ -1,5 +1,5 @@
 @echo off
-if not exist "%~dp0qitmeer.exe" goto :error
+if not exist "%~dp0qng.exe" goto :error
 
 if not exist "%~dp0config.conf" goto :config
 goto :version
