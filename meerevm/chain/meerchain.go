@@ -152,12 +152,8 @@ func (b *MeerChain) fillBlock(qtxs []qconsensus.Tx, header *types.Header, stated
 
 	header.Coinbase = b.chain.config.Eth.Miner.Etherbase
 	for _, tx := range qtxs {
-		if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
-			txb := common.FromHex(string(tx.GetData()))
-			var txmb = &types.Transaction{}
-			if err := txmb.UnmarshalBinary(txb); err != nil {
-				return nil, nil, err
-			}
+		if tx.GetTxType() == qtypes.TxTypeCrossChainVM ||
+			tx.GetTxType() == qtypes.TxTypeCrossChainImport {
 			pubkBytes, err := hex.DecodeString(tx.GetTo())
 			if err != nil {
 				return nil, nil, err
@@ -166,7 +162,6 @@ func (b *MeerChain) fillBlock(qtxs []qconsensus.Tx, header *types.Header, stated
 			if err != nil {
 				return nil, nil, err
 			}
-
 			toAddr := crypto.PubkeyToAddress(*publicKey)
 			header.Coinbase = toAddr
 			break

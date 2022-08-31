@@ -94,6 +94,22 @@ func (itx *ImportTx) CheckSanity() error {
 	return nil
 }
 
+func (itx *ImportTx) SetCoinbaseTx(tx *types.Transaction) error {
+	_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
+	if err != nil {
+		return err
+	}
+	if len(pksAddrs) > 0 {
+		secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
+		}
+		itx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
+		return nil
+	}
+	return fmt.Errorf("tx format error :TxTypeCrossChainVM")
+}
+
 func (itx *ImportTx) GetTransactionForEngine() (*types.Transaction, error) {
 	mtx := types.NewTransaction()
 	mtx.AddTxIn(&types.TxInput{

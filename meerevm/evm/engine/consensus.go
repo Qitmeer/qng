@@ -7,6 +7,7 @@ package engine
 import (
 	"errors"
 	"fmt"
+	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"math/big"
 	"runtime"
 	"time"
@@ -243,8 +244,28 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 		state.AddBalance(*tx.To(), tx.Value())
 		me.config.Log.Debug(fmt.Sprintf("Cross chain(%s):%s(MEER) => %s(ETH)", tx.To().String(), tx.Value().String(), tx.Value().String()))
 	} else {
+		fee := big.NewInt(0).Sub(oldBalance, tx.Value())
+		if fee.Sign() < 0 {
+			fee.SetInt64(0)
+		}
+		feeStr := ""
+		if fee.Sign() > 0 {
+			mfee := big.NewInt(0).Div(fee, qcommon.Precision)
+			mfee = mfee.Mul(mfee, qcommon.Precision)
+			efee := big.NewInt(0).Sub(fee, mfee)
+			if efee.Sign() > 0 {
+				feeStr = fmt.Sprintf("fee:%s(MEER)+%s(ETH)", mfee.String(), efee.String())
+				state.AddBalance(header.Coinbase, efee)
+				nonce := state.GetNonce(header.Coinbase)
+				state.SetNonce(header.Coinbase, nonce)
+			} else {
+				feeStr = fmt.Sprintf("fee:%s(MEER)", fee.String())
+			}
+		} else {
+			feeStr = fmt.Sprintf("fee:%s(MEER)", fee.String())
+		}
 		state.SubBalance(*tx.To(), oldBalance)
-		me.config.Log.Debug(fmt.Sprintf("Cross chain(%s):%s(ETH) => %s(MEER) + %s(MEER)", tx.To().String(), oldBalance.String(), tx.Value().String(), oldBalance.Sub(oldBalance, tx.Value()).String()))
+		me.config.Log.Debug(fmt.Sprintf("Cross chain(%s):%s(ETH) => %s(MEER) + %s", tx.To().String(), oldBalance.String(), tx.Value().String(), feeStr))
 	}
 
 	newBalance := state.GetBalance(*tx.To())
