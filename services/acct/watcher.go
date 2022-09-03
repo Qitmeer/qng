@@ -4,9 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 )
@@ -78,18 +77,12 @@ type AcctUTXOIWatcher interface {
 
 func BuildUTXOWatcher(op []byte, au *AcctUTXO, entry *blockchain.UtxoEntry, am *AccountManager) AcctUTXOIWatcher {
 	if entry == nil {
-		txhash, err := hash.NewHash(op[:hash.HashSize])
+		outpoint, err := parseOutpoint(op)
 		if err != nil {
-			log.Error(err.Error())
-			return nil
-		}
-		txOutIdex, size := serialization.DeserializeVLQ(op[hash.HashSize:])
-		if size <= 0 {
-			log.Error(fmt.Sprintf("DeserializeVLQ:%s %v", txhash.String(), op[hash.HashSize:]))
 			return nil
 		}
 		err = am.chain.DB().View(func(dbTx database.Tx) error {
-			entry, err = blockchain.DBFetchUtxoEntry(dbTx, *types.NewOutPoint(txhash, uint32(txOutIdex)))
+			entry, err = blockchain.DBFetchUtxoEntry(dbTx, *outpoint)
 			return err
 		})
 		if err != nil {
@@ -122,7 +115,11 @@ func BuildUTXOWatcher(op []byte, au *AcctUTXO, entry *blockchain.UtxoEntry, am *
 			return nil
 		}
 		lockTime := txscript.GetInt64FromOpcode(ops[0])
-		return NewCLTVWatcher(au, lockTime)
+		outpoint, err := parseOutpoint(op)
+		if err != nil {
+			return nil
+		}
+		return NewCLTVWatcher(au, lockTime, forks.IsMaxLockUTXOInGenesis(outpoint))
 	}
 	return nil
 }

@@ -3,11 +3,9 @@ package acct
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
@@ -156,15 +154,11 @@ func (a *AccountManager) rebuild() error {
 		utxoBucket := meta.Bucket(dbnamespace.UtxoSetBucketName)
 		cursor := utxoBucket.Cursor()
 		for ok := cursor.First(); ok; ok = cursor.Next() {
-			serializedUtxo := cursor.Value()
-			txhash, err := hash.NewHash(cursor.Key()[:hash.HashSize])
+			op, err := parseOutpoint(cursor.Key())
 			if err != nil {
 				return err
 			}
-			txOutIdex, size := serialization.DeserializeVLQ(cursor.Key()[hash.HashSize:])
-			if size <= 0 {
-				return fmt.Errorf("DeserializeVLQ:%s %v", txhash.String(), cursor.Key()[hash.HashSize:])
-			}
+			serializedUtxo := cursor.Value()
 			// Deserialize the utxo entry and return it.
 			entry, err := blockchain.DeserializeUtxoEntry(serializedUtxo)
 			if err != nil {
@@ -173,7 +167,7 @@ func (a *AccountManager) rebuild() error {
 			if entry.IsSpent() {
 				continue
 			}
-			err = a.apply(true, types.NewOutPoint(txhash, uint32(txOutIdex)), entry)
+			err = a.apply(true, op, entry)
 			if err != nil {
 				return err
 			}
@@ -255,7 +249,10 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 					a.watchers[addrStr] = wb
 				}
 				opk := OutpointKey(op)
-				wb.Add(opk, BuildUTXOWatcher(opk, au, entry, a))
+				uw := BuildUTXOWatcher(opk, au, entry, a)
+				if uw != nil {
+					wb.Add(opk, uw)
+				}
 			} else if scriptClass == txscript.CLTVPubKeyHashTy {
 				au.SetCLTV()
 				if !exist {
@@ -263,7 +260,10 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 					a.watchers[addrStr] = wb
 				}
 				opk := OutpointKey(op)
-				wb.Add(opk, BuildUTXOWatcher(opk, au, entry, a))
+				uw := BuildUTXOWatcher(opk, au, entry, a)
+				if uw != nil {
+					wb.Add(opk, uw)
+				}
 			} else {
 				if exist {
 					wb.ab = balance
@@ -392,8 +392,10 @@ func (a *AccountManager) initWatchers(dbTx database.Tx) error {
 				wb = NewAcctBalanceWatcher(addrStr, balance)
 				a.watchers[addrStr] = wb
 			}
-			wb.Add(ku, BuildUTXOWatcher(ku, au, nil, a))
-
+			uw := BuildUTXOWatcher(ku, au, nil, a)
+			if uw != nil {
+				wb.Add(ku, uw)
+			}
 			return nil
 		})
 		return nil
