@@ -2,13 +2,15 @@ package acct
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/engine/txscript"
 )
 
 type CLTVWatcher struct {
-	au       *AcctUTXO
-	unlocked bool
-	lockTime int64
+	au            *AcctUTXO
+	unlocked      bool
+	lockTime      int64
+	isForkGenUTXO bool // MeerEVM fork
 }
 
 func (cw *CLTVWatcher) Update(am *AccountManager) error {
@@ -18,6 +20,10 @@ func (cw *CLTVWatcher) Update(am *AccountManager) error {
 	mainTip := am.chain.BlockDAG().GetMainChainTip()
 	if mainTip == nil {
 		return fmt.Errorf("No main tip")
+	}
+	if forks.IsMeerEVMUTXOHeight(int64(mainTip.GetHeight())) && cw.isForkGenUTXO {
+		cw.unlocked = true
+		return nil
 	}
 	lockTime := int64(0)
 	if cw.lockTime < txscript.LockTimeThreshold {
@@ -53,8 +59,7 @@ func (cw *CLTVWatcher) GetName() string {
 	return cw.au.TypeStr()
 }
 
-func NewCLTVWatcher(au *AcctUTXO, lockTime int64) *CLTVWatcher {
-	fmt.Println(au.String(), " lockTime=", lockTime)
-	cw := &CLTVWatcher{au: au, lockTime: lockTime}
+func NewCLTVWatcher(au *AcctUTXO, lockTime int64, isForkGenUTXO bool) *CLTVWatcher {
+	cw := &CLTVWatcher{au: au, lockTime: lockTime, isForkGenUTXO: isForkGenUTXO}
 	return cw
 }

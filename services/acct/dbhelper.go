@@ -71,19 +71,19 @@ func getDBPath(dataDir string) string {
 }
 
 // info
-func DBGetACCTInfo(dbTx database.Tx) (*AcctInfo,error){
+func DBGetACCTInfo(dbTx database.Tx) (*AcctInfo, error) {
 	meta := dbTx.Metadata()
 
 	infoData := meta.Get(InfoBucketName)
 	if infoData == nil {
-		return nil,nil
+		return nil, nil
 	}
-	info:=NewAcctInfo()
+	info := NewAcctInfo()
 	err := info.Decode(bytes.NewReader(infoData))
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	return info,nil
+	return info, nil
 }
 
 func DBPutACCTInfo(dbTx database.Tx, ai *AcctInfo) error {
@@ -96,22 +96,22 @@ func DBPutACCTInfo(dbTx database.Tx, ai *AcctInfo) error {
 }
 
 // balance
-func DBGetACCTBalance(dbTx database.Tx, address string) (*AcctBalance,error) {
+func DBGetACCTBalance(dbTx database.Tx, address string) (*AcctBalance, error) {
 	meta := dbTx.Metadata()
 	bucket := meta.Bucket(BalanceBucketName)
 	if bucket == nil {
-		return nil,nil
+		return nil, nil
 	}
 	balData := bucket.Get([]byte(address))
 	if balData == nil {
-		return nil,nil
+		return nil, nil
 	}
-	balance:=&AcctBalance{}
+	balance := &AcctBalance{}
 	err := balance.Decode(bytes.NewReader(balData))
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	return balance,nil
+	return balance, nil
 }
 
 func DBPutACCTBalance(dbTx database.Tx, address string, ab *AcctBalance) error {
@@ -198,4 +198,19 @@ func OutpointKey(outpoint *types.TxOutPoint) []byte {
 	copy(key, outpoint.Hash[:])
 	serialization.PutVLQ(key[hash.HashSize:], idx)
 	return key
+}
+
+func parseOutpoint(opk []byte) (*types.TxOutPoint, error) {
+	txhash, err := hash.NewHash(opk[:hash.HashSize])
+	if err != nil {
+		log.Error(err.Error())
+		return nil, err
+	}
+	txOutIdex, size := serialization.DeserializeVLQ(opk[hash.HashSize:])
+	if size <= 0 {
+		err := fmt.Errorf("DeserializeVLQ:%s %v", txhash.String(), opk[hash.HashSize:])
+		log.Error(err.Error())
+		return nil, err
+	}
+	return types.NewOutPoint(txhash, uint32(txOutIdex)), nil
 }
