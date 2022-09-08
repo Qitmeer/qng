@@ -179,19 +179,24 @@ func (vm *VM) LastAccepted() (*hash.Hash, error) {
 }
 
 func (vm *VM) GetBalance(addre string) (int64, error) {
-	addr, err := address.DecodeAddress(addre)
-	if err != nil {
-		return 0, err
+	var eAddr common.Address
+	if common.IsHexAddress(addre) {
+		eAddr = common.HexToAddress(addre)
+	} else {
+		addr, err := address.DecodeAddress(addre)
+		if err != nil {
+			return 0, err
+		}
+		secpPksAddr, ok := addr.(*address.SecpPubKeyAddress)
+		if !ok {
+			return 0, fmt.Errorf("Not SecpPubKeyAddress:%s", addr.String())
+		}
+		publicKey, err := crypto.UnmarshalPubkey(secpPksAddr.PubKey().SerializeUncompressed())
+		if err != nil {
+			return 0, err
+		}
+		eAddr = crypto.PubkeyToAddress(*publicKey)
 	}
-	secpPksAddr, ok := addr.(*address.SecpPubKeyAddress)
-	if !ok {
-		return 0, fmt.Errorf("Not SecpPubKeyAddress:%s", addr.String())
-	}
-	publicKey, err := crypto.UnmarshalPubkey(secpPksAddr.PubKey().SerializeUncompressed())
-	if err != nil {
-		return 0, err
-	}
-	eAddr := crypto.PubkeyToAddress(*publicKey)
 	state, err := vm.chain.Ether().BlockChain().State()
 	if err != nil {
 		return 0, err
