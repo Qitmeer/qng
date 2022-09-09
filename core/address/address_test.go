@@ -40,7 +40,7 @@ func TestAddress(t *testing.T) {
 	}{
 		{
 			// prikey 7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b
-			name:      "privNet p2pkh NewPubKeyHashAddress",
+			name:      "mixNet p2pkh NewPubKeyHashAddress",
 			addr:      "XmNZ52HdwsBWUK4TAhyXfYhZ1NcJ9HC88oh",
 			pubkeystr: "0354455a60d86273d322eebb913d87f428988ce97922a366f0a0867a426df78bc9",
 			encoded:   "XmNZ52HdwsBWUK4TAhyXfYhZ1NcJ9HC88oh",
