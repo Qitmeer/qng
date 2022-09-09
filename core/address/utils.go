@@ -28,7 +28,7 @@ func IsForCurNetwork(addr string) bool {
 		log.Error(err.Error())
 		return false
 	}
-	if !IsForNetwork(add,params.ActiveNetParams.Params) {
+	if !IsForNetwork(add, params.ActiveNetParams.Params) {
 		return false
 	}
 	return true
