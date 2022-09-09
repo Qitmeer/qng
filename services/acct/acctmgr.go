@@ -2,8 +2,10 @@ package acct
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
@@ -457,18 +459,21 @@ func (a *AccountManager) Commit() error {
 	return nil
 }
 
-func (a *AccountManager) GetBalance(address string) (uint64, error) {
+func (a *AccountManager) GetBalance(addr string) (uint64, error) {
 	if !a.cfg.AcctMode {
 		return 0, fmt.Errorf("Please enable --acctmode")
 	}
+	if !address.IsForCurNetwork(addr) {
+		return 0, fmt.Errorf("network error:%s", addr)
+	}
 	result := uint64(0)
-	wb, exist := a.watchers[address]
+	wb, exist := a.watchers[addr]
 	if exist {
 		return wb.GetBalance(), nil
 	}
 
 	err := a.db.Update(func(dbTx database.Tx) error {
-		balance, err := DBGetACCTBalance(dbTx, address)
+		balance, err := DBGetACCTBalance(dbTx, addr)
 		if err != nil {
 			return err
 		}
@@ -481,6 +486,47 @@ func (a *AccountManager) GetBalance(address string) (uint64, error) {
 		return 0, err
 	}
 	return result, nil
+}
+
+func (a *AccountManager) GetUTXOs(addr string) ([]UTXOResult, error) {
+	utxos := []UTXOResult{}
+	err := a.db.Update(func(dbTx database.Tx) error {
+		us := DBGetACCTUTXOs(dbTx, addr)
+		if len(us) > 0 {
+			for k, v := range us {
+				ur := UTXOResult{Type: v.TypeStr(), Amount: v.balance, Status: "valid"}
+				wb, exist := a.watchers[addr]
+				if exist {
+					wu := wb.GetByOPS(k)
+					if wu != nil {
+						if wu.IsUnlocked() {
+							ur.Status = "unlocked"
+						} else {
+							ur.Status = "locked"
+						}
+					}
+				}
+
+				opk, err := hex.DecodeString(k)
+				if err != nil {
+					return err
+				}
+				op, err := parseOutpoint(opk)
+				if err != nil {
+					return err
+				}
+				ur.PreTxHash = op.Hash.String()
+				ur.PreOutIdx = op.OutIndex
+				utxos = append(utxos, ur)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return utxos, nil
 }
 
 func (a *AccountManager) APIs() []api.API {

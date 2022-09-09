@@ -13,6 +13,7 @@ import (
 	"github.com/Qitmeer/qng/meerevm/chain"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/evm/util"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/common"
@@ -186,6 +187,9 @@ func (vm *VM) GetBalance(addre string) (int64, error) {
 		addr, err := address.DecodeAddress(addre)
 		if err != nil {
 			return 0, err
+		}
+		if !addr.IsForNetwork(params.ActiveNetParams.Net) {
+			return 0, fmt.Errorf("network error:%s", addr.String())
 		}
 		secpPksAddr, ok := addr.(*address.SecpPubKeyAddress)
 		if !ok {
