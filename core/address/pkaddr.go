@@ -3,6 +3,7 @@ package address
 import (
 	"errors"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/params"
@@ -89,6 +90,12 @@ func (a *SecpPubKeyAddress) Script() []byte {
 	return a.serialize()
 }
 
+// IsForNetwork returns whether or not the address is associated with the
+// passed network.
+func (a *SecpPubKeyAddress) IsForNetwork(net protocol.Network) bool {
+	return a.net.Net == net
+}
+
 // NewAddressSecpPubKey returns a new AddressSecpPubKey which represents a
 // pay-to-pubkey address, using a secp256k1 pubkey.  The serializedPubKey
 // parameter must be a valid pubkey and must be uncompressed or compressed.
@@ -170,6 +177,12 @@ func (a *EdwardsPubKeyAddress) Script() []byte {
 	return a.serialize()
 }
 
+// IsForNetwork returns whether or not the address is associated with the
+// passed network.
+func (a *EdwardsPubKeyAddress) IsForNetwork(net protocol.Network) bool {
+	return a.net.Net == net
+}
+
 // NewAddressEdwardsPubKey returns a new AddressEdwardsPubKey which represents a
 // pay-to-pubkey address, using an Ed25519 pubkey.  The serializedPubKey
 // parameter must be a valid 32 byte serialized public key.
@@ -233,6 +246,12 @@ func (a *SecSchnorrPubKeyAddress) PKHAddress() *PubKeyHashAddress {
 // this function accordingly.  Part of the Address interface.
 func (a *SecSchnorrPubKeyAddress) Script() []byte {
 	return a.serialize()
+}
+
+// IsForNetwork returns whether or not the address is associated with the
+// passed network.
+func (a *SecSchnorrPubKeyAddress) IsForNetwork(net protocol.Network) bool {
+	return a.net.Net == net
 }
 
 // NewAddressSecSchnorrPubKey returns a new AddressSecpPubKey which represents a

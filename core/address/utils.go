@@ -10,16 +10,8 @@ import (
 
 // IsForNetwork returns whether or not the address is associated with the
 // passed network.
-//TODO, other addr type and ec type check
 func IsForNetwork(addr types.Address, p *params.Params) bool {
-	switch addr := addr.(type) {
-	case *PubKeyHashAddress:
-		return addr.netID == p.PubKeyHashAddrID
-	case *SecpPubKeyAddress:
-		return addr.net.Net == p.Net
-
-	}
-	return false
+	return addr.IsForNetwork(p.Net)
 }
 
 func IsForCurNetwork(addr string) bool {
@@ -28,8 +20,5 @@ func IsForCurNetwork(addr string) bool {
 		log.Error(err.Error())
 		return false
 	}
-	if !IsForNetwork(add, params.ActiveNetParams.Params) {
-		return false
-	}
-	return true
+	return add.IsForNetwork(params.ActiveNetParams.Params.Net)
 }

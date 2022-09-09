@@ -3,6 +3,7 @@ package address
 import (
 	"errors"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/params"
 	"golang.org/x/crypto/ripemd160"
@@ -43,6 +44,12 @@ func (a *ScriptHashAddress) Script() []byte {
 	return a.hash[:]
 }
 
+// IsForNetwork returns whether or not the address is associated with the
+// passed network.
+func (a *ScriptHashAddress) IsForNetwork(net protocol.Network) bool {
+	return a.net.Net == net
+}
+
 // newAddressScriptHashFromHash is the internal API to create a script hash
 // address with a known leading identifier byte for a network, rather than
 // looking it up through its parameters.  This is useful when creating a new
@@ -62,7 +69,12 @@ func newScriptHashAddressFromHash(scriptHash []byte, netID [2]byte) (*ScriptHash
 // NewAddressScriptHash returns a new AddressScriptHash.
 func NewScriptHashAddress(serializedScript []byte, net *params.Params) (*ScriptHashAddress, error) {
 	scriptHash := hash.Hash160(serializedScript)
-	return newScriptHashAddressFromHash(scriptHash, net.ScriptHashAddrID)
+	sha, err := newScriptHashAddressFromHash(scriptHash, net.ScriptHashAddrID)
+	if err != nil {
+		return nil, err
+	}
+	sha.net = net
+	return sha, nil
 }
 
 // NewAddressScriptHashFromHash returns a new AddressScriptHash.  scriptHash

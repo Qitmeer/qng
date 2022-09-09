@@ -2,6 +2,7 @@ package address
 
 import (
 	"errors"
+	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/params"
 	"golang.org/x/crypto/ripemd160"
@@ -48,6 +49,12 @@ func (a *PubKeyHashAddress) Hash160() *[ripemd160.Size]byte {
 // to a pubkey hash.  Part of the Address interface.
 func (a *PubKeyHashAddress) Script() []byte {
 	return a.hash[:]
+}
+
+// IsForNetwork returns whether or not the address is associated with the
+// passed network.
+func (a *PubKeyHashAddress) IsForNetwork(net protocol.Network) bool {
+	return a.net.Net == net
 }
 
 // NewAddressPubKeyHash returns a new AddressPubKeyHash.  pkHash must
