@@ -144,11 +144,6 @@ func (a *PubKeyHashAddress) Hash160() *[ripemd160.Size]byte {
 	return &a.hash
 }
 
-type PubKeyAddress struct {
-	pk       []byte
-	addrType types.AddressType
-}
-
 // NewAddressPubKey returns a new Address. decoded must
 // be 33 bytes.
 func NewPubKeyAddress(decoded []byte, net *params.Params) (types.Address, error) {
