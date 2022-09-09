@@ -4,6 +4,7 @@ package address
 
 import (
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/params"
 )
 
@@ -19,4 +20,16 @@ func IsForNetwork(addr types.Address, p *params.Params) bool {
 
 	}
 	return false
+}
+
+func IsForCurNetwork(addr string) bool {
+	add, err := DecodeAddress(addr)
+	if err != nil {
+		log.Error(err.Error())
+		return false
+	}
+	if !IsForNetwork(add,params.ActiveNetParams.Params) {
+		return false
+	}
+	return true
 }
