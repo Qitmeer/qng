@@ -2,6 +2,7 @@
 package types
 
 import (
+	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/crypto/ecc"
 )
 
@@ -28,10 +29,9 @@ type Address interface {
 	// raw byte in script, aka the hash in the most case
 	Script() []byte
 
-	// TODO, revisit the design of address type decision
 	// IsForNetwork returns whether or not the address is associated with the
 	// passed network.
-	// IsForNetwork(hashID [2]byte) bool
+	IsForNetwork(net protocol.Network) bool
 }
 
 type AddressType byte
