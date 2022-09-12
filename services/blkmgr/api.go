@@ -9,10 +9,10 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -439,13 +439,13 @@ func (api *PublicBlockAPI) GetCoinbase(h hash.Hash, verbose *bool) (interface{},
 
 // GetCoinbase
 func (api *PublicBlockAPI) GetFees(h hash.Hash) (interface{}, error) {
-	feesMap:=map[string]int64{}
-	fsm:=api.bm.chain.GetFees(&h)
-	for coinId,v:=range fsm {
+	feesMap := map[string]int64{}
+	fsm := api.bm.chain.GetFees(&h)
+	for coinId, v := range fsm {
 		if v <= 0 {
 			continue
 		}
-		feesMap[coinId.Name()]=v
+		feesMap[coinId.Name()] = v
 	}
 	return feesMap, nil
 }
@@ -462,7 +462,7 @@ func (api *PublicBlockAPI) GetTokenInfo() (interface{}, error) {
 		ts.CoinId = uint16(v.Id)
 		ts.CoinName = v.Name
 		ts.Owners = hex.EncodeToString(v.Owners)
-		if v.Id != types.MEERID && v.Id != types.ETHID {
+		if v.Id != types.MEERA && v.Id != types.MEERB {
 			ts.UpLimit = v.UpLimit
 			ts.Enable = v.Enable
 			for k, vb := range state.Balances {

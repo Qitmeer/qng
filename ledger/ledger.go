@@ -31,8 +31,8 @@ type PayoutList []TokenPayoutReGen
 
 func (p PayoutList) Len() int { return len(p) }
 func (p PayoutList) Less(i, j int) bool {
-	x, _ := (&types.Amount{Value: 0, Id: types.MEERID}).Add(&p[i].GenAmount, &p[i].Payout.Amount)
-	y, _ := (&types.Amount{Value: 0, Id: types.MEERID}).Add(&p[j].GenAmount, &p[j].Payout.Amount)
+	x, _ := (&types.Amount{Value: 0, Id: types.MEERA}).Add(&p[i].GenAmount, &p[i].Payout.Amount)
+	y, _ := (&types.Amount{Value: 0, Id: types.MEERA}).Add(&p[j].GenAmount, &p[j].Payout.Amount)
 	return x.Value < y.Value
 }
 func (p PayoutList) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
@@ -54,7 +54,7 @@ var GenesisLedger []*TokenPayout
 // BlockOneSubsidy returns the total subsidy of block height 1 for the
 // network.
 func GenesisLedgerSubsidy() types.Amount {
-	zero := &types.Amount{Value: 0, Id: types.MEERID}
+	zero := &types.Amount{Value: 0, Id: types.MEERA}
 	if len(GenesisLedger) == 0 {
 		return *zero
 	}
@@ -121,7 +121,7 @@ func Ledger(tx *types.Transaction, netType protocol.Network) {
 
 	if len(tx.TxOut) <= 0 {
 		tx.AddTxOut(&types.TxOutput{
-			Amount: types.Amount{Value: 0, Id: types.MEERID},
+			Amount: types.Amount{Value: 0, Id: types.MEERA},
 		})
 	}
 }

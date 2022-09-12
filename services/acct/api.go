@@ -19,9 +19,9 @@ func NewPublicAccountManagerAPI(a *AccountManager) *PublicAccountManagerAPI {
 }
 
 func (api *PublicAccountManagerAPI) GetBalance(addr string, coinID types.CoinID) (interface{}, error) {
-	if coinID == types.MEERID {
+	if coinID == types.MEERA {
 		return api.a.GetBalance(addr)
-	} else if coinID == types.ETHID {
+	} else if coinID == types.MEERB {
 		cv, err := api.a.chain.VMService.GetVM(evm.MeerEVMID)
 		if err != nil {
 			return nil, err
@@ -42,7 +42,7 @@ func (api *PublicAccountManagerAPI) GetAcctInfo() (interface{}, error) {
 
 func (api *PublicAccountManagerAPI) GetBalanceInfo(addr string, coinID types.CoinID) (interface{}, error) {
 	result := BalanceInfoResult{CoinId: coinID.Name()}
-	if coinID == types.MEERID {
+	if coinID == types.MEERA {
 		bal, err := api.a.GetBalance(addr)
 		if err != nil {
 			return nil, err
@@ -53,7 +53,7 @@ func (api *PublicAccountManagerAPI) GetBalanceInfo(addr string, coinID types.Coi
 			return nil, err
 		}
 		return result, nil
-	} else if coinID == types.ETHID {
+	} else if coinID == types.MEERB {
 		cv, err := api.a.chain.VMService.GetVM(evm.MeerEVMID)
 		if err != nil {
 			return nil, err

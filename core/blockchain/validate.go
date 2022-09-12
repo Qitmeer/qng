@@ -439,7 +439,7 @@ func validateCoinbase(tx *types.Transaction, pa *params.Params) error {
 			str := fmt.Sprintf("Coinbase output number error")
 			return ruleError(ErrBadCoinbaseOutpoint, str)
 		}
-		if tx.TxOut[CoinbaseOutput_subsidy].Amount.Id != types.MEERID {
+		if tx.TxOut[CoinbaseOutput_subsidy].Amount.Id != types.MEERA {
 			str := fmt.Sprintf("Subsidy output amount type is error")
 			return ruleError(ErrBadCoinbaseOutpoint, str)
 		}
@@ -470,7 +470,7 @@ func validateCoinbaseToken(outputs []*types.TxOutput) error {
 		return nil
 	}
 	for _, v := range outputs {
-		if v.Amount.Id == types.MEERID {
+		if v.Amount.Id == types.MEERA {
 			continue
 		}
 		if !types.IsKnownCoinID(v.Amount.Id) {
@@ -491,7 +491,7 @@ func validateCoinbaseTax(tx *types.Transaction, pa *params.Params) error {
 		str := fmt.Sprintf("Lack of output")
 		return ruleError(ErrBadCoinbaseOutpoint, str)
 	}
-	if tx.TxOut[CoinbaseOutput_subsidy].Amount.Id != types.MEERID {
+	if tx.TxOut[CoinbaseOutput_subsidy].Amount.Id != types.MEERA {
 		str := fmt.Sprintf("Subsidy output amount type is error")
 		return ruleError(ErrBadCoinbaseOutpoint, str)
 	}
@@ -511,7 +511,7 @@ func validateCoinbaseTax(tx *types.Transaction, pa *params.Params) error {
 		return err
 	}
 
-	if tx.TxOut[taxIndex].Amount.Id != types.MEERID {
+	if tx.TxOut[taxIndex].Amount.Id != types.MEERA {
 		str := fmt.Sprintf("Tax output amount type is error")
 		return ruleError(ErrBadCoinbaseOutpoint, str)
 	}
@@ -669,7 +669,7 @@ func (b *BlockChain) checkBlockSubsidy(block *types.SerializedBlock) error {
 	hasOPR := opreturn.IsOPReturn(transactions[0].Tx.TxOut[txoutLen-1].PkScript)
 	for k, v := range transactions[0].Tx.TxOut {
 		// the coinbase should always use meer coin
-		if v.Amount.Id != types.MEERID {
+		if v.Amount.Id != types.MEERA {
 			continue
 		}
 		if b.params.HasTax() {
@@ -1202,7 +1202,7 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 			return nil, err
 		}
 		if isCCExportTx {
-			if utxoEntry.amount.Id != types.MEERID {
+			if utxoEntry.amount.Id != types.MEERA {
 				return nil, fmt.Errorf("%s has illegal inputs %s", types.DetermineTxType(tx.Tx), utxoEntry.amount.Id.Name())
 			}
 		}
@@ -1226,7 +1226,7 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 			}
 			targets = append(targets, ubhIB.GetID())
 			if !utxoEntry.BlockHash().IsEqual(b.params.GenesisHash) {
-				if originTxAtom.Id == types.MEERID {
+				if originTxAtom.Id == types.MEERA {
 					if txIn.PreviousOut.OutIndex == CoinbaseOutput_subsidy {
 						originTxAtom.Value += b.GetFeeByCoinID(utxoEntry.BlockHash(), originTxAtom.Id)
 					}
@@ -1286,7 +1286,7 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 	totalAtomOut := make(map[types.CoinID]int64)
 	for idx, txOut := range tx.Transaction().TxOut {
 		if idx == 0 && isCCExportTx {
-			totalAtomOut[types.MEERID] += txOut.Amount.Value
+			totalAtomOut[types.MEERA] += txOut.Amount.Value
 			continue
 		}
 		// Ensure the coinId is known
@@ -1433,7 +1433,7 @@ func (b *BlockChain) CheckTokenTransactionInputs(tx *types.Tx, utxoView *UtxoVie
 			return ruleError(ErrMissingTxOut, str)
 		}
 		if !utxoEntry.amount.Id.IsBase() {
-			return fmt.Errorf("Token transaction(%s) input (%s %d) must be MEERID\n", tx.Hash(), txIn.PreviousOut.Hash, txIn.PreviousOut.OutIndex)
+			return fmt.Errorf("Token transaction(%s) input (%s %d) must be MEERA\n", tx.Hash(), txIn.PreviousOut.Hash, txIn.PreviousOut.OutIndex)
 		}
 
 		originTxAtom := utxoEntry.Amount()
@@ -1457,7 +1457,7 @@ func (b *BlockChain) CheckTokenTransactionInputs(tx *types.Tx, utxoView *UtxoVie
 			}
 			targets = append(targets, ubhIB.GetID())
 			if !utxoEntry.BlockHash().IsEqual(b.params.GenesisHash) {
-				if originTxAtom.Id == types.MEERID {
+				if originTxAtom.Id == types.MEERA {
 					if txIn.PreviousOut.OutIndex == CoinbaseOutput_subsidy {
 						originTxAtom.Value += b.GetFeeByCoinID(utxoEntry.BlockHash(), originTxAtom.Id)
 					}

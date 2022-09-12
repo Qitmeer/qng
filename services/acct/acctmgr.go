@@ -183,7 +183,7 @@ func (a *AccountManager) rebuild() error {
 }
 
 func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain.UtxoEntry) error {
-	if entry.Amount().Id != types.MEERID {
+	if entry.Amount().Id != types.MEERA {
 		return nil
 	}
 	scriptClass, addrs, _, err := txscript.ExtractPkScriptAddrs(entry.PkScript(), params.ActiveNetParams.Params)

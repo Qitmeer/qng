@@ -93,11 +93,11 @@ func ToQNGTx(tx *types.Transaction, timestamp int64) *qtypes.Transaction {
 	mtx.AddTxIn(&qtypes.TxInput{
 		PreviousOut: *qtypes.NewOutPoint(&qtxh, qtypes.SupperPrevOutIndex),
 		Sequence:    uint32(qtypes.TxTypeCrossChainVM),
-		AmountIn:    qtypes.Amount{Id: qtypes.ETHID, Value: 0},
+		AmountIn:    qtypes.Amount{Id: qtypes.MEERB, Value: 0},
 		SignScript:  []byte(txmbHex),
 	})
 	mtx.AddTxOut(&qtypes.TxOutput{
-		Amount:   qtypes.Amount{Value: 0, Id: qtypes.ETHID},
+		Amount:   qtypes.Amount{Value: 0, Id: qtypes.MEERB},
 		PkScript: opreturn.NewEVMTx().PKScript(),
 	})
 

@@ -44,7 +44,7 @@ func TestWsNotify(t *testing.T) {
 		t.Fatal(err)
 		return
 	}
-	spendAmt := types.Amount{Value: 50 * types.AtomsPerCoin, Id: types.MEERID}
+	spendAmt := types.Amount{Value: 50 * types.AtomsPerCoin, Id: types.MEERA}
 	lockT := int64(1)
 	txid, addr := Spend(t, h, spendAmt, nil, &lockT)
 	t.Logf("[%v]: tx %v which spend %v has been sent", h.Node.Id(), txid, spendAmt.String())
@@ -74,7 +74,7 @@ func TestWsNotify(t *testing.T) {
 	GenerateBlock(t, h, 2)
 	AssertBlockOrderAndHeight(t, h, 8, 8, 7)
 	AssertTxConfirm(t, h, txid.String(), 5)
-	spendAmt = types.Amount{Value: 50 * types.AtomsPerCoin, Id: types.MEERID}
+	spendAmt = types.Amount{Value: 50 * types.AtomsPerCoin, Id: types.MEERA}
 	lockT = int64(1)
 	txid, addr = Spend(t, h, spendAmt, nil, &lockT)
 	t.Logf("[%v]: tx %v which spend %v has been sent", h.Node.Id(), txid, spendAmt.String())

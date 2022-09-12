@@ -38,7 +38,7 @@ func Test_CheckTransactionSanity(t *testing.T) {
 		panic(err)
 	}
 	tx.AddTxOut(&types.TxOutput{
-		Amount:   types.Amount{Value: 99999999999999999, Id: types.MEERID},
+		Amount:   types.Amount{Value: 99999999999999999, Id: types.MEERA},
 		PkScript: attackerPkScript,
 	})
 
@@ -130,7 +130,7 @@ func createTx() *types.Transaction {
 		PreviousOut: *types.NewOutPoint(&hash.Hash{}, types.SupperPrevOutIndex),
 		Sequence:    uint32(types.TxTypeTokenUnmint),
 		SignScript:  unmintScript,
-		AmountIn:    types.Amount{Value: 10 * 1e8, Id: types.MEERID},
+		AmountIn:    types.Amount{Value: 10 * 1e8, Id: types.MEERA},
 	})
 
 	txid := hash.MustHexToDecodedHash("377cfb2c535be289f8e40299e8d4c234283c367e20bc5ff67ca18c1ca1337443")
@@ -159,7 +159,7 @@ func createTx() *types.Transaction {
 	meerReleaseScript[0] = txscript.OP_MEER_RELEASE
 	copy(meerReleaseScript[1:], p2pkhScript)
 	fee := int64(5400)
-	tx.AddTxOut(&types.TxOutput{Amount: types.Amount{Value: 10*1e8 - fee, Id: types.MEERID}, PkScript: meerReleaseScript})
+	tx.AddTxOut(&types.TxOutput{Amount: types.Amount{Value: 10*1e8 - fee, Id: types.MEERA}, PkScript: meerReleaseScript})
 	// output[2] token-change
 	tokenChangeScript := make([]byte, len(p2pkhScript)+1)
 	tokenChangeScript[0] = txscript.OP_TOKEN_CHANGE

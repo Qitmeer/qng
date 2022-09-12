@@ -67,7 +67,7 @@ func (itx *ImportTx) CheckSanity() error {
 	if !types.IsCrossChainImportTx(itx.Transaction) {
 		return fmt.Errorf("Not import tx data")
 	}
-	if itx.Transaction.TxOut[0].Amount.Id != types.MEERID {
+	if itx.Transaction.TxOut[0].Amount.Id != types.MEERA {
 		return fmt.Errorf("Import output must MEER coin")
 	}
 	if len(itx.Transaction.TxOut[0].PkScript) <= 0 {

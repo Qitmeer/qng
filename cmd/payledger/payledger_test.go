@@ -42,7 +42,7 @@ func TestLockedLedger(t *testing.T) {
 	testutils.GenerateBlock(t, h, 2)
 	testutils.AssertBlockOrderAndHeight(t, h, 3, 3, 2)
 
-	spendAmt := types.Amount{Value: 50 * types.AtomsPerCoin, Id: types.MEERID}
+	spendAmt := types.Amount{Value: 50 * types.AtomsPerCoin, Id: types.MEERA}
 
 	lockTime := int64(2)
 	txid, addr := testutils.Spend(t, h, spendAmt, types.NewOutPoint(&genesisTxHash, 406), &lockTime)
