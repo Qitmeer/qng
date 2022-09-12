@@ -29,7 +29,7 @@ func (cw *CoinbaseWatcher) Update(am *AccountManager) error {
 	cw.unlocked = true
 
 	if !cw.target.GetHash().IsEqual(params.ActiveNetParams.GenesisHash) {
-		cw.fee = uint64(am.chain.GetFeeByCoinID(cw.target.GetHash(), types.MEERID))
+		cw.fee = uint64(am.chain.GetFeeByCoinID(cw.target.GetHash(), types.MEERA))
 	}
 	return nil
 }

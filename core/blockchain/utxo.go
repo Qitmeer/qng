@@ -457,7 +457,7 @@ func (view *UtxoViewpoint) connectTransaction(tx *types.Tx, node *BlockNode, blo
 		}
 		if stxo.IsCoinBase && !entry.BlockHash().IsEqual(bc.params.GenesisHash) {
 			if txIn.PreviousOut.OutIndex == CoinbaseOutput_subsidy ||
-				entry.Amount().Id != types.MEERID {
+				entry.Amount().Id != types.MEERA {
 				stxo.Fees.Value = bc.GetFeeByCoinID(&stxo.BlockHash, stxo.Fees.Id)
 			}
 		}
@@ -477,8 +477,8 @@ func (view *UtxoViewpoint) connectImportTransaction(tx *types.Tx, node *BlockNod
 	}
 
 	var stxo = SpentTxOut{
-		Amount:     types.Amount{Id: types.MEERID, Value: balance},
-		Fees:       types.Amount{Value: 0, Id: types.MEERID},
+		Amount:     types.Amount{Id: types.MEERA, Value: balance},
+		Fees:       types.Amount{Value: 0, Id: types.MEERA},
 		PkScript:   nil,
 		BlockHash:  hash.ZeroHash,
 		IsCoinBase: false,

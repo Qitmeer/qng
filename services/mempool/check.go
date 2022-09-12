@@ -205,7 +205,7 @@ func isDust(txOut *types.TxOutput, minRelayTxFee types.Amount) bool {
 	}
 
 	// Only MeerCoin need to compare with RelayTxFee
-	if txOut.Amount.Id != types.MEERID {
+	if txOut.Amount.Id != types.MEERA {
 		// TODO the Dust rule for coin other than meer
 		return false
 	}

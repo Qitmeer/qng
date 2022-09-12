@@ -37,7 +37,7 @@ func TestReleaseContract(t *testing.T) {
 	AssertBlockOrderAndHeight(t, h, 21, 21, 20)
 
 	lockTime := int64(20)
-	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERID}
+	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERA}
 	txid := SendSelf(t, h, spendAmt, nil, &lockTime)
 	GenerateBlock(t, h, 10)
 	fee := int64(2200)

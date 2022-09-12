@@ -321,7 +321,7 @@ func IsTokenTx(tx *Transaction) bool {
 func GetSupportCoinsForCrossChain() map[CoinID]bool {
 	// TODO:This is an extensible cross chain configuration. There are more possibilities in the future
 	return map[CoinID]bool{
-		ETHID: true,
+		MEERB: true,
 	}
 }
 
@@ -333,7 +333,7 @@ func IsCrossChainExportTx(tx *Transaction) bool {
 		if k == 0 {
 			continue
 		}
-		if to.Amount.Id != MEERID {
+		if to.Amount.Id != MEERA {
 			return false
 		}
 	}

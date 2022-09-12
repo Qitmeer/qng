@@ -128,36 +128,36 @@ func Test_FeeConfigs(t *testing.T) {
 	}{
 		{
 			txFees: types.AmountMap{
-				types.MEERID: types.AtomsPerCoin,
-				QITID:        types.AtomsPerCoin,
+				types.MEERA: types.AtomsPerCoin,
+				QITID:       types.AtomsPerCoin,
 			},
 			expect: true,
 		},
 		{
 			txFees: types.AmountMap{
-				types.MEERID: types.AtomsPerCoin * 2,
-				QITID:        types.AtomsPerCoin * 3,
+				types.MEERA: types.AtomsPerCoin * 2,
+				QITID:       types.AtomsPerCoin * 3,
 			},
 			expect: true,
 		},
 		{
 			txFees: types.AmountMap{
-				types.MEERID: types.AtomsPerCoin,
-				QITID:        types.AtomsPerCoin,
+				types.MEERA: types.AtomsPerCoin,
+				QITID:       types.AtomsPerCoin,
 			},
 			expect: true,
 		},
 		{
 			txFees: types.AmountMap{
-				types.MEERID: types.AtomsPerCoin,
-				QITID:        types.AtomsPerCoin,
+				types.MEERA: types.AtomsPerCoin,
+				QITID:       types.AtomsPerCoin,
 			},
 			expect: true,
 		},
 	}
 
 	ts := TokenState{Types: TokenTypesMap{}}
-	ts.Types[types.MEERID] = TokenType{FeeCfg: *NewTokenFeeConfig(0)}
+	ts.Types[types.MEERA] = TokenType{FeeCfg: *NewTokenFeeConfig(0)}
 	ts.Types[QITID] = TokenType{FeeCfg: *NewTokenFeeConfig(0)}
 
 	for _, test := range tests {

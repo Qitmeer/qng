@@ -555,7 +555,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		}
 		return nil, nil, err
 	}
-	if _, exist := txFees[types.MEERID]; !exist {
+	if _, exist := txFees[types.MEERA]; !exist {
 		str := fmt.Sprintf("transaction %v must contain at least the utxo of base coin (MEER)", txHash)
 		return nil, nil, txRuleError(message.RejectInvalid, str)
 	}
@@ -601,7 +601,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		return nil, nil, txRuleError(message.RejectNonstandard, str)
 	}
 
-	txFee := types.Amount{Id: types.MEERID, Value: 0}
+	txFee := types.Amount{Id: types.MEERA, Value: 0}
 	if txFees != nil {
 		txFee.Value = txFees[txFee.Id]
 	}

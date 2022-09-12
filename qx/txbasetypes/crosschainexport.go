@@ -40,7 +40,7 @@ func (this *TxTypeCrossChainExportUTXO) AssembleVout(mtx *types.Transaction) err
 		return fmt.Errorf("could not decode "+
 			"address: %v", err)
 	}
-	if this.Amount.Id != types.ETHID {
+	if this.Amount.Id != types.MEERB {
 		return fmt.Errorf("coinID error")
 	}
 	switch addr.(type) {

@@ -158,17 +158,17 @@ func NewAmount(f float64) (*Amount, error) {
 	case math.IsInf(f, 1):
 		fallthrough
 	case math.IsInf(f, -1):
-		return &Amount{0, MEERID}, errors.New("invalid coin amount")
+		return &Amount{0, MEERA}, errors.New("invalid coin amount")
 	}
 
-	return &Amount{round(f * AtomsPerCoin), MEERID}, nil
+	return &Amount{round(f * AtomsPerCoin), MEERA}, nil
 }
 
 func NewMeer(a uint64) (*Amount, error) {
-	amt := Amount{int64(a), MEERID}
+	amt := Amount{int64(a), MEERA}
 	err := checkMaxAmount(&amt)
 	if err != nil {
-		zero := Amount{0, MEERID}
+		zero := Amount{0, MEERA}
 		return &zero, err
 	}
 	return &amt, nil
