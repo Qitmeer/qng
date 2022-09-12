@@ -126,28 +126,28 @@ func TestAmountUnitConversions(t *testing.T) {
 			amount:    Amount{MaxAmount, MEERA},
 			unit:      AmountMegaCoin,
 			converted: 21,
-			s:         "21 MMEER",
+			s:         "21 MMEER Asset",
 		},
 		{
 			name:      "kMEER",
 			amount:    Amount{44433322211100, MEERA},
 			unit:      AmountKiloCoin,
 			converted: 444.33322211100,
-			s:         "444.333222111 kMEER",
+			s:         "444.333222111 kMEER Asset",
 		},
 		{
 			name:      "MEER",
 			amount:    Amount{44433322211100, MEERA},
 			unit:      AmountCoin,
 			converted: 444333.22211100,
-			s:         "444333.222111 MEER",
+			s:         "444333.222111 MEER Asset",
 		},
 		{
 			name:      "mMEER",
 			amount:    Amount{44433322211100, MEERA},
 			unit:      AmountMilliCoin,
 			converted: 444333222.11100,
-			s:         "444333222.111 mMEER",
+			s:         "444333222.111 mMEER Asset",
 		},
 		{
 
@@ -155,7 +155,7 @@ func TestAmountUnitConversions(t *testing.T) {
 			amount:    Amount{44433322211100, MEERA},
 			unit:      AmountMicroCoin,
 			converted: 444333222111.00,
-			s:         "444333222111 μMEER",
+			s:         "444333222111 μMEER Asset",
 		},
 		{
 
@@ -163,7 +163,7 @@ func TestAmountUnitConversions(t *testing.T) {
 			amount:    Amount{44433322211100, MEERA},
 			unit:      AmountAtom,
 			converted: 44433322211100,
-			s:         "44433322211100 atomMEER",
+			s:         "44433322211100 atomMEER Asset",
 		},
 		{
 
@@ -171,7 +171,7 @@ func TestAmountUnitConversions(t *testing.T) {
 			amount:    Amount{44433322211100, MEERA},
 			unit:      AmountUnit(-1),
 			converted: 4443332.2211100,
-			s:         "4443332.22111 1e-1 MEER",
+			s:         "4443332.22111 1e-1 MEER Asset",
 		},
 	}
 
