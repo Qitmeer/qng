@@ -191,8 +191,8 @@ func (ttm *TokenTypesMap) Update(update *TypeUpdate) error {
 
 func (ttm *TokenTypesMap) Ids() []string {
 	ret := []string{}
-	for id := range *ttm {
-		ret = append(ret, id.Name())
+	for _, tt := range *ttm {
+		ret = append(ret, tt.Name)
 	}
 	return ret
 }
