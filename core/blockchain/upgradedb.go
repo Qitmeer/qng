@@ -23,11 +23,13 @@ func (b *BlockChain) upgradeDB() error {
 		return fmt.Errorf("Only supported update version(%d or %d,%d) -> version(%d), but cur db is version:%d\n", version8, version9, version10, currentDatabaseVersion, b.dbInfo.version)
 	}
 	log.Info(fmt.Sprintf("Update cur db to new version: version(%d) -> version(%d) ...", b.dbInfo.version, currentDatabaseVersion))
-	err := b.indexManager.Drop()
-	if err != nil {
-		log.Debug(err.Error())
+	if b.dbInfo.version != version10 {
+		err := b.indexManager.Drop()
+		if err != nil {
+			log.Debug(err.Error())
+		}
 	}
-	err = b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx database.Tx) error {
 		bidxStart := roughtime.Now()
 		meta := dbTx.Metadata()
 		serializedData := meta.Get(dbnamespace.ChainStateKeyName)
