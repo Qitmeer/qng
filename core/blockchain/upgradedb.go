@@ -14,9 +14,10 @@ import (
 func (b *BlockChain) upgradeDB() error {
 	version8 := uint32(8)
 	version9 := uint32(9)
+	version10 := uint32(10)
 	if b.dbInfo.version == currentDatabaseVersion {
 		return nil
-	} else if b.dbInfo.version != version8 && b.dbInfo.version != version9 {
+	} else if b.dbInfo.version != version8 && b.dbInfo.version != version9 && b.dbInfo.version != version10 {
 		return fmt.Errorf("Only supported update version(%d or %d) -> version(%d), but cur db is version:%d\n", version8, version9, currentDatabaseVersion, b.dbInfo.version)
 	}
 	log.Info(fmt.Sprintf("Update cur db to new version: version(%d) -> version(%d) ...", b.dbInfo.version, currentDatabaseVersion))
@@ -44,6 +45,14 @@ func (b *BlockChain) upgradeDB() error {
 		}
 
 		// token
+		if b.dbInfo.version == version10 && meta.Bucket(dbnamespace.TokenBucketName) == nil {
+			// create the bucket token_v2 which for version 10+
+			if _, err := meta.CreateBucket(dbnamespace.TokenBucketName); err != nil {
+				return err
+			}
+			log.Info(fmt.Sprintf("recreate tokendb to %s", dbnamespace.TokenBucketName))
+		}
+
 		tokenTipID := meerdag.MaxId
 		bid, er := meerdag.DBGetBlockIdByHash(dbTx, &state.tokenTipHash)
 		if er == nil {
