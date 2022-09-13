@@ -275,7 +275,7 @@ func BuildGenesisTokenState() *TokenState {
 		Owners:  []byte("Qitmeer"),
 		UpLimit: math.MaxUint64,
 		Enable:  true,
-		Name:    "MEER",
+		Name:    types.MEERA.Name(),
 	}
 
 	tys[types.MEERB] = TokenType{
@@ -283,7 +283,7 @@ func BuildGenesisTokenState() *TokenState {
 		Owners:  []byte("Qitmeer"),
 		UpLimit: math.MaxUint64,
 		Enable:  true,
-		Name:    "ETH",
+		Name:    types.MEERB.Name(),
 	}
 
 	return &TokenState{
