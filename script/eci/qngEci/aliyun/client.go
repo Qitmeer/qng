@@ -2,6 +2,7 @@ package aliyun
 
 import (
 	"eci/config"
+	"encoding/hex"
 	"fmt"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials"
@@ -47,9 +48,10 @@ func (this *AliyunECI) CreateContainer() {
 			request.ActiveDeadlineSeconds = requests.NewInteger(this.params.ExiprePeriod)
 		}
 		dockerContainerName := fmt.Sprintf("%s%d", this.params.DataDirPrefix, i)
+		dn := hex.EncodeToString([]byte(dockerContainerName))
 		request.Volume = &[]eci.CreateContainerGroupVolume{
 			{
-				Name: dockerContainerName,
+				Name: dn,
 				Type: this.params.VolumeType,
 				NFSVolume: eci.CreateContainerGroupNFSVolume{
 					Server: this.params.NfsServer,
@@ -59,13 +61,13 @@ func (this *AliyunECI) CreateContainer() {
 		}
 		createContainerRequestContainers := make([]eci.CreateContainerGroupContainer, 0)
 		createContainerRequestContainers = append(createContainerRequestContainers, eci.CreateContainerGroupContainer{
-			Name:   dockerContainerName,
+			Name:   dn,
 			Image:  this.params.QngImage,
 			Cpu:    requests.NewFloat(this.params.CpuCores),
 			Memory: requests.NewFloat(this.params.MemCores),
 			VolumeMount: &[]eci.CreateContainerGroupVolumeMount{
 				{
-					Name:      dockerContainerName,
+					Name:      dn,
 					MountPath: this.params.DockerDataDir,
 				},
 			},
