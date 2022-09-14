@@ -47,7 +47,7 @@ func buildGenesisCoinbaseTx(net protocol.Network) types.Transaction {
 
 		TxOut: []*types.TxOutput{
 			{
-				Amount:   types.Amount{Value: 0x00000000, Id: types.MEERID},
+				Amount:   types.Amount{Value: 0x00000000, Id: types.MEERA},
 				PkScript: hexMustDecode("76a9143846e53e5e952b5cd6023e3ad3cfc75cb93fce0388ac"),
 			},
 		},
@@ -244,7 +244,7 @@ var privNetGenesisCoinbaseTx = types.Transaction{
 	},
 	TxOut: []*types.TxOutput{
 		{
-			Amount: types.Amount{Value: 0x00000000, Id: types.MEERID},
+			Amount: types.Amount{Value: 0x00000000, Id: types.MEERA},
 			PkScript: []byte{
 				0x41, 0x04, 0x67, 0x8a, 0xfd, 0xb0, 0xfe, 0x55, /* |A.g....U| */
 				0x48, 0x27, 0x19, 0x67, 0xf1, 0xa6, 0x71, 0x30, /* |H'.g..q0| */
@@ -366,7 +366,7 @@ var testPowNetGenesisCoinbaseTx = types.Transaction{
 	},
 	TxOut: []*types.TxOutput{
 		{
-			Amount: types.Amount{Value: 0x00000000, Id: types.MEERID},
+			Amount: types.Amount{Value: 0x00000000, Id: types.MEERA},
 			PkScript: []byte{
 				0x41, 0x04, 0x67, 0x8a, 0xfd, 0xb0, 0xfe, 0x55, /* |A.g....U| */
 				0x48, 0x27, 0x19, 0x67, 0xf1, 0xa6, 0x71, 0x30, /* |H'.g..q0| */

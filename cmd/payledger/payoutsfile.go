@@ -65,7 +65,7 @@ func savePayoutsFile(params *params.Params, genesisLedger ledger.PayoutList2, co
 func processNormalPayouts(genesisLedger ledger.PayoutList2) string {
 	fileContent := ""
 	for _, v := range genesisLedger {
-		if v.Payout.Amount.Id != types.MEERID {
+		if v.Payout.Amount.Id != types.MEERA {
 			continue
 		}
 		fileContent += fmt.Sprintf("	addPayout(\"%s\",%d,\"%s\")\n", v.Payout.Address, v.Payout.Amount.Value, hex.EncodeToString(v.Payout.PkScript))
@@ -79,7 +79,7 @@ func processLockingPayouts(genesisLedger ledger.PayoutList2, lockNum int64) stri
 	curMHeight := int64(0)
 	curLockedNum := int64(0)
 	for _, v := range genesisLedger {
-		if v.Payout.Amount.Id != types.MEERID {
+		if v.Payout.Amount.Id != types.MEERA {
 			continue
 		}
 

@@ -445,6 +445,17 @@ function get_balance() {
   get_result "$data"
 }
 
+function get_balance_info() {
+  local address=$1
+  local coinID=$2
+  if [ "$coinID" == "" ]; then
+    coinID=0
+  fi
+
+  local data='{"jsonrpc":"2.0","method":"getBalanceInfo","params":["'$address'",'$coinID'],"id":null}'
+  get_result "$data"
+}
+
 function get_acctinfo() {
    local data='{"jsonrpc":"2.0","method":"getAcctInfo","params":[],"id":null}'
    get_result "$data"
@@ -697,6 +708,7 @@ function usage(){
   echo "  vmsinfo"
   echo "  acctinfo"
   echo "  getbalance <address> <coinID>"
+  echo "  getbalanceinfo <address> <coinID>"
   echo "  getaddresses <private key>"
   echo "  modules"
   echo "block  :"
@@ -1084,6 +1096,10 @@ elif [ "$1" == "acctinfo" ]; then
 elif [ "$1" == "getbalance" ]; then
   shift
   get_balance $@
+
+elif [ "$1" == "getbalanceinfo" ]; then
+  shift
+  get_balance_info $@
 
 elif [ "$1" == "rpcmax" ]; then
   shift

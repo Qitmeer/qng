@@ -128,14 +128,14 @@ func TestHarness_RpcAPI(t *testing.T) {
 	AssertBlockOrderAndHeight(t, h, 3, 3, 2)
 	GenerateBlock(t, h, 16)
 	AssertBlockOrderAndHeight(t, h, 19, 19, 18)
-	spendAmt := types.Amount{Value: 50 * types.AtomsPerCoin, Id: types.MEERID}
+	spendAmt := types.Amount{Value: 50 * types.AtomsPerCoin, Id: types.MEERA}
 	lockTime := int64(18)
 	txid, _ := Spend(t, h, spendAmt, nil, &lockTime)
 	t.Logf("[%v]: tx %v which spend %v has been sent", h.Node.Id(), txid, spendAmt.String())
 	blocks := GenerateBlock(t, h, 1)
 	AssertTxMinedUseNotifierAPI(t, h, txid, blocks[0])
 	lockTime = int64(19)
-	spendAmt = types.Amount{Value: 5000 * types.AtomsPerCoin, Id: types.MEERID}
+	spendAmt = types.Amount{Value: 5000 * types.AtomsPerCoin, Id: types.MEERA}
 
 	txid, _ = Spend(t, h, spendAmt, nil, &lockTime)
 	t.Logf("[%v]: tx %v which spend %v has been sent", h.Node.Id(), txid, spendAmt.String())
@@ -157,7 +157,7 @@ func TestHarness_SpentGenesis(t *testing.T) {
 	}
 	time.Sleep(500 * time.Millisecond)
 	// max can spent 13000 meer in genesis
-	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERID}
+	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERA}
 	_, _ = CanNotSpend(t, h, spendAmt, nil, nil)
 
 	GenerateBlock(t, h, 20)
@@ -168,7 +168,7 @@ func TestHarness_SpentGenesis(t *testing.T) {
 	GenerateBlock(t, h, 5)
 	AssertBlockOrderAndHeight(t, h, 26, 26, 25)
 
-	spendAmt = types.Amount{Value: 50 * types.AtomsPerCoin, Id: types.MEERID}
+	spendAmt = types.Amount{Value: 50 * types.AtomsPerCoin, Id: types.MEERA}
 	txid, _ := Spend(t, h, spendAmt, nil, nil)
 	t.Logf("[%v]: tx %v which spend %v has been sent", h.Node.Id(), txid, spendAmt.String())
 	blocks := GenerateBlock(t, h, 1)

@@ -2,6 +2,7 @@ package acct
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/serialization"
@@ -189,6 +190,38 @@ func DBDelACCTUTXOs(dbTx database.Tx, address string) error {
 		return nil
 	}
 	return bucket.DeleteBucket(bkey)
+}
+
+func DBGetACCTUTXOs(dbTx database.Tx, address string) map[string]*AcctUTXO {
+	meta := dbTx.Metadata()
+	bucket := meta.Bucket(BalanceBucketName)
+	if bucket == nil {
+		return nil
+	}
+	bkey := GetACCTUTXOKey(address)
+	balUTXOBucket := bucket.Bucket(bkey)
+	if balUTXOBucket == nil {
+		return nil
+	}
+	result := map[string]*AcctUTXO{}
+	err := balUTXOBucket.ForEach(func(ku, vu []byte) error {
+		au := NewAcctUTXO()
+		err := au.Decode(bytes.NewReader(vu))
+		if err != nil {
+			return err
+		}
+		kus := hex.EncodeToString(ku)
+		if result[kus] != nil {
+			log.Error("Already exists:Outpoint=%s", kus)
+		}
+		result[kus] = au
+		return nil
+	})
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return result
 }
 
 func OutpointKey(outpoint *types.TxOutPoint) []byte {

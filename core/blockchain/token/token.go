@@ -84,7 +84,7 @@ func CheckTokenMint(tx *types.Transaction) (signature []byte, pubKey []byte, tok
 	id := types.CoinID(binary.LittleEndian.Uint16(tokenId))
 
 	// tokenId must not meer itself
-	if id == types.MEERID {
+	if id == types.MEERA {
 		return nil, nil, nil, fmt.Errorf("invalid TOKEN_MINT input[0], can not mint %s", id.Name())
 	}
 	// TxIn[0] value should match tokenId
@@ -94,7 +94,7 @@ func CheckTokenMint(tx *types.Transaction) (signature []byte, pubKey []byte, tok
 	}
 	mintAmount := tx.TxIn[0].AmountIn
 
-	inputMeer := types.Amount{Value: 0, Id: types.MEERID}
+	inputMeer := types.Amount{Value: 0, Id: types.MEERA}
 	// TxIn[1..N] must normal meer signature script
 	for i, txIn := range tx.TxIn[1:] {
 		// Make sure there is a script.
@@ -103,7 +103,7 @@ func CheckTokenMint(tx *types.Transaction) (signature []byte, pubKey []byte, tok
 				"script length %v", i+1, len(txIn.SignScript))
 		}
 		// Make sure the input value should meer
-		if types.MEERID != txIn.AmountIn.Id {
+		if types.MEERA != txIn.AmountIn.Id {
 			return nil, nil, nil, fmt.Errorf("invalid TOKEN_MINT input[%d],"+
 				" must from meer, but from %v", i+1, txIn.AmountIn.Id)
 		}
@@ -135,7 +135,7 @@ func CheckTokenMint(tx *types.Transaction) (signature []byte, pubKey []byte, tok
 		return nil, nil, nil, fmt.Errorf("invalid TOKEN_MINT, output[0] must be a MEER_LOCK, got 0x%x",
 			tx.TxOut[0].PkScript[0])
 	}
-	if tx.TxOut[0].Amount.Id != types.MEERID {
+	if tx.TxOut[0].Amount.Id != types.MEERA {
 		return nil, nil, nil, fmt.Errorf("invalid TOKEN_MINT, output[0] must be a MEER value, got %v",
 			tx.TxOut[0].Amount.Id)
 	}
@@ -165,7 +165,7 @@ func CheckTokenMint(tx *types.Transaction) (signature []byte, pubKey []byte, tok
 	}
 
 	// check optional output[2]
-	changeMeer := types.Amount{Value: 0, Id: types.MEERID}
+	changeMeer := types.Amount{Value: 0, Id: types.MEERA}
 	if len(tx.TxOut) == 3 {
 		if tx.TxOut[2].PkScript[0] != txscript.OP_MEER_CHANGE {
 			return nil, nil, nil, fmt.Errorf("invalid TOKEN_MINT, output[2] is not OP_MEER_CHANGE")
@@ -174,7 +174,7 @@ func CheckTokenMint(tx *types.Transaction) (signature []byte, pubKey []byte, tok
 			txscript.IsPayToScriptHash(tx.TxOut[2].PkScript[1:])) {
 			return nil, nil, nil, fmt.Errorf("invalid TOKEN_MINT, output[2] is not P2SH or P2PKH")
 		}
-		if tx.TxOut[2].Amount.Id != types.MEERID {
+		if tx.TxOut[2].Amount.Id != types.MEERA {
 			return nil, nil, nil, fmt.Errorf("invalid TOKEN_MINT, output[2] must be a MEER value, got %v",
 				tx.TxOut[2].Amount.Id)
 		}
@@ -233,14 +233,14 @@ func CheckTokenUnMint(tx *types.Transaction) (signature []byte, pubKey []byte, t
 	tokenId = txIn[100 : 100+TokenIdSize]
 	id := types.CoinID(binary.LittleEndian.Uint16(tokenId))
 	// tokenId must not meer itself
-	if id == types.MEERID {
+	if id == types.MEERA {
 		return nil, nil, nil, fmt.Errorf("invalid TOKEN_UNMINT input[0],  token id, can't unmint %v ", id)
 	}
 
 	// check TxIn[0] id and value , TxIn[0] must meer
-	if tx.TxIn[0].AmountIn.Id != types.MEERID {
+	if tx.TxIn[0].AmountIn.Id != types.MEERA {
 		return nil, nil, nil, fmt.Errorf("invalid TOKEN_UNMINT input[0], value must be %s but %s",
-			types.MEERID.Name(), tx.TxIn[0].AmountIn.Id.Name())
+			types.MEERA.Name(), tx.TxIn[0].AmountIn.Id.Name())
 	}
 	if tx.TxIn[0].AmountIn.Value <= 0 {
 		return nil, nil, nil, fmt.Errorf("invalid TOKEN_UNMINT input[0], value %s is invalid",
@@ -309,7 +309,7 @@ func CheckTokenUnMint(tx *types.Transaction) (signature []byte, pubKey []byte, t
 		return nil, nil, nil, fmt.Errorf("invalid TOKEN_UNMINT, output[1] is not P2SH or P2PKH")
 	}
 	// check output[1] value must meer
-	if types.MEERID != tx.TxOut[1].Amount.Id {
+	if types.MEERA != tx.TxOut[1].Amount.Id {
 		return nil, nil, nil, fmt.Errorf("invalid TOKEN_UNMINT, "+
 			"token id %v not match, token-unmint must release MEER", tx.TxOut[1].Amount.Id)
 	}

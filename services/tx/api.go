@@ -58,7 +58,7 @@ func (api *PublicTxAPI) CreateRawTransaction(inputs []json.TransactionInput, amo
 	aa := json.AdreesAmount{}
 	if len(amounts) > 0 {
 		for k, v := range amounts {
-			aa[k] = json.Amout{CoinId: uint16(types.MEERID), Amount: int64(v)}
+			aa[k] = json.Amout{CoinId: uint16(types.MEERA), Amount: int64(v)}
 		}
 	}
 	return api.CreateRawTransactionV2(inputs, aa, lockTime)
@@ -1185,7 +1185,7 @@ func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, 
 				return nil, fmt.Errorf("Input(%s %d) is invalid\n", prevOut.Hash, prevOut.OutIndex)
 			}
 			if !entry.Amount().Id.IsBase() {
-				return nil, fmt.Errorf("Token transaction input (%s %d) must be MEERID\n", txIn.PreviousOut.Hash, txIn.PreviousOut.OutIndex)
+				return nil, fmt.Errorf("Token transaction input (%s %d) must be MEERA\n", txIn.PreviousOut.Hash, txIn.PreviousOut.OutIndex)
 			}
 			lockMeer += entry.Amount().Value
 			mtx.AddTxIn(txIn)
@@ -1340,7 +1340,7 @@ func (api *PublicTxAPI) CreateImportRawTransaction(pkAddress string, amount int6
 	}
 
 	mtx.AddTxOut(&types.TxOutput{
-		Amount:   types.Amount{Id: types.MEERID, Value: amount},
+		Amount:   types.Amount{Id: types.MEERA, Value: amount},
 		PkScript: pkScript,
 	})
 
@@ -1364,7 +1364,7 @@ func (api *PublicTxAPI) CreateExportRawTransaction(txid string, vout uint32, pkA
 	}
 
 	aa := json.AdreesAmount{}
-	aa[pkAddress] = json.Amout{CoinId: uint16(types.ETHID), Amount: amount}
+	aa[pkAddress] = json.Amout{CoinId: uint16(types.MEERB), Amount: amount}
 	inputs := []json.TransactionInput{
 		json.TransactionInput{Txid: txid, Vout: vout},
 	}
@@ -1392,13 +1392,13 @@ func (api *PublicTxAPI) CreateExportRawTransactionV2(inputs []json.TransactionIn
 	}
 
 	aa := json.AdreesAmount{}
-	aa[ePKAddress] = json.Amout{CoinId: uint16(types.ETHID), Amount: eAmount}
+	aa[ePKAddress] = json.Amout{CoinId: uint16(types.MEERB), Amount: eAmount}
 	if len(outputs) > 0 {
 		for k, v := range outputs {
 			if k == 0 {
 				continue
 			}
-			aa[v.Address] = json.Amout{CoinId: uint16(types.MEERID), Amount: v.Amount}
+			aa[v.Address] = json.Amout{CoinId: uint16(types.MEERA), Amount: v.Amount}
 		}
 	}
 	return api.CreateRawTransactionV2(inputs, aa, lockTime)

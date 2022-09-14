@@ -11,17 +11,17 @@ import (
 type CoinID uint16
 
 const (
-	MEERID CoinID = 0
-	ETHID  CoinID = 1
+	MEERA CoinID = 0
+	MEERB CoinID = 1
 
 	QitmeerReservedID CoinID = 255
 )
 
 func (c CoinID) Name() string {
-	if c == MEERID {
-		return "MEER"
-	} else if c == ETHID {
-		return "ETH"
+	if c == MEERA {
+		return "MEER Asset"
+	} else if c == MEERB {
+		return "MEER Balance"
 	} else if t, ok := CoinNameMap[c]; ok {
 		return t
 	} else {
@@ -37,7 +37,7 @@ func (c CoinID) Bytes() []byte {
 
 // Is it the main coin ?
 func (c CoinID) IsBase() bool {
-	return c == MEERID
+	return c == MEERA
 }
 
 func NewCoinID(name string) CoinID {
@@ -47,11 +47,11 @@ func NewCoinID(name string) CoinID {
 		}
 	}
 	// panic(fmt.Sprintf("Unknown-CoinID:%s", name)) // Which way is better ?
-	return MEERID
+	return MEERA
 }
 
 var CoinNameMap = map[CoinID]string{}
-var CoinIDList = []CoinID{MEERID, ETHID}
+var CoinIDList = []CoinID{MEERA, MEERB}
 
 // Check if a valid coinId, current only check if the coinId is known.
 func CheckCoinID(id CoinID) error {

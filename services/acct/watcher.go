@@ -40,6 +40,15 @@ func (aw *AcctBalanceWatcher) Has(op []byte) bool {
 	return exist
 }
 
+func (aw *AcctBalanceWatcher) Get(op []byte) AcctUTXOIWatcher {
+	ops := hex.EncodeToString(op)
+	return aw.GetByOPS(ops)
+}
+
+func (aw *AcctBalanceWatcher) GetByOPS(ops string) AcctUTXOIWatcher {
+	return aw.watchers[ops]
+}
+
 func (aw *AcctBalanceWatcher) GetBalance() uint64 {
 	return aw.ab.normal + aw.unlocked
 }

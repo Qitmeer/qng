@@ -97,7 +97,7 @@ func NewOPReturnFrom(pks []byte) (IOPReturn, error) {
 
 func GetOPReturnTxOutput(opr IOPReturn) *types.TxOutput {
 	return &types.TxOutput{
-		Amount:   types.Amount{Value: 0, Id: types.MEERID},
+		Amount:   types.Amount{Value: 0, Id: types.MEERA},
 		PkScript: opr.PKScript(),
 	}
 }

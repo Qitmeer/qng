@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
@@ -12,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/ledger"
 	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	_ "github.com/Qitmeer/qng/services/common"
 	"sort"
@@ -240,8 +240,8 @@ func buildLedger(node INode, config *Config) error {
 			}
 		}
 		if _, ok := genesisLedger[addrStr]; !ok {
-			tp := ledger.TokenPayout{Address: addrStr, PkScript: entry.PkScript(), Amount: types.Amount{Value: 0, Id: types.MEERID}}
-			reTp := ledger.TokenPayoutReGen{Payout:tp, GenAmount:types.Amount{Value: 0, Id: types.MEERID}}
+			tp := ledger.TokenPayout{Address: addrStr, PkScript: entry.PkScript(), Amount: types.Amount{Value: 0, Id: types.MEERA}}
+			reTp := ledger.TokenPayoutReGen{Payout: tp, GenAmount: types.Amount{Value: 0, Id: types.MEERA}}
 			genesisLedger[addrStr] = &reTp
 		}
 

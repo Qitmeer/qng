@@ -17,8 +17,8 @@ func (m *MeerEVM) Verify(tx *types.Transaction) error {
 	if len(tx.TxOut) != 1 || len(tx.TxIn) != 1 {
 		return fmt.Errorf("Tx is error")
 	}
-	if tx.TxOut[0].Amount.Id != types.ETHID {
-		return fmt.Errorf("tx is not %s", types.ETHID.Name())
+	if tx.TxOut[0].Amount.Id != types.MEERB {
+		return fmt.Errorf("tx is not %s", types.MEERB.Name())
 	}
 	if tx.TxOut[0].Amount.Value != 0 {
 		return fmt.Errorf("Tx output value must zero")

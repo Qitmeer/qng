@@ -13,12 +13,12 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
-	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/merkle"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"time"
 )
@@ -40,7 +40,7 @@ const (
 type CoinbaseFlags string
 
 const (
-	CoinbaseFlagsStatic CoinbaseFlags = "/qitmeer/"
+	CoinbaseFlagsStatic  CoinbaseFlags = "/qitmeer/"
 	CoinbaseFlagsDynamic CoinbaseFlags = "/qng/"
 )
 
@@ -83,7 +83,7 @@ func MedianAdjustedTime(bc *blockchain.BlockChain, timeSource blockchain.MedianT
 	return newTimestamp
 }
 
-func StandardCoinbaseScript(nextBlockHeight uint64, extraNonce uint64, extraData string,flags CoinbaseFlags) ([]byte, error) {
+func StandardCoinbaseScript(nextBlockHeight uint64, extraNonce uint64, extraData string, flags CoinbaseFlags) ([]byte, error) {
 	scriptBuilder := txscript.NewScriptBuilder().AddInt64(int64(nextBlockHeight)).
 		AddInt64(int64(extraNonce)).AddData([]byte(flags))
 	if len(extraData) > 0 {
@@ -152,7 +152,7 @@ func createCoinbaseTx(subsidyCache *blockchain.SubsidyCache, coinbaseScript []by
 	}
 	// Subsidy paid to miner.
 	tx.AddTxOut(&types.TxOutput{
-		Amount:   types.Amount{Value: int64(subsidy), Id: types.MEERID},
+		Amount:   types.Amount{Value: int64(subsidy), Id: types.MEERA},
 		PkScript: pksSubsidy,
 	})
 
@@ -160,7 +160,7 @@ func createCoinbaseTx(subsidyCache *blockchain.SubsidyCache, coinbaseScript []by
 	var taxOutput *types.TxOutput
 	if params.HasTax() {
 		taxOutput = &types.TxOutput{
-			Amount:   types.Amount{Value: int64(tax), Id: types.MEERID},
+			Amount:   types.Amount{Value: int64(tax), Id: types.MEERA},
 			PkScript: params.OrganizationPkScript,
 		}
 	}
@@ -178,14 +178,14 @@ func createCoinbaseTx(subsidyCache *blockchain.SubsidyCache, coinbaseScript []by
 	return types.NewTx(tx), taxOutput, opReturnOutput, nil
 }
 
-func fillWitnessToCoinBase(blockTxns []*types.Tx) (*hash.Hash,error) {
+func fillWitnessToCoinBase(blockTxns []*types.Tx) (*hash.Hash, error) {
 	merkles := merkle.BuildMerkleTreeStore(blockTxns, true)
 	txWitnessRoot := merkles[len(merkles)-1]
 	witnessPreimage := append(txWitnessRoot.Bytes(), blockTxns[0].Tx.TxIn[0].SignScript...)
 	witnessCommitment := hash.DoubleHashH(witnessPreimage[:])
 	blockTxns[0].Tx.TxIn[0].PreviousOut.Hash = witnessCommitment
 	blockTxns[0].RefreshHash()
-	return txWitnessRoot,nil
+	return txWitnessRoot, nil
 }
 
 func fillOutputsToCoinBase(coinbaseTx *types.Tx, blockFeesMap types.AmountMap, taxOutput *types.TxOutput, oprOutput *types.TxOutput) error {
@@ -193,7 +193,7 @@ func fillOutputsToCoinBase(coinbaseTx *types.Tx, blockFeesMap types.AmountMap, t
 		return fmt.Errorf("coinbase output error")
 	}
 	for k, v := range blockFeesMap {
-		if v <= 0 || k == types.MEERID {
+		if v <= 0 || k == types.MEERA {
 			continue
 		}
 		coinbaseTx.Tx.AddTxOut(&types.TxOutput{
@@ -224,38 +224,38 @@ func IsSupportCoinbaseFlagsDynamic(coinbaseTx *types.Transaction) bool {
 		return false
 	}
 
-	cfd:=CoinbaseFlags(ops[2].GetData())
+	cfd := CoinbaseFlags(ops[2].GetData())
 
 	return cfd == CoinbaseFlagsDynamic
 }
 
-func DoCalculateTransactionsRoot(coinbaseTx *types.Transaction,merklePath []*hash.Hash,witnessRoot *hash.Hash,extraNonce uint64) (*hash.Hash,error) {
+func DoCalculateTransactionsRoot(coinbaseTx *types.Transaction, merklePath []*hash.Hash, witnessRoot *hash.Hash, extraNonce uint64) (*hash.Hash, error) {
 	if !IsSupportCoinbaseFlagsDynamic(coinbaseTx) {
-		return nil,fmt.Errorf("Not support:%s\n",CoinbaseFlagsDynamic)
+		return nil, fmt.Errorf("Not support:%s\n", CoinbaseFlagsDynamic)
 	}
 	ops, _ := txscript.ParseScript(coinbaseTx.TxIn[0].SignScript)
-	nextBlockHeight:=txscript.GetInt64FromOpcode(ops[0])
+	nextBlockHeight := txscript.GetInt64FromOpcode(ops[0])
 	var extraData string
 	if len(ops) >= 4 {
-		extraData=string(ops[3].GetData())
+		extraData = string(ops[3].GetData())
 	}
-	coinbaseScript, err := StandardCoinbaseScript(uint64(nextBlockHeight), extraNonce,extraData,CoinbaseFlagsDynamic)
+	coinbaseScript, err := StandardCoinbaseScript(uint64(nextBlockHeight), extraNonce, extraData, CoinbaseFlagsDynamic)
 	if err != nil {
 		return nil, err
 	}
 	if witnessRoot == nil {
 		witnessRoot = &hash.ZeroHash
 	}
-	coinbaseTx.TxIn[0].SignScript=coinbaseScript
+	coinbaseTx.TxIn[0].SignScript = coinbaseScript
 	witnessPreimage := append(witnessRoot.Bytes(), coinbaseTx.TxIn[0].SignScript...)
 	witnessCommitment := hash.DoubleHashH(witnessPreimage[:])
 	coinbaseTx.TxIn[0].PreviousOut.Hash = witnessCommitment
 
-	coinbaseTxHash:=coinbaseTx.TxHash()
-	return merkle.CalculateMerkleTreeRootByPath(&coinbaseTxHash,merklePath),nil
+	coinbaseTxHash := coinbaseTx.TxHash()
+	return merkle.CalculateMerkleTreeRootByPath(&coinbaseTxHash, merklePath), nil
 }
 
-func CalculateTransactionsRoot(coinbaseTx string,merklePath []string,witnessRoot string,extraNonce uint64) (*hash.Hash,error) {
+func CalculateTransactionsRoot(coinbaseTx string, merklePath []string, witnessRoot string, extraNonce uint64) (*hash.Hash, error) {
 	serializedTx, err := hex.DecodeString(coinbaseTx)
 	if err != nil {
 		return nil, err
@@ -265,22 +265,22 @@ func CalculateTransactionsRoot(coinbaseTx string,merklePath []string,witnessRoot
 	if err != nil {
 		return nil, err
 	}
-	path:=[]*hash.Hash{}
-	for _,mp:=range merklePath {
-		ph,err:=hash.NewHashFromStr(mp)
+	path := []*hash.Hash{}
+	for _, mp := range merklePath {
+		ph, err := hash.NewHashFromStr(mp)
 		if err != nil {
 			return nil, err
 		}
-		path=append(path,ph)
+		path = append(path, ph)
 	}
 	var wroot *hash.Hash
 	if len(witnessRoot) > 0 {
-		wr,err:=hash.NewHashFromStr(witnessRoot)
+		wr, err := hash.NewHashFromStr(witnessRoot)
 		if err != nil {
 			return nil, err
 		}
-		wroot=wr
+		wroot = wr
 	}
 
-	return DoCalculateTransactionsRoot(&mtx,path,wroot,extraNonce)
+	return DoCalculateTransactionsRoot(&mtx, path, wroot, extraNonce)
 }

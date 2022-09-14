@@ -7,11 +7,11 @@ package token
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/math"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/meerdag"
 )
 
 // tokenState specifies the token balance of the current block.
@@ -32,7 +32,7 @@ func (ts *TokenState) Serialize() ([]byte, error) {
 	serializeSize += serialization.SerializeSizeVLQ(uint64(len(ts.Balances)))
 	for id, b := range ts.Balances {
 		// sanity check
-		if id == types.MEERID || b.Balance < 0 || b.LockedMeer < 0 {
+		if id == types.MEERA || b.Balance < 0 || b.LockedMeer < 0 {
 			return nil, fmt.Errorf("invalid token balance {%v, %v}", id, b)
 		}
 		serializeSize += serialization.SerializeSizeVLQ(uint64(id))
@@ -270,20 +270,20 @@ func DBRemoveTokenState(dbTx database.Tx, id uint32) error {
 // TODO: You can customize the initial value
 func BuildGenesisTokenState() *TokenState {
 	tys := TokenTypesMap{}
-	tys[types.MEERID] = TokenType{
-		Id:      types.MEERID,
+	tys[types.MEERA] = TokenType{
+		Id:      types.MEERA,
 		Owners:  []byte("Qitmeer"),
 		UpLimit: math.MaxUint64,
 		Enable:  true,
-		Name:    "MEER",
+		Name:    types.MEERA.Name(),
 	}
 
-	tys[types.ETHID] = TokenType{
-		Id:      types.ETHID,
+	tys[types.MEERB] = TokenType{
+		Id:      types.MEERB,
 		Owners:  []byte("Qitmeer"),
 		UpLimit: math.MaxUint64,
 		Enable:  true,
-		Name:    "ETH",
+		Name:    types.MEERB.Name(),
 	}
 
 	return &TokenState{
