@@ -1,4 +1,86 @@
-{"PH_fig2-blocks":[
+{
+  "PH_fig1-blocks":[
+    {
+      "tag":"Genesis",
+      "parents": [
+      ]
+    },
+    {
+      "tag":"B",
+      "parents": [
+        "Genesis"
+      ]
+    },
+    {
+      "tag":"C",
+      "parents": [
+        "Genesis"
+      ]
+    },
+    {
+      "tag":"D",
+      "parents": [
+        "Genesis"
+      ]
+    },
+    {
+      "tag":"E",
+      "parents": [
+        "Genesis"
+      ]
+    },
+    {
+      "tag":"F",
+      "parents": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "tag":"H",
+      "parents": [
+        "C",
+        "D",
+        "E"
+      ]
+    },
+    {
+      "tag":"I",
+      "parents": [
+        "E"
+      ]
+    },
+    {
+      "tag":"J",
+      "parents": [
+        "F",
+        "H"
+      ]
+    },
+    {
+      "tag":"K",
+      "parents": [
+        "B",
+        "H",
+        "I"
+      ]
+    },
+    {
+      "tag":"L",
+      "parents": [
+        "D",
+        "I"
+      ]
+    },
+    {
+      "tag":"M",
+      "parents": [
+        "F",
+        "K"
+      ]
+    }
+  ],
+  "PH_fig2-blocks":[
     {
       "tag":"A",
       "parents": [
@@ -210,11 +292,17 @@
     "in":"J",
     "out":["F","I","H","K"]
   },
+  "PH_BlueSetFig1":{
+    "out":["L","F","B","I","C","D","J"]
+  },
   "PH_BlueSetFig2":{
     "out":["H","I","E","B","C","F","K"]
   },
   "PH_BlueSetFig4":{
     "out":["M","P","E","I","D","C","U","S","T","N","H","Q","L"]
+  },
+  "PH_OrderFig1":{
+    "out":["Genesis","E","D","C","H","I","B","K","F","M","J","L"]
   },
   "PH_OrderFig2":{
     "out":["A","D","C","G","E","B","J","F","I","H","K"]

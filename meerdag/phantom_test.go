@@ -55,6 +55,21 @@ func Test_GetAnticone(t *testing.T) {
 
 }
 
+func Test_BlueSetFig1(t *testing.T) {
+	ibd := InitBlockDAG(phantom, "PH_fig1-blocks")
+	if ibd == nil {
+		t.FailNow()
+	}
+	ph := ibd.(*Phantom)
+	//
+	blueSet := ph.GetDiffBlueSet()
+	fmt.Println("Fig1 diff blue set：")
+	printBlockSetTag(blueSet)
+	if !processResult(blueSet, changeToIDList(testData.PH_BlueSetFig1.Output)) {
+		t.FailNow()
+	}
+}
+
 func Test_BlueSetFig2(t *testing.T) {
 	ibd := InitBlockDAG(phantom, "PH_fig2-blocks")
 	if ibd == nil {
@@ -83,6 +98,31 @@ func Test_BlueSetFig4(t *testing.T) {
 	if !processResult(blueSet, changeToIDList(testData.PH_BlueSetFig4.Output)) {
 		t.FailNow()
 	}
+}
+
+func Test_OrderFig1(t *testing.T) {
+	ibd := InitBlockDAG(phantom, "PH_fig1-blocks")
+	if ibd == nil {
+		t.FailNow()
+	}
+	ph := ibd.(*Phantom)
+	order := []uint{}
+	var i uint
+	ph.UpdateVirtualBlockOrder()
+	for i = 0; i < bd.GetBlockTotal(); i++ {
+		order = append(order, bd.getBlockByOrder(uint(i)).GetID())
+	}
+	fmt.Printf("The Fig.1 Order: ")
+	printBlockChainTag(order)
+
+	if !processResult(order, changeToIDList(testData.PH_OrderFig1.Output)) {
+		t.FailNow()
+	}
+
+	//
+	da := ph.GetDiffAnticone()
+	fmt.Printf("The diffanticoner: ")
+	printBlockSetTag(da)
 }
 
 func Test_OrderFig2(t *testing.T) {

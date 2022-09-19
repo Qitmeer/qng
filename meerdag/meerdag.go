@@ -20,9 +20,6 @@ const (
 	// A Scalable BlockDAG protocol
 	phantom = "phantom"
 
-	// Phantom protocol V2
-	phantom_v2 = "phantom_v2"
-
 	// The order of all transactions is solely determined by the Tree Graph (TG)
 	conflux = "conflux"
 
@@ -56,8 +53,6 @@ func NewBlockDAG(dagType string) ConsensusAlgorithm {
 	switch dagType {
 	case phantom:
 		return &Phantom{}
-	case phantom_v2:
-		return &Phantom_v2{}
 	case conflux:
 		return &Conflux{}
 	case spectre:
@@ -70,8 +65,6 @@ func GetDAGTypeIndex(dagType string) byte {
 	switch dagType {
 	case phantom:
 		return 0
-	case phantom_v2:
-		return 1
 	case conflux:
 		return 2
 	case spectre:
@@ -84,8 +77,6 @@ func GetDAGTypeByIndex(dagType byte) string {
 	switch dagType {
 	case 0:
 		return phantom
-	case 1:
-		return phantom_v2
 	case 2:
 		return conflux
 	case 3:
