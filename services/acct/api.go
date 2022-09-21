@@ -32,12 +32,16 @@ func (api *PublicAccountManagerAPI) GetBalance(addr string, coinID types.CoinID)
 }
 
 func (api *PublicAccountManagerAPI) GetAcctInfo() (interface{}, error) {
-	return json.AcctInfo{
+	ai := json.AcctInfo{
 		Mode:    api.a.cfg.AcctMode,
 		Version: api.a.info.version,
-		Total:   api.a.info.addrTotal,
+		Total:   api.a.info.total,
 		Watcher: uint32(len(api.a.watchers)),
-	}, nil
+	}
+	if api.a.info.GetAddrTotal() > 0 {
+		ai.Addrs = api.a.info.addrs
+	}
+	return ai, nil
 }
 
 func (api *PublicAccountManagerAPI) GetBalanceInfo(addr string, coinID types.CoinID) (interface{}, error) {
@@ -66,4 +70,8 @@ func (api *PublicAccountManagerAPI) GetBalanceInfo(addr string, coinID types.Coi
 		return result, nil
 	}
 	return nil, fmt.Errorf("Not support %v", coinID)
+}
+
+func (api *PublicAccountManagerAPI) AddBalance(addr string) (interface{}, error) {
+	return nil, api.a.AddAddress(addr)
 }
