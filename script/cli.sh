@@ -456,6 +456,12 @@ function get_balance_info() {
   get_result "$data"
 }
 
+function add_balance() {
+  local address=$1
+  local data='{"jsonrpc":"2.0","method":"addBalance","params":["'$address'"],"id":null}'
+  get_result "$data"
+}
+
 function get_acctinfo() {
    local data='{"jsonrpc":"2.0","method":"getAcctInfo","params":[],"id":null}'
    get_result "$data"
@@ -709,6 +715,7 @@ function usage(){
   echo "  acctinfo"
   echo "  getbalance <address> <coinID>"
   echo "  getbalanceinfo <address> <coinID>"
+  echo "  addbalance <address>"
   echo "  getaddresses <private key>"
   echo "  modules"
   echo "block  :"
@@ -1100,7 +1107,9 @@ elif [ "$1" == "getbalance" ]; then
 elif [ "$1" == "getbalanceinfo" ]; then
   shift
   get_balance_info $@
-
+elif [ "$1" == "addbalance" ]; then
+  shift
+  add_balance $@
 elif [ "$1" == "rpcmax" ]; then
   shift
   set_rpc_maxclients $@

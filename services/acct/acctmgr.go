@@ -35,7 +35,7 @@ func (a *AccountManager) Start() error {
 	if a.cfg.AcctMode {
 		err := a.initDB(true)
 		if err != nil {
-			log.Error(err.Error())
+			log.Error(fmt.Sprintf("Serious error, you can try to delete the data file(%s):%s", getDBPath(a.cfg.DataDir), err.Error()))
 		}
 	} else {
 		a.cleanDB()
@@ -81,10 +81,15 @@ func (a *AccountManager) initDB(first bool) error {
 		} else {
 			a.info = info
 			log.Info(fmt.Sprintf("Load account manager info:%s", a.info.String()))
-			if curDAGID != a.info.updateDAGID {
+			if !a.info.IsCurrentVersion() {
+				log.Warn(fmt.Sprintf("The account database version is not current(%d != %d). It will be rebuilt", a.info.version, CurrentAcctInfoVersion))
+				rebuilddb = true
+				return nil
+			} else if curDAGID != a.info.updateDAGID {
 				log.Warn(fmt.Sprintf("DAG is not consistent with account manager state"))
 				if first {
 					rebuilddb = true
+					return nil
 				} else {
 					return fmt.Errorf("update dag id is inconformity:%d != %d", curDAGID, a.info.updateDAGID)
 				}
@@ -97,11 +102,19 @@ func (a *AccountManager) initDB(first bool) error {
 		return err
 	}
 	if rebuilddb {
-		a.info = NewAcctInfo()
+		info := NewAcctInfo()
+		if a.info != nil {
+			info.addrs = a.info.addrs
+		}
+		a.info = info
 		a.cleanDB()
 		return a.initDB(false)
 	} else if rebuildidx {
-		err = a.rebuild()
+		if a.info.IsEmpty() {
+			log.Info("There is no account address for the moment. You can add it later through (RPC:addBalance)")
+			return nil
+		}
+		err = a.rebuild(nil)
 		if err != nil {
 			return err
 		}
@@ -149,8 +162,12 @@ func (a *AccountManager) cleanDB() {
 	}
 }
 
-func (a *AccountManager) rebuild() error {
-	log.Trace("Try to rebuild account index")
+func (a *AccountManager) rebuild(addrs []string) error {
+	if len(addrs) > 0 {
+		log.Trace(fmt.Sprintf("Try to rebuild account index for (%v)", addrs))
+	} else {
+		log.Trace("Try to rebuild account index")
+	}
 	err := a.chain.DB().View(func(dbTx database.Tx) error {
 		meta := dbTx.Metadata()
 		utxoBucket := meta.Bucket(dbnamespace.UtxoSetBucketName)
@@ -169,6 +186,15 @@ func (a *AccountManager) rebuild() error {
 			if entry.IsSpent() {
 				continue
 			}
+			if len(addrs) > 0 {
+				addr, _, err := a.checkUtxoEntry(entry, addrs)
+				if err != nil {
+					return err
+				}
+				if len(addr) <= 0 {
+					continue
+				}
+			}
 			err = a.apply(true, op, entry)
 			if err != nil {
 				return err
@@ -182,23 +208,49 @@ func (a *AccountManager) rebuild() error {
 	return nil
 }
 
-func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain.UtxoEntry) error {
+func (a *AccountManager) checkUtxoEntry(entry *blockchain.UtxoEntry, tracks []string) (string, txscript.ScriptClass, error) {
 	if entry.Amount().Id != types.MEERA {
-		return nil
+		return "", txscript.NonStandardTy, nil
 	}
 	scriptClass, addrs, _, err := txscript.ExtractPkScriptAddrs(entry.PkScript(), params.ActiveNetParams.Params)
 	if err != nil {
-		return err
+		return "", txscript.NonStandardTy, err
 	}
 	if len(addrs) <= 0 {
-		return nil
+		return "", txscript.NonStandardTy, nil
+	}
+	addrStr := addrs[0].String()
+
+	isHas := func(addr string) bool {
+		if len(tracks) <= 0 {
+			return false
+		}
+		for _, ad := range tracks {
+			if ad == addr {
+				return true
+			}
+		}
+		return false
+	}
+	if !isHas(addrStr) {
+		return "", txscript.NonStandardTy, nil
 	}
 	if scriptClass != txscript.PubKeyHashTy &&
 		scriptClass != txscript.PubKeyTy &&
 		scriptClass != txscript.CLTVPubKeyHashTy {
+		return "", txscript.NonStandardTy, nil
+	}
+	return addrStr, scriptClass, nil
+}
+
+func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain.UtxoEntry) error {
+	addrStr, scriptClass, err := a.checkUtxoEntry(entry, a.info.addrs)
+	if err != nil {
+		return err
+	}
+	if len(addrStr) <= 0 {
 		return nil
 	}
-
 	if add {
 		if entry.Amount().Value == 0 && !entry.IsCoinBase() {
 			return nil
@@ -207,7 +259,6 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 			return nil
 		}
 		err = a.db.Update(func(dbTx database.Tx) error {
-			addrStr := addrs[0].String()
 			balance, er := DBGetACCTBalance(dbTx, addrStr)
 			if er != nil {
 				return er
@@ -219,7 +270,7 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 				} else {
 					balance = NewAcctBalance(uint64(entry.Amount().Value), 1, 0, 0)
 				}
-				a.info.addrTotal++
+				a.info.total++
 				er = DBPutACCTInfo(dbTx, a.info)
 				if er != nil {
 					return er
@@ -281,7 +332,6 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 		return err
 	} else {
 		err = a.db.Update(func(dbTx database.Tx) error {
-			addrStr := addrs[0].String()
 			balance, er := DBGetACCTBalance(dbTx, addrStr)
 			if er != nil {
 				return er
@@ -313,20 +363,9 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 			}
 			log.Trace(fmt.Sprintf("Del balance: %s (%s:%d)", addrStr, op.Hash.String(), op.OutIndex))
 			if balance.IsEmpty() {
-				er = DBDelACCTBalance(dbTx, addrStr)
+				er = a.cleanBalanceDB(dbTx, addrStr)
 				if er != nil {
 					return er
-				}
-				er = DBDelACCTUTXOs(dbTx, addrStr)
-				if er != nil {
-					return er
-				}
-				if a.info.addrTotal > 0 {
-					a.info.addrTotal--
-					er = DBPutACCTInfo(dbTx, a.info)
-					if er != nil {
-						return er
-					}
 				}
 			} else {
 				er = DBPutACCTBalance(dbTx, addrStr, balance)
@@ -364,7 +403,9 @@ func (a *AccountManager) DelWatcher(addr string, op *types.TxOutPoint) {
 func (a *AccountManager) initWatchers(dbTx database.Tx) error {
 	meta := dbTx.Metadata()
 	balBucket := meta.Bucket(BalanceBucketName)
-
+	if balBucket == nil {
+		return nil
+	}
 	err := balBucket.ForEach(func(k, v []byte) error {
 		balance := &AcctBalance{}
 		err := balance.Decode(bytes.NewReader(v))
@@ -527,6 +568,49 @@ func (a *AccountManager) GetUTXOs(addr string) ([]UTXOResult, error) {
 	}
 
 	return utxos, nil
+}
+
+func (a *AccountManager) AddAddress(addr string) error {
+	if !a.cfg.AcctMode {
+		return fmt.Errorf("Please enable --acctmode")
+	}
+	if !address.IsForCurNetwork(addr) {
+		return fmt.Errorf("network error:%s", addr)
+	}
+	if a.info.Has(addr) {
+		return fmt.Errorf(fmt.Sprintf("Already exists:%s", addr))
+	}
+	_, exist := a.watchers[addr]
+	if exist {
+		return fmt.Errorf(fmt.Sprintf("Already exists watcher:%s", addr))
+	}
+	a.info.Add(addr)
+	err := a.db.Update(func(dbTx database.Tx) error {
+		return a.cleanBalanceDB(dbTx, addr)
+	})
+	if err != nil {
+		return err
+	}
+	return a.rebuild([]string{addr})
+}
+
+func (a *AccountManager) cleanBalanceDB(dbTx database.Tx, addr string) error {
+	er := DBDelACCTBalance(dbTx, addr)
+	if er != nil {
+		return er
+	}
+	er = DBDelACCTUTXOs(dbTx, addr)
+	if er != nil {
+		return er
+	}
+	if a.info.total > 0 {
+		a.info.total--
+		er = DBPutACCTInfo(dbTx, a.info)
+		if er != nil {
+			return er
+		}
+	}
+	return nil
 }
 
 func (a *AccountManager) APIs() []api.API {
