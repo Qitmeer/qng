@@ -43,12 +43,15 @@ type TestInOutData3 struct {
 
 // Structure of test data
 type TestData struct {
+	PH_Fig1Blocks      []TestBlocksData `json:"PH_fig1-blocks"`
 	PH_Fig2Blocks      []TestBlocksData `json:"PH_fig2-blocks"`
 	PH_Fig4Blocks      []TestBlocksData `json:"PH_fig4-blocks"`
 	PH_GetFutureSet    TestInOutData
 	PH_GetAnticone     TestInOutData
+	PH_BlueSetFig1     TestInOutData
 	PH_BlueSetFig2     TestInOutData
 	PH_BlueSetFig4     TestInOutData
+	PH_OrderFig1       TestInOutData
 	PH_OrderFig2       TestInOutData
 	PH_OrderFig4       TestInOutData
 	PH_IsOnMainChain   TestInOutData
@@ -149,7 +152,9 @@ func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
 		return nil
 	}
 	var tbd []TestBlocksData
-	if graph == "PH_fig2-blocks" {
+	if graph == "PH_fig1-blocks" {
+		tbd = testData.PH_Fig1Blocks
+	} else if graph == "PH_fig2-blocks" {
 		tbd = testData.PH_Fig2Blocks
 	} else if graph == "PH_fig4-blocks" {
 		tbd = testData.PH_Fig4Blocks
