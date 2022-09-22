@@ -2,9 +2,11 @@
 The next generation of the Qitmeer network implementation with the plug-able VMs under the MeerDAG consensus.
 
 ### Installation
-* Build from source
+* Build from source  
+make sure you have go-lang version 1.17.x or 1.18.x installed on the system
 ```bash
 ~ git clone https://github.com/Qitmeer/qng.git
+~ cd qng
 ~ make
 ```
 
