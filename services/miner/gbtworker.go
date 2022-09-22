@@ -50,7 +50,7 @@ func (w *GBTWorker) Start() error {
 	if err != nil {
 		log.Warn(fmt.Sprintf("You will not be allowed to use <coinbasetxn> :%s", err.Error()))
 	}
-	w.miner.updateBlockTemplate(false)
+	w.miner.updateBlockTemplate(false, false)
 	return nil
 }
 
@@ -120,7 +120,7 @@ func (w *GBTWorker) GetRequest(request *json.TemplateRequest, reply chan *gbtRes
 	// timestamp for the existing block template is updated .
 	if w.miner.powType != pow.PowType(powtyp) {
 		w.miner.powType = pow.PowType(powtyp)
-		if err := w.miner.updateBlockTemplate(true); err != nil {
+		if err := w.miner.updateBlockTemplate(true, false); err != nil {
 			reply <- &gbtResponse{nil, err}
 			return
 		}
