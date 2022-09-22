@@ -44,6 +44,7 @@ or
 
 ### Address
 ##### Use qx Command line tools 
+Note: to use "qx" tool, you need to enter the directory ./cmd/qx to build the qx command, see [this guide](https://github.com/Qitmeer/qng/tree/main/cmd/qx#readme) for details
 * PKH Address:
 ```
 ~ ./qx ec-to-public [Your_Private_Key] | ./qx ec-to-addr -v=testnet
