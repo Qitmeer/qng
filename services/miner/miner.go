@@ -195,6 +195,9 @@ out:
 					}
 				}
 			case *MempoolChangeMsg:
+				// when mempool has changed
+				// Speed up packing efficiency
+				// recreate BlockTemplate when transactions is empty except coinbase tx
 				if m.updateBlockTemplate(len(m.template.Block.Transactions) <= 1) == nil {
 					if m.worker != nil {
 						m.worker.Update()
