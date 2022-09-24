@@ -195,7 +195,7 @@ out:
 					}
 				}
 			case *MempoolChangeMsg:
-				if m.updateBlockTemplate(false) == nil {
+				if m.updateBlockTemplate(false) == nil && len(m.template.Block.Transactions) <= 1 {
 					if m.worker != nil {
 						m.worker.Update()
 					}
@@ -290,11 +290,10 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 		if hasCoinbaseAddr != m.template.ValidPayAddress {
 			reCreate = true
 		}
-		sourceTxns := m.txSource.MiningDescs()
 		// when mempool has changed
 		// Speed up packing efficiency
 		// recreate BlockTemplate when transactions is empty except coinbase tx
-		if len(m.template.Block.Transactions) <= 1 && len(sourceTxns) > 0 {
+		if len(m.template.Block.Transactions) <= 1 {
 			reCreate = true
 		}
 	}
