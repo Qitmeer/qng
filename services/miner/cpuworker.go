@@ -74,7 +74,7 @@ func (w *CPUWorker) Start() error {
 
 	log.Info("Start CPU Worker...")
 
-	w.miner.updateBlockTemplate(false)
+	w.miner.updateBlockTemplate(false, false)
 
 	w.wg.Add(2)
 	go w.speedMonitor()
