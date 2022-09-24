@@ -2,9 +2,11 @@
 The next generation of the Qitmeer network implementation with the plug-able VMs under the MeerDAG consensus.
 
 ### Installation
-* Build from source
+* Build from source  
+make sure you have go-lang version 1.17.x or 1.18.x installed on the system to build [QNG 1.0.17](https://github.com/Qitmeer/qng/releases/tag/v1.0.17)
 ```bash
 ~ git clone https://github.com/Qitmeer/qng.git
+~ cd qng
 ~ make
 ```
 
@@ -42,6 +44,7 @@ or
 
 ### Address
 ##### Use qx Command line tools 
+Note: to use "qx" tool, you need to enter the directory ./cmd/qx to build the qx command, see [this guide](https://github.com/Qitmeer/qng/tree/main/cmd/qx#readme) for details
 * PKH Address:
 ```
 ~ ./qx ec-to-public [Your_Private_Key] | ./qx ec-to-addr -v=testnet
