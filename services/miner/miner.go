@@ -195,7 +195,7 @@ out:
 					}
 				}
 			case *MempoolChangeMsg:
-				if m.updateBlockTemplate(false) == nil && len(m.template.Block.Transactions) <= 1 {
+				if m.updateBlockTemplate(len(m.template.Block.Transactions) <= 1) == nil {
 					if m.worker != nil {
 						m.worker.Update()
 					}
