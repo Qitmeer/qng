@@ -157,7 +157,7 @@ out:
 						if m.powType != msg.powType {
 							m.powType = msg.powType
 						}
-						if m.updateBlockTemplate(true, false) == nil {
+						if m.updateBlockTemplate(true) == nil {
 							m.worker.Update()
 						} else {
 							if msg.block != nil {
@@ -189,13 +189,13 @@ out:
 				worker.Update()
 
 			case *BlockChainChangeMsg:
-				if m.updateBlockTemplate(false, false) == nil {
+				if m.updateBlockTemplate(false) == nil {
 					if m.worker != nil {
 						m.worker.Update()
 					}
 				}
 			case *MempoolChangeMsg:
-				if m.updateBlockTemplate(false, true) == nil {
+				if m.updateBlockTemplate(false) == nil {
 					if m.worker != nil {
 						m.worker.Update()
 					}
@@ -276,7 +276,7 @@ cleanup:
 	log.Trace("Miner handler done")
 }
 
-func (m *Miner) updateBlockTemplate(force bool, mempoolChange bool) error {
+func (m *Miner) updateBlockTemplate(force bool) error {
 
 	reCreate := false
 	//
@@ -288,12 +288,6 @@ func (m *Miner) updateBlockTemplate(force bool, mempoolChange bool) error {
 	if !reCreate {
 		hasCoinbaseAddr := m.coinbaseAddress != nil
 		if hasCoinbaseAddr != m.template.ValidPayAddress {
-			reCreate = true
-		}
-		// when mempool has changed
-		// Speed up packing efficiency
-		// recreate BlockTemplate when transactions is empty except coinbase tx
-		if mempoolChange && len(m.template.Block.Transactions) <= 1 {
 			reCreate = true
 		}
 	}
