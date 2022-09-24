@@ -290,12 +290,6 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 		if hasCoinbaseAddr != m.template.ValidPayAddress {
 			reCreate = true
 		}
-		// when mempool has changed
-		// Speed up packing efficiency
-		// recreate BlockTemplate when transactions is empty except coinbase tx
-		if len(m.template.Block.Transactions) <= 1 {
-			reCreate = true
-		}
 	}
 	if !reCreate {
 		parentsSet := meerdag.NewHashSet()
