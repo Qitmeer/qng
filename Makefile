@@ -37,7 +37,7 @@ DEV_TARGETS=$(DEV_EXECUTABLES)
 
 ZMQ = FALSE
 
-.PHONY: qng release
+.PHONY: qng qx release
 
 qng: qng-build
 	@echo "Done building."
@@ -51,11 +51,17 @@ qng-build:
     else
 		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qng"
     endif
+qx:
+	@go build -o $(GOBIN)/qx $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qx"
+relay:
+	@go build -o $(GOBIN)/relaynode $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/relaynode"
+fastibd:
+	@go build -o $(GOBIN)/fastibd $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/fastibd"
 
 checkversion: qng-build
 #	@echo version $(VERSION)
 
-all: qng-build
+all: qng-build qx relay fastibd
 
 # amd64 release
 build/release/%: OS=$(word 3,$(subst /, ,$(@)))
@@ -104,6 +110,6 @@ checksum: checkversion
 clean:
 	@rm -f *.zip
 	@rm -f *.tar.gz
-	@rm -f ./build/bin/qng
+	@rm -f ./build/bin/*
 	@rm -rf ./build/release
 	@rm -rf ./build/dev
