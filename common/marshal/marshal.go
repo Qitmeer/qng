@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	qconsensus "github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/params"
 	"strconv"
 	"time"
@@ -56,6 +58,7 @@ func MarshalJsonTransaction(transaction *types.Tx, params *params.Params, blkHas
 		Vin:       MarshJsonVin(tx),
 		Duplicate: transaction.IsDuplicate,
 		Txsvalid:  state,
+		Type:      types.DetermineTxType(tx).String(),
 	}
 	if tx.Timestamp.Unix() > 0 {
 		txr.Timestamp = tx.Timestamp.Format(time.RFC3339)
@@ -101,7 +104,21 @@ func MarshJsonVin(tx *types.Transaction) []json.Vin {
 
 		}
 		return vinList
-	} else if types.IsCrossChainImportTx(tx) || types.IsCrossChainVMTx(tx) {
+	} else if types.IsCrossChainImportTx(tx) {
+		ctx, err := qconsensus.NewImportTx(tx)
+		if err != nil {
+			return vinList
+		}
+		from, err := common.NewMeerEVMAddress(ctx.From)
+		if err != nil {
+			return vinList
+		}
+		vinEntry := &vinList[0]
+		vinEntry.From = from.String()
+		vinEntry.Value = ctx.Value
+		vinEntry.TxType = types.DetermineTxType(tx).String()
+		return vinList
+	} else if types.IsCrossChainVMTx(tx) {
 		vinList[0].TxType = types.DetermineTxType(tx).String()
 		sig := tx.TxIn[0].SignScript
 		// disbuf, _ := txscript.DisasmString(sig)  //TODO, the Disasm is not fully work for the cross-chain tx
@@ -167,15 +184,28 @@ func MarshJsonVout(tx *types.Transaction, filterAddrMap map[string]struct{}, par
 		}
 
 		var vout json.Vout
-		voutSPK := &vout.ScriptPubKey
 		vout.Coin = v.Amount.Id.Name()
 		vout.CoinId = uint16(v.Amount.Id)
 		vout.Amount = uint64(v.Amount.Value)
+		voutSPK := &vout.ScriptPubKey
 		voutSPK.Addresses = encodedAddrs
+		if len(encodedAddrs) > 0 {
+			if types.CoinID(vout.CoinId) == types.MEERB {
+				ctx, err := qconsensus.NewExportTx(tx)
+				if err == nil {
+					to, err := common.NewMeerEVMAddress(ctx.To)
+					if err == nil {
+						vout.To = to.String()
+						voutList = append(voutList, vout)
+						continue
+					}
+				}
+			}
+		}
 		voutSPK.Asm = disbuf
-		voutSPK.Hex = hex.EncodeToString(v.PkScript)
 		voutSPK.Type = scriptClass
 		voutSPK.ReqSigs = int32(reqSigs)
+		voutSPK.Hex = hex.EncodeToString(v.PkScript)
 		voutList = append(voutList, vout)
 	}
 
