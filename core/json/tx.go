@@ -2,7 +2,9 @@
 
 package json
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // TxRawResult models the data from the getrawtransaction command.
 type TxRawResult struct {
@@ -24,6 +26,7 @@ type TxRawResult struct {
 	Blocktime     int64  `json:"blocktime,omitempty"`
 	Duplicate     bool   `json:"duplicate,omitempty"`
 	Txsvalid      bool   `json:"txsvalid"`
+	Type          string `json:"type,omitempty"`
 }
 
 // Vin models parts of the tx data.  It is defined separately since
@@ -36,6 +39,8 @@ type Vin struct {
 	Sequence  uint32     `json:"sequence"`
 	ScriptSig *ScriptSig `json:"scriptSig"`
 	TxType    string     `json:"type,omitempty"`
+	From      string     `json:"from,omitempty"`
+	Value     uint64     `json:"value,omitempty"`
 }
 
 // IsCoinBase returns a bool to show if a Vin is a Coinbase one or not.
@@ -59,15 +64,24 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 		}
 		return json.Marshal(coinbaseStruct)
 	}
-	if v.IsNonStd() {
-		coinbaseStruct := struct {
+	if v.TxType == "TxTypeCrossChainImport" {
+		cciStruct := struct {
+			From  string `json:"from"`
+			Value uint64 `json:"value"`
+		}{
+			From:  v.From,
+			Value: v.Value,
+		}
+		return json.Marshal(cciStruct)
+	} else if v.IsNonStd() {
+		nstdStruct := struct {
 			Type      string     `json:"type"`
 			ScriptSig *ScriptSig `json:"scriptSig"`
 		}{
 			Type:      v.TxType,
 			ScriptSig: v.ScriptSig,
 		}
-		return json.Marshal(coinbaseStruct)
+		return json.Marshal(nstdStruct)
 	}
 
 	txStruct := struct {
@@ -90,16 +104,17 @@ type Vout struct {
 	Coin         string             `json:"coin,omitempty"`
 	CoinId       uint16             `json:"coinid,omitempty"`
 	Amount       uint64             `json:"amount,omitempty"`
-	ScriptPubKey ScriptPubKeyResult `json:"scriptPubKey"`
+	ScriptPubKey ScriptPubKeyResult `json:"scriptPubKey,omitempty"`
+	To           string             `json:"to,omitempty"`
 }
 
 // ScriptPubKeyResult models the scriptPubKey data of a tx script.  It is
 // defined separately since it is used by multiple commands.
 type ScriptPubKeyResult struct {
-	Asm       string   `json:"asm"`
+	Asm       string   `json:"asm,omitempty"`
 	Hex       string   `json:"hex,omitempty"`
 	ReqSigs   int32    `json:"reqSigs,omitempty"`
-	Type      string   `json:"type"`
+	Type      string   `json:"type,omitempty"`
 	Addresses []string `json:"addresses,omitempty"`
 }
 
