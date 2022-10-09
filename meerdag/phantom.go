@@ -10,8 +10,6 @@ import (
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/meerdag/anticone"
 	"io"
-	"runtime"
-	"time"
 )
 
 var (
