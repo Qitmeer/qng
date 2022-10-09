@@ -41,7 +41,7 @@ func (pb *PhantomBlock) Encode(w io.Writer) error {
 
 	// blueDiffAnticone
 	blueDiffAnticone := []uint{}
-	if pb.blueDiffAnticone != nil && pb.blueDiffAnticone.Size() > 0 {
+	if pb.GetBlueDiffAnticoneSize() > 0 {
 		blueDiffAnticone = pb.blueDiffAnticone.List()
 	}
 	blueDiffAnticoneSize := len(blueDiffAnticone)
@@ -104,7 +104,6 @@ func (pb *PhantomBlock) Decode(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	pb.blueDiffAnticone = NewIdSet()
 	if blueDiffAnticoneSize > 0 {
 		for i := uint32(0); i < blueDiffAnticoneSize; i++ {
 			var bda uint32
@@ -119,7 +118,7 @@ func (pb *PhantomBlock) Decode(r io.Reader) error {
 				return err
 			}
 
-			pb.blueDiffAnticone.AddPair(uint(bda), uint(order))
+			pb.AddPairBlueDiffAnticone(uint(bda), uint(order))
 		}
 	}
 
@@ -129,7 +128,6 @@ func (pb *PhantomBlock) Decode(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	pb.redDiffAnticone = NewIdSet()
 	if redDiffAnticoneSize > 0 {
 		for i := uint32(0); i < redDiffAnticoneSize; i++ {
 			var bda uint32
@@ -143,7 +141,7 @@ func (pb *PhantomBlock) Decode(r io.Reader) error {
 				return err
 			}
 
-			pb.redDiffAnticone.AddPair(uint(bda), uint(order))
+			pb.AddPairRedDiffAnticone(uint(bda), uint(order))
 		}
 	}
 
@@ -161,4 +159,73 @@ func (pb *PhantomBlock) GetBlueDiffAnticone() *IdSet {
 
 func (pb *PhantomBlock) GetRedDiffAnticone() *IdSet {
 	return pb.redDiffAnticone
+}
+
+func (pb *PhantomBlock) GetBlueDiffAnticoneSize() int {
+	if pb.blueDiffAnticone == nil {
+		return 0
+	}
+	return pb.blueDiffAnticone.Size()
+}
+
+func (pb *PhantomBlock) GetRedDiffAnticoneSize() int {
+	if pb.redDiffAnticone == nil {
+		return 0
+	}
+	return pb.redDiffAnticone.Size()
+}
+
+func (pb *PhantomBlock) GetDiffAnticoneSize() int {
+	return pb.GetBlueDiffAnticoneSize() + pb.GetRedDiffAnticoneSize()
+}
+
+func (pb *PhantomBlock) AddBlueDiffAnticone(id uint) {
+	if pb.blueDiffAnticone == nil {
+		pb.blueDiffAnticone = NewIdSet()
+	}
+	pb.blueDiffAnticone.Add(id)
+}
+
+func (pb *PhantomBlock) AddRedDiffAnticone(id uint) {
+	if pb.redDiffAnticone == nil {
+		pb.redDiffAnticone = NewIdSet()
+	}
+	pb.redDiffAnticone.Add(id)
+}
+
+func (pb *PhantomBlock) AddPairBlueDiffAnticone(id uint, order uint) {
+	if pb.blueDiffAnticone == nil {
+		pb.blueDiffAnticone = NewIdSet()
+	}
+	pb.blueDiffAnticone.AddPair(id, order)
+}
+
+func (pb *PhantomBlock) AddPairRedDiffAnticone(id uint, order uint) {
+	if pb.redDiffAnticone == nil {
+		pb.redDiffAnticone = NewIdSet()
+	}
+	pb.redDiffAnticone.AddPair(id, order)
+}
+
+func (pb *PhantomBlock) HasBlueDiffAnticone(id uint) bool {
+	if pb.blueDiffAnticone == nil {
+		return false
+	}
+	return pb.blueDiffAnticone.Has(id)
+}
+
+func (pb *PhantomBlock) HasRedDiffAnticone(id uint) bool {
+	if pb.redDiffAnticone == nil {
+		return false
+	}
+	return pb.redDiffAnticone.Has(id)
+}
+
+func (pb *PhantomBlock) CleanDiffAnticone() {
+	if pb.blueDiffAnticone != nil {
+		pb.blueDiffAnticone.Clean()
+	}
+	if pb.redDiffAnticone != nil {
+		pb.redDiffAnticone.Clean()
+	}
 }

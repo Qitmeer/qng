@@ -67,7 +67,7 @@ func (ph *Phantom) AddBlock(ib IBlock) (*list.List, *list.List) {
 
 // Build self block
 func (ph *Phantom) CreateBlock(b *Block) IBlock {
-	return &PhantomBlock{b, 0, NewIdSet(), NewIdSet()}
+	return &PhantomBlock{b, 0, nil, nil}
 }
 
 func (ph *Phantom) updateBlockColor(pb *PhantomBlock) {
@@ -123,12 +123,12 @@ func (ph *Phantom) calculateBlueSet(pb *PhantomBlock, diffAnticone *IdSet) {
 		if !ok {
 			panic("phantom block type is error.")
 		}
-		ph.colorBlock(kc, cur, pb.blueDiffAnticone, pb.redDiffAnticone)
+		ph.colorBlock(kc, cur, pb)
 	}
-	if diffAnticone.Size() != pb.blueDiffAnticone.Size()+pb.redDiffAnticone.Size() {
+	if diffAnticone.Size() != pb.GetDiffAnticoneSize() {
 		log.Error(fmt.Sprintf("error blue set"))
 	}
-	pb.blueNum += uint(pb.blueDiffAnticone.Size())
+	pb.blueNum += uint(pb.GetBlueDiffAnticoneSize())
 }
 
 func (ph *Phantom) getKChain(pb *PhantomBlock) *KChain {
@@ -141,7 +141,7 @@ func (ph *Phantom) getKChain(pb *PhantomBlock) *KChain {
 		blueCount++
 		deep++
 		result.miniLayer = curPb.GetLayer()
-		blueCount += curPb.blueDiffAnticone.Size()
+		blueCount += curPb.GetBlueDiffAnticoneSize()
 		if (blueCount > ph.anticoneSize && deep > MaxTipLayerGap*2) || curPb.mainParent == MaxId {
 			break
 		}
@@ -150,11 +150,11 @@ func (ph *Phantom) getKChain(pb *PhantomBlock) *KChain {
 	return result
 }
 
-func (ph *Phantom) colorBlock(kc *KChain, pb *PhantomBlock, blueOrder *IdSet, redOrder *IdSet) {
+func (ph *Phantom) colorBlock(kc *KChain, pb *PhantomBlock, blueRedOrder *PhantomBlock) {
 	if ph.coloringRule(kc, pb) {
-		blueOrder.Add(pb.GetID())
+		blueRedOrder.AddBlueDiffAnticone(pb.GetID())
 	} else {
-		redOrder.Add(pb.GetID())
+		blueRedOrder.AddRedDiffAnticone(pb.GetID())
 	}
 }
 
@@ -181,15 +181,15 @@ func (ph *Phantom) updateBlockOrder(pb *PhantomBlock) {
 	}
 	order := ph.getDiffAnticoneOrder(pb)
 	l := len(order)
-	if l != pb.blueDiffAnticone.Size()+pb.redDiffAnticone.Size() {
+	if l != pb.GetDiffAnticoneSize() {
 		log.Error(fmt.Sprintf("error block order"))
 	}
 	for i := 0; i < l; i++ {
 		index := i + 1
-		if pb.blueDiffAnticone.Has(order[i]) {
-			pb.blueDiffAnticone.AddPair(order[i], uint(index))
-		} else if pb.redDiffAnticone.Has(order[i]) {
-			pb.redDiffAnticone.AddPair(order[i], uint(index))
+		if pb.HasBlueDiffAnticone(order[i]) {
+			pb.AddPairBlueDiffAnticone(order[i], uint(index))
+		} else if pb.HasRedDiffAnticone(order[i]) {
+			pb.AddPairRedDiffAnticone(order[i], uint(index))
 		} else {
 			log.Error(fmt.Sprintf("error block order index"))
 		}
@@ -257,10 +257,12 @@ func (ph *Phantom) sortBlocks(lastBlock uint, blueDiffAnticone *IdSet, toSort *I
 
 func (ph *Phantom) buildSortDiffAnticone(diffAn *IdSet) *IdSet {
 	result := NewIdSet()
-	for k := range diffAn.GetMap() {
-		ib := ph.getBlock(k)
-		if ib != nil {
-			result.AddPair(k, ib)
+	if diffAn != nil {
+		for k := range diffAn.GetMap() {
+			ib := ph.getBlock(k)
+			if ib != nil {
+				result.AddPair(k, ib)
+			}
 		}
 	}
 	return result
@@ -372,25 +374,31 @@ func (ph *Phantom) updateMainOrder(path []uint, intersection uint) {
 	for i := l - 1; i >= 0; i-- {
 		curBlock := ph.getBlock(path[i])
 		ph.bd.lastSnapshot.AddOrder(curBlock)
-		curBlock.SetOrder(startOrder + uint(curBlock.blueDiffAnticone.Size()+curBlock.redDiffAnticone.Size()+1))
+		curBlock.SetOrder(startOrder + uint(curBlock.GetDiffAnticoneSize()+1))
 		ph.bd.commitOrder[curBlock.GetOrder()] = curBlock.GetID()
 		ph.bd.commitBlock.AddPair(curBlock.GetID(), curBlock)
 
 		ph.mainChain.commitBlocks.AddPair(curBlock.GetID(), true)
-		for k, v := range curBlock.blueDiffAnticone.GetMap() {
-			dab := ph.getBlock(k)
-			ph.bd.lastSnapshot.AddOrder(dab)
-			dab.SetOrder(startOrder + v.(uint))
-			ph.bd.commitOrder[dab.GetOrder()] = dab.GetID()
-			ph.bd.commitBlock.AddPair(dab.GetID(), dab)
+		if curBlock.GetBlueDiffAnticoneSize() > 0 {
+			for k, v := range curBlock.blueDiffAnticone.GetMap() {
+				dab := ph.getBlock(k)
+				ph.bd.lastSnapshot.AddOrder(dab)
+				dab.SetOrder(startOrder + v.(uint))
+				ph.bd.commitOrder[dab.GetOrder()] = dab.GetID()
+				ph.bd.commitBlock.AddPair(dab.GetID(), dab)
+			}
 		}
-		for k, v := range curBlock.redDiffAnticone.GetMap() {
-			dab := ph.getBlock(k)
-			ph.bd.lastSnapshot.AddOrder(dab)
-			dab.SetOrder(startOrder + v.(uint))
-			ph.bd.commitOrder[dab.GetOrder()] = dab.GetID()
-			ph.bd.commitBlock.AddPair(dab.GetID(), dab)
+
+		if curBlock.GetRedDiffAnticoneSize() > 0 {
+			for k, v := range curBlock.redDiffAnticone.GetMap() {
+				dab := ph.getBlock(k)
+				ph.bd.lastSnapshot.AddOrder(dab)
+				dab.SetOrder(startOrder + v.(uint))
+				ph.bd.commitOrder[dab.GetOrder()] = dab.GetID()
+				ph.bd.commitBlock.AddPair(dab.GetID(), dab)
+			}
 		}
+
 		startOrder = curBlock.GetOrder()
 	}
 	//
@@ -419,27 +427,31 @@ func (ph *Phantom) UpdateVirtualBlockOrder() *PhantomBlock {
 	ph.virtualBlock.height = tp.height + 1
 	//ph.virtualBlock.weight = tp.GetWeight()
 
-	ph.virtualBlock.blueDiffAnticone.Clean()
-	ph.virtualBlock.redDiffAnticone.Clean()
+	ph.virtualBlock.CleanDiffAnticone()
 
 	ph.calculateBlueSet(ph.virtualBlock, ph.diffAnticone)
 	ph.updateBlockOrder(ph.virtualBlock)
 
 	startOrder := ph.getBlock(ph.mainChain.tip).GetOrder()
-	for k, v := range ph.virtualBlock.blueDiffAnticone.GetMap() {
-		dab := ph.getBlock(k)
-		ph.bd.lastSnapshot.AddOrder(dab)
-		dab.SetOrder(startOrder + v.(uint))
-		ph.bd.commitOrder[dab.GetOrder()] = dab.GetID()
-		ph.bd.commitBlock.AddPair(dab.GetID(), dab)
+	if ph.virtualBlock.GetBlueDiffAnticoneSize() > 0 {
+		for k, v := range ph.virtualBlock.blueDiffAnticone.GetMap() {
+			dab := ph.getBlock(k)
+			ph.bd.lastSnapshot.AddOrder(dab)
+			dab.SetOrder(startOrder + v.(uint))
+			ph.bd.commitOrder[dab.GetOrder()] = dab.GetID()
+			ph.bd.commitBlock.AddPair(dab.GetID(), dab)
+		}
 	}
-	for k, v := range ph.virtualBlock.redDiffAnticone.GetMap() {
-		dab := ph.getBlock(k)
-		ph.bd.lastSnapshot.AddOrder(dab)
-		dab.SetOrder(startOrder + v.(uint))
-		ph.bd.commitOrder[dab.GetOrder()] = dab.GetID()
-		ph.bd.commitBlock.AddPair(dab.GetID(), dab)
+	if ph.virtualBlock.GetRedDiffAnticoneSize() > 0 {
+		for k, v := range ph.virtualBlock.redDiffAnticone.GetMap() {
+			dab := ph.getBlock(k)
+			ph.bd.lastSnapshot.AddOrder(dab)
+			dab.SetOrder(startOrder + v.(uint))
+			ph.bd.commitOrder[dab.GetOrder()] = dab.GetID()
+			ph.bd.commitBlock.AddPair(dab.GetID(), dab)
+		}
 	}
+
 	ph.bd.lastSnapshot.AddOrder(ph.virtualBlock)
 	ph.virtualBlock.SetOrder(ph.bd.blockTotal + 1)
 
@@ -591,7 +603,6 @@ func (ph *Phantom) Load(dbTx database.Tx) error {
 
 	ph.mainChain.genesis = 0
 	ph.mainChain.tip = tips[0]
-
 	for i := uint(0); i < ph.bd.blockTotal; i++ {
 		block := Block{id: i}
 		ib := ph.CreateBlock(&block)
@@ -607,17 +618,15 @@ func (ph *Phantom) Load(dbTx database.Tx) error {
 		}
 		// Make up for missing
 		if ib.HasParents() {
-			parentsSet := NewIdSet()
-			for k := range ib.GetParents().GetMap() {
+			parents := ib.GetParents()
+			for k := range parents.GetMap() {
 				parent := ph.bd.getBlockById(k)
-				parentsSet.AddPair(k, parent)
+				parents.AddPair(k, parent)
 				parent.AddChild(ib)
 			}
-			ib.GetParents().Clean()
-			ib.GetParents().AddSet(parentsSet)
 		}
 		ph.bd.blocks[ib.GetID()] = ib
-		//
+
 		if !ib.IsOrdered() {
 			ph.diffAnticone.AddPair(ib.GetID(), ib)
 		} else {
@@ -704,7 +713,7 @@ func (ph *Phantom) doIsBlue(ib IBlock, fork IBlock) bool {
 
 	for ; cur != nil; cur = ph.getBlock(cur.mainParent) {
 		if cur.GetHash().IsEqual(b.GetHash()) ||
-			cur.blueDiffAnticone.Has(b.GetID()) {
+			cur.HasBlueDiffAnticone(b.GetID()) {
 			return true
 		}
 		if cur.GetLayer() < b.GetLayer() {
@@ -770,7 +779,7 @@ func (ph *Phantom) GetMainParentConcurrency(b IBlock) int {
 		return 0
 	}
 	pblock := b.(*PhantomBlock)
-	result := pblock.redDiffAnticone.Size() + pblock.blueDiffAnticone.Size() + 1
+	result := pblock.GetDiffAnticoneSize() + 1
 	return result
 }
 
@@ -789,9 +798,11 @@ func (ph *Phantom) UpdateWeight(ib IBlock) {
 		pb.weight = tp.GetWeight()
 
 		pb.weight += uint64(ph.bd.calcWeight(pb, ph.bd.getBlueInfo(pb)))
-		for k := range pb.blueDiffAnticone.GetMap() {
-			bdpb := ph.getBlock(k)
-			pb.weight += uint64(ph.bd.calcWeight(bdpb, ph.bd.getBlueInfo(bdpb)))
+		if pb.GetBlueDiffAnticoneSize() > 0 {
+			for k := range pb.blueDiffAnticone.GetMap() {
+				bdpb := ph.getBlock(k)
+				pb.weight += uint64(ph.bd.calcWeight(bdpb, ph.bd.getBlueInfo(bdpb)))
+			}
 		}
 		ph.bd.commitBlock.AddPair(ib.GetID(), ib)
 	}
