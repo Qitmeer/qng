@@ -62,7 +62,6 @@ func (bd *MeerDAG) GetBlockData(ib IBlock) IBlockData {
 		return ib.GetData()
 	}
 	// load
-	fmt.Println("加载blockdata:", ib.GetHash().String())
 	data := bd.getBlockData(ib.GetHash())
 	if data == nil {
 		panic(fmt.Errorf("Can't load block data:%s", ib.GetHash().String()))
@@ -91,7 +90,6 @@ func (bd *MeerDAG) updateBlockDataCache() {
 				ib.SetData(nil)
 			}
 			delete(bd.blockDataCache, k)
-			fmt.Println("释放blockdata:", k)
 		}
 		if time.Since(startTime) > time.Second*2 {
 			break
