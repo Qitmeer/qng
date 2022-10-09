@@ -452,7 +452,7 @@ func checkLoad(t *testing.T) {
 		}
 		return tb
 	}
-	pbd := New(phantom, CalcBlockWeight, -1, db, getBlockData)
+	bd = New(phantom, CalcBlockWeight, -1, db, getBlockData)
 	total, err := dbGetTotal()
 	if err != nil {
 		t.Fatal(err)
@@ -463,7 +463,7 @@ func checkLoad(t *testing.T) {
 	}
 
 	err = db.View(func(dbTx database.Tx) error {
-		return pbd.Load(dbTx, uint(total), geneis)
+		return bd.Load(dbTx, uint(total), geneis)
 	})
 	if err != nil {
 		t.Fatal(err)
