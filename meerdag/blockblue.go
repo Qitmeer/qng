@@ -77,7 +77,7 @@ func (bd *MeerDAG) getBlueInfo(ib IBlock) *BlueInfo {
 	if !ok {
 		return NewBlueInfo(1, 0, 0, int64(ib.GetHeight()))
 	}
-	mt := ib.GetData().GetTimestamp() - mainIB.GetData().GetTimestamp()
+	mt := bd.GetBlockData(ib).GetTimestamp() - bd.GetBlockData(mainIB).GetTimestamp()
 	if mt <= 0 {
 		mt = 1
 	}

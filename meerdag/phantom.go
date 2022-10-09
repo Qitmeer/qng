@@ -239,10 +239,12 @@ func (ph *Phantom) sortBlocks(lastBlock uint, blueDiffAnticone *IdSet, toSort *I
 	remaining = remaining.Intersection(diffAnticone)
 
 	blueSet := remaining.Intersection(blueDiffAnticone)
+	ph.bd.LoadBlockDataSet(blueSet)
 	blueList := blueSet.SortPriorityList(true)
 
 	redSet := remaining.Clone()
 	redSet.RemoveSet(blueSet)
+	ph.bd.LoadBlockDataSet(redSet)
 	redList := redSet.SortPriorityList(true)
 
 	result := []uint{}
@@ -639,7 +641,6 @@ func (ph *Phantom) Load(dbTx database.Tx) error {
 				return fmt.Errorf("The order(%d) of %s is inconsistent: Order Index (%d)\n", ib.GetOrder(), ib.GetHash(), id)
 			}
 		}
-		block.data = ph.bd.getBlockData(ib.GetHash())
 	}
 	// load tips
 	for _, v := range tips {

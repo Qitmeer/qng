@@ -123,7 +123,7 @@ func (tb *TestBlock) GetPriority() int {
 }
 
 // This is the interface for Block DAG,can use to call public function.
-var bd MeerDAG
+var bd *MeerDAG
 
 var randTool *rand.Rand = rand.New(rand.NewSource(roughtime.Now().UnixNano()))
 
@@ -179,8 +179,8 @@ func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
 		return nil
 	}
 
-	bd = MeerDAG{}
-	instance := bd.Init(dagType, CalcBlockWeight, -1, db, nil)
+	bd = New(dagType, CalcBlockWeight, -1, db, nil)
+	instance := bd.GetInstance()
 	tbMap = map[string]IBlock{}
 	for i := 0; i < blen; i++ {
 		parents := []*hash.Hash{}

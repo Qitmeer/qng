@@ -112,3 +112,9 @@ type AcctInfo struct {
 	Watcher uint32   `json:"watcher"`
 	Addrs   []string `json:"addrs,omitempty"`
 }
+
+type MeerDAGInfoResult struct {
+	Name               string `json:"name"`
+	Total              uint   `json:"total"`
+	BlockDataCacheSize int    `json:"bdcachesize"`
+}

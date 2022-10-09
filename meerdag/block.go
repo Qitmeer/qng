@@ -84,6 +84,8 @@ type IBlock interface {
 
 	// block data
 	GetData() IBlockData
+	SetData(data IBlockData)
+	IsLoaded() bool
 
 	// valid block data
 	Valid()
@@ -431,6 +433,14 @@ func (b *Block) UnsetStatusFlags(flags BlockStatus) {
 
 func (b *Block) GetData() IBlockData {
 	return b.data
+}
+
+func (b *Block) SetData(data IBlockData) {
+	b.data = data
+}
+
+func (b *Block) IsLoaded() bool {
+	return b.data != nil
 }
 
 func (b *Block) Valid() {

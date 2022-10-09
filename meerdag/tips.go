@@ -50,12 +50,12 @@ func (bd *MeerDAG) GetValidTips(expectPriority int) []*hash.Hash {
 	epNum := expectPriority
 	for k, v := range tips {
 		if k == 0 {
-			if v.GetData().GetPriority() <= 1 {
+			if bd.GetBlockData(v).GetPriority() <= 1 {
 				epNum--
 			}
 			continue
 		}
-		if v.GetData().GetPriority() > 1 {
+		if bd.GetBlockData(v).GetPriority() > 1 {
 			result = append(result, v.GetHash())
 			continue
 		}

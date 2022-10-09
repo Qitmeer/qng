@@ -633,6 +633,11 @@ function get_subsidy(){
   get_result "$data"
 }
 
+function dag_info(){
+  local data='{"jsonrpc":"2.0","method":"getMeerDAGInfo","params":[],"id":1}'
+  get_result "$data"
+}
+
 function get_result(){
   local proto="https"
   if [ $notls -eq 1 ]; then
@@ -718,6 +723,7 @@ function usage(){
   echo "  addbalance <address>"
   echo "  getaddresses <private key>"
   echo "  modules"
+  echo "  daginfo"
   echo "block  :"
   echo "  block <order|hash>"
   echo "  blockid <id>"
@@ -1377,6 +1383,10 @@ elif [ "$1" == "submitblockheader" ]; then
 elif [ "$1" == "remotegbt" ]; then
   shift
   get_remote_gbt $@
+
+elif [ "$1" == "daginfo" ]; then
+  shift
+  dag_info $@
 
 elif [ "$1" == "list_command" ]; then
   usage

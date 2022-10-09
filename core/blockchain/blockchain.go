@@ -354,8 +354,7 @@ func New(config *Config) (*BlockChain, error) {
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
-	b.bd = &meerdag.MeerDAG{}
-	b.bd.Init(config.DAGType, b.CalcWeight,
+	b.bd = meerdag.New(config.DAGType, b.CalcWeight,
 		1.0/float64(par.TargetTimePerBlock/time.Second), b.db, b.getBlockData)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
 	// Initialize the chain state from the passed database.  When the db
