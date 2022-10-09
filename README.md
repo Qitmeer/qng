@@ -20,6 +20,36 @@ or
 ~ docker build -t qng .
 ```
 
+### Make sure you have enough memory  
+
+***Note : Swap 4G+ is required for running the mainent node otherwise you might need the 8G physical memory.***
+
+#### Ex: How to setup a 4G+ swap file on an ubuntu machine
+
+1. setup the swap file
+```
+sudo apt update
+sudo apt install --reinstall util-linux
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+```
+
+2. check the running swap file
+```
+sudo swapon -s
+```
+
+3. edit `/etc/fstab` file (optional) 
+```
+sudo vi /etc/fstab
+```
+add a line to the end of `/etc/fstab` file
+```
+/swapfile swap swap defaults 0 0
+```
+
 
 ### Getting Started
 * We take the construction of test network nodes as an example:
@@ -28,6 +58,9 @@ or
 ~ ./qng --testnet
 ~ docker run --rm -it --name qng qng:latest ./build/bin/qng --mixnet --acceptnonstd --modules=qitmeer --modules=p2p
 ``` 
+
+
+
 
 ### Miner
 
