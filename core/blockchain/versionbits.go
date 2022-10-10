@@ -104,7 +104,7 @@ func (c bitConditionChecker) MinerConfirmationWindow() uint32 {
 //
 // This is part of the thresholdConditionChecker interface implementation.
 func (c bitConditionChecker) Condition(node meerdag.IBlock) (bool, error) {
-	// TODO:This will be removed in the future, and we will seek more efficient solutions
+	// TODO:We will seek better and more efficient solutions in the future
 	if params.ActiveNetParams.Net == protocol.MainNet {
 		return true, nil
 	}
@@ -197,7 +197,7 @@ func (c deploymentChecker) MinerConfirmationWindow() uint32 {
 //
 // This is part of the thresholdConditionChecker interface implementation.
 func (c deploymentChecker) Condition(node meerdag.IBlock) (bool, error) {
-	// TODO:This will be removed in the future, and we will seek more efficient solutions
+	// TODO:We will seek better and more efficient solutions in the future
 	if params.ActiveNetParams.Net == protocol.MainNet {
 		return true, nil
 	}
