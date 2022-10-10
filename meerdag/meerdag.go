@@ -1,14 +1,14 @@
 package meerdag
 
 import (
-	"bytes"
 	"container/list"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
-	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/meerdag/anticone"
+	"github.com/Qitmeer/qng/node/service"
+	"github.com/Qitmeer/qng/params"
 	"io"
 	"math"
 	"sync"
@@ -47,6 +47,9 @@ const StableConfirmations = 10
 
 // Max Priority
 const MaxPriority = int(math.MaxInt32)
+
+// block data
+const MinBlockDataCache = 2000
 
 // It will create different BlockDAG instances
 func NewBlockDAG(dagType string) ConsensusAlgorithm {
@@ -146,6 +149,8 @@ type GetBlockData func(*hash.Hash) IBlockData
 
 // The general foundation framework of Block DAG implement
 type MeerDAG struct {
+	service.Service
+
 	// The genesis of block dag
 	genesis hash.Hash
 
@@ -187,6 +192,13 @@ type MeerDAG struct {
 
 	// Rollback mechanism
 	lastSnapshot *DAGSnapshot
+
+	// block data
+	blockDataLock  sync.RWMutex
+	blockDataCache map[uint]time.Time
+
+	wg   sync.WaitGroup
+	quit chan struct{}
 }
 
 // Acquire the name of DAG instance
@@ -200,7 +212,7 @@ func (bd *MeerDAG) GetInstance() ConsensusAlgorithm {
 }
 
 // Initialize self, the function to be invoked at the beginning
-func (bd *MeerDAG) Init(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData) ConsensusAlgorithm {
+func (bd *MeerDAG) init(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData) ConsensusAlgorithm {
 	bd.lastTime = time.Unix(roughtime.Now().Unix(), 0)
 	bd.commitOrder = map[uint]uint{}
 	bd.calcWeight = calcWeight
@@ -258,6 +270,27 @@ func (bd *MeerDAG) Init(dagType string, calcWeight CalcWeight, blockRate float64
 	return bd.instance
 }
 
+func (bd *MeerDAG) Start() error {
+	if err := bd.Service.Start(); err != nil {
+		return err
+	}
+	log.Info(fmt.Sprintf("Start MeerDAG:%s", bd.GetName()))
+	bd.wg.Add(1)
+	go bd.handler()
+
+	return nil
+}
+
+func (bd *MeerDAG) Stop() error {
+	if err := bd.Service.Stop(); err != nil {
+		return err
+	}
+	log.Info(fmt.Sprintf("Stop MeerDAG:%s", bd.GetName()))
+	close(bd.quit)
+	bd.wg.Wait()
+	return nil
+}
+
 // This is an entry for update the block dag,you need pass in a block parameter,
 // If add block have failure,it will return false.
 func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool) {
@@ -296,13 +329,12 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 	lastMT := bd.instance.GetMainChainTipId()
 	//
 	block := Block{id: bd.blockTotal, hash: *b.GetHash(), layer: 0, status: StatusNone, mainParent: MaxId, data: b}
-
 	if bd.blocks == nil {
 		bd.blocks = map[uint]IBlock{}
 	}
 	ib := bd.instance.CreateBlock(&block)
 	bd.blocks[block.id] = ib
-
+	bd.blockDataCache[block.GetID()] = time.Now()
 	// db
 	bd.commitBlock.AddPair(ib.GetID(), ib)
 
@@ -867,52 +899,11 @@ func (bd *MeerDAG) checkPriority(parents []IBlock, b IBlockData) bool {
 	}
 	lowPriNum := 0
 	for _, pa := range parents {
-		if pa.GetData().GetPriority() <= 1 {
+		if bd.GetBlockData(pa).GetPriority() <= 1 {
 			lowPriNum++
 		}
 	}
 	return b.GetPriority() >= lowPriNum
-}
-
-// Load from database
-func (bd *MeerDAG) Load(dbTx database.Tx, blockTotal uint, genesis *hash.Hash) error {
-	meta := dbTx.Metadata()
-	serializedData := meta.Get(DagInfoBucketName)
-	if serializedData == nil {
-		return fmt.Errorf("dag load error")
-	}
-
-	err := bd.Decode(bytes.NewReader(serializedData))
-	if err != nil {
-		return err
-	}
-	bd.genesis = *genesis
-	bd.blockTotal = blockTotal
-	bd.blocks = map[uint]IBlock{}
-	bd.tips = NewIdSet()
-	return bd.instance.Load(dbTx)
-}
-
-func (bd *MeerDAG) Encode(w io.Writer) error {
-	dagTypeIndex := GetDAGTypeIndex(bd.instance.GetName())
-	err := s.WriteElements(w, dagTypeIndex)
-	if err != nil {
-		return err
-	}
-	return bd.instance.Encode(w)
-}
-
-// decode
-func (bd *MeerDAG) Decode(r io.Reader) error {
-	var dagTypeIndex byte
-	err := s.ReadElements(r, &dagTypeIndex)
-	if err != nil {
-		return err
-	}
-	if GetDAGTypeIndex(bd.instance.GetName()) != dagTypeIndex {
-		return fmt.Errorf("The dag type is %s, but read is %s", bd.instance.GetName(), GetDAGTypeByIndex(dagTypeIndex))
-	}
-	return bd.instance.Decode(r)
 }
 
 func (bd *MeerDAG) IsHourglass(id uint) bool {
@@ -1334,4 +1325,31 @@ func (bd *MeerDAG) optimizeReorganizeResult(newOrders *list.List, oldOrders *lis
 		ne = neNext
 		oe = oeNext
 	}
+}
+
+func (bd *MeerDAG) handler() {
+	log.Trace("MeerDAG handler start")
+	stallTicker := time.NewTicker(params.ActiveNetParams.TargetTimePerBlock)
+	defer stallTicker.Stop()
+
+out:
+	for {
+		select {
+		case <-stallTicker.C:
+			bd.updateBlockDataCache()
+		case <-bd.quit:
+			break out
+		}
+	}
+	bd.wg.Done()
+	log.Trace("MeerDAG handler done")
+}
+
+func New(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData) *MeerDAG {
+	md := &MeerDAG{
+		quit:           make(chan struct{}),
+		blockDataCache: map[uint]time.Time{},
+	}
+	md.init(dagType, calcWeight, blockRate, db, getBlockData)
+	return md
 }

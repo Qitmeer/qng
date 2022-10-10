@@ -42,10 +42,7 @@ func (b *BlockChain) LookupNode(hash *hash.Hash) *BlockNode {
 	if ib == nil {
 		return nil
 	}
-	if ib.GetData() == nil {
-		return nil
-	}
-	return ib.GetData().(*BlockNode)
+	return b.bd.GetBlockData(ib).(*BlockNode)
 }
 
 func (b *BlockChain) LookupNodeById(id uint) *BlockNode {
@@ -53,20 +50,14 @@ func (b *BlockChain) LookupNodeById(id uint) *BlockNode {
 	if ib == nil {
 		return nil
 	}
-	if ib.GetData() == nil {
-		return nil
-	}
-	return ib.GetData().(*BlockNode)
+	return b.bd.GetBlockData(ib).(*BlockNode)
 }
 
 func (b *BlockChain) GetBlockNode(ib meerdag.IBlock) *BlockNode {
 	if ib == nil {
 		return nil
 	}
-	if ib.GetData() == nil {
-		return nil
-	}
-	return ib.GetData().(*BlockNode)
+	return b.bd.GetBlockData(ib).(*BlockNode)
 }
 
 func (b *BlockChain) GetBlock(h *hash.Hash) meerdag.IBlock {

@@ -279,7 +279,7 @@ func (api *PublicBlockChainAPI) GetSubsidy() (interface{}, error) {
 		info.TotalTime = totalTime.Truncate(time.Second).String()
 
 		firstMBlock := api.node.GetBlockManager().GetChain().BlockDAG().GetBlockByOrder(1)
-		startTime := time.Unix(firstMBlock.GetData().GetTimestamp(), 0)
+		startTime := time.Unix(api.node.GetBlockManager().GetChain().BlockDAG().GetBlockData(firstMBlock).GetTimestamp(), 0)
 		leftTotalTime := totalTime - time.Since(startTime)
 		if leftTotalTime < 0 {
 			leftTotalTime = 0
@@ -307,6 +307,15 @@ func (api *PublicBlockChainAPI) GetRpcModules() (interface{}, error) {
 		}
 	}
 	return json.OrderedResult(result), nil
+}
+
+func (api *PublicBlockChainAPI) GetMeerDAGInfo() (interface{}, error) {
+	mdr := json.MeerDAGInfoResult{}
+	md := api.node.GetBlockManager().GetChain().BlockDAG()
+	mdr.Name = md.GetName()
+	mdr.Total = md.GetBlockTotal()
+	mdr.BlockDataCacheSize = md.GetBlockDataCacheSize()
+	return mdr, nil
 }
 
 type PrivateBlockChainAPI struct {

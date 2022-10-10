@@ -138,6 +138,9 @@ func NewBlockManager(ntmgr consensus.Notify, indexManager blockchain.IndexManage
 	bm.zmqNotify = zmq.NewZMQNotification(cfg)
 
 	bm.chain.Subscribe(bm.handleNotifyMsg)
+
+	bm.InitServices()
+	bm.Services().RegisterService(bm.chain.BlockDAG())
 	return &bm, nil
 }
 

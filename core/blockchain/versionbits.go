@@ -6,6 +6,7 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"math"
@@ -103,6 +104,10 @@ func (c bitConditionChecker) MinerConfirmationWindow() uint32 {
 //
 // This is part of the thresholdConditionChecker interface implementation.
 func (c bitConditionChecker) Condition(node meerdag.IBlock) (bool, error) {
+	// TODO:We will seek better and more efficient solutions in the future
+	if params.ActiveNetParams.Net == protocol.MainNet {
+		return true, nil
+	}
 	bn := c.chain.GetBlockNode(node)
 	if bn == nil {
 		return false, nil
@@ -192,6 +197,10 @@ func (c deploymentChecker) MinerConfirmationWindow() uint32 {
 //
 // This is part of the thresholdConditionChecker interface implementation.
 func (c deploymentChecker) Condition(node meerdag.IBlock) (bool, error) {
+	// TODO:We will seek better and more efficient solutions in the future
+	if params.ActiveNetParams.Net == protocol.MainNet {
+		return true, nil
+	}
 	bn := c.chain.GetBlockNode(node)
 	if bn == nil {
 		return false, nil

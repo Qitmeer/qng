@@ -29,7 +29,7 @@ func (cw *CLTVWatcher) Update(am *AccountManager) error {
 	if cw.lockTime < txscript.LockTimeThreshold {
 		lockTime = int64(mainTip.GetHeight())
 	} else {
-		lockTime = mainTip.GetData().GetTimestamp()
+		lockTime = am.chain.BlockDAG().GetBlockData(mainTip).GetTimestamp()
 	}
 	err := txscript.VerifyLockTime(lockTime, txscript.LockTimeThreshold, cw.lockTime)
 	if err != nil {
