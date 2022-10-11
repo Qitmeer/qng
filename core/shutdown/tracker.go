@@ -22,6 +22,9 @@ func (t *Tracker) Check() error {
 	if err != nil {
 		return err
 	}
+	if len(bhbs) <= 0 {
+		return nil
+	}
 	bh := hash.MustHexToHash(string(bhbs))
 	err = fmt.Errorf("Illegal withdrawal at block:%s, you can cleanup your block data base by '--cleanup'.", bh.String())
 	log.Error(err.Error())
