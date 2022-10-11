@@ -109,6 +109,7 @@ func NewBlockManager(ntmgr consensus.Notify, indexManager blockchain.IndexManage
 		IndexManager:   indexManager,
 		DAGType:        cfg.DAGType,
 		CacheInvalidTx: cfg.CacheInvalidTx,
+		DataDir:        cfg.DataDir,
 	})
 	if err != nil {
 		return nil, err

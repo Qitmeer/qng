@@ -2,10 +2,11 @@ package common
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/chain"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/core/shutdown"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/meerevm/chain"
 	"github.com/Qitmeer/qng/params"
 	"os"
 	"path"
@@ -88,8 +89,12 @@ func CleanupBlockDB(cfg *config.Config) {
 	if err != nil {
 		log.Error(err.Error())
 	}
-	dbPath = path.Join(cfg.DataDir,chain.ClientIdentifier)
+	dbPath = path.Join(cfg.DataDir, chain.ClientIdentifier)
 	err = os.RemoveAll(dbPath)
+	if err != nil {
+		log.Error(err.Error())
+	}
+	err = shutdown.NewTracker(cfg.DataDir).Done()
 	if err != nil {
 		log.Error(err.Error())
 	}
