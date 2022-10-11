@@ -150,6 +150,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	if err != nil {
 		panic(err.Error())
 	}
+	b.shutdownTracker.Wait(ib.GetHash())
 	connectedBlocks := list.New()
 	// Connect the passed block to the chain while respecting proper chain
 	// selection according to the chain with the most proof of work.  This
@@ -162,8 +163,8 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	if err != nil {
 		panic(err.Error())
 	}
+	b.shutdownTracker.Done()
 	b.ChainUnlock()
-
 	if connectedBlocks.Len() > 0 {
 		for e := connectedBlocks.Front(); e != nil; e = e.Next() {
 			b.sendNotification(BlockConnected, e.Value)

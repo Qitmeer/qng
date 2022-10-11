@@ -16,6 +16,7 @@ import (
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/serialization"
+	"github.com/Qitmeer/qng/core/shutdown"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/database"
@@ -126,6 +127,8 @@ type BlockChain struct {
 	VMService consensus.VMI
 
 	Acct ACCTI
+
+	shutdownTracker *shutdown.Tracker
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.
@@ -187,6 +190,9 @@ type Config struct {
 
 	// Cache Invalid tx
 	CacheInvalidTx bool
+
+	// data dir
+	DataDir string
 }
 
 // BestState houses information about the current best block and other info
@@ -351,6 +357,7 @@ func New(config *Config) (*BlockChain, error) {
 		CacheNotifications: []*Notification{},
 		warningCaches:      newThresholdCaches(VBNumBits),
 		deploymentCaches:   newThresholdCaches(params.DefinedDeployments),
+		shutdownTracker:    shutdown.NewTracker(config.DataDir),
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
@@ -436,6 +443,10 @@ func (b *BlockChain) initChainState(interrupt <-chan struct{}) error {
 		// Remove the legacy version information.
 		return bucket.Delete(dbnamespace.BCDBInfoBucketName)
 	})
+	if err != nil {
+		return err
+	}
+	err = b.shutdownTracker.Check()
 	if err != nil {
 		return err
 	}
