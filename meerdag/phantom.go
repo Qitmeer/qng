@@ -103,6 +103,11 @@ func (ph *Phantom) getExtremeBlue(bs *IdSet, bluest bool) *PhantomBlock {
 	var result *PhantomBlock
 	for k := range bs.GetMap() {
 		pb := ph.getBlock(k)
+		if pb != nil {
+			ph.bd.GetBlockData(pb)
+		}else{
+			continue
+		}
 		if result == nil {
 			result = pb
 		} else {
