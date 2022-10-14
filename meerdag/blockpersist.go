@@ -71,16 +71,29 @@ func (bd *MeerDAG) GetBlockData(ib IBlock) IBlockData {
 }
 
 func (bd *MeerDAG) updateBlockDataCache() {
-	bd.blockDataLock.Lock()
-	defer bd.blockDataLock.Unlock()
-
-	if len(bd.blockDataCache) <= MinBlockDataCache {
+	cacheSize := bd.GetBlockDataCacheSize()
+	if cacheSize <= MinBlockDataCache {
 		return
 	}
 	maxLife := params.ActiveNetParams.TargetTimePerBlock
 	startTime := time.Now()
 	mainHeight := bd.GetMainChainTip().GetHeight()
+	need := cacheSize - MinBlockDataCache
+	blockDataCache := map[uint]time.Time{}
+	bd.blockDataLock.Lock()
+	const waitTime = time.Second * 2
 	for k, t := range bd.blockDataCache {
+		blockDataCache[k] = t
+		need--
+		if need <= 0 {
+			break
+		}
+		if time.Since(startTime) > waitTime {
+			break
+		}
+	}
+	bd.blockDataLock.Unlock()
+	for k, t := range blockDataCache {
 		if time.Since(t) > maxLife {
 			ib := bd.GetBlockById(k)
 			if ib != nil {
@@ -89,9 +102,11 @@ func (bd *MeerDAG) updateBlockDataCache() {
 				}
 				ib.SetData(nil)
 			}
+			bd.blockDataLock.Lock()
 			delete(bd.blockDataCache, k)
+			bd.blockDataLock.Unlock()
 		}
-		if time.Since(startTime) > time.Second*2 {
+		if time.Since(startTime) > waitTime {
 			break
 		}
 	}
