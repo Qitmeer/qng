@@ -334,7 +334,9 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 	}
 	ib := bd.instance.CreateBlock(&block)
 	bd.blocks[block.id] = ib
+	bd.blockDataLock.Lock()
 	bd.blockDataCache[block.GetID()] = time.Now()
+	bd.blockDataLock.Unlock()
 	// db
 	bd.commitBlock.AddPair(ib.GetID(), ib)
 
