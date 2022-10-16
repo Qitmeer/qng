@@ -4,6 +4,11 @@
 
 package event
 
+const (
+	MempoolTxAdd = int(0x01)
+	Initialized  = int(0x02)
+)
+
 type Event struct {
 	Data interface{}
 	Ack  chan<- struct{}

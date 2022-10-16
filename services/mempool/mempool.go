@@ -22,10 +22,6 @@ import (
 	"time"
 )
 
-const (
-	MempoolTxAdd = int(1)
-)
-
 // TxPool is used as a source of transactions that need to be mined into blocks
 // and relayed to other peers.  It is safe for concurrent access from multiple
 // peers.
@@ -249,7 +245,7 @@ func (mp *TxPool) notify() {
 			select {
 			case <-mp.notifyT.C:
 			}
-			mp.cfg.Events.Send(event.New(MempoolTxAdd))
+			mp.cfg.Events.Send(event.New(event.MempoolTxAdd))
 			mp.notifyT.Stop()
 			mp.notifyT = nil
 		}()
