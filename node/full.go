@@ -287,10 +287,6 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	qm.GetPeerServer().SetTxMemPool(txManager.MemPool().(*mempool.TxPool))
 	qm.GetPeerServer().SetNotify(qm.nfManager)
 
-	//
-	if err := qm.RegisterMinerService(); err != nil {
-		return nil, err
-	}
 	// init address api
 	qm.addressApi = address.NewAddressApi(cfg, node.Params, bm.GetChain())
 
@@ -306,6 +302,12 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	if err := qm.RegisterRpcService(); err != nil {
 		return nil, err
 	}
+
+	//
+	if err := qm.RegisterMinerService(); err != nil {
+		return nil, err
+	}
+
 	if qm.GetRpcServer() != nil {
 		qm.GetRpcServer().BC = bm.GetChain()
 		qm.GetRpcServer().TxIndex = txIndex
