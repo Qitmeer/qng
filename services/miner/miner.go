@@ -20,7 +20,6 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/blkmgr"
-	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/services/mining"
 	"math/rand"
 	"net/http"
@@ -90,10 +89,6 @@ func (m *Miner) Start() error {
 
 	m.wg.Add(1)
 	go m.handler()
-
-	if m.cfg.Generate {
-		m.StartCPUMining()
-	}
 	return nil
 }
 
@@ -355,8 +350,12 @@ func (m *Miner) subscribe() {
 					case *blockchain.Notification:
 						m.handleNotifyMsg(value)
 					case int:
-						if value == mempool.MempoolTxAdd {
+						if value == event.MempoolTxAdd {
 							go m.MempoolChange()
+						} else if value == event.Initialized {
+							if m.cfg.Generate {
+								m.StartCPUMining()
+							}
 						}
 					}
 				}

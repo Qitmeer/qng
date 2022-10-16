@@ -7,8 +7,8 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/node/service"
+	"github.com/Qitmeer/qng/params"
 	"sync"
 )
 
@@ -84,6 +84,7 @@ func (n *Node) Start() error {
 	n.startupTime = roughtime.Now().Unix()
 	n.wg.Wrap(n.nodeEventHandler)
 
+	n.events.Send(event.New(event.Initialized))
 	return nil
 }
 
