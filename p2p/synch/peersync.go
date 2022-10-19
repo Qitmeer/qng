@@ -426,7 +426,7 @@ func (ps *PeerSync) updateSyncPeer(force bool) {
 	if !ps.IsRunning() {
 		return
 	}
-	log.Debug("Updating sync peer")
+	log.Trace("Updating sync peer")
 	if force {
 		ps.SetSyncPeer(nil)
 	}
