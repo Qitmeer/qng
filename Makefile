@@ -1,5 +1,6 @@
 
 EXECUTABLE := qng
+EXECUTABLE_QX := qx
 GITVER := $(shell git rev-parse --short=7 HEAD )
 GITDIRTY := $(shell git diff --quiet || echo '-dirty')
 GITVERSION = "$(GITVER)$(GITDIRTY)"
@@ -11,6 +12,7 @@ LDFLAG_DEV = -X github.com/Qitmeer/qng/version.Build=$(DEV)-$(GITVERSION)
 LDFLAG_RELEASE = -X github.com/Qitmeer/qng/version.Build=$(RELEASE)-$(GITVERSION)
 GOFLAGS_DEV = -ldflags "$(LDFLAG_DEV)"
 GOFLAGS_RELEASE = -ldflags "$(LDFLAG_RELEASE)"
+GOFLAGS_RELEASE_QX = -ldflags "$(LDFLAG_RELEASE)"
 VERSION=$(shell ./build/bin/qng --version | grep ^QNG | cut -d' ' -f3|cut -d'+' -f1)
 GOBIN = ./build/bin
 
@@ -21,7 +23,15 @@ UNIX_EXECUTABLES := \
 WIN_EXECUTABLES := \
 	build/release/windows/amd64/bin/$(EXECUTABLE).exe
 
-EXECUTABLES=$(UNIX_EXECUTABLES) $(WIN_EXECUTABLES)
+UNIX_EXECUTABLES_QX := \
+	build/release/darwin/amd64/bin/$(EXECUTABLE_QX) \
+	build/release/darwin/arm64/bin/$(EXECUTABLE_QX) \
+	build/release/linux/amd64/bin/$(EXECUTABLE_QX)
+WIN_EXECUTABLES_QX := \
+	build/release/windows/amd64/bin/$(EXECUTABLE_QX).exe
+
+
+EXECUTABLES=$(UNIX_EXECUTABLES) $(WIN_EXECUTABLES) $(UNIX_EXECUTABLES_QX) $(WIN_EXECUTABLES_QX)
 
 DEV_EXECUTABLES := \
 	build/dev/darwin/amd64/bin/$(EXECUTABLE) \
@@ -29,7 +39,13 @@ DEV_EXECUTABLES := \
 	build/dev/linux/amd64/bin/$(EXECUTABLE) \
 	build/dev/windows/amd64/bin/$(EXECUTABLE).exe
 
-COMPRESSED_EXECUTABLES=$(UNIX_EXECUTABLES:%=%.tar.gz) $(WIN_EXECUTABLES:%.exe=%.zip) $(WIN_EXECUTABLES:%.exe=%.cn.zip)
+COMPRESSED_EXECUTABLES := \
+     $(UNIX_EXECUTABLES:%=%.qng.tar.gz) \
+     $(WIN_EXECUTABLES:%.exe=%.qng.zip) \
+     $(WIN_EXECUTABLES:%.exe=%.qng.cn.zip) \
+     $(UNIX_EXECUTABLES_QX:%=%.qx.tar.gz) \
+     $(WIN_EXECUTABLES_QX:%.exe=%.qx.zip)
+
 
 RELEASE_TARGETS=$(EXECUTABLES) $(COMPRESSED_EXECUTABLES)
 
@@ -72,6 +88,13 @@ build/release/%/$(EXECUTABLE):
 build/release/%/$(EXECUTABLE).exe:
 	@echo Build $(@)
 	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_RELEASE) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
+build/release/%/$(EXECUTABLE_QX):
+	@echo Build $(@)
+	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_RELEASE_QX) -o $(@) "github.com/Qitmeer/qng/cmd/qx"
+build/release/%/$(EXECUTABLE_QX).exe:
+	@echo Build $(@)
+	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_RELEASE_QX) -o $(@) "github.com/Qitmeer/qng/cmd/qx"
+
 
 # amd64 dev
 build/dev/%: OS=$(word 3,$(subst /, ,$(@)))
@@ -84,29 +107,39 @@ build/dev/%/$(EXECUTABLE).exe:
 	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_DEV) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
 
 
-%.zip: %.exe
+%.qng.zip: %.exe
 	@echo zip $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH)
 	@zip $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH).zip "$<"
 
-%.cn.zip: %.exe
-	@echo Build $(@).cn.zip
+%.qng.cn.zip: %.exe
 	@echo zip $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH)
 	@zip -j $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH).cn.zip "$<" script/win/start.bat
 
-%.tar.gz : %
+%.qng.tar.gz : %
 	@echo tar $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH)
 	@tar -zcvf $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH).tar.gz "$<"
+
+%.qx.tar.gz : %
+	@echo qx.tar.gz: $(@)
+	@tar -zcvf $(EXECUTABLE_QX)-$(VERSION)-$(OS)-$(ARCH).tar.gz "$<"
+%.qx.zip: %.exe
+	@echo qx.zip: $(@)
+	@echo zip $(EXECUTABLE_QX)-$(VERSION)-$(OS)-$(ARCH)
+	@zip $(EXECUTABLE_QX)-$(VERSION)-$(OS)-$(ARCH).zip "$<"
+
+
 release: clean checkversion
 	@echo "Build release version : $(VERSION)"
 	@$(MAKE) $(RELEASE_TARGETS)
-	@shasum -a 512 $(EXECUTABLES) > $(EXECUTABLE)-$(VERSION)_checksum.txt
-	@shasum -a 512 $(EXECUTABLE)-$(VERSION)-* >> $(EXECUTABLE)-$(VERSION)_checksum.txt
+	@shasum -a 512 $(EXECUTABLES) > release-$(VERSION)_checksum.txt
+	@shasum -a 512 $(EXECUTABLE)-$(VERSION)-* >> release-$(VERSION)_checksum.txt
+	@shasum -a 512 $(EXECUTABLE_QX)-$(VERSION)-* >> release-$(VERSION)_checksum.txt
 dev: clean checkversion
 	@echo "Build dev version : $(VERSION)"
 	@$(MAKE) $(DEV_TARGETS)
 
 checksum: checkversion
-	@cat $(EXECUTABLE)-$(VERSION)_checksum.txt|shasum -c
+	@cat release-$(VERSION)_checksum.txt|shasum -c
 clean:
 	@rm -f *.zip
 	@rm -f *.tar.gz
