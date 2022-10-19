@@ -74,8 +74,8 @@ entropy (seed) & mnemoic & hd & ec :
     wif-to-public         derive the EC public key from a WIF private key. 
 
 addr & tx & sign :
-    ec-to-addr            convert an EC public key to a paymant address. default is qx address
-    ec-to-pkaddr          convert an EC public key to a paymant public key address. default is qx address
+    ec-to-addr            convert an EC public key to a payment address. default is qx address
+    ec-to-pkaddr          convert an EC public key to a payment public key address. default is qx address
     ec-to-ethaddr         convert an EC public key to a ethereum address.
     pkaddr-to-public      convert an pkaddress to EC public key (the uncompressed format by default )
     pkaddr-to-ethaddr     convert an pkaddress to ethereum address
