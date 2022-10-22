@@ -3,6 +3,7 @@
 package hash
 
 import (
+	"bytes"
 	"crypto"
 	_ "crypto/sha256"
 	"encoding/hex"
@@ -247,10 +248,7 @@ func (h *Hash) UnmarshalText(input []byte) error {
 	return nil
 }
 
-// MarshalText encodes the hash as hex.
-// TODO, impl after the clean-up of byte-reverse hash
-/*
-func (h Hash) MarshalText() ([]byte, error) {
-	return []byte(hex.EncodeToString(h[:])), nil
+// Less returns true if hash is less than other
+func (h *Hash) Less(other *Hash) bool {
+	return bytes.Compare(h[:], other[:]) < 0
 }
-*/
