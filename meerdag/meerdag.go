@@ -25,6 +25,9 @@ const (
 
 	// Confirming Transactions via Recursive Elections
 	spectre = "spectre"
+
+	// GHOSTDAG is an greedy algorithm implementation based on PHANTOM protocol
+	GHOSTDAG = "ghostdag"
 )
 
 // Maximum number of the DAG tip
@@ -60,6 +63,8 @@ func NewBlockDAG(dagType string) ConsensusAlgorithm {
 		return &Conflux{}
 	case spectre:
 		return &Spectre{}
+	case GHOSTDAG:
+		return &GhostDAG{}
 	}
 	return nil
 }
@@ -72,6 +77,8 @@ func GetDAGTypeIndex(dagType string) byte {
 		return 2
 	case spectre:
 		return 3
+	case GHOSTDAG:
+		return 4
 	}
 	return 0
 }
@@ -84,6 +91,8 @@ func GetDAGTypeByIndex(dagType byte) string {
 		return conflux
 	case 3:
 		return spectre
+	case 4:
+		return GHOSTDAG
 	}
 	return phantom
 }
@@ -401,6 +410,9 @@ func (bd *MeerDAG) GetGenesisHash() *hash.Hash {
 // If the block is illegal dag,will return false.
 // Exclude genesis block
 func (bd *MeerDAG) isDAG(parents []IBlock, b IBlockData) bool {
+	if bd.GetInstance().GetName() == GHOSTDAG {
+		return bd.instance.IsDAG(parents)
+	}
 	return bd.checkPriority(parents, b) &&
 		bd.checkLayerGap(parents) &&
 		bd.checkLegality(parents) &&

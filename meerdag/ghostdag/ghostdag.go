@@ -278,6 +278,10 @@ func (gm *GhostDAG) findSelectedParent(stagingArea *model.StagingArea, parentHas
 	return selectedParent, nil
 }
 
+func (gm *GhostDAG) FindSelectedParent(stagingArea *model.StagingArea, parentHashes []*hash.Hash) (*hash.Hash, error) {
+	return gm.findSelectedParent(stagingArea, parentHashes)
+}
+
 func (gm *GhostDAG) less(stagingArea *model.StagingArea, blockHashA, blockHashB *hash.Hash) (bool, error) {
 	chosenSelectedParent, err := gm.ChooseSelectedParent(stagingArea, blockHashA, blockHashB)
 	if err != nil {
@@ -438,6 +442,14 @@ func (gm *GhostDAG) GetSortedMergeSet(stagingArea *model.StagingArea,
 	sortedMergeSet = append(sortedMergeSet, redMergeSet[j:]...)
 
 	return sortedMergeSet, nil
+}
+
+func (gm *GhostDAG) GenesisHash() *hash.Hash {
+	return gm.genesisHash
+}
+
+func (gm *GhostDAG) SetGenesisHash(h *hash.Hash) {
+	gm.genesisHash = h
 }
 
 // New instantiates a new GhostDAG
