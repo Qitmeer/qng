@@ -66,6 +66,12 @@ type TestData struct {
 	PH_MPConcurrency   TestInOutData2
 	PH_BConcurrency    TestInOutData2
 	PH_MainChainTip    []TestInOutData3
+	GD_BlueSetFig1     TestInOutData
+	GD_BlueSetFig2     TestInOutData
+	GD_BlueSetFig4     TestInOutData
+	GD_OrderFig1       TestInOutData
+	GD_OrderFig2       TestInOutData
+	GD_OrderFig4       TestInOutData
 }
 
 // Load some data that phantom test need,it can use to build the dag ;This is the
