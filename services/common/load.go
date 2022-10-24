@@ -544,6 +544,11 @@ var (
 			Usage:       "HTTP URL list to be notified of new block template",
 			Destination: &GBTNotify,
 		},
+		&cli.BoolFlag{
+			Name:        "acctmode",
+			Usage:       "Enable support account system mode",
+			Destination: &cfg.AcctMode,
+		},
 	}
 )
 
