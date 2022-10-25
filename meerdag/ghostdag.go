@@ -210,10 +210,36 @@ func (gd *GhostDAG) GetBlueSet() *IdSet {
 	return blueSet
 }
 
-func (gd *GhostDAG) UpdateOrders() {
+// It is only used to simulate the tags of all sequences, and the algorithm itself is very inefficient
+func (gd *GhostDAG) UpdateOrders() error {
 	if gd.virtualBlock.IsOrdered() {
-		return
+		return nil
 	}
+	mainChains := []IBlock{}
+	for cur := IBlock(gd.virtualBlock); cur != nil; cur = gd.bd.getBlockById(cur.GetMainParent()) {
+		mainChains = append(mainChains, cur)
+	}
+	curOrder := uint(0)
+	for i := len(mainChains) - 1; i >= 0; i-- {
+		sms, err := gd.algorithm.GetSortedMergeSet(nil, mainChains[i].GetHash())
+		if err != nil {
+			return err
+		}
+		for _, v := range sms {
+			block := gd.bd.getBlock(v)
+			if block.GetID() == mainChains[i].GetMainParent() {
+				continue
+			}
+			block.SetOrder(curOrder)
+			gd.bd.commitOrder[curOrder] = block.GetID()
+			curOrder++
+		}
+		mainChains[i].SetOrder(curOrder)
+		gd.bd.commitOrder[curOrder] = mainChains[i].GetID()
+		curOrder++
+
+	}
+	return gd.bd.commit()
 }
 
 //---------------

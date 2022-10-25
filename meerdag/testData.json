@@ -602,5 +602,23 @@
       ],
       "out": false
     }
-  ]
+  ],
+  "GD_BlueSetFig1":{
+    "out":["I","D","E","C","Genesis","M","K","H"]
+  },
+  "GD_BlueSetFig2":{
+    "out":["J","F","D","B","C","A","I","G"]
+  },
+  "GD_BlueSetFig4":{
+    "out":["F","D","B","C","R","O","P","I","Genesis","M","K","J"]
+  },
+  "GD_OrderFig1":{
+    "out":["Genesis","D","E","C","H","B","I","K","F","M","L","J"]
+  },
+  "GD_OrderFig2":{
+    "out":["A","B","C","F","D","I","E","H","G","K","J"]
+  },
+  "GD_OrderFig4":{
+    "out":["Genesis","B","C","F","D","J","E","I","K","O","H","N","P","R","L","Q","S","T","U","M"]
+  }
 }
