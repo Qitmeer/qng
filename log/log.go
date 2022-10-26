@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 var (
@@ -101,4 +102,15 @@ func LogWrite() *logWriter {
 
 func Glogger() *GlogHandler {
 	return glogger
+}
+
+func LogAndMeasureExecutionTime(log Logger, functionName string) (onEnd func()) {
+	if Glogger().GetVerbosity() < LvlTrace {
+		return
+	}
+	start := time.Now()
+	log.Trace(fmt.Sprintf("%s start", functionName))
+	return func() {
+		log.Trace(fmt.Sprintf("%s end. Took: %s", functionName, time.Since(start)))
+	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/database"
+	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 )
 
@@ -22,6 +23,8 @@ func (b *BlockChain) upgradeDB() error {
 		b.dbInfo.version != version10 {
 		return fmt.Errorf("Only supported update version(%d or %d,%d) -> version(%d), but cur db is version:%d\n", version8, version9, version10, currentDatabaseVersion, b.dbInfo.version)
 	}
+	onEnd := l.LogAndMeasureExecutionTime(log, "BlockChain.upgradeDB")
+	defer onEnd()
 	log.Info(fmt.Sprintf("Update cur db to new version: version(%d) -> version(%d) ...", b.dbInfo.version, currentDatabaseVersion))
 	if b.dbInfo.version != version10 {
 		err := b.indexManager.Drop()
