@@ -106,7 +106,7 @@ func Glogger() *GlogHandler {
 
 func LogAndMeasureExecutionTime(log Logger, functionName string) (onEnd func()) {
 	if Glogger().GetVerbosity() < LvlTrace {
-		return
+		return nil
 	}
 	start := time.Now()
 	log.Trace(fmt.Sprintf("%s start", functionName))

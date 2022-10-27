@@ -87,8 +87,9 @@ func IsFinalizedTransaction(tx *types.Tx, blockHeight uint64, blockTime time.Tim
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags BehaviorFlags) error {
-	onEnd := l.LogAndMeasureExecutionTime(log, "BlockChain.maybeAcceptBlock")
-	defer onEnd()
+	if onEnd := l.LogAndMeasureExecutionTime(log, "BlockChain.maybeAcceptBlock"); onEnd != nil {
+		defer onEnd()
+	}
 	// This function should never be called with orphan blocks or the
 	// genesis block.
 	b.ChainLock()

@@ -304,8 +304,9 @@ func (bd *MeerDAG) Stop() error {
 // This is an entry for update the block dag,you need pass in a block parameter,
 // If add block have failure,it will return false.
 func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool) {
-	onEnd := l.LogAndMeasureExecutionTime(log, "MeerDAG.AddBlock")
-	defer onEnd()
+	if onEnd := l.LogAndMeasureExecutionTime(log, "MeerDAG.AddBlock"); onEnd != nil {
+		defer onEnd()
+	}
 	bd.stateLock.Lock()
 	defer bd.stateLock.Unlock()
 	if b == nil {
