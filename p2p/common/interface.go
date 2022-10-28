@@ -10,8 +10,8 @@ import (
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/vm/consensus"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 type P2P interface {

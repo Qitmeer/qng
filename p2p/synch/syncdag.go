@@ -12,8 +12,8 @@ import (
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/peer"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"strings"
 	"sync/atomic"
 )

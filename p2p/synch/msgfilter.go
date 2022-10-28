@@ -6,7 +6,7 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/p2p/common"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
-	libp2pcore "github.com/libp2p/go-libp2p-core"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
 )
 
 func (s *Sync) HandlerFilterMsgAdd(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {

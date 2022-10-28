@@ -11,8 +11,8 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/peers"
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/peer"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 // pingHandler reads the incoming ping rpc message from the peer.

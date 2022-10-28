@@ -8,7 +8,7 @@ import (
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/notifymgr/notify"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"sync"
 	"time"
 )

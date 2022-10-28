@@ -12,7 +12,7 @@ import (
 	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnode"
-	libp2pcore "github.com/libp2p/go-libp2p-core"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"sync/atomic"
 )
 
