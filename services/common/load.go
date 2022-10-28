@@ -6,6 +6,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/profiling"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/config"
@@ -283,6 +284,22 @@ var (
 			Name:        "profile",
 			Usage:       "Enable HTTP profiling on given [addr:]port -- NOTE port must be between 1024 and 65536",
 			Destination: &cfg.Profile,
+		},
+		&cli.StringFlag{
+			Name:        "cpuprofile",
+			Usage:       "Write CPU profile to the specified file",
+			Destination: &cfg.CPUProfile,
+		},
+		&cli.BoolFlag{
+			Name:        "trackheap",
+			Usage:       "tracks the size of the heap and dumps a profile",
+			Destination: &cfg.TrackHeap,
+		},
+		&cli.IntFlag{
+			Name:        "trackheaplimit",
+			Usage:       "track heap when limit in gigabytes (default:7G)",
+			Destination: &cfg.TrackHeapLimit,
+			Value:       profiling.DefaultTrackHeapLimit,
 		},
 		&cli.StringFlag{
 			Name:        "debuglevel",

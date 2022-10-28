@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/profiling"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/config"
 	_ "github.com/Qitmeer/qng/database/ffldb"
@@ -20,6 +21,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
+	"runtime/pprof"
 )
 
 func main() {
@@ -82,6 +84,23 @@ func qitmeerd(ctx *cli.Context) error {
 			log.LogWrite().Close()
 		}
 	}()
+	if len(cfg.Profile) > 0 {
+		profiling.Start(cfg.Profile)
+	}
+	// Write cpu profile if requested.
+	if len(cfg.CPUProfile) > 0 {
+		f, err := os.Create(cfg.CPUProfile)
+		if err != nil {
+			log.Error(fmt.Sprintf("Unable to create cpu profile: %v", err.Error()))
+			return err
+		}
+		pprof.StartCPUProfile(f)
+		defer f.Close()
+		defer pprof.StopCPUProfile()
+	}
+	if cfg.TrackHeap {
+		profiling.TrackHeap(cfg)
+	}
 	// Get a channel that will be closed when a shutdown signal has been
 	// triggered either from an OS signal such as SIGINT (Ctrl+C) or from
 	// another subsystem such as the RPC server.

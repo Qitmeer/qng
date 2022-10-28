@@ -36,6 +36,9 @@ type Config struct {
 	PrivNet            bool     `long:"privnet" description:"Use the private network"`
 	DbType             string   `long:"dbtype" description:"Database backend to use for the Block Chain"`
 	Profile            string   `long:"profile" description:"Enable HTTP profiling on given [addr:]port -- NOTE port must be between 1024 and 65536"`
+	CPUProfile         string   `long:"cpuprofile" description:"Write CPU profile to the specified file"`
+	TrackHeap          bool     `long:"trackheap" description:"tracks the size of the heap and dumps a profile"`
+	TrackHeapLimit     int      `long:"trackheaplimit" description:"track heap when limit in gigabytes (default:7G)"`
 	DebugLevel         string   `short:"d" long:"debuglevel" description:"Logging level {trace, debug, info, warn, error, critical} "`
 	DebugPrintOrigins  bool     `long:"printorigin" description:"Print log debug location (file:line) "`
 	// MemPool Config
