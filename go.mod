@@ -1,6 +1,6 @@
 module github.com/Qitmeer/qng
 
-go 1.17
+go 1.18
 
 require (
 	github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a
