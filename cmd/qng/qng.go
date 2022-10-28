@@ -19,7 +19,6 @@ import (
 	"github.com/urfave/cli/v2"
 	"os"
 	"runtime"
-	"runtime/debug"
 )
 
 func main() {
@@ -30,7 +29,7 @@ func main() {
 	// limits the garbage collector from excessively overallocating during
 	// bursts.  This value was arrived at with the help of profiling live
 	// usage.
-	debug.SetGCPercent(20)
+	//debug.SetGCPercent(20)
 
 	// Work around defer not working after os.Exit()
 	if err := qng(); err != nil {
