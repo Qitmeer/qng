@@ -88,6 +88,9 @@ import (
 func NewBlockTemplate(policy *Policy, params *params.Params,
 	sigCache *txscript.SigCache, txSource TxSource, timeSource blockchain.MedianTimeSource,
 	blockManager *blkmgr.BlockManager, payToAddress types.Address, parents []*hash.Hash, powType pow.PowType, coinbaseFlags CoinbaseFlags) (*types.BlockTemplate, error) {
+	if onEnd := log.LogAndMeasureExecutionTime(log.Root(), "NewBlockTemplate"); onEnd != nil {
+		defer onEnd()
+	}
 	subsidyCache := blockManager.GetChain().FetchSubsidyCache()
 	bd := blockManager.GetChain().BlockDAG()
 	best := blockManager.GetChain().BestSnapshot()

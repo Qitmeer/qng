@@ -14,6 +14,7 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
+	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"math"
@@ -86,6 +87,9 @@ func IsFinalizedTransaction(tx *types.Tx, blockHeight uint64, blockTime time.Tim
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags BehaviorFlags) error {
+	if onEnd := l.LogAndMeasureExecutionTime(log, "BlockChain.maybeAcceptBlock"); onEnd != nil {
+		defer onEnd()
+	}
 	// This function should never be called with orphan blocks or the
 	// genesis block.
 	b.ChainLock()

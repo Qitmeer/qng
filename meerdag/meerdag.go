@@ -6,6 +6,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/database"
+	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag/anticone"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
@@ -303,6 +304,9 @@ func (bd *MeerDAG) Stop() error {
 // This is an entry for update the block dag,you need pass in a block parameter,
 // If add block have failure,it will return false.
 func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool) {
+	if onEnd := l.LogAndMeasureExecutionTime(log, "MeerDAG.AddBlock"); onEnd != nil {
+		defer onEnd()
+	}
 	bd.stateLock.Lock()
 	defer bd.stateLock.Unlock()
 	if b == nil {
