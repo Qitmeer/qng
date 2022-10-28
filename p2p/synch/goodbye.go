@@ -8,8 +8,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/Qitmeer/qng/p2p/common"
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/peer"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"time"
 )
 

@@ -1,9 +1,9 @@
 package notify
 
-import "github.com/libp2p/go-libp2p-core/peer"
+import "github.com/libp2p/go-libp2p/core/peer"
 
 type NotifyData struct {
-	Data interface{}
+	Data    interface{}
 	Filters []peer.ID
 }
 
@@ -12,7 +12,7 @@ func (nd *NotifyData) IsFilter(pid peer.ID) bool {
 		return false
 	}
 
-	for _,f:=range nd.Filters {
+	for _, f := range nd.Filters {
 		if f == pid {
 			return true
 		}

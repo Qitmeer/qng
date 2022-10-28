@@ -13,7 +13,7 @@ import (
 	"github.com/Qitmeer/qng/p2p/qnr"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/version"
-	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"io/ioutil"
 	"net"
@@ -79,7 +79,7 @@ func PrivateKey(dataDir string, privateKeyPath string, readWritePermissions os.F
 }
 
 func ConvertToInterfacePubkey(pubkey *ecdsa.PublicKey) crypto.PubKey {
-	cpubKey,err:=crypto.ECDSAPublicKeyFromPubKey(*pubkey)
+	cpubKey, err := crypto.ECDSAPublicKeyFromPubKey(*pubkey)
 	if err != nil {
 		log.Error(err.Error())
 	}

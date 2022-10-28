@@ -3,7 +3,7 @@ package peers
 import (
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnr"
-	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p/core/network"
 	ma "github.com/multiformats/go-multiaddr"
 	"time"
 )

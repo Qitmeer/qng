@@ -6,7 +6,7 @@ package consensus
 
 import (
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 // Notify interface manage message announce & relay & notification between mempool, websocket, gbt long pull

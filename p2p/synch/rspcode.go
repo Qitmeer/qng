@@ -9,7 +9,7 @@ import (
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/encoder"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
-	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p/core/network"
 )
 
 func generateErrorResponse(e *common.Error, encoding encoder.NetworkEncoding) ([]byte, error) {

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/p2p/qnode"
 	"github.com/Qitmeer/qng/p2p/qnr"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"strings"
 )

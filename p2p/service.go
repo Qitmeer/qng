@@ -27,13 +27,13 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-discovery"
 	"github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p-pubsub/pb"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	"github.com/multiformats/go-multiaddr"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -74,7 +74,7 @@ type Service struct {
 
 	dv5Listener Listener
 	kademliaDHT *dht.IpfsDHT
-	routingDv   *discovery.RoutingDiscovery
+	routingDv   *routing.RoutingDiscovery
 
 	events *event.Feed
 	sy     *synch.Sync

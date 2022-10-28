@@ -9,7 +9,7 @@ import (
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
-	libp2pcore "github.com/libp2p/go-libp2p-core"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
 )
 
 func (s *Sync) tryToSendInventoryRequest(pe *peers.Peer, invs []*pb.InvVect) error {

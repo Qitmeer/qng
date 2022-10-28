@@ -21,15 +21,15 @@ import (
 	"github.com/Qitmeer/qng/rpc"
 	ds "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/control"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/routing"
 	"github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/control"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"path"
@@ -184,10 +184,10 @@ func (node *Node) startP2P() error {
 	var kademliaDHT *dht.IpfsDHT
 	newDHT := func(h host.Host) (routing.PeerRouting, error) {
 		var err error
-		kademliaDHT, err = dht.New(node.Context(), h,dht.V1ProtocolOverride(p2p.ProtocolDHT),dht.Mode(dht.ModeServer))
+		kademliaDHT, err = dht.New(node.Context(), h, dht.V1ProtocolOverride(p2p.ProtocolDHT), dht.Mode(dht.ModeServer))
 		return kademliaDHT, err
 	}
-	opts = append(opts,libp2p.Routing(newDHT))
+	opts = append(opts, libp2p.Routing(newDHT))
 
 	node.host, err = libp2p.New(opts...)
 	if err != nil {
