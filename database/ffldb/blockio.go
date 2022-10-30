@@ -478,7 +478,7 @@ func (s *blockStore) writeBlock(rawBlock []byte) (blockLocation, error) {
 	_, _ = hasher.Write(scratch[:])
 
 	// Serialized block.
-	if err := s.writeData(rawBlock[:], "block"); err != nil {
+	if err := s.writeData(rawBlock, "block"); err != nil {
 		return blockLocation{}, err
 	}
 	_, _ = hasher.Write(rawBlock)
