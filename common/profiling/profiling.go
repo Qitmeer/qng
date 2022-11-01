@@ -3,6 +3,7 @@ package profiling
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
+	"github.com/google/gops/agent"
 	"net"
 	"net/http"
 	"os"
@@ -34,6 +35,11 @@ func Start(port string) {
 		http.Handle("/", profileRedirect)
 		err := http.ListenAndServe(listenAddr, nil)
 		if err != nil {
+			log.Error(err.Error())
+		}
+	}()
+	go func() {
+		if err := agent.Listen(agent.Options{}); err != nil {
 			log.Error(err.Error())
 		}
 	}()
