@@ -13,7 +13,6 @@ import (
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 )
 
@@ -21,7 +20,7 @@ import (
 // implements the blockchain.IndexManager interface so it can be seamlessly
 // plugged into normal chain processing.
 type Manager struct {
-	params         *params.Params
+	cfg            *Config
 	db             database.DB
 	enabledIndexes []Indexer
 }
@@ -33,11 +32,14 @@ var _ blockchain.IndexManager = (*Manager)(nil)
 //
 // The manager returned satisfies the blockchain.IndexManager interface and thus
 // cleanly plugs into the normal blockchain processing path.
-func NewManager(db database.DB, enabledIndexes []Indexer, params *params.Params) *Manager {
+func NewManager(cfg *Config, db database.DB, enabledIndexes []Indexer) *Manager {
+	if cfg == nil {
+		cfg = DefaultConfig()
+	}
 	return &Manager{
+		cfg:            cfg,
 		db:             db,
 		enabledIndexes: enabledIndexes,
-		params:         params,
 	}
 }
 

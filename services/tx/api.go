@@ -969,6 +969,11 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 	return fmt.Sprintf("0x%s", mtx.Tx.TxIn[0].PreviousOut.Hash.String()), nil
 }
 
+func (api *PublicTxAPI) GetTxIDByMeerEVMTxHash(etxh hash.Hash) (interface{}, error) {
+
+	return nil, nil
+}
+
 type PrivateTxAPI struct {
 	txManager *TxManager
 }

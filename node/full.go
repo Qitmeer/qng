@@ -264,7 +264,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	// index-manager
 	var indexManager blockchain.IndexManager
 	if len(indexes) > 0 {
-		indexManager = index.NewManager(qm.db, indexes, node.Params)
+		indexManager = index.NewManager(index.ToConfig(cfg), qm.db, indexes)
 	}
 
 	qm.RegisterNotifyMgr()

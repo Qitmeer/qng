@@ -13,12 +13,12 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/index"
 	"path"
@@ -50,7 +50,7 @@ func (node *DebugAddressNode) init(cfg *Config) error {
 	txIndex := index.NewTxIndex(db)
 	indexes = append(indexes, txIndex)
 	// index-manager
-	indexManager := index.NewManager(db, indexes, params.ActiveNetParams.Params)
+	indexManager := index.NewManager(nil, db, indexes)
 
 	bc, err := blockchain.New(&blockchain.Config{
 		DB:           db,
@@ -231,7 +231,7 @@ func (node *DebugAddressNode) processAddress(blueM *map[uint]bool) error {
 				}
 
 				tradeRecord = append(tradeRecord, tr)
-				txOutPoint := types.TxOutPoint{Hash:*txHash,OutIndex:uint32(txOutIndex)}
+				txOutPoint := types.TxOutPoint{Hash: *txHash, OutIndex: uint32(txOutIndex)}
 				tradeRecordMap[txOutPoint] = tr
 			}
 		}

@@ -13,13 +13,13 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/vm"
@@ -60,7 +60,7 @@ func (node *Node) init(cfg *Config) error {
 	txIndex := index.NewTxIndex(db)
 	indexes = append(indexes, txIndex)
 	// index-manager
-	indexManager := index.NewManager(db, indexes, params.ActiveNetParams.Params)
+	indexManager := index.NewManager(nil, db, indexes)
 
 	bc, err := blockchain.New(&blockchain.Config{
 		DB:           db,
@@ -386,7 +386,7 @@ func (node *Node) Upgrade() error {
 	txIndex := index.NewTxIndex(db)
 	indexes = append(indexes, txIndex)
 	// index-manager
-	indexManager := index.NewManager(db, indexes, params.ActiveNetParams.Params)
+	indexManager := index.NewManager(nil, db, indexes)
 
 	bc, err := blockchain.New(&blockchain.Config{
 		DB:           db,
