@@ -6,14 +6,13 @@
 package index
 
 import (
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/consensus/model"
 	"sync"
 
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
 )
 
 var (
@@ -80,7 +79,7 @@ var _ Indexer = (*ExistsAddrIndex)(nil)
 // initialize for this index.
 //
 // This is part of the Indexer interface.
-func (idx *ExistsAddrIndex) Init(chain *blockchain.BlockChain) error {
+func (idx *ExistsAddrIndex) Init(chain model.BlockChain) error {
 	// Nothing to do.
 	return nil
 }
@@ -202,8 +201,8 @@ func (idx *ExistsAddrIndex) ExistsAddresses(addrs []types.Address) ([]bool, erro
 // the transactions in the block involve.
 //
 // This is part of the Indexer interface.
-func (idx *ExistsAddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
-	if ib.GetStatus().KnownInvalid() {
+func (idx *ExistsAddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
+	if blk.GetStatus().KnownInvalid() {
 		return nil
 	}
 	var allTxns []*types.Tx
@@ -301,7 +300,7 @@ func (idx *ExistsAddrIndex) ConnectBlock(dbTx database.Tx, block *types.Serializ
 // never removes addresses.
 //
 // This is part of the Indexer interface.
-func (idx *ExistsAddrIndex) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
+func (idx *ExistsAddrIndex) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte) error {
 	return nil
 }
 

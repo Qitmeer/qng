@@ -118,8 +118,8 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 		// Remove unconfirmed address index entries associated with the
 		// transaction if enabled.
 		// TODO address index
-		if mp.cfg.AddrIndex != nil {
-			mp.cfg.AddrIndex.RemoveUnconfirmedTx(txHash)
+		if aIndex := mp.cfg.IndexManager.AddrIndex(); aIndex != nil {
+			aIndex.RemoveUnconfirmedTx(txHash)
 		}
 		// Mark the referenced outpoints as unspent by the pool.
 
@@ -199,8 +199,8 @@ func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
 	if !types.IsCrossChainVMTx(tx.Tx) {
 		mp.pool[*tx.Hash()] = txD
 
-		if mp.cfg.ExistsAddrIndex != nil {
-			mp.cfg.ExistsAddrIndex.AddUnconfirmedTx(msgTx)
+		if eaIndex := mp.cfg.IndexManager.ExistsAddrIndex(); eaIndex != nil {
+			eaIndex.AddUnconfirmedTx(msgTx)
 		}
 	}
 
@@ -223,8 +223,8 @@ func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
 
 	// Add unconfirmed address index entries associated with the transaction
 	// if enabled.
-	if mp.cfg.AddrIndex != nil && utxoView != nil {
-		mp.cfg.AddrIndex.AddUnconfirmedTx(tx, utxoView)
+	if aIndex := mp.cfg.IndexManager.AddrIndex(); aIndex != nil && utxoView != nil {
+		mp.AddUnconfirmedTx(tx, utxoView)
 	}
 
 	// Record this tx for fee estimation if enabled.
@@ -1269,4 +1269,27 @@ func (mp *TxPool) GetMainHeight() int64 {
 
 func (mp *TxPool) IsSupportVMTx() bool {
 	return mp.cfg.BC.IsValidTxType(types.TxTypeCrossChainVM)
+}
+
+func (mp *TxPool) AddUnconfirmedTx(tx *types.Tx, utxoView *blockchain.UtxoViewpoint) {
+	var pkScripts [][]byte
+	msgTx := tx.Transaction()
+	for _, txIn := range msgTx.TxIn {
+		entry := utxoView.LookupEntry(txIn.PreviousOut)
+		if entry == nil {
+			// Ignore missing entries.  This should never happen
+			// in practice since the function comments specifically
+			// call out all inputs must be available.
+			continue
+		}
+		pkScript := entry.PkScript()
+		//txType := entry.TransactionType()
+		pkScripts = append(pkScripts, pkScript)
+	}
+
+	// Index addresses of all created outputs.
+	for _, txOut := range msgTx.TxOut {
+		pkScripts = append(pkScripts, txOut.PkScript)
+	}
+	mp.cfg.IndexManager.AddrIndex().AddUnconfirmedTx(tx, pkScripts)
 }

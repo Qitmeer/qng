@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/consensus/forks"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
@@ -59,7 +60,7 @@ type BlockChain struct {
 	timeSource   MedianTimeSource
 	events       *event.Feed
 	sigCache     *txscript.SigCache
-	indexManager IndexManager
+	indexManager model.IndexManager
 
 	// subsidyCache is the cache that provides quick lookup of subsidy
 	// values.
@@ -183,7 +184,7 @@ type Config struct {
 	//
 	// This field can be nil if the caller does not wish to make use of an
 	// index manager.
-	IndexManager IndexManager
+	IndexManager model.IndexManager
 
 	// Setting different dag types will use different consensus
 	DAGType string
@@ -1016,6 +1017,10 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut, connectedBlocks *list.List) error {
+	pkss := [][]byte{}
+	for _, stxo := range stxos {
+		pkss = append(pkss, stxo.PkScript)
+	}
 	if !node.GetStatus().KnownInvalid() {
 		err := b.VMService.ConnectBlock(block)
 		if err != nil {
@@ -1042,7 +1047,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 			// optional indexes with the block being connected so they can
 			// update themselves accordingly.
 			if b.indexManager != nil {
-				err := b.indexManager.ConnectBlock(dbTx, block, stxos, node)
+				err := b.indexManager.ConnectBlock(dbTx, block, pkss, node)
 				if err != nil {
 					return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 				}
@@ -1065,7 +1070,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		// Atomically insert info into the database.
 		err := b.db.Update(func(dbTx database.Tx) error {
 			if b.indexManager != nil {
-				err := b.indexManager.ConnectBlock(dbTx, block, stxos, node)
+				err := b.indexManager.ConnectBlock(dbTx, block, pkss, node)
 				if err != nil {
 					return err
 				}
@@ -1108,7 +1113,11 @@ func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoVie
 		// optional indexes with the block being disconnected so they
 		// can update themselves accordingly.
 		if b.indexManager != nil {
-			err := b.indexManager.DisconnectBlock(dbTx, block, stxos)
+			pkss := [][]byte{}
+			for _, stxo := range stxos {
+				pkss = append(pkss, stxo.PkScript)
+			}
+			err := b.indexManager.DisconnectBlock(dbTx, block, pkss)
 			if err != nil {
 				return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 			}
@@ -1319,6 +1328,20 @@ func (b *BlockChain) fetchSpendJournal(targetBlock *types.SerializedBlock) ([]Sp
 	}
 
 	return spendEntries, nil
+}
+
+func (b *BlockChain) FetchSpendJournalPKS(targetBlock *types.SerializedBlock) ([][]byte, error) {
+	b.ChainRLock()
+	defer b.ChainRUnlock()
+	ret := [][]byte{}
+	stxo, err := b.fetchSpendJournal(targetBlock)
+	if err != nil {
+		return nil, err
+	}
+	for _, so := range stxo {
+		ret = append(ret, so.PkScript)
+	}
+	return ret, nil
 }
 
 // expect priority
@@ -1585,4 +1608,16 @@ func (b *BlockChain) HasTx(txid *hash.Hash) bool {
 
 func (b *BlockChain) DB() database.DB {
 	return b.db
+}
+
+func (b *BlockChain) IndexManager() model.IndexManager {
+	return b.indexManager
+}
+
+func (b *BlockChain) GetMainOrder() uint {
+	return b.BestSnapshot().GraphState.GetMainOrder()
+}
+
+func (b *BlockChain) IsCacheInvalidTx() bool {
+	return b.CacheInvalidTx
 }

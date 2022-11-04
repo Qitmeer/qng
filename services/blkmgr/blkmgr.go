@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
@@ -82,7 +83,7 @@ type BlockManager struct {
 
 // NewBlockManager returns a new block manager.
 // Use Start to begin processing asynchronous block and inv updates.
-func NewBlockManager(ntmgr consensus.Notify, indexManager blockchain.IndexManager, db database.DB,
+func NewBlockManager(ntmgr consensus.Notify, indexManager model.IndexManager, db database.DB,
 	timeSource blockchain.MedianTimeSource, sigCache *txscript.SigCache,
 	cfg *config.Config, par *params.Params,
 	interrupt <-chan struct{}, events *event.Feed, peerServer P2PService) (*BlockManager, error) {

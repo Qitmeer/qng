@@ -4,6 +4,7 @@ package node
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng/database"
@@ -99,7 +100,7 @@ func (qm *QitmeerFull) RegisterRpcService() error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterBlkMgrService(indexManager blockchain.IndexManager) error {
+func (qm *QitmeerFull) RegisterBlkMgrService(indexManager model.IndexManager) error {
 
 	// block-manager
 	bm, err := blkmgr.NewBlockManager(qm.nfManager, indexManager, qm.node.DB, qm.timeSource, qm.sigCache, qm.node.Config, qm.node.Params,
@@ -111,9 +112,9 @@ func (qm *QitmeerFull) RegisterBlkMgrService(indexManager blockchain.IndexManage
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterTxManagerService(txIndex *index.TxIndex, addrIndex *index.AddrIndex) error {
+func (qm *QitmeerFull) RegisterTxManagerService(indexManager model.IndexManager) error {
 	// txmanager
-	tm, err := tx.NewTxManager(qm.GetBlockManager(), txIndex, addrIndex, qm.node.Config, qm.nfManager, qm.sigCache, qm.node.DB, &qm.node.events)
+	tm, err := tx.NewTxManager(qm.GetBlockManager(), indexManager, qm.node.Config, qm.nfManager, qm.sigCache, qm.node.DB, &qm.node.events)
 	if err != nil {
 		return err
 	}
@@ -248,24 +249,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		return nil, err
 	}
 
-	// Create the transaction and address indexes if needed.
-	var indexes []index.Indexer
-
-	var txIndex *index.TxIndex
-	var addrIndex *index.AddrIndex
-	log.Info("Transaction index is enabled")
-	txIndex = index.NewTxIndex(qm.db)
-	indexes = append(indexes, txIndex)
-	if cfg.AddrIndex {
-		log.Info("Address index is enabled")
-		addrIndex = index.NewAddrIndex(qm.db, node.Params)
-		indexes = append(indexes, addrIndex)
-	}
-	// index-manager
-	var indexManager blockchain.IndexManager
-	if len(indexes) > 0 {
-		indexManager = index.NewManager(index.ToConfig(cfg), qm.db, indexes)
-	}
+	indexManager := index.NewManager(index.ToConfig(cfg), qm.db)
 
 	qm.RegisterNotifyMgr()
 
@@ -274,7 +258,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	}
 	bm := qm.GetBlockManager()
 
-	if err := qm.RegisterTxManagerService(txIndex, addrIndex); err != nil {
+	if err := qm.RegisterTxManagerService(indexManager); err != nil {
 		return nil, err
 	}
 
@@ -308,7 +292,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	}
 	if qm.GetRpcServer() != nil {
 		qm.GetRpcServer().BC = bm.GetChain()
-		qm.GetRpcServer().TxIndex = txIndex
+		qm.GetRpcServer().TxIndex = indexManager.TxIndex()
 		qm.GetRpcServer().ChainParams = bm.ChainParams()
 
 		qm.nfManager.(*notifymgr.NotifyMgr).RpcServer = qm.GetRpcServer()

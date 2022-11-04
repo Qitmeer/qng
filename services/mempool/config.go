@@ -7,13 +7,13 @@ package mempool
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/vm/consensus"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/services/index"
+	"github.com/Qitmeer/qng/vm/consensus"
 	"time"
 )
 
@@ -65,10 +65,7 @@ type Config struct {
 	// SigCache defines a signature cache to use.
 	SigCache *txscript.SigCache
 
-	// AddrIndex defines the optional address index instance to use for
-	// indexing the unconfirmed transactions in the memory pool.
-	// This can be nil if the address index is not enabled.
-	AddrIndex *index.AddrIndex
+	IndexManager *index.Manager
 
 	// ExistsAddrIndex defines the optional exists address index instance
 	// to use for indexing the unconfirmed transactions in the memory pool.

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
@@ -23,11 +24,9 @@ type TxManager struct {
 	service.Service
 
 	bm *blkmgr.BlockManager
-	// tx index
-	txIndex *index.TxIndex
 
-	// addr index
-	addrIndex *index.AddrIndex
+	indexManager *index.Manager
+
 	// mempool hold tx that need to be mined into blocks and relayed to other peers.
 	txMemPool *mempool.TxPool
 
@@ -145,8 +144,7 @@ func (tm *TxManager) InitDefaultFeeEstimator() {
 		mempool.DefaultEstimateFeeMinRegisteredBlocks)
 }
 
-func NewTxManager(bm *blkmgr.BlockManager, txIndex *index.TxIndex,
-	addrIndex *index.AddrIndex, cfg *config.Config, ntmgr consensus.Notify,
+func NewTxManager(bm *blkmgr.BlockManager, indexManager model.IndexManager, cfg *config.Config, ntmgr consensus.Notify,
 	sigCache *txscript.SigCache, db database.DB, events *event.Feed) (*TxManager, error) {
 	// mem-pool
 	amt, _ := types.NewMeer(uint64(cfg.MinTxFee))
@@ -175,7 +173,7 @@ func NewTxManager(bm *blkmgr.BlockManager, txIndex *index.TxIndex,
 		SubsidyCache:     bm.GetChain().FetchSubsidyCache(),
 		SigCache:         sigCache,
 		PastMedianTime:   func() time.Time { return bm.GetChain().BestSnapshot().MedianTime },
-		AddrIndex:        addrIndex,
+		IndexManager:     indexManager.(*index.Manager),
 		BD:               bm.GetChain().BlockDAG(),
 		BC:               bm.GetChain(),
 		DataDir:          cfg.DataDir,
@@ -186,5 +184,5 @@ func NewTxManager(bm *blkmgr.BlockManager, txIndex *index.TxIndex,
 	}
 	txMemPool := mempool.New(&txC)
 	invalidTx := make(map[hash.Hash]*meerdag.HashSet)
-	return &TxManager{bm: bm, txIndex: txIndex, addrIndex: addrIndex, txMemPool: txMemPool, ntmgr: ntmgr, db: db, invalidTx: invalidTx, enableFeeEst: cfg.Estimatefee}, nil
+	return &TxManager{bm: bm, indexManager: indexManager.(*index.Manager), txMemPool: txMemPool, ntmgr: ntmgr, db: db, invalidTx: invalidTx, enableFeeEst: cfg.Estimatefee}, nil
 }

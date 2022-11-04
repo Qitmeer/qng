@@ -255,7 +255,7 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 
 	if tx == nil {
 		//not found from mem-pool, try db
-		txIndex := api.txManager.txIndex
+		txIndex := api.txManager.indexManager.TxIndex()
 		if txIndex == nil {
 			return nil, fmt.Errorf("the transaction index " +
 				"must be enabled to query the blockchain (specify --txindex in configuration)")
@@ -482,7 +482,7 @@ func (api *PublicTxAPI) GetUtxo(txHash hash.Hash, vout uint32, includeMempool *b
 
 // handleSearchRawTransactions implements the searchrawtransactions command.
 func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *uint, skip *uint, revers *bool, verbose *bool, filterAddrs *[]string) (interface{}, error) {
-	addrIndex := api.txManager.addrIndex
+	addrIndex := api.txManager.indexManager.AddrIndex()
 	if addrIndex == nil {
 		return nil, fmt.Errorf("Address index must be enabled (--addrindex)")
 	}
@@ -491,7 +491,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 		vinExtra = *vinext
 	}
 
-	if vinExtra && api.txManager.txIndex == nil {
+	if vinExtra && api.txManager.indexManager.TxIndex() == nil {
 		return nil, fmt.Errorf("Transaction index must be enabled (--txindex)")
 	}
 	params := api.txManager.bm.ChainParams()
@@ -697,7 +697,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 func (api *PublicTxAPI) fetchMempoolTxnsForAddress(addr types.Address, numToSkip, numRequested uint32) ([]*types.Tx, uint32) {
 	// There are no entries to return when there are less available than the
 	// number being skipped.
-	mpTxns := api.txManager.addrIndex.UnconfirmedTxnsForAddress(addr)
+	mpTxns := api.txManager.indexManager.AddrIndex().UnconfirmedTxnsForAddress(addr)
 	numAvailable := uint32(len(mpTxns))
 	if numToSkip > numAvailable {
 		return nil, numAvailable
@@ -854,7 +854,7 @@ func (api *PublicTxAPI) fetchInputTxos(tx *types.Tx) (map[types.TxOutPoint]types
 		}
 
 		// Look up the location of the transaction.
-		blockRegion, err := api.txManager.txIndex.TxBlockRegion(origin.Hash)
+		blockRegion, err := api.txManager.indexManager.TxIndex().TxBlockRegion(origin.Hash)
 		if err != nil {
 			context := "Failed to retrieve transaction location"
 			return nil, rpc.RpcInternalError(err.Error(), context)
@@ -896,7 +896,7 @@ func (api *PublicTxAPI) fetchInputTxos(tx *types.Tx) (map[types.TxOutPoint]types
 }
 
 func (api *PublicTxAPI) GetRawTransactionByHash(txHash hash.Hash, verbose bool) (interface{}, error) {
-	txIndex := api.txManager.txIndex
+	txIndex := api.txManager.indexManager.TxIndex()
 	if txIndex == nil {
 		return nil, fmt.Errorf("the transaction index " +
 			"must be enabled to query the blockchain (specify --txindex in configuration)")
@@ -921,7 +921,7 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 	var mtx *types.Tx
 	tx, _ := api.txManager.txMemPool.FetchTransaction(&txid)
 	if tx == nil {
-		txIndex := api.txManager.txIndex
+		txIndex := api.txManager.indexManager.TxIndex()
 		if txIndex == nil {
 			return nil, fmt.Errorf("the transaction index " +
 				"must be enabled to query the blockchain (specify --txindex in configuration)")
@@ -1034,7 +1034,7 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 			return nil, err
 		}
 	} else {
-		txIndex := api.txManager.txIndex
+		txIndex := api.txManager.indexManager.TxIndex()
 		if txIndex == nil {
 			return nil, fmt.Errorf("the transaction index " +
 				"must be enabled to query the blockchain (specify --txindex in configuration)")
