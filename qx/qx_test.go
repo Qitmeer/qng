@@ -3,6 +3,7 @@ package qx
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -33,7 +34,7 @@ func TestTxEncode(t *testing.T) {
 			Value: 2083509771,
 			Id:    0,
 		},
-		OutputType:     types.TxTypeRegular,
+		OutputType:     txscript.PubKeyHashTy,
 		TargetLockTime: 0,
 	}, Output{
 		TargetAddress: "TnU8gXq9xHFrfchwk2bjyGHR2HMswANsVU5",
@@ -41,7 +42,7 @@ func TestTxEncode(t *testing.T) {
 			Value: 100000000,
 			Id:    0,
 		},
-		OutputType:     types.TxTypeRegular,
+		OutputType:     txscript.PubKeyHashTy,
 		TargetLockTime: 0,
 	})
 	timestamp, _ := time.Parse("2016-01-02 15:04:05", "2019-13-14 00:00:00")
