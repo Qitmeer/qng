@@ -74,8 +74,8 @@ addr & tx & sign
 ### Qx Support UnLock script Types
 - `standard` the txid vout address need pubkeyhash address  
 - `pubkey` the txid vout address need pubkey address
-- `cltvpubkeyhash` the txid vout address need pubkeyhash address, and need lock a height or time
-- `crossimport` the special script
+- `cltvpubkeyhash` the txid vout address need pubkeyhash address, sequence need 4294967294 and need lock a height or time 
+- `crossimport` the special script, the index need 4294967294 and sequence need 258
 
 ### Qx Support Lock script Types
 - `standard` the txid vout address need pubkeyhash address
