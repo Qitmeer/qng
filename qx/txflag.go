@@ -12,7 +12,15 @@ import (
 
 type TxVersionFlag uint32
 type TxLockTimeFlag uint32
+type TxPrivateKey []string
 
+func (v *TxPrivateKey) Set(s string) error {
+	*v = append(*v, s)
+	return nil
+}
+func (ver TxPrivateKey) String() string {
+	return strings.Join(ver, ":")
+}
 func (ver TxVersionFlag) String() string {
 	return fmt.Sprintf("%d", ver)
 }
@@ -51,26 +59,26 @@ type TxOutputsFlag struct {
 }
 
 type txInput struct {
-	txhash   []byte
-	index    uint32
-	sequence uint32
-	txtype   string
+	txhash     []byte
+	index      uint32
+	sequence   uint32
+	unlocktype string
 }
 type txOutput struct {
-	target string
-	amount float64
-	coinid int64
-	txtype string
+	target   string
+	amount   float64
+	coinid   int64
+	locktype string
 }
 
 func (i LockAddress) String() string {
 	return fmt.Sprintf("%s:%d:%s", i.Address, i.SignType, string(i.Args))
 }
 func (i txInput) String() string {
-	return fmt.Sprintf("%x:%d:%d:%s", i.txhash[:], i.index, i.sequence, i.txtype)
+	return fmt.Sprintf("%x:%d:%d:%s", i.txhash[:], i.index, i.sequence, i.unlocktype)
 }
 func (o txOutput) String() string {
-	return fmt.Sprintf("%s:%f:%d:%s", o.target, o.amount, o.coinid, o.txtype)
+	return fmt.Sprintf("%s:%f:%d:%s", o.target, o.amount, o.coinid, o.locktype)
 }
 
 func (v TxInputsFlag) String() string {

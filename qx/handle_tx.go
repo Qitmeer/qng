@@ -5,12 +5,15 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
+	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/qx/txbasetypes"
+	"github.com/Qitmeer/qng/qx/scriptbasetypes"
+	"log"
 	"strings"
 	"time"
 )
@@ -20,52 +23,105 @@ type Input struct {
 	OutIndex   uint32
 	SignScript []byte
 	sequence   uint32
-	InputType  types.TxType
+	InputType  txscript.ScriptClass
 }
 
 type Output struct {
 	TargetAddress  string
 	Amount         types.Amount
 	TargetLockTime int64
-	OutputType     types.TxType
+	OutputType     txscript.ScriptClass
 }
 
 const MTX_STR_SEPERATE = "-"
 
 func TxEncode(version uint32, lockTime uint32, timestamp *time.Time, inputs []Input, outputs []Output) (string, error) {
 	mtx := types.NewTransaction()
-	mtx.Version = uint32(version)
+	mtx.Version = version
 	if lockTime != 0 {
-		mtx.LockTime = uint32(lockTime)
+		mtx.LockTime = lockTime
 	}
 	if timestamp != nil {
 		mtx.Timestamp = *timestamp
 	}
 
-	txtypes := &TxTypeIndex{}
-	for i, vout := range inputs {
-		vinEncode := txbasetypes.NewTxAssembleVinObject(vout.TxID, vout.OutIndex, vout.sequence, int64(lockTime), vout.InputType)
-		if vinEncode == nil {
-			return "", errors.New("input type not support:" + vout.InputType.String())
-		}
-		err := vinEncode.AssembleVin(mtx)
+	txtypes := &ScriptTypeIndex{}
+	for i, vin := range inputs {
+		txtypes.InputTypeSet(i, vin.InputType)
+		txHash, err := hash.NewHashFromStr(vin.TxID)
 		if err != nil {
+			log.Fatalln(err)
 			return "", err
 		}
-		txtypes.InputTypeSet(i, vout.InputType)
+		prevOut := types.NewOutPoint(txHash, vin.OutIndex)
+		txIn := types.NewTxInput(prevOut, []byte{})
+		if vin.sequence > 0 {
+			txIn.Sequence = vin.sequence
+		}
+		//setting the locktime to 0, or
+		//setting the locktime to be less than the current block height, or
+		//setting the locktime to be less than the current time (but still above a threshold so that it is not confused for a block height), or
+		//setting ALL txin sequence numbers to 0xffffffff.
+		// check sequence and lockTime
+		if vin.sequence == types.MaxTxInSequenceNum-1 && lockTime <= 0 {
+			return "", errors.New("due to sequence not 0xfffffffe,locktime must > 0")
+		}
+		mtx.AddTxIn(txIn)
 	}
 
 	for i := 0; i < len(outputs); i++ {
 		o := outputs[i]
-		voutEncode := txbasetypes.NewTxAssembleVoutObject(o.TargetAddress, o.Amount, o.TargetLockTime, o.OutputType)
-		if voutEncode == nil {
-			return "", errors.New("oupput type not support:" + o.OutputType.String())
-		}
-		err := voutEncode.AssembleVout(mtx)
-		if err != nil {
-			return "", err
-		}
 		txtypes.OutputTypeSet(i, o.OutputType)
+		addr, err := address.DecodeAddress(o.TargetAddress)
+		if err != nil {
+			return "", fmt.Errorf("could not decode "+
+				"address: %v", err)
+		}
+		var pkScript []byte
+		switch addr.(type) {
+		case *address.PubKeyHashAddress:
+		case *address.SecpPubKeyAddress:
+		case *address.ScriptHashAddress:
+		default:
+			return "", fmt.Errorf("unsupport address type: %T", addr)
+		}
+		// if coinID is meerB the out address must be SecpPubKeyAddress
+		if o.Amount.Id == types.MEERB {
+			if _, ok := addr.(*address.SecpPubKeyAddress); !ok {
+				return "", fmt.Errorf("out coinid is %v but the out address is: %v , not the SecpPubKeyAddress", o.Amount.Id, addr)
+			}
+		}
+		switch o.OutputType {
+		case txscript.CLTVPubKeyHashTy:
+			if lockTime <= 0 {
+				return "", fmt.Errorf("can not set CLTVPubKeyHashTy locktime need > 0")
+			}
+			if _, ok := addr.(*address.PubKeyHashAddress); !ok {
+				return "", fmt.Errorf("locktype is %v but the out address is: %v , not the PubKeyHashAddress", o.OutputType.String(), addr)
+			}
+			pkScript, err = txscript.PayToCLTVPubKeyHashScript(addr.Script(), int64(lockTime))
+			if err != nil {
+				return "", err
+			}
+		case txscript.PubKeyTy:
+			if _, ok := addr.(*address.SecpPubKeyAddress); !ok {
+				return "", fmt.Errorf("locktype is %v but the out address is: %v , not the SecpPubKeyAddress", o.OutputType.String(), addr)
+			}
+			pkScript, err = txscript.PayToAddrScript(addr)
+			if err != nil {
+				return "", err
+			}
+		default: // pubkeyhash standard
+			if _, ok := addr.(*address.PubKeyHashAddress); !ok {
+				return "", fmt.Errorf("locktype is %v but the out address is: %v , not the PubKeyHashAddress", o.OutputType.String(), addr)
+			}
+			pkScript, err = txscript.PayToAddrScript(addr)
+			if err != nil {
+				return "", err
+			}
+		}
+		txOut := types.NewTxOutput(o.Amount, pkScript)
+		mtx.AddTxOut(txOut)
 	}
 	mtxHex, err := mtx.Serialize()
 	if err != nil {
@@ -78,20 +134,12 @@ func TxEncode(version uint32, lockTime uint32, timestamp *time.Time, inputs []In
 	return hex.EncodeToString(mtxHex) + MTX_STR_SEPERATE + typeIndex, nil
 }
 
-func DecodePkString(pk string) (string, error) {
-	b, err := txscript.PkStringToScript(pk)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
-}
-
 func TxSign(privkeyStrs []string, rawTxStr string, network string) (string, error) {
 	strArr := strings.Split(rawTxStr, MTX_STR_SEPERATE)
 	rawTxStr = strArr[0]
-	txtypeIndex := &TxTypeIndex{}
+	txtypeIndex := &ScriptTypeIndex{}
 	if len(strArr) == 2 {
-		txtypeIndex, _ = DecodeTxTypeIndex(strArr[1])
+		txtypeIndex, _ = DecodeScriptTypeIndex(strArr[1])
 	}
 	var param *params.Params
 	switch network {
@@ -119,8 +167,11 @@ func TxSign(privkeyStrs []string, rawTxStr string, network string) (string, erro
 		return "", err
 	}
 	//
+	if len(privkeyStrs) != len(redeemTx.TxIn) {
+		return "", fmt.Errorf("vin length is %v , but private keys length is %v", len(redeemTx.TxIn), len(privkeyStrs))
+	}
 	for i := range redeemTx.TxIn {
-		txSignBase := txbasetypes.NewTxSignObject(txtypeIndex.FindInputTxType(i))
+		txSignBase := scriptbasetypes.NewTxSignObject(txtypeIndex.FindInputScriptType(i))
 		err = txSignBase.Sign(privkeyStrs[i], &redeemTx, i, param)
 		if err != nil {
 			return "", err
@@ -148,9 +199,9 @@ func TxDecode(network string, rawTxStr string) {
 	}
 	strArr := strings.Split(rawTxStr, MTX_STR_SEPERATE)
 	rawTxStr = strArr[0]
-	txTypeIndex := &TxTypeIndex{}
+	txTypeIndex := &ScriptTypeIndex{}
 	if len(strArr) == 2 {
-		txTypeIndex, _ = DecodeTxTypeIndex(strArr[1])
+		txTypeIndex, _ = DecodeScriptTypeIndex(strArr[1])
 	}
 	if len(rawTxStr)%2 != 0 {
 		ErrExit(fmt.Errorf("invaild raw transaction : %s", rawTxStr))
@@ -167,7 +218,7 @@ func TxDecode(network string, rawTxStr string) {
 	vins := marshal.MarshJsonVin(&tx)
 	if len(strArr) == 2 {
 		for i := range vins {
-			vins[i].TxType = txTypeIndex.FindInputTxType(i).String()
+			vins[i].TxType = txTypeIndex.FindInputScriptType(i).String()
 		}
 	}
 	jsonTx := &json.OrderedResult{
@@ -194,7 +245,7 @@ func TxEncodeSTDO(version TxVersionFlag, lockTime TxLockTimeFlag, txIn TxInputsF
 		txInputs = append(txInputs, Input{
 			TxID:      hex.EncodeToString(input.txhash),
 			OutIndex:  input.index,
-			InputType: types.GetTxType(input.txtype),
+			InputType: scriptbasetypes.GetScriptType(input.unlocktype),
 			sequence:  input.sequence,
 		})
 	}
@@ -206,7 +257,7 @@ func TxEncodeSTDO(version TxVersionFlag, lockTime TxLockTimeFlag, txIn TxInputsF
 		}
 		txOutputs = append(txOutputs, Output{
 			TargetAddress: output.target,
-			OutputType:    types.GetTxType(output.txtype),
+			OutputType:    scriptbasetypes.GetScriptType(output.locktype),
 			Amount: types.Amount{
 				Value: atomic.Value,
 				Id:    types.CoinID(output.coinid),
@@ -221,8 +272,8 @@ func TxEncodeSTDO(version TxVersionFlag, lockTime TxLockTimeFlag, txIn TxInputsF
 	fmt.Printf("%s\n", mtxHex)
 }
 
-func TxSignSTDO(privkeyStr string, rawTxStr string, network string) {
-	mtxHex, err := TxSign([]string{privkeyStr}, rawTxStr, network)
+func TxSignSTDO(privkeyStrs []string, rawTxStr string, network string) {
+	mtxHex, err := TxSign(privkeyStrs, rawTxStr, network)
 	if err != nil {
 		ErrExit(err)
 	}
