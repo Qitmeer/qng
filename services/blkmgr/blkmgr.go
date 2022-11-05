@@ -10,16 +10,13 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 	"github.com/Qitmeer/qng/services/zmq"
-	"github.com/Qitmeer/qng/vm/consensus"
+	vmconsensus "github.com/Qitmeer/qng/vm/consensus"
 	"sync"
 	"time"
 )
@@ -46,7 +43,7 @@ type BlockManager struct {
 	config *config.Config
 	params *params.Params
 
-	notify consensus.Notify
+	notify vmconsensus.Notify
 
 	chain *blockchain.BlockChain
 
@@ -83,10 +80,9 @@ type BlockManager struct {
 
 // NewBlockManager returns a new block manager.
 // Use Start to begin processing asynchronous block and inv updates.
-func NewBlockManager(ntmgr consensus.Notify, indexManager model.IndexManager, db database.DB,
-	timeSource blockchain.MedianTimeSource, sigCache *txscript.SigCache,
-	cfg *config.Config, par *params.Params,
-	interrupt <-chan struct{}, events *event.Feed, peerServer P2PService) (*BlockManager, error) {
+func NewBlockManager(ntmgr vmconsensus.Notify, consensus model.Consensus, peerServer P2PService) (*BlockManager, error) {
+	cfg := consensus.Config()
+	par := params.ActiveNetParams.Params
 	bm := BlockManager{
 		config:         cfg,
 		params:         par,
@@ -96,24 +92,7 @@ func NewBlockManager(ntmgr consensus.Notify, indexManager model.IndexManager, db
 		headerList:     list.New(),
 		quit:           make(chan struct{}),
 		peerServer:     peerServer,
-	}
-
-	// Create a new block chain instance with the appropriate configuration.
-	var err error
-	bm.chain, err = blockchain.New(&blockchain.Config{
-		DB:             db,
-		Interrupt:      interrupt,
-		ChainParams:    par,
-		TimeSource:     timeSource,
-		Events:         events,
-		SigCache:       sigCache,
-		IndexManager:   indexManager,
-		DAGType:        cfg.DAGType,
-		CacheInvalidTx: cfg.CacheInvalidTx,
-		DataDir:        cfg.DataDir,
-	})
-	if err != nil {
-		return nil, err
+		chain:          consensus.BlockChain().(*blockchain.BlockChain), // TODO:Future optimized interface
 	}
 
 	best := bm.chain.BestSnapshot()
@@ -129,7 +108,7 @@ func NewBlockManager(ntmgr consensus.Notify, indexManager model.IndexManager, db
 	}
 
 	if cfg.DumpBlockchain != "" {
-		err = bm.chain.DumpBlockChain(cfg.DumpBlockchain, par, uint64(best.GraphState.GetTotal())-1)
+		err := bm.chain.DumpBlockChain(cfg.DumpBlockchain, par, uint64(best.GraphState.GetTotal())-1)
 		if err != nil {
 			return nil, err
 		}

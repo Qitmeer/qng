@@ -15,7 +15,7 @@ type IndexManager interface {
 	// channel parameter specifies a channel the caller can close to signal
 	// that the process should be interrupted.  It can be nil if that
 	// behavior is not desired.
-	Init(bc BlockChain, interrupt <-chan struct{}) error
+	Init() error
 
 	// ConnectBlock is invoked when a new block has been connected to the
 	// main chain.

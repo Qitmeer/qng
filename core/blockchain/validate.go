@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/blockchain/token"
@@ -47,7 +48,7 @@ func IsExpired(tx *types.Tx, blockHeight uint64) bool {
 	return IsExpiredTx(tx.Transaction(), blockHeight)
 }
 
-func (b *BlockChain) CheckBlockSanity(block *types.SerializedBlock, timeSource MedianTimeSource, flags BehaviorFlags, chainParams *params.Params) error {
+func (b *BlockChain) CheckBlockSanity(block *types.SerializedBlock, timeSource model.MedianTimeSource, flags BehaviorFlags, chainParams *params.Params) error {
 	return b.checkBlockSanity(block, timeSource, flags, chainParams)
 }
 
@@ -57,7 +58,7 @@ func (b *BlockChain) CheckBlockSanity(block *types.SerializedBlock, timeSource M
 //
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkBlockHeaderSanity.
-func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource MedianTimeSource, flags BehaviorFlags, chainParams *params.Params) error {
+func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource model.MedianTimeSource, flags BehaviorFlags, chainParams *params.Params) error {
 	msgBlock := block.Block()
 	header := &msgBlock.Header
 
@@ -235,7 +236,7 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource M
 //
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkProofOfWork.
-func checkBlockHeaderSanity(header *types.BlockHeader, timeSource MedianTimeSource, flags BehaviorFlags, chainParams *params.Params, mHeight uint) error {
+func checkBlockHeaderSanity(header *types.BlockHeader, timeSource model.MedianTimeSource, flags BehaviorFlags, chainParams *params.Params, mHeight uint) error {
 	instance := pow.GetInstance(header.Pow.GetPowType(), 0, []byte{})
 	instance.SetMainHeight(pow.MainHeight(mHeight))
 	instance.SetParams(chainParams.PowConfig)

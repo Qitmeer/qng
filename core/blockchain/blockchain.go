@@ -57,7 +57,7 @@ type BlockChain struct {
 
 	db           database.DB
 	dbInfo       *databaseInfo
-	timeSource   MedianTimeSource
+	timeSource   model.MedianTimeSource
 	events       *event.Feed
 	sigCache     *txscript.SigCache
 	indexManager model.IndexManager
@@ -130,6 +130,8 @@ type BlockChain struct {
 	Acct ACCTI
 
 	shutdownTracker *shutdown.Tracker
+
+	consensus model.Consensus
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.
@@ -159,7 +161,7 @@ type Config struct {
 	// The caller is expected to keep a reference to the time source as well
 	// and add time samples from other peers on the network so the local
 	// time is adjusted to be in agreement with other peers.
-	TimeSource MedianTimeSource
+	TimeSource model.MedianTimeSource
 
 	// Events defines a event manager to which notifications will be sent
 	// when various events take place.  See the documentation for
@@ -365,29 +367,34 @@ func New(config *Config) (*BlockChain, error) {
 	b.bd = meerdag.New(config.DAGType, b.CalcWeight,
 		1.0/float64(par.TargetTimePerBlock/time.Second), b.db, b.getBlockData)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
+
+	return &b, nil
+}
+
+func (b *BlockChain) Init() error {
 	// Initialize the chain state from the passed database.  When the db
 	// does not yet contain any chain state, both it and the chain state
 	// will be initialized to contain only the genesis block.
-	if err := b.initChainState(config.Interrupt); err != nil {
-		return nil, err
+	if err := b.initChainState(); err != nil {
+		return err
 	}
 	// Initialize and catch up all of the currently active optional indexes
 	// as needed.
-	if config.IndexManager != nil {
-		err := config.IndexManager.Init(&b, config.Interrupt)
+	if b.indexManager != nil {
+		err := b.indexManager.Init()
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 	err := b.CheckCacheInvalidTxConfig()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	b.pruner = newChainPruner(&b)
+	b.pruner = newChainPruner(b)
 
 	// Initialize rule change threshold state caches.
 	if err := b.initThresholdCaches(); err != nil {
-		return nil, err
+		return err
 	}
 
 	log.Info(fmt.Sprintf("DAG Type:%s", b.bd.GetName()))
@@ -400,14 +407,13 @@ func New(config *Config) (*BlockChain, error) {
 	for _, v := range tips {
 		log.Info(fmt.Sprintf("hash=%s,order=%s,height=%d", v.GetHash(), meerdag.GetOrderLogStr(v.GetOrder()), v.GetHeight()))
 	}
-
-	return &b, nil
+	return nil
 }
 
 // initChainState attempts to load and initialize the chain state from the
 // database.  When the db does not yet contain any chain state, both it and the
 // chain state are initialized to the genesis block.
-func (b *BlockChain) initChainState(interrupt <-chan struct{}) error {
+func (b *BlockChain) initChainState() error {
 	// Update database versioning scheme if needed.
 	err := b.db.Update(func(dbTx database.Tx) error {
 		// No versioning upgrade is needed if the dbinfo bucket does not
@@ -1303,7 +1309,7 @@ func (b *BlockChain) BlockDAG() *meerdag.MeerDAG {
 }
 
 // Return median time source
-func (b *BlockChain) TimeSource() MedianTimeSource {
+func (b *BlockChain) TimeSource() model.MedianTimeSource {
 	return b.timeSource
 }
 

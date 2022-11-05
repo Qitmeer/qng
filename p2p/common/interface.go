@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/p2p/encoder"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
@@ -26,7 +27,7 @@ type P2P interface {
 	TxMemPool() *mempool.TxPool
 	Metadata() *pb.MetaData
 	MetadataSeq() uint64
-	TimeSource() blockchain.MedianTimeSource
+	TimeSource() model.MedianTimeSource
 	Notify() consensus.Notify
 	ConnectTo(node *qnode.Node)
 	Resolve(n *qnode.Node) *qnode.Node

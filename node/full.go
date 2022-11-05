@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
@@ -37,14 +36,8 @@ type QitmeerFull struct {
 	nfManager consensus.Notify
 	// database
 	db database.DB
-
 	// address service
 	addressApi *address.AddressApi
-
-	// clock time service
-	timeSource blockchain.MedianTimeSource
-	// signature cache
-	sigCache *txscript.SigCache
 }
 
 func (qm *QitmeerFull) APIs() []api.API {
@@ -55,7 +48,7 @@ func (qm *QitmeerFull) APIs() []api.API {
 }
 
 func (qm *QitmeerFull) RegisterP2PService() error {
-	peerServer, err := p2p.NewService(qm.node.Config, &qm.node.events, qm.node.Params)
+	peerServer, err := p2p.NewService(qm.node.Config, qm.node.consensus.Events(), qm.node.Params)
 	if err != nil {
 		return err
 	}
@@ -66,7 +59,7 @@ func (qm *QitmeerFull) RegisterRpcService() error {
 	if qm.node.Config.DisableRPC {
 		return nil
 	}
-	rpcServer, err := rpc.NewRPCServer(qm.node.Config, &qm.node.events)
+	rpcServer, err := rpc.NewRPCServer(qm.node.Config, qm.node.consensus.Events())
 	if err != nil {
 		return err
 	}
@@ -100,11 +93,9 @@ func (qm *QitmeerFull) RegisterRpcService() error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterBlkMgrService(indexManager model.IndexManager) error {
-
+func (qm *QitmeerFull) RegisterBlkMgrService() error {
 	// block-manager
-	bm, err := blkmgr.NewBlockManager(qm.nfManager, indexManager, qm.node.DB, qm.timeSource, qm.sigCache, qm.node.Config, qm.node.Params,
-		qm.node.quit, &qm.node.events, qm.GetPeerServer())
+	bm, err := blkmgr.NewBlockManager(qm.nfManager, qm.node.consensus, qm.GetPeerServer())
 	if err != nil {
 		return err
 	}
@@ -114,7 +105,7 @@ func (qm *QitmeerFull) RegisterBlkMgrService(indexManager model.IndexManager) er
 
 func (qm *QitmeerFull) RegisterTxManagerService(indexManager model.IndexManager) error {
 	// txmanager
-	tm, err := tx.NewTxManager(qm.GetBlockManager(), indexManager, qm.node.Config, qm.nfManager, qm.sigCache, qm.node.DB, &qm.node.events)
+	tm, err := tx.NewTxManager(qm.node.consensus, qm.GetBlockManager(), qm.nfManager)
 	if err != nil {
 		return err
 	}
@@ -140,8 +131,8 @@ func (qm *QitmeerFull) RegisterMinerService() error {
 		}, //TODO, duplicated config item with mem-pool
 		CoinbaseGenerator: coinbase.NewCoinbaseGenerator(qm.node.Params, qm.GetPeerServer().PeerID().String()),
 	}
-	miner := miner.NewMiner(cfg, &policy, qm.sigCache,
-		txManager.MemPool().(*mempool.TxPool), qm.timeSource, qm.GetBlockManager(), &qm.node.events)
+	miner := miner.NewMiner(cfg, &policy, qm.node.consensus.SigCache(),
+		txManager.MemPool().(*mempool.TxPool), qm.node.consensus.MedianTimeSource(), qm.GetBlockManager(), qm.node.consensus.Events())
 	qm.Services().RegisterService(miner)
 	return nil
 }
@@ -165,7 +156,7 @@ func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 }
 
 func (qm *QitmeerFull) RegisterVMService(tp consensus.TxPool) error {
-	vmServer, err := vm.NewService(qm.node.Config, &qm.node.events, tp, qm.nfManager)
+	vmServer, err := vm.NewService(qm.node.Config, qm.node.consensus.Events(), tp, qm.nfManager)
 	if err != nil {
 		return err
 	}
@@ -236,10 +227,8 @@ func (qm *QitmeerFull) GetMiner() *miner.Miner {
 
 func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	qm := QitmeerFull{
-		node:       node,
-		db:         node.DB,
-		timeSource: blockchain.NewMedianTime(),
-		sigCache:   txscript.NewSigCache(node.Config.SigCacheMaxSize),
+		node: node,
+		db:   node.DB,
 	}
 	qm.Service.InitServices()
 
@@ -251,17 +240,15 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	if err := qm.RegisterP2PService(); err != nil {
 		return nil, err
 	}
-
-	indexManager := index.NewManager(index.ToConfig(cfg), qm.db)
-
-	qm.RegisterNotifyMgr()
-
-	if err := qm.RegisterBlkMgrService(indexManager); err != nil {
+	if err := qm.RegisterNotifyMgr(); err != nil {
+		return nil, err
+	}
+	if err := qm.RegisterBlkMgrService(); err != nil {
 		return nil, err
 	}
 	bm := qm.GetBlockManager()
 
-	if err := qm.RegisterTxManagerService(indexManager); err != nil {
+	if err := qm.RegisterTxManagerService(node.consensus.IndexManager()); err != nil {
 		return nil, err
 	}
 
@@ -270,7 +257,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	// prepare peerServer
 	qm.GetPeerServer().SetBlockChain(bm.GetChain())
 	qm.GetPeerServer().SetBLKManager(bm)
-	qm.GetPeerServer().SetTimeSource(qm.timeSource)
+	qm.GetPeerServer().SetTimeSource(qm.node.consensus.MedianTimeSource())
 	qm.GetPeerServer().SetTxMemPool(txManager.MemPool().(*mempool.TxPool))
 	qm.GetPeerServer().SetNotify(qm.nfManager)
 
@@ -295,7 +282,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	}
 	if qm.GetRpcServer() != nil {
 		qm.GetRpcServer().BC = bm.GetChain()
-		qm.GetRpcServer().TxIndex = indexManager.TxIndex()
+		qm.GetRpcServer().TxIndex = node.consensus.IndexManager().(*index.Manager).TxIndex()
 		qm.GetRpcServer().ChainParams = bm.ChainParams()
 
 		qm.nfManager.(*notifymgr.NotifyMgr).RpcServer = qm.GetRpcServer()

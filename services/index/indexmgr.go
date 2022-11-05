@@ -18,6 +18,7 @@ import (
 // implements the blockchain.IndexManager interface so it can be seamlessly
 // plugged into normal chain processing.
 type Manager struct {
+	consensus      model.Consensus
 	cfg            *Config
 	db             database.DB
 	enabledIndexes []Indexer
@@ -31,32 +32,33 @@ var _ model.IndexManager = (*Manager)(nil)
 //
 // The manager returned satisfies the blockchain.IndexManager interface and thus
 // cleanly plugs into the normal blockchain processing path.
-func NewManager(cfg *Config, db database.DB) *Manager {
+func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 	if cfg == nil {
 		cfg = DefaultConfig()
 	}
 	// Create the transaction and address indexes if needed.
 	var indexers []Indexer
 	if cfg.TxIndex {
-		txIndex := NewTxIndex(db)
+		txIndex := NewTxIndex(consensus.DatabaseContext())
 		indexers = append(indexers, txIndex)
 	}
 	if cfg.AddrIndex {
-		addrIndex := NewAddrIndex(db)
+		addrIndex := NewAddrIndex(consensus.DatabaseContext())
 		indexers = append(indexers, addrIndex)
 	}
 	var vmbIndex *VMBlockIndex
 	if cfg.VMBlockIndex {
-		vmbIndex = NewVMBlockIndex(db)
+		vmbIndex = NewVMBlockIndex(consensus)
 	}
 	for _, indexer := range indexers {
 		log.Info(fmt.Sprintf("%s is enabled", indexer.Name()))
 	}
 	return &Manager{
 		cfg:            cfg,
-		db:             db,
+		db:             consensus.DatabaseContext(),
 		enabledIndexes: indexers,
 		vmblockIndex:   vmbIndex,
+		consensus:      consensus,
 	}
 }
 
@@ -68,7 +70,9 @@ func NewManager(cfg *Config, db database.DB) *Manager {
 // catch up due to the I/O contention.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) Init(chain model.BlockChain, interrupt <-chan struct{}) error {
+func (m *Manager) Init() error {
+	interrupt := m.consensus.Quit()
+	chain := m.consensus.BlockChain()
 	if m.vmblockIndex != nil {
 		err := m.vmblockIndex.Init(chain)
 		if err != nil {

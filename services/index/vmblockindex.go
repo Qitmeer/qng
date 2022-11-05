@@ -12,7 +12,7 @@ const (
 )
 
 type VMBlockIndex struct {
-	vmbStore model.VMBlockIndexStore
+	consensus model.Consensus
 }
 
 func (idx *VMBlockIndex) Init(chain model.BlockChain) error {
@@ -41,8 +41,9 @@ func (idx *VMBlockIndex) DisconnectBlock(dbTx database.Tx, block *types.Serializ
 	return nil
 }
 
-func NewVMBlockIndex(db database.DB) *VMBlockIndex {
-	index := &VMBlockIndex{}
-	log.Info(fmt.Sprintf("%s is enabled", index.Name()))
-	return index
+func NewVMBlockIndex(consensus model.Consensus) *VMBlockIndex {
+	log.Info(fmt.Sprintf("%s is enabled", vmblockIndexName))
+	return &VMBlockIndex{
+		consensus: consensus,
+	}
 }

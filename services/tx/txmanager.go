@@ -3,10 +3,8 @@ package tx
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
@@ -16,7 +14,7 @@ import (
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/services/mempool"
-	"github.com/Qitmeer/qng/vm/consensus"
+	vmconsensus "github.com/Qitmeer/qng/vm/consensus"
 	"time"
 )
 
@@ -31,7 +29,7 @@ type TxManager struct {
 	txMemPool *mempool.TxPool
 
 	// notify
-	ntmgr consensus.Notify
+	ntmgr vmconsensus.Notify
 
 	// db
 	db database.DB
@@ -127,11 +125,11 @@ func (tm *TxManager) Stop() error {
 	return nil
 }
 
-func (tm *TxManager) MemPool() consensus.TxPool {
+func (tm *TxManager) MemPool() vmconsensus.TxPool {
 	return tm.txMemPool
 }
 
-func (tm *TxManager) FeeEstimator() consensus.FeeEstimator {
+func (tm *TxManager) FeeEstimator() vmconsensus.FeeEstimator {
 	if tm.feeEstimator != nil {
 		return tm.feeEstimator
 	}
@@ -144,8 +142,9 @@ func (tm *TxManager) InitDefaultFeeEstimator() {
 		mempool.DefaultEstimateFeeMinRegisteredBlocks)
 }
 
-func NewTxManager(bm *blkmgr.BlockManager, indexManager model.IndexManager, cfg *config.Config, ntmgr consensus.Notify,
-	sigCache *txscript.SigCache, db database.DB, events *event.Feed) (*TxManager, error) {
+func NewTxManager(consensus model.Consensus, bm *blkmgr.BlockManager, ntmgr vmconsensus.Notify) (*TxManager, error) {
+	cfg := consensus.Config()
+	sigCache := consensus.SigCache()
 	// mem-pool
 	amt, _ := types.NewMeer(uint64(cfg.MinTxFee))
 	txC := mempool.Config{
@@ -173,16 +172,16 @@ func NewTxManager(bm *blkmgr.BlockManager, indexManager model.IndexManager, cfg 
 		SubsidyCache:     bm.GetChain().FetchSubsidyCache(),
 		SigCache:         sigCache,
 		PastMedianTime:   func() time.Time { return bm.GetChain().BestSnapshot().MedianTime },
-		IndexManager:     indexManager.(*index.Manager),
+		IndexManager:     consensus.IndexManager().(*index.Manager),
 		BD:               bm.GetChain().BlockDAG(),
 		BC:               bm.GetChain(),
 		DataDir:          cfg.DataDir,
 		Expiry:           time.Duration(cfg.MempoolExpiry),
 		Persist:          cfg.Persistmempool,
 		NoMempoolBar:     cfg.NoMempoolBar,
-		Events:           events,
+		Events:           consensus.Events(),
 	}
 	txMemPool := mempool.New(&txC)
 	invalidTx := make(map[hash.Hash]*meerdag.HashSet)
-	return &TxManager{bm: bm, indexManager: indexManager.(*index.Manager), txMemPool: txMemPool, ntmgr: ntmgr, db: db, invalidTx: invalidTx, enableFeeEst: cfg.Estimatefee}, nil
+	return &TxManager{bm: bm, indexManager: consensus.IndexManager().(*index.Manager), txMemPool: txMemPool, ntmgr: ntmgr, db: consensus.DatabaseContext(), invalidTx: invalidTx, enableFeeEst: cfg.Estimatefee}, nil
 }

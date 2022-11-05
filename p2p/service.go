@@ -6,6 +6,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	pv "github.com/Qitmeer/qng/core/protocol"
@@ -81,7 +82,7 @@ type Service struct {
 
 	blockChain  *blockchain.BlockChain
 	blkMgr      *blkmgr.BlockManager
-	timeSource  blockchain.MedianTimeSource
+	timeSource  model.MedianTimeSource
 	txMemPool   *mempool.TxPool
 	notify      consensus.Notify
 	rebroadcast *Rebroadcast
@@ -452,11 +453,11 @@ func (s *Service) TxMemPool() *mempool.TxPool {
 	return s.txMemPool
 }
 
-func (s *Service) SetTimeSource(timeSource blockchain.MedianTimeSource) {
+func (s *Service) SetTimeSource(timeSource model.MedianTimeSource) {
 	s.timeSource = timeSource
 }
 
-func (s *Service) TimeSource() blockchain.MedianTimeSource {
+func (s *Service) TimeSource() model.MedianTimeSource {
 	return s.timeSource
 }
 
