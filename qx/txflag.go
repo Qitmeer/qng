@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/engine/txscript"
 	"math"
 	"strconv"
 	"strings"
@@ -69,6 +69,7 @@ type txOutput struct {
 	amount   float64
 	coinid   int64
 	locktype string
+	args     string
 }
 
 func (i LockAddress) String() string {
@@ -78,7 +79,7 @@ func (i txInput) String() string {
 	return fmt.Sprintf("%x:%d:%d:%s", i.txhash[:], i.index, i.sequence, i.unlocktype)
 }
 func (o txOutput) String() string {
-	return fmt.Sprintf("%s:%f:%d:%s", o.target, o.amount, o.coinid, o.locktype)
+	return fmt.Sprintf("%s:%f:%d:%s:%s", o.target, o.amount, o.coinid, o.locktype, o.args)
 }
 
 func (v TxInputsFlag) String() string {
@@ -126,15 +127,15 @@ func (v *TxInputsFlag) Set(s string) error {
 		}
 		seq = uint32(s)
 	}
-	txtype := types.TxTypeRegular.String()
+	scripttype := txscript.PubKeyHashTy.String()
 	if len(input) >= 4 {
-		txtype = input[3]
+		scripttype = input[3]
 	}
 	i := txInput{
 		data,
 		uint32(index),
 		uint32(seq),
-		txtype,
+		scripttype,
 	}
 	v.inputs = append(v.inputs, i)
 	return nil
@@ -154,11 +155,15 @@ func (of *TxOutputsFlag) Set(s string) error {
 	if err != nil {
 		return err
 	}
-	txtype := types.TxTypeRegular.String()
+	scripttype := txscript.PubKeyHashTy.String()
 	if len(output) == 4 {
-		txtype = output[3]
+		scripttype = output[3]
+	}
+	args := ""
+	if len(output) == 5 {
+		args = output[4]
 	}
 	of.outputs = append(of.outputs, txOutput{
-		target, amount, coinid, txtype})
+		target, amount, coinid, scripttype, args})
 	return nil
 }

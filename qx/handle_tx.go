@@ -14,6 +14,7 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/qx/scriptbasetypes"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -93,13 +94,13 @@ func TxEncode(version uint32, lockTime uint32, timestamp *time.Time, inputs []In
 		}
 		switch o.OutputType {
 		case txscript.CLTVPubKeyHashTy:
-			if lockTime <= 0 {
-				return "", fmt.Errorf("can not set CLTVPubKeyHashTy locktime need > 0")
+			if o.TargetLockTime <= 0 {
+				return "", fmt.Errorf("can not set CLTVPubKeyHashTy ADDRESS:AMOUNT:COINID:SCRIPTTYPE:LOCKTIME")
 			}
 			if _, ok := addr.(*address.PubKeyHashAddress); !ok {
 				return "", fmt.Errorf("locktype is %v but the out address is: %v , not the PubKeyHashAddress", o.OutputType.String(), addr)
 			}
-			pkScript, err = txscript.PayToCLTVPubKeyHashScript(addr.Script(), int64(lockTime))
+			pkScript, err = txscript.PayToCLTVPubKeyHashScript(addr.Script(), o.TargetLockTime)
 			if err != nil {
 				return "", err
 			}
@@ -255,6 +256,14 @@ func TxEncodeSTDO(version TxVersionFlag, lockTime TxLockTimeFlag, txIn TxInputsF
 			ErrExit(fmt.Errorf("fail to create the currency amount from a "+
 				"floating point value %f : %w", output.amount, err))
 		}
+		targetLock := int64(0)
+		if output.locktype == txscript.CLTVPubKeyHashTy.String() {
+			targetLock, err = strconv.ParseInt(output.args, 10, 46)
+			if err != nil {
+				ErrExit(fmt.Errorf("cltvpubkeyhash need a locktime or lockheight ADDRESS:AMOUNT:COINID:SCRIPTTYPE:LOCKTIME"))
+			}
+		}
+
 		txOutputs = append(txOutputs, Output{
 			TargetAddress: output.target,
 			OutputType:    scriptbasetypes.GetScriptType(output.locktype),
@@ -262,7 +271,7 @@ func TxEncodeSTDO(version TxVersionFlag, lockTime TxLockTimeFlag, txIn TxInputsF
 				Value: atomic.Value,
 				Id:    types.CoinID(output.coinid),
 			},
-			TargetLockTime: int64(lockTime),
+			TargetLockTime: targetLock,
 		})
 	}
 	mtxHex, err := TxEncode(uint32(version), uint32(lockTime), nil, txInputs, txOutputs)

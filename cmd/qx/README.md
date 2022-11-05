@@ -72,13 +72,13 @@ addr & tx & sign
 ```
 
 ### Qx Support UnLock script Types
-- `standard` the txid vout address need pubkeyhash address  
+- `pubkeyhash` the txid vout address need pubkeyhash address  
 - `pubkey` the txid vout address need pubkey address
 - `cltvpubkeyhash` the txid vout address need pubkeyhash address, sequence need 4294967294 and need lock a height or time 
 - `crossimport` the special script, the index need 4294967294 and sequence need 258
 
 ### Qx Support Lock script Types
-- `standard` the txid vout address need pubkeyhash address
+- `pubkeyhash` the txid vout address need pubkeyhash address
 - `pubkey` the txid vout address need pubkey address
 - `cltvpubkeyhash` the txid vout address need pubkeyhash address, and need lock a height or time
 
@@ -87,7 +87,7 @@ addr & tx & sign
 ### TxTypeRegular (Regular MEER Tx)
 From UTXO: ```5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca``` to MEER ```XmRTajVTajFiaEkd7PygFw46vNsoNW6fWE5``` 9.9999 MEER coinID : 0 MEER
 ```bash
-$ ./qx tx-encode -v 1 -i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967295:standard -l 0 -o XmRTajVTajFiaEkd7PygFw46vNsoNW6fWE5:9.9999:0:standard
+$ ./qx tx-encode -v 1 -i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967295:pubkeyhash -l 0 -o XmRTajVTajFiaEkd7PygFw46vNsoNW6fWE5:9.9999:0:pubkeyhash
 ```
 ```output
 0100000001ca0265bbe73e89220da12dcfed31fb45ec3d18b60ea161036b418167bbd6da5f00000000ffffffff010000f0a29a3b000000001976a914ada117669b04771e481cc68ae8d4f33f913d1eda88ac0000000000000000faac64630100-7b22696e707574223a7b2230223a327d2c226f7574707574223a7b2230223a327d7d

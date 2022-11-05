@@ -28,11 +28,11 @@ func NewTxSignObject(scripttype txscript.ScriptClass) TxSignBase {
 
 func GetScriptType(scriptTyp string) txscript.ScriptClass {
 	switch scriptTyp {
-	case "standard":
+	case txscript.PubKeyHashTy.String():
 		return txscript.PubKeyHashTy
-	case "pubkey":
+	case txscript.PubKeyTy.String():
 		return txscript.PubKeyTy
-	case "cltvpubkeyhash":
+	case txscript.CLTVPubKeyHashTy.String():
 		return txscript.CLTVPubKeyHashTy
 	case "crossimport":
 		return 255 // special script
