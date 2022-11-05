@@ -109,7 +109,8 @@ type Config struct {
 
 	Estimatefee bool `long:"estimatefee" description:"Enable estimate fee"`
 
-	AcctMode bool `long:"acctmode" description:"Enable support account system mode"`
+	AcctMode   bool `long:"acctmode" description:"Enable support account system mode"`
+	IsArchival bool `long:"archival" description:"Archival tells the consensus if it should not prune old blocks"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {

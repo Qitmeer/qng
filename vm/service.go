@@ -5,7 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	qconfig "github.com/Qitmeer/qng/config"
-	qconsensus "github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
@@ -113,7 +113,7 @@ func (s *Service) registerVMs() error {
 }
 
 func (s *Service) GetVMContext() consensus.Context {
-	return &qconsensus.Context{
+	return &vm.Context{
 		Context: s.Context(),
 		Cfg: &qconfig.Config{
 			DataDir:           s.cfg.DataDir,
@@ -183,7 +183,7 @@ func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 		return 0, fmt.Errorf("Not support:%s\n", tx.GetTxType().String())
 	}
 
-	itx, ok := tx.(*qconsensus.ImportTx)
+	itx, ok := tx.(*vm.ImportTx)
 	if !ok {
 		return 0, fmt.Errorf("Not support tx:%s\n", tx.GetTxType().String())
 	}
@@ -296,8 +296,8 @@ func (s *Service) DisconnectBlock(block *types.SerializedBlock) error {
 	return vm.DisconnectBlock(b)
 }
 
-func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*qconsensus.Block, error) {
-	result := &qconsensus.Block{Id: block.Hash(), Txs: []consensus.Tx{}, Time: block.Block().Header.Timestamp}
+func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*vm.Block, error) {
+	result := &vm.Block{Id: block.Hash(), Txs: []consensus.Tx{}, Time: block.Block().Header.Timestamp}
 
 	for idx, tx := range block.Transactions() {
 		if idx == 0 {
@@ -308,13 +308,13 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*
 		}
 
 		if types.IsCrossChainExportTx(tx.Tx) {
-			ctx, err := qconsensus.NewExportTx(tx.Tx)
+			ctx, err := vm.NewExportTx(tx.Tx)
 			if err != nil {
 				return nil, err
 			}
 			result.Txs = append(result.Txs, ctx)
 		} else if types.IsCrossChainImportTx(tx.Tx) {
-			ctx, err := qconsensus.NewImportTx(tx.Tx)
+			ctx, err := vm.NewImportTx(tx.Tx)
 			if err != nil {
 				return nil, err
 			}
@@ -324,7 +324,7 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*
 			}
 			result.Txs = append(result.Txs, ctx)
 		} else if types.IsCrossChainVMTx(tx.Tx) {
-			ctx, err := qconsensus.NewVMTx(tx.Tx)
+			ctx, err := vm.NewVMTx(tx.Tx)
 			if err != nil {
 				return nil, err
 			}

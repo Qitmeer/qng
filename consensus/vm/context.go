@@ -1,4 +1,4 @@
-package consensus
+package vm
 
 import (
 	"context"

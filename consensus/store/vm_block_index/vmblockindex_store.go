@@ -10,6 +10,8 @@ import (
 )
 
 var bucketName = []byte("vm_block_index")
+var tipOrderKeyName = []byte("vmbi_tip_order")
+var tipHashKeyName = []byte("vmbi_tip_hash")
 
 type vmblockindexStore struct {
 	shardID model.StagingShardID
@@ -23,6 +25,12 @@ func (bis *vmblockindexStore) Stage(stagingArea *model.StagingArea, bid uint64, 
 		delete(stagingShard.toDelete, bid)
 	}
 	stagingShard.toAdd[bid] = bhash
+}
+
+func (bis *vmblockindexStore) StageTip(stagingArea *model.StagingArea, bhash *hash.Hash, order uint64) {
+	stagingShard := bis.stagingShard(stagingArea)
+	stagingShard.tipOrder = order
+	stagingShard.tipHash = bhash
 }
 
 func (bis *vmblockindexStore) IsStaged(stagingArea *model.StagingArea) bool {

@@ -245,6 +245,9 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 
 	cfg := node.Config
 
+	if err := node.consensus.Init(); err != nil {
+		return nil, err
+	}
 	if err := qm.RegisterP2PService(); err != nil {
 		return nil, err
 	}

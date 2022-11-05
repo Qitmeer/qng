@@ -9,9 +9,9 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/util"
-	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
@@ -125,7 +125,7 @@ type BlockChain struct {
 	unknownRulesWarned bool
 	deploymentMux      sync.RWMutex
 
-	VMService consensus.VMI
+	VMService vm.VMI
 
 	Acct ACCTI
 

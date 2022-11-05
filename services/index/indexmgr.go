@@ -11,7 +11,6 @@ import (
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 )
 
@@ -22,6 +21,7 @@ type Manager struct {
 	cfg            *Config
 	db             database.DB
 	enabledIndexes []Indexer
+	vmblockIndex   *VMBlockIndex
 }
 
 // Ensure the Manager type implements the blockchain.IndexManager interface.
@@ -36,21 +36,27 @@ func NewManager(cfg *Config, db database.DB) *Manager {
 		cfg = DefaultConfig()
 	}
 	// Create the transaction and address indexes if needed.
-	var indexes []Indexer
+	var indexers []Indexer
 	if cfg.TxIndex {
-		log.Info("Transaction index is enabled")
 		txIndex := NewTxIndex(db)
-		indexes = append(indexes, txIndex)
+		indexers = append(indexers, txIndex)
 	}
 	if cfg.AddrIndex {
-		log.Info("Address index is enabled")
 		addrIndex := NewAddrIndex(db)
-		indexes = append(indexes, addrIndex)
+		indexers = append(indexers, addrIndex)
+	}
+	var vmbIndex *VMBlockIndex
+	if cfg.VMBlockIndex {
+		vmbIndex = NewVMBlockIndex(db)
+	}
+	for _, indexer := range indexers {
+		log.Info(fmt.Sprintf("%s is enabled", indexer.Name()))
 	}
 	return &Manager{
 		cfg:            cfg,
 		db:             db,
-		enabledIndexes: indexes,
+		enabledIndexes: indexers,
+		vmblockIndex:   vmbIndex,
 	}
 }
 
@@ -63,6 +69,12 @@ func NewManager(cfg *Config, db database.DB) *Manager {
 //
 // This is part of the blockchain.IndexManager interface.
 func (m *Manager) Init(chain model.BlockChain, interrupt <-chan struct{}) error {
+	if m.vmblockIndex != nil {
+		err := m.vmblockIndex.Init(chain)
+		if err != nil {
+			return err
+		}
+	}
 	// Nothing to do when no indexes are enabled.
 	if len(m.enabledIndexes) == 0 {
 		return nil
@@ -197,7 +209,7 @@ func (m *Manager) Init(chain model.BlockChain, interrupt <-chan struct{}) error 
 	}
 
 	// Create a progress logger for the indexing process below.
-	progressLogger := progresslog.NewBlockProgressLogger("Indexed", log.Root())
+	progressLogger := progresslog.NewBlockProgressLogger("Indexed", log)
 
 	// At this point, one or more indexes are behind the current best chain
 	// tip and need to be caught up, so log the details and loop through
@@ -329,6 +341,9 @@ func indexNeedsInputs(index Indexer) bool {
 func (m *Manager) maybeCreateIndexes(dbTx database.Tx) error {
 	indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
 	for _, indexer := range m.enabledIndexes {
+		if indexer.Name() == vmblockIndexName {
+			continue
+		}
 		// Nothing to do if the index tip already exists.
 		idxKey := indexer.Key()
 		if indexesBucket.Get(idxKey) != nil {

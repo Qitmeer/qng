@@ -1,6 +1,7 @@
 package index
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
@@ -11,6 +12,7 @@ const (
 )
 
 type VMBlockIndex struct {
+	vmbStore model.VMBlockIndexStore
 }
 
 func (idx *VMBlockIndex) Init(chain model.BlockChain) error {
@@ -40,5 +42,7 @@ func (idx *VMBlockIndex) DisconnectBlock(dbTx database.Tx, block *types.Serializ
 }
 
 func NewVMBlockIndex(db database.DB) *VMBlockIndex {
-	return &VMBlockIndex{}
+	index := &VMBlockIndex{}
+	log.Info(fmt.Sprintf("%s is enabled", index.Name()))
+	return index
 }

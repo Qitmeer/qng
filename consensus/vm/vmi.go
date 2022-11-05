@@ -1,4 +1,4 @@
-package consensus
+package vm
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
