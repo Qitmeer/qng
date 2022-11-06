@@ -444,7 +444,7 @@ example:
 	txEncodeCmd.Var(&txOutputs, "o", `The set of transaction output data encoded as ADDRESS:AMOUNT:COINID:SCRIPTTYPE:[args].
 ADDRESS is an address (pay-to-pubkey-hash or pay-to-script-hash).
 AMOUNT is the 64 bit spend amount in qitmeer.
-COINID enum {0 => MEER,1=>ETHID}
+COINID enum {0 => MEERA,1=>MEERB}
 SCRIPTTYPE is lock script type
 - pubkeyhash PayToAddrScript(pkh)
 - pubkey PayToAddrScript(pk)
