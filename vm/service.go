@@ -23,18 +23,11 @@ type Factory interface {
 
 type Service struct {
 	service.Service
-
 	events *event.Feed
-
 	vms map[string]consensus.ChainVM
-
 	cfg *config.Config
-
-	tp consensus.TxPool
-
-	Notify consensus.Notify
-
 	apis []api.API
+	ctx *vm.Context
 }
 
 func (s *Service) Start() error {
@@ -43,12 +36,8 @@ func (s *Service) Start() error {
 		return err
 	}
 	for _, vm := range s.vms {
-		err := vm.Initialize(s.GetVMContext())
-		if err != nil {
-			return err
-		}
 		vm.RegisterAPIs(s.apis)
-		err = vm.Bootstrapping()
+		err := vm.Bootstrapping()
 		if err != nil {
 			return err
 		}
@@ -110,20 +99,6 @@ func (s *Service) registerVMs() error {
 	err := s.Register(evm.New())
 
 	return err
-}
-
-func (s *Service) GetVMContext() consensus.Context {
-	return &vm.Context{
-		Context: s.Context(),
-		Cfg: &qconfig.Config{
-			DataDir:           s.cfg.DataDir,
-			DebugLevel:        s.cfg.DebugLevel,
-			DebugPrintOrigins: s.cfg.DebugPrintOrigins,
-			EVMEnv:            s.cfg.EVMEnv,
-		},
-		Tp:     s.tp,
-		Notify: s.Notify,
-	}
 }
 
 func (s *Service) subscribe() {
@@ -396,19 +371,41 @@ func (s *Service) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
 	return vm.GetBlockIDByTxHash(txhash)
 }
 
-func NewService(cfg *config.Config, events *event.Feed, tp consensus.TxPool, Notify consensus.Notify) (*Service, error) {
+func (s *Service) SetTxPool(tp consensus.TxPool) {
+	s.ctx.Tp=tp
+}
+
+func (s *Service) SetNotify(Notify consensus.Notify) {
+	s.ctx.Notify=Notify
+}
+
+func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
 	ser := Service{
 		events: events,
 		vms:    make(map[string]consensus.ChainVM),
 		cfg:    cfg,
-		tp:     tp,
-		Notify: Notify,
 		apis:   []api.API{},
+	}
+	ser.InitContext()
+	ser.ctx=&vm.Context{
+		Context: ser.Context(),
+		Cfg: &qconfig.Config{
+			DataDir:           cfg.DataDir,
+			DebugLevel:        cfg.DebugLevel,
+			DebugPrintOrigins: cfg.DebugPrintOrigins,
+			EVMEnv:            cfg.EVMEnv,
+		},
 	}
 	if err := ser.registerVMs(); err != nil {
 		log.Error(err.Error())
 		return nil, err
 	}
 
+	for _, vm := range ser.vms {
+		err := vm.Initialize(ser.ctx)
+		if err != nil {
+			return nil,err
+		}
+	}
 	return &ser, nil
 }

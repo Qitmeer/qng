@@ -73,6 +73,12 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 func (m *Manager) Init() error {
 	interrupt := m.consensus.Interrupt()
 	chain := m.consensus.BlockChain()
+	if m.vmblockIndex != nil {
+		err :=m.vmblockIndex.Init()
+		if err != nil {
+			return err
+		}
+	}
 	// Nothing to do when no indexes are enabled.
 	if len(m.enabledIndexes) == 0 {
 		return nil

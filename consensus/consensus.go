@@ -12,6 +12,7 @@ import (
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/index"
+	"github.com/Qitmeer/qng/vm"
 	"sync"
 )
 
@@ -37,6 +38,8 @@ type consensus struct {
 
 	blockchain   model.BlockChain
 	indexManager model.IndexManager
+
+	vmService *vm.Service
 }
 
 // Init initializes consensus
@@ -75,6 +78,13 @@ func (s *consensus) Init() error {
 		return err
 	}
 	s.blockchain = blockchain
+	//
+	vmService, err := vm.NewService(s.Config(), s.Events())
+	if err != nil {
+		return err
+	}
+	s.vmService=vmService
+	blockchain.VMService=vmService
 	s.subscribe()
 	return blockchain.Init()
 }
@@ -124,37 +134,24 @@ func (s *consensus) GenesisHash() *hash.Hash {
 }
 
 func (s *consensus) subscribe() {
-	ch := make(chan *event.Event)
-	sub := s.events.Subscribe(ch)
-	go func() {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case ev := <-ch:
-				if ev.Data != nil {
-					switch value := ev.Data.(type) {
-					case int:
-						// TODO: The future will be structured
-						if value == event.Initialized {
-							if s.indexManager.(*index.Manager).VMBlockIndex() != nil {
-								err := s.indexManager.(*index.Manager).VMBlockIndex().Init()
-								if err != nil {
-									log.Error(err.Error())
-									s.Shutdown()
-								}
-							}
-						}
-					}
-				}
-				if ev.Ack != nil {
-					ev.Ack <- struct{}{}
-				}
-			case <-s.interrupt:
-				log.Info("Close consensus Event Subscribe")
-				return
-			}
-		}
-	}()
+	//ch := make(chan *event.Event)
+	//sub := s.events.Subscribe(ch)
+	//go func() {
+	//	defer sub.Unsubscribe()
+	//	for {
+	//		select {
+	//		case ev := <-ch:
+	//			if ev.Data != nil {
+	//			}
+	//			if ev.Ack != nil {
+	//				ev.Ack <- struct{}{}
+	//			}
+	//		case <-s.interrupt:
+	//			log.Info("Close consensus Event Subscribe")
+	//			return
+	//		}
+	//	}
+	//}()
 }
 
 func New(cfg *config.Config, databaseContext database.DB, interrupt <-chan struct{}, shutdownRequestChannel chan struct{}) *consensus {

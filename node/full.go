@@ -155,12 +155,8 @@ func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterVMService(tp consensus.TxPool) error {
-	vmServer, err := vm.NewService(qm.node.Config, qm.node.consensus.Events(), tp, qm.nfManager)
-	if err != nil {
-		return err
-	}
-	return qm.Services().RegisterService(vmServer)
+func (qm *QitmeerFull) RegisterVMService(vmService *vm.Service) error {
+	return qm.Services().RegisterService(vmService)
 }
 
 // return block manager
@@ -268,10 +264,12 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	// init address api
 	qm.addressApi = address.NewAddressApi(cfg, node.Params, bm.GetChain())
 
-	if err := qm.RegisterVMService(txManager.MemPool()); err != nil {
+	if err := qm.RegisterVMService(bm.GetChain().VMService.(*vm.Service)); err != nil {
 		return nil, err
 	}
-	bm.GetChain().VMService = qm.GetVMService()
+	vms:=qm.GetVMService()
+	vms.SetTxPool(txManager.MemPool())
+	vms.SetNotify(qm.nfManager)
 
 	if err := qm.RegisterAccountService(cfg); err != nil {
 		return nil, err
