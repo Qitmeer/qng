@@ -439,7 +439,7 @@ SCRIPTTYPE is unlock script type
 - crossimport the special script, the index need 4294967294 and sequence need 258
 example: 
 -i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967295:pubkeyhash
--i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967295:cltvpubkeyhash:1667298670
+-i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967294:cltvpubkeyhash:1667298670
 `)
 	txEncodeCmd.Var(&txOutputs, "o", `The set of transaction output data encoded as ADDRESS:AMOUNT:COINID:SCRIPTTYPE:[args].
 ADDRESS is an address (pay-to-pubkey-hash or pay-to-script-hash).
