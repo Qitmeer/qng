@@ -1,9 +1,11 @@
 package vm_block_index
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/log"
 )
 
 type vmblockindexStagingShard struct {
@@ -16,7 +18,14 @@ type vmblockindexStagingShard struct {
 
 func (biss *vmblockindexStagingShard) Commit(dbTx database.Tx) error {
 	bucket := dbTx.Metadata().Bucket(bucketName)
-
+	if bucket == nil {
+		var err error
+		bucket,err=dbTx.Metadata().CreateBucketIfNotExists(bucketName)
+		if err != nil {
+			return err
+		}
+		log.Info(fmt.Sprintf("Create bucket:%s",bucketName))
+	}
 	for vmbid, bhash := range biss.toAdd {
 		err := bucket.Put(serialization.SerializeUint64(vmbid), bhash.Bytes())
 		if err != nil {

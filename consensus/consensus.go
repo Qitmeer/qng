@@ -49,7 +49,7 @@ func (s *consensus) Init() error {
 	}
 
 	if s.cfg.VMBlockIndex {
-		vmblockindexStore, err := vm_block_index.New(s.databaseContext, defaultCacheSize, defaultPreallocateCaches)
+		vmblockindexStore, err := vm_block_index.New(s.databaseContext, 10, false)
 		if err != nil {
 			return err
 		}

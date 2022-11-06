@@ -14,4 +14,5 @@ type VMBlockIndexStore interface {
 	Delete(stagingArea *StagingArea, bid uint64)
 	Tip(stagingArea *StagingArea) (uint64, *hash.Hash, error)
 	IsEmpty() bool
+	Clean() error
 }

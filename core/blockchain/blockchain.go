@@ -995,9 +995,15 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 		}
 		return nil
 	})
-
 	if err != nil {
 		return err
+	}
+
+	if b.indexManager != nil {
+		err := b.indexManager.UpdateMainTip(mainTip.GetHash(),uint64(mainTip.GetOrder()))
+		if err != nil {
+			return err
+		}
 	}
 	// Update the state for the best block.  Notice how this replaces the
 	// entire struct instead of updating the existing one.  This effectively
@@ -1028,7 +1034,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		pkss = append(pkss, stxo.PkScript)
 	}
 	if !node.GetStatus().KnownInvalid() {
-		err := b.VMService.ConnectBlock(block)
+		vmbid,err := b.VMService.ConnectBlock(block)
 		if err != nil {
 			return err
 		}
@@ -1049,19 +1055,20 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 			if err != nil {
 				return err
 			}
-			// Allow the index manager to call each of the currently active
-			// optional indexes with the block being connected so they can
-			// update themselves accordingly.
-			if b.indexManager != nil {
-				err := b.indexManager.ConnectBlock(dbTx, block, pkss, node)
-				if err != nil {
-					return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
-				}
-			}
 			return nil
 		})
 		if err != nil {
 			return err
+		}
+
+		// Allow the index manager to call each of the currently active
+		// optional indexes with the block being connected so they can
+		// update themselves accordingly.
+		if b.indexManager != nil {
+			err := b.indexManager.ConnectBlock(block, pkss, node,vmbid)
+			if err != nil {
+				return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
+			}
 		}
 
 		// Prune fully spent entries and mark all entries in the view unmodified
@@ -1074,17 +1081,11 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		}
 	} else {
 		// Atomically insert info into the database.
-		err := b.db.Update(func(dbTx database.Tx) error {
-			if b.indexManager != nil {
-				err := b.indexManager.ConnectBlock(dbTx, block, pkss, node)
-				if err != nil {
-					return err
-				}
+		if b.indexManager != nil {
+			err := b.indexManager.ConnectBlock(block, pkss, node,0)
+			if err != nil {
+				return err
 			}
-			return nil
-		})
-		if err != nil {
-			return err
 		}
 	}
 	connectedBlocks.PushBack([]interface{}{block, b.bd.IsOnMainChain(node.GetID())})
@@ -1096,7 +1097,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
-	err := b.VMService.DisconnectBlock(block)
+	vmbid,err := b.VMService.DisconnectBlock(block)
 	if err != nil {
 		return err
 	}
@@ -1115,25 +1116,24 @@ func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoVie
 		if err != nil {
 			return err
 		}
-		// Allow the index manager to call each of the currently active
-		// optional indexes with the block being disconnected so they
-		// can update themselves accordingly.
-		if b.indexManager != nil {
-			pkss := [][]byte{}
-			for _, stxo := range stxos {
-				pkss = append(pkss, stxo.PkScript)
-			}
-			err := b.indexManager.DisconnectBlock(dbTx, block, pkss)
-			if err != nil {
-				return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
-			}
-		}
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-
+	// Allow the index manager to call each of the currently active
+	// optional indexes with the block being disconnected so they
+	// can update themselves accordingly.
+	if b.indexManager != nil {
+		pkss := [][]byte{}
+		for _, stxo := range stxos {
+			pkss = append(pkss, stxo.PkScript)
+		}
+		err := b.indexManager.DisconnectBlock(block, pkss,vmbid)
+		if err != nil {
+			return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
+		}
+	}
 	// Prune fully spent entries and mark all entries in the view unmodified
 	// now that the modifications have been committed to the database.
 	view.commit()

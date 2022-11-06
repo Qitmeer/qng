@@ -576,7 +576,7 @@ var (
 
 // loadConfig initializes and parses the config using a config file and command
 // line options.
-func LoadConfig(ctx *cli.Context) (*config.Config, error) {
+func LoadConfig(ctx *cli.Context,parsefile bool) (*config.Config, error) {
 	cfg.RPCListeners = RPCListeners.Value()
 	cfg.Modules = Modules.Value()
 	cfg.MiningAddrs = MiningAddrs.Value()
@@ -635,7 +635,7 @@ func LoadConfig(ctx *cli.Context) (*config.Config, error) {
 	// not specify an override.
 	// TODO
 
-	if ctx.IsSet("configfile") {
+	if ctx.IsSet("configfile") && parsefile {
 		// Load additional config from file.
 		parser := newConfigParser(&cfg, flags.Default)
 		err := flags.NewIniParser(parser).ParseFile(cfg.ConfigFile)

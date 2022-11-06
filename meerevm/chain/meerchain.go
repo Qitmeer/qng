@@ -40,69 +40,65 @@ func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
 	return nil
 }
 
-func (b *MeerChain) ConnectBlock(block qconsensus.Block) error {
+func (b *MeerChain) ConnectBlock(block qconsensus.Block) (uint64,error) {
 
 	mblock, _, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
 
 	if err != nil {
-		return err
+		return 0,err
 	}
 
 	num, err := b.chain.Ether().BlockChain().InsertChain(types.Blocks{mblock})
 	if err != nil {
-		return err
+		return 0,err
 	}
 	if num != 1 {
-		return fmt.Errorf("BuildBlock error")
+		return 0,fmt.Errorf("BuildBlock error")
 	}
 
 	//
-	mbhb := block.ID().Bytes()
-	qcommon.ReverseBytes(&mbhb)
-	mbh := common.BytesToHash(mbhb)
+	mbh := qcommon.ToEVMHash(block.ID())
 	//
 	WriteBlockNumber(b.chain.Ether().ChainDb(), mbh, mblock.NumberU64())
 	//
 	log.Debug(fmt.Sprintf("MeerEVM Block:number=%d hash=%s txs=%d  => blockHash(%s) txs=%d", mblock.Number().Uint64(), mblock.Hash().String(), len(mblock.Transactions()), mbh.String(), len(block.Transactions())))
 
-	return nil
+	return mblock.NumberU64(),nil
 }
 
-func (b *MeerChain) DisconnectBlock(block qconsensus.Block) error {
+func (b *MeerChain) DisconnectBlock(block qconsensus.Block) (uint64,error) {
 	curBlock := b.chain.Ether().BlockChain().CurrentBlock()
 	if curBlock == nil {
 		log.Error("Can't find current block")
-		return nil
+		return 0,nil
 	}
 
-	mbhb := block.ID().Bytes()
-	qcommon.ReverseBytes(&mbhb)
-	mbh := common.BytesToHash(mbhb)
+	mbh := qcommon.ToEVMHash(block.ID())
 
 	bn := ReadBlockNumber(b.chain.Ether().ChainDb(), mbh)
 	if bn == nil {
-		return nil
+		return 0,nil
 	}
 	defer func() {
 		DeleteBlockNumber(b.chain.Ether().ChainDb(), mbh)
 	}()
 
 	if *bn > curBlock.NumberU64() {
-		return nil
+		return *bn,nil
 	}
 	parentNumber := *bn - 1
 	err := b.chain.Ether().BlockChain().SetHead(parentNumber)
 	if err != nil {
 		log.Error(err.Error())
-		return nil
+		return *bn,nil
 	}
 	newParent := b.chain.Ether().BlockChain().CurrentBlock()
 	if newParent == nil {
 		log.Error("Can't find current block")
-		return nil
+		return *bn,nil
 	}
 	log.Debug(fmt.Sprintf("Reorganize:%s(%d) => %s(%d)", curBlock.Hash().String(), curBlock.NumberU64(), newParent.Hash().String(), newParent.NumberU64()))
-	return nil
+	return *bn,nil
 }
 
 func (b *MeerChain) buildBlock(qtxs []qconsensus.Tx, timestamp int64) (*types.Block, types.Receipts, error) {

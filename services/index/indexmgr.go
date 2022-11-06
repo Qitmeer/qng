@@ -371,16 +371,25 @@ func (m *Manager) maybeCreateIndexes(dbTx database.Tx) error {
 // checks, and invokes each indexer.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
+func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block,vmbid uint64) error {
 	// Call each of the currently active optional indexes with the block
 	// being connected so they can update accordingly.
-	for _, index := range m.enabledIndexes {
-		err := dbIndexConnectBlock(dbTx, index, block, stxos, blk)
-		if err != nil {
-			return err
+	err := m.db.Update(func(dbTx database.Tx) error {
+		for _, index := range m.enabledIndexes {
+			err := dbIndexConnectBlock(dbTx, index, block, stxos, blk)
+			if err != nil {
+				return err
+			}
 		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
-	return nil
+	if m.vmblockIndex != nil {
+		return m.vmblockIndex.ConnectBlock(block.Hash(),vmbid)	
+	}
+	return nil	
 }
 
 // DisconnectBlock must be invoked when a block is being disconnected from the
@@ -389,16 +398,32 @@ func (m *Manager) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, s
 // the index entries associated with the block.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte) error {
+func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte,vmbid uint64) error {
 	// Call each of the currently active optional indexes with the block
 	// being disconnected so they can update accordingly.
-	for _, index := range m.enabledIndexes {
-		err := m.dbIndexDisconnectBlock(dbTx, index, block, stxos)
-		if err != nil {
-			return err
+	err := m.db.Update(func(dbTx database.Tx) error {
+		for _, index := range m.enabledIndexes {
+			err := m.dbIndexDisconnectBlock(dbTx, index, block, stxos)
+			if err != nil {
+				return err
+			}
 		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if m.vmblockIndex != nil {
+		return m.vmblockIndex.DisconnectBlock(block.Hash(), vmbid)
 	}
 	return nil
+}
+
+func (m *Manager) UpdateMainTip(bh *hash.Hash,order uint64) error {
+	if m.vmblockIndex != nil {
+		return m.vmblockIndex.UpdateMainTip(bh,order)	
+	}
+	return nil	
 }
 
 // HasTransaction

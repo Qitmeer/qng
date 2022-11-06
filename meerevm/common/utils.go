@@ -73,6 +73,16 @@ func ToEVMHash(h *hash.Hash) common.Hash {
 	return common.BytesToHash(ehb)
 }
 
+func FromEVMHash(h common.Hash) *hash.Hash {
+	ehb := h.Bytes()
+	ReverseBytes(&ehb)
+	th,err:=hash.NewHash(ehb)
+	if err != nil {
+		return nil
+	}
+	return th
+}
+
 func ToQNGTx(tx *types.Transaction, timestamp int64) *qtypes.Transaction {
 	txmb, err := tx.MarshalBinary()
 	if err != nil {

@@ -54,6 +54,9 @@ func (bis *vmblockindexStore) Get(stagingArea *model.StagingArea, bid uint64) (*
 	var bh *hash.Hash
 	err := bis.db.View(func(dbTx database.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
+		if bucket == nil {
+			return nil
+		}
 		hb := bucket.Get(serialization.SerializeUint64(bid))
 		if len(hb) <= 0 {
 			return nil
@@ -86,6 +89,9 @@ func (bis *vmblockindexStore) Has(stagingArea *model.StagingArea, bid uint64) (b
 	exists := false
 	err := bis.db.View(func(dbTx database.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
+		if bucket == nil {
+			return nil
+		}
 		hb := bucket.Get(serialization.SerializeUint64(bid))
 		if len(hb) > 0 {
 			exists = true
@@ -115,6 +121,9 @@ func (bis *vmblockindexStore) Tip(stagingArea *model.StagingArea) (uint64, *hash
 	var tipOrder uint64
 	err := bis.db.View(func(dbTx database.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
+		if bucket == nil {
+			return fmt.Errorf("No vm block index:%s",bucketName)
+		}
 		tiphashValue := bucket.Get(tipHashKeyName)
 		if len(tiphashValue) <= 0 {
 			return fmt.Errorf("No vm block index tip hash")
@@ -148,13 +157,26 @@ func (bis *vmblockindexStore) IsEmpty() bool {
 	hasTip := false
 	bis.db.View(func(dbTx database.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
+		if bucket == nil {
+			return nil
+		}
 		tiphashValue := bucket.Get(tipHashKeyName)
 		if len(tiphashValue) > 0 {
 			hasTip = true
 		}
 		return nil
 	})
-	return hasTip
+	return !hasTip
+}
+
+func (bis *vmblockindexStore) Clean() error {
+	return bis.db.Update(func(dbTx database.Tx) error {
+		bucket := dbTx.Metadata().Bucket(bucketName)
+		if bucket != nil {
+			return dbTx.Metadata().DeleteBucket(bucketName)
+		}
+		return nil
+	})
 }
 
 func (bis *vmblockindexStore) stagingShard(stagingArea *model.StagingArea) *vmblockindexStagingShard {

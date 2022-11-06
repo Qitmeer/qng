@@ -35,11 +35,11 @@ var MainNetParams = Params{
 	DefaultPort:    "8130",
 	DefaultUDPPort: 8140,
 	Bootstrap:      []string{
-		//"/dns4/node.meerscan.io/tcp/28130/p2p/16Uiu2HAmTdcrQ2S4MD6UxeR81Su8DQdt2eB7vLzJA7LrawNf93T2",
-		//"/dns4/ns-cn.qitmeer.xyz/tcp/18150/p2p/16Uiu2HAm45YEQXf5sYgpebp1NvPS96ypvvpz5uPx7iPHmau94vVk",
-		//"/dns4/ns.qitmeer.top/tcp/28230/p2p/16Uiu2HAmRtp5CjNv3WvPYuh7kNXXZQDYegwFFeDH9vWY3JY4JS1W",
-		//"/dns4/ns1.qitmeer.info/tcp/18132/p2p/16Uiu2HAmLZmu4rBkAXeeHKofb1MECv6N2dbQBuyCs5Wywi7PVi4c",
-		//"/dns4/ns2.qitmeer.info/tcp/8130/p2p/16Uiu2HAmGtiMWoDVKtJd3VNWW8NvrM8DcyzteNpKae8ZuZWvUKCy",
+		"/dns4/node.meerscan.io/tcp/28130/p2p/16Uiu2HAmTdcrQ2S4MD6UxeR81Su8DQdt2eB7vLzJA7LrawNf93T2",
+		"/dns4/ns-cn.qitmeer.xyz/tcp/18150/p2p/16Uiu2HAm45YEQXf5sYgpebp1NvPS96ypvvpz5uPx7iPHmau94vVk",
+		"/dns4/ns.qitmeer.top/tcp/28230/p2p/16Uiu2HAmRtp5CjNv3WvPYuh7kNXXZQDYegwFFeDH9vWY3JY4JS1W",
+		"/dns4/ns1.qitmeer.info/tcp/18132/p2p/16Uiu2HAmLZmu4rBkAXeeHKofb1MECv6N2dbQBuyCs5Wywi7PVi4c",
+		"/dns4/ns2.qitmeer.info/tcp/8130/p2p/16Uiu2HAmGtiMWoDVKtJd3VNWW8NvrM8DcyzteNpKae8ZuZWvUKCy",
 	},
 	LedgerParams: ledger.LedgerParams{
 		GenesisAmountUnit: 1000 * 1e8,                               // 1000 MEER every utxo

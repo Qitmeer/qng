@@ -232,10 +232,10 @@ func (s *Service) RemoveTxFromMempool(tx *types.Transaction) error {
 	return v.RemoveTxFromMempool(tx)
 }
 
-func (s *Service) GetTxsFromMempool() ([]*types.Transaction, error) {
+func (s *Service) GetTxsFromMempool() ([]*types.Transaction,[]*hash.Hash, error) {
 	v, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
-		return nil, err
+		return nil,nil, err
 	}
 	return v.GetTxsFromMempool()
 }
@@ -264,34 +264,34 @@ func (s *Service) CheckConnectBlock(block *types.SerializedBlock) error {
 	return vm.CheckConnectBlock(b)
 }
 
-func (s *Service) ConnectBlock(block *types.SerializedBlock) error {
+func (s *Service) ConnectBlock(block *types.SerializedBlock) (uint64,error) {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
-		return err
+		return 0,err
 	}
 	b, err := s.normalizeBlock(block, true)
 	if err != nil {
-		return err
+		return 0,err
 	}
 
 	if len(b.Txs) <= 0 {
-		return nil
+		return 0,nil
 	}
 	return vm.ConnectBlock(b)
 }
 
-func (s *Service) DisconnectBlock(block *types.SerializedBlock) error {
+func (s *Service) DisconnectBlock(block *types.SerializedBlock) (uint64,error) {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
-		return err
+		return 0,err
 	}
 	b, err := s.normalizeBlock(block, false)
 	if err != nil {
-		return err
+		return 0,err
 	}
 
 	if len(b.Txs) <= 0 {
-		return nil
+		return 0,nil
 	}
 	return vm.DisconnectBlock(b)
 }
@@ -386,6 +386,14 @@ func (s *Service) GetBlockID(bh *hash.Hash) uint64 {
 		return 0
 	}
 	return vm.GetBlockID(bh)
+}
+
+func (s *Service) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return 0
+	}
+	return vm.GetBlockIDByTxHash(txhash)
 }
 
 func NewService(cfg *config.Config, events *event.Feed, tp consensus.TxPool, Notify consensus.Notify) (*Service, error) {

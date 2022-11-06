@@ -42,6 +42,8 @@ type TxManager struct {
 	feeEstimator *mempool.FeeEstimator
 
 	enableFeeEst bool
+
+	consensus model.Consensus
 }
 
 func (tm *TxManager) Start() error {
@@ -183,5 +185,5 @@ func NewTxManager(consensus model.Consensus, bm *blkmgr.BlockManager, ntmgr vmco
 	}
 	txMemPool := mempool.New(&txC)
 	invalidTx := make(map[hash.Hash]*meerdag.HashSet)
-	return &TxManager{bm: bm, indexManager: consensus.IndexManager().(*index.Manager), txMemPool: txMemPool, ntmgr: ntmgr, db: consensus.DatabaseContext(), invalidTx: invalidTx, enableFeeEst: cfg.Estimatefee}, nil
+	return &TxManager{consensus: consensus,bm: bm, indexManager: consensus.IndexManager().(*index.Manager), txMemPool: txMemPool, ntmgr: ntmgr, db: consensus.DatabaseContext(), invalidTx: invalidTx, enableFeeEst: cfg.Estimatefee}, nil
 }

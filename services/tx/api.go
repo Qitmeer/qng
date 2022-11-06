@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/common/math"
+	"github.com/Qitmeer/qng/consensus/model"
 	qconsensus "github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain/token"
@@ -970,8 +971,43 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 }
 
 func (api *PublicTxAPI) GetTxIDByMeerEVMTxHash(etxh hash.Hash) (interface{}, error) {
+	vmi:=api.txManager.bm.GetChain().VMService
+	etxs,txhs, err := vmi.GetTxsFromMempool()
+	if err != nil {
+		return nil,err
+	}
+	if len(txhs) > 0 {
+		for i:=0;i<len(txhs);i++ {
+			if txhs[i].IsEqual(&etxh) {
+				return etxs[i].TxHash().String(),nil
+			}
+		}
+	}
 
-	return nil, nil
+	bid:=vmi.GetBlockIDByTxHash(&etxh)
+	if bid == 0 {
+		return nil,fmt.Errorf("No meerevm tx:%s",etxh.String())
+	}
+	vmbiStore:=api.txManager.consensus.VMBlockIndexStore()
+	if vmbiStore == nil {
+		return nil,fmt.Errorf("You must be enable by --vmblockindex")
+	}
+	bh,err:=vmbiStore.Get(model.NewStagingArea(),bid)
+	if err != nil {
+		return nil,err
+	}
+	block,err:=api.txManager.bm.GetChain().FetchBlockByHash(bh)
+	if err != nil {
+		return nil,err
+	}
+	for _,tx:=range block.Transactions() {
+		if types.IsCrossChainVMTx(tx.Tx) {
+			if etxh.IsEqual(&tx.Tx.TxIn[0].PreviousOut.Hash) {
+				return tx.Hash().String(),nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("No meerevm tx:%s",etxh.String())
 }
 
 type PrivateTxAPI struct {
