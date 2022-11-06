@@ -3,6 +3,7 @@ package qx
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -33,7 +34,7 @@ func TestTxEncode(t *testing.T) {
 			Value: 2083509771,
 			Id:    0,
 		},
-		OutputType:     types.TxTypeRegular,
+		OutputType:     txscript.PubKeyHashTy,
 		TargetLockTime: 0,
 	}, Output{
 		TargetAddress: "TnU8gXq9xHFrfchwk2bjyGHR2HMswANsVU5",
@@ -41,14 +42,18 @@ func TestTxEncode(t *testing.T) {
 			Value: 100000000,
 			Id:    0,
 		},
-		OutputType:     types.TxTypeRegular,
+		OutputType:     txscript.PubKeyHashTy,
 		TargetLockTime: 0,
 	})
-	timestamp, _ := time.Parse("2016-01-02 15:04:05", "2019-13-14 00:00:00")
+	timestamp, err := time.Parse("2006-01-02 15:04:05", "2022-11-05 00:00:00")
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
 	rs, _ := TxEncode(1, 0, &timestamp, inputs, outputs)
 
 	fmt.Println(rs)
-	assert.Equal(t, rs, "0100000001410b13fbb6fbfbc574d84b8e88d6c56224dbd2d4a364a1805e3659373b7e512500000000ffffffff0200000bd62f7c000000001976a914afda839fa515ffdbcbc8630b60909c64cfd73f7a88ac000000e1f505000000001976a914b51127b89f9b704e7cfbc69286f0de2e00e7196988ac000000000000000000096e880100-7b22696e707574223a7b2230223a307d2c226f7574707574223a7b2230223a302c2231223a307d7d")
+	assert.Equal(t, rs, "0100000001410b13fbb6fbfbc574d84b8e88d6c56224dbd2d4a364a1805e3659373b7e512500000000ffffffff0200000bd62f7c000000001976a914afda839fa515ffdbcbc8630b60909c64cfd73f7a88ac000000e1f505000000001976a914b51127b89f9b704e7cfbc69286f0de2e00e7196988ac000000000000000080a765630100-7b22696e707574223a7b2230223a7b2253637269707454797065223a302c224c6f636b54696d65223a307d7d2c226f7574707574223a7b2230223a7b2253637269707454797065223a322c224c6f636b54696d65223a307d2c2231223a7b2253637269707454797065223a322c224c6f636b54696d65223a307d7d7d")
 }
 
 func TestNewEntropy(t *testing.T) {
