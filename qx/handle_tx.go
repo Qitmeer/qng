@@ -25,6 +25,7 @@ type Input struct {
 	SignScript []byte
 	sequence   uint32
 	InputType  txscript.ScriptClass
+	LockTime   int64
 }
 
 type Output struct {
@@ -48,7 +49,7 @@ func TxEncode(version uint32, lockTime uint32, timestamp *time.Time, inputs []In
 
 	txtypes := &ScriptTypeIndex{}
 	for i, vin := range inputs {
-		txtypes.InputTypeSet(i, vin.InputType)
+		txtypes.InputTypeSet(i, vin.InputType, vin.LockTime)
 		txHash, err := hash.NewHashFromStr(vin.TxID)
 		if err != nil {
 			log.Fatalln(err)
@@ -64,7 +65,7 @@ func TxEncode(version uint32, lockTime uint32, timestamp *time.Time, inputs []In
 		//setting the locktime to be less than the current time (but still above a threshold so that it is not confused for a block height), or
 		//setting ALL txin sequence numbers to 0xffffffff.
 		// check sequence and lockTime
-		if vin.InputType == txscript.CLTVPubKeyHashTy && lockTime <= 0 {
+		if vin.sequence == types.MaxTxInSequenceNum-1 && lockTime <= 0 {
 			return "", errors.New("unlock cltvpubkeyhash script,locktime must > 0")
 		}
 		mtx.AddTxIn(txIn)
@@ -172,7 +173,7 @@ func TxSign(privkeyStrs []string, rawTxStr string, network string) (string, erro
 		return "", fmt.Errorf("vin length is %v , but private keys length is %v", len(redeemTx.TxIn), len(privkeyStrs))
 	}
 	for i := range redeemTx.TxIn {
-		txSignBase := scriptbasetypes.NewTxSignObject(txtypeIndex.FindInputScriptType(i))
+		txSignBase := scriptbasetypes.NewTxSignObject(txtypeIndex.FindInputScriptType(i), txtypeIndex.FindInputScriptLockTime(i))
 		err = txSignBase.Sign(privkeyStrs[i], &redeemTx, i, param)
 		if err != nil {
 			return "", err
@@ -242,12 +243,21 @@ func TxDecode(network string, rawTxStr string) {
 func TxEncodeSTDO(version TxVersionFlag, lockTime TxLockTimeFlag, txIn TxInputsFlag, txOut TxOutputsFlag) {
 	txInputs := []Input{}
 	txOutputs := []Output{}
+	var err error
 	for _, input := range txIn.inputs {
+		lockT := int64(0)
+		if input.unlocktype == txscript.CLTVPubKeyHashTy.String() {
+			lockT, err = strconv.ParseInt(input.args, 10, 46)
+			if err != nil {
+				ErrExit(fmt.Errorf("cltvpubkeyhash need a locktime or lockheight"))
+			}
+		}
 		txInputs = append(txInputs, Input{
 			TxID:      hex.EncodeToString(input.txhash),
 			OutIndex:  input.index,
 			InputType: scriptbasetypes.GetScriptType(input.unlocktype),
 			sequence:  input.sequence,
+			LockTime:  lockT,
 		})
 	}
 	for _, output := range txOut.outputs {

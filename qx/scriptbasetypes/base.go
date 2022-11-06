@@ -10,11 +10,13 @@ type TxSignBase interface {
 	Sign(privateKey string, mtx *types.Transaction, inputIndex int, param *params.Params) error
 }
 
-func NewTxSignObject(scripttype txscript.ScriptClass) TxSignBase {
+func NewTxSignObject(scripttype txscript.ScriptClass, lockTime int64) TxSignBase {
 	var s TxSignBase
 	switch scripttype {
 	case txscript.CLTVPubKeyHashTy:
-		s = &CLTVPubKeyHashScript{}
+		s = &CLTVPubKeyHashScript{
+			LockTime: lockTime,
+		}
 	case txscript.PubKeyTy:
 		s = &PubKeyScript{}
 	case 255:

@@ -11,20 +11,31 @@ const (
 	OUTPUT_NAME = "output"
 )
 
-type ScriptTypeIndex map[string]map[int]txscript.ScriptClass
+type InputData struct {
+	ScriptType txscript.ScriptClass
+	LockTime   int64
+}
 
-func (this *ScriptTypeIndex) InputTypeSet(index int, scripttype txscript.ScriptClass) {
+type ScriptTypeIndex map[string]map[int]InputData
+
+func (this *ScriptTypeIndex) InputTypeSet(index int, scripttype txscript.ScriptClass, lockTime int64) {
 	if _, ok := (*this)[INPUT_NAME]; !ok {
-		(*this)[INPUT_NAME] = map[int]txscript.ScriptClass{}
+		(*this)[INPUT_NAME] = map[int]InputData{}
 	}
-	(*this)[INPUT_NAME][index] = scripttype
+	(*this)[INPUT_NAME][index] = InputData{
+		scripttype,
+		lockTime,
+	}
 }
 
 func (this *ScriptTypeIndex) OutputTypeSet(index int, scripttype txscript.ScriptClass) {
 	if _, ok := (*this)[OUTPUT_NAME]; !ok {
-		(*this)[OUTPUT_NAME] = map[int]txscript.ScriptClass{}
+		(*this)[OUTPUT_NAME] = map[int]InputData{}
 	}
-	(*this)[OUTPUT_NAME][index] = scripttype
+	(*this)[OUTPUT_NAME][index] = InputData{
+		scripttype,
+		0,
+	}
 }
 
 func (this *ScriptTypeIndex) Encode() (string, error) {
@@ -50,7 +61,17 @@ func (this *ScriptTypeIndex) FindInputScriptType(index int) txscript.ScriptClass
 	if _, ok := (*this)[INPUT_NAME][index]; !ok {
 		return txscript.PubKeyHashTy
 	}
-	return (*this)[INPUT_NAME][index]
+	return (*this)[INPUT_NAME][index].ScriptType
+}
+
+func (this *ScriptTypeIndex) FindInputScriptLockTime(index int) int64 {
+	if _, ok := (*this)[INPUT_NAME]; !ok {
+		return 0
+	}
+	if _, ok := (*this)[INPUT_NAME][index]; !ok {
+		return 0
+	}
+	return (*this)[INPUT_NAME][index].LockTime
 }
 
 func DecodeScriptTypeIndex(str string) (*ScriptTypeIndex, error) {

@@ -63,6 +63,7 @@ type txInput struct {
 	index      uint32
 	sequence   uint32
 	unlocktype string
+	args       string
 }
 type txOutput struct {
 	target   string
@@ -76,7 +77,7 @@ func (i LockAddress) String() string {
 	return fmt.Sprintf("%s:%d:%s", i.Address, i.SignType, string(i.Args))
 }
 func (i txInput) String() string {
-	return fmt.Sprintf("%x:%d:%d:%s", i.txhash[:], i.index, i.sequence, i.unlocktype)
+	return fmt.Sprintf("%x:%d:%d:%s:%s", i.txhash[:], i.index, i.sequence, i.unlocktype, i.args)
 }
 func (o txOutput) String() string {
 	return fmt.Sprintf("%s:%f:%d:%s:%s", o.target, o.amount, o.coinid, o.locktype, o.args)
@@ -131,11 +132,16 @@ func (v *TxInputsFlag) Set(s string) error {
 	if len(input) >= 4 {
 		scripttype = input[3]
 	}
+	args := ""
+	if len(input) >= 5 {
+		args = input[4]
+	}
 	i := txInput{
 		data,
 		uint32(index),
 		uint32(seq),
 		scripttype,
+		args,
 	}
 	v.inputs = append(v.inputs, i)
 	return nil

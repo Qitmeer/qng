@@ -428,7 +428,7 @@ func main() {
 	txVersion = qx.TxVersionFlag(TX_VERION) //set default tx version
 	txEncodeCmd.Var(&txVersion, "v", "the transaction version")
 	txEncodeCmd.Var(&txLockTime, "l", "the transaction lock time")
-	txEncodeCmd.Var(&txInputs, "i", `The set of transaction input points encoded as TXHASH:INDEX:SEQUENCE:SCRIPTTYPE. 
+	txEncodeCmd.Var(&txInputs, "i", `The set of transaction input points encoded as TXHASH:INDEX:SEQUENCE:SCRIPTTYPE:[args]. 
 -i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967295:pubkeyhash
 TXHASH is a Base16 transaction hash. INDEX is the 32 bit input index
 in the context of the transaction. SEQUENCE is the optional 32 bit 
@@ -436,7 +436,7 @@ input sequence and defaults to the maximum value.
 UNLOCKTYPE is unlock script type
 - pubkeyhash PayToAddrScript(pkh)
 - pubkey PayToAddrScript(pk)
-- cltvpubkeyhash Sequence is the locktime or lockheight PayToCLTVPubKeyHashScript(pkh, Sequence)
+- cltvpubkeyhash Sequence is the locktime or lockheight PayToCLTVPubKeyHashScript(pkh, args) TXHASH:INDEX:SEQUENCE:SCRIPTTYPE:locktime. 
 - crossimport the special script, the index need 4294967294 and sequence need 258
 `)
 	txEncodeCmd.Var(&txOutputs, "o", `The set of transaction output data encoded as ADDRESS:AMOUNT:COINID:SCRIPTTYPE:[ARGS]. 

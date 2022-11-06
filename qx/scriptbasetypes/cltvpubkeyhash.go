@@ -13,6 +13,7 @@ import (
 )
 
 type CLTVPubKeyHashScript struct {
+	LockTime int64
 }
 
 func (this *CLTVPubKeyHashScript) Sign(privKey string, mtx *types.Transaction, inputIndex int, param *params.Params) error {
@@ -29,12 +30,11 @@ func (this *CLTVPubKeyHashScript) Sign(privKey string, mtx *types.Transaction, i
 	if err != nil {
 		return err
 	}
-	pkScript, err := txscript.PayToCLTVPubKeyHashScript(addr.Script(), int64(mtx.TxIn[inputIndex].Sequence))
+	pkScript, err := txscript.PayToCLTVPubKeyHashScript(addr.Script(), this.LockTime)
 	if err != nil {
 		log.Fatalln("PayToAddrScript Error", err)
 		return err
 	}
-	mtx.TxIn[inputIndex].Sequence = types.MaxTxInSequenceNum - 1
 	var kdb txscript.KeyClosure = func(types.Address) (ecc.PrivateKey, bool, error) {
 		return privateKey, true, nil // compressed is true
 	}
