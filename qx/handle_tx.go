@@ -60,11 +60,8 @@ func TxEncode(version uint32, lockTime uint32, timestamp *time.Time, inputs []In
 		if vin.sequence > 0 {
 			txIn.Sequence = vin.sequence
 		}
-		//setting the locktime to 0, or
-		//setting the locktime to be less than the current block height, or
-		//setting the locktime to be less than the current time (but still above a threshold so that it is not confused for a block height), or
-		//setting ALL txin sequence numbers to 0xffffffff.
 		// check sequence and lockTime
+		// see https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki
 		if vin.sequence == types.MaxTxInSequenceNum-1 && lockTime <= 0 {
 			return "", errors.New("unlock cltvpubkeyhash script,locktime must > 0")
 		}
