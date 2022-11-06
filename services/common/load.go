@@ -68,36 +68,7 @@ var (
 )
 
 var (
-	cfg = config.Config{
-		HomeDir:              defaultHomeDir,
-		ConfigFile:           defaultConfigFile,
-		DebugLevel:           defaultLogLevel,
-		DebugPrintOrigins:    defaultDebugPrintOrigins,
-		DataDir:              defaultDataDir,
-		LogDir:               defaultLogDir,
-		DbType:               defaultDbType,
-		RPCKey:               defaultRPCKeyFile,
-		RPCCert:              defaultRPCCertFile,
-		RPCMaxClients:        defaultMaxRPCClients,
-		RPCMaxWebsockets:     defaultMaxRPCWebsockets,
-		RPCMaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
-		Generate:             defaultGenerate,
-		MaxPeers:             defaultMaxPeers,
-		MinTxFee:             mempool.DefaultMinRelayTxFee,
-		BlockMinSize:         defaultBlockMinSize,
-		BlockMaxSize:         defaultBlockMaxSize,
-		SigCacheMaxSize:      defaultSigCacheMaxSize,
-		MiningStateSync:      defaultMiningStateSync,
-		DAGType:              defaultDAGType,
-		Banning:              true,
-		MaxInbound:           defaultMaxInboundPeersPerHost,
-		CacheInvalidTx:       defaultCacheInvalidTx,
-		NTP:                  false,
-		MempoolExpiry:        defaultMempoolExpiry,
-		AcceptNonStd:         true,
-		RPCUser:              defaultRPCUser,
-		RPCPass:              defaultRPCPass,
-	}
+	cfg = DefaultConfig("")
 
 	RPCListeners      cli.StringSlice
 	Modules           cli.StringSlice
@@ -637,7 +608,7 @@ func LoadConfig(ctx *cli.Context,parsefile bool) (*config.Config, error) {
 
 	if ctx.IsSet("configfile") && parsefile {
 		// Load additional config from file.
-		parser := newConfigParser(&cfg, flags.Default)
+		parser := newConfigParser(cfg, flags.Default)
 		err := flags.NewIniParser(parser).ParseFile(cfg.ConfigFile)
 		if err != nil {
 			if _, ok := err.(*os.PathError); !ok {
@@ -884,7 +855,7 @@ func LoadConfig(ctx *cli.Context,parsefile bool) (*config.Config, error) {
 		roughtime.Init()
 	}
 
-	return &cfg, nil
+	return cfg, nil
 }
 
 // newConfigParser returns a new command line flags parser.
@@ -947,4 +918,50 @@ func removeDuplicateAddresses(addrs []string) []string {
 		}
 	}
 	return result
+}
+
+func DefaultConfig(homeDir string) *config.Config {
+	cfg:=&config.Config{
+		HomeDir:              defaultHomeDir,
+		ConfigFile:           defaultConfigFile,
+		DebugLevel:           defaultLogLevel,
+		DebugPrintOrigins:    defaultDebugPrintOrigins,
+		DataDir:              defaultDataDir,
+		LogDir:               defaultLogDir,
+		DbType:               defaultDbType,
+		RPCKey:               defaultRPCKeyFile,
+		RPCCert:              defaultRPCCertFile,
+		RPCMaxClients:        defaultMaxRPCClients,
+		RPCMaxWebsockets:     defaultMaxRPCWebsockets,
+		RPCMaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
+		Generate:             defaultGenerate,
+		MaxPeers:             defaultMaxPeers,
+		MinTxFee:             mempool.DefaultMinRelayTxFee,
+		BlockMinSize:         defaultBlockMinSize,
+		BlockMaxSize:         defaultBlockMaxSize,
+		SigCacheMaxSize:      defaultSigCacheMaxSize,
+		MiningStateSync:      defaultMiningStateSync,
+		DAGType:              defaultDAGType,
+		Banning:              true,
+		MaxInbound:           defaultMaxInboundPeersPerHost,
+		CacheInvalidTx:       defaultCacheInvalidTx,
+		NTP:                  false,
+		MempoolExpiry:        defaultMempoolExpiry,
+		AcceptNonStd:         true,
+		RPCUser:              defaultRPCUser,
+		RPCPass:              defaultRPCPass,
+	}
+	if len(homeDir) > 0 {
+		hd, err := filepath.Abs(homeDir)
+		if err != nil {
+			panic(err)
+		}
+		cfg.HomeDir=hd
+		cfg.ConfigFile  = filepath.Join(cfg.HomeDir, defaultConfigFilename)
+		cfg.DataDir     = filepath.Join(cfg.HomeDir, defaultDataDirname)
+		cfg.LogDir      = filepath.Join(cfg.HomeDir, defaultLogDirname)
+		cfg.RPCKey  = filepath.Join(cfg.HomeDir, "rpc.key")
+		cfg.RPCCert = filepath.Join(cfg.HomeDir, "rpc.cert")
+	}
+	return cfg
 }

@@ -164,3 +164,7 @@ func New(cfg *config.Config, databaseContext database.DB, interrupt <-chan struc
 		shutdownRequestChannel: shutdownRequestChannel,
 	}
 }
+
+func NewPure(cfg *config.Config, databaseContext database.DB) *consensus {
+	return New(cfg, databaseContext, make(chan struct{}),make(chan struct{}))
+}
