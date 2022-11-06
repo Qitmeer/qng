@@ -71,14 +71,8 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 //
 // This is part of the blockchain.IndexManager interface.
 func (m *Manager) Init() error {
-	interrupt := m.consensus.Quit()
+	interrupt := m.consensus.Interrupt()
 	chain := m.consensus.BlockChain()
-	if m.vmblockIndex != nil {
-		err := m.vmblockIndex.Init(chain)
-		if err != nil {
-			return err
-		}
-	}
 	// Nothing to do when no indexes are enabled.
 	if len(m.enabledIndexes) == 0 {
 		return nil
@@ -563,11 +557,7 @@ func (m *Manager) AddrIndex() *AddrIndex {
 }
 
 func (m *Manager) VMBlockIndex() *VMBlockIndex {
-	indexer := m.GetIndex(vmblockIndexName)
-	if indexer != nil {
-		return indexer.(*VMBlockIndex)
-	}
-	return nil
+	return m.vmblockIndex
 }
 
 func (m *Manager) ExistsAddrIndex() *ExistsAddrIndex {

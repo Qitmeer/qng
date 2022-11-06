@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 )
@@ -11,4 +12,5 @@ type BlockChain interface {
 	FetchSpendJournalPKS(targetBlock *types.SerializedBlock) ([][]byte, error)
 	CalculateDAGDuplicateTxs(block *types.SerializedBlock)
 	IsCacheInvalidTx() bool
+	GetBlockHashByOrder(order uint) *hash.Hash
 }

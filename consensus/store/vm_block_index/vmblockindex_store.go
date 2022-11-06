@@ -1,6 +1,7 @@
 package vm_block_index
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/lrucache"
 	"github.com/Qitmeer/qng/common/staging"
@@ -37,7 +38,7 @@ func (bis *vmblockindexStore) IsStaged(stagingArea *model.StagingArea) bool {
 	return bis.stagingShard(stagingArea).isStaged()
 }
 
-func (bis *vmblockindexStore) Get(dbContext database.DB, stagingArea *model.StagingArea, bid uint64) (*hash.Hash, error) {
+func (bis *vmblockindexStore) Get(stagingArea *model.StagingArea, bid uint64) (*hash.Hash, error) {
 	stagingShard := bis.stagingShard(stagingArea)
 	if bh, ok := stagingShard.toAdd[bid]; ok {
 		return bh, nil
@@ -51,7 +52,7 @@ func (bis *vmblockindexStore) Get(dbContext database.DB, stagingArea *model.Stag
 		return bh.(*hash.Hash), nil
 	}
 	var bh *hash.Hash
-	err := dbContext.View(func(dbTx database.Tx) error {
+	err := bis.db.View(func(dbTx database.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
 		hb := bucket.Get(serialization.SerializeUint64(bid))
 		if len(hb) <= 0 {
@@ -71,7 +72,7 @@ func (bis *vmblockindexStore) Get(dbContext database.DB, stagingArea *model.Stag
 	return bh, nil
 }
 
-func (bis *vmblockindexStore) Has(dbContext database.DB, stagingArea *model.StagingArea, bid uint64) (bool, error) {
+func (bis *vmblockindexStore) Has(stagingArea *model.StagingArea, bid uint64) (bool, error) {
 	stagingShard := bis.stagingShard(stagingArea)
 	if _, ok := stagingShard.toAdd[bid]; ok {
 		return true, nil
@@ -83,7 +84,7 @@ func (bis *vmblockindexStore) Has(dbContext database.DB, stagingArea *model.Stag
 		return true, nil
 	}
 	exists := false
-	err := dbContext.View(func(dbTx database.Tx) error {
+	err := bis.db.View(func(dbTx database.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
 		hb := bucket.Get(serialization.SerializeUint64(bid))
 		if len(hb) > 0 {
@@ -103,6 +104,57 @@ func (bis *vmblockindexStore) Delete(stagingArea *model.StagingArea, bid uint64)
 		delete(stagingShard.toAdd, bid)
 	}
 	stagingShard.toDelete[bid] = struct{}{}
+}
+
+func (bis *vmblockindexStore) Tip(stagingArea *model.StagingArea) (uint64, *hash.Hash, error) {
+	stagingShard := bis.stagingShard(stagingArea)
+	if stagingShard.tipHash != nil {
+		return stagingShard.tipOrder, stagingShard.tipHash, nil
+	}
+	var tipHash *hash.Hash
+	var tipOrder uint64
+	err := bis.db.View(func(dbTx database.Tx) error {
+		bucket := dbTx.Metadata().Bucket(bucketName)
+		tiphashValue := bucket.Get(tipHashKeyName)
+		if len(tiphashValue) <= 0 {
+			return fmt.Errorf("No vm block index tip hash")
+		}
+		th, err := hash.NewHash(tiphashValue)
+		if err != nil {
+			return err
+		}
+		tipHash = th
+		//
+		tiporderValue := bucket.Get(tipOrderKeyName)
+		if len(tiporderValue) <= 0 {
+			return fmt.Errorf("No vm block index tip order")
+		}
+		to, err := serialization.DeserializeUint64(tiporderValue)
+		if err != nil {
+			return err
+		}
+		tipOrder = to
+		return nil
+	})
+	if err != nil {
+		return 0, nil, err
+	}
+	stagingShard.tipOrder = tipOrder
+	stagingShard.tipHash = tipHash
+	return tipOrder, tipHash, nil
+}
+
+func (bis *vmblockindexStore) IsEmpty() bool {
+	hasTip := false
+	bis.db.View(func(dbTx database.Tx) error {
+		bucket := dbTx.Metadata().Bucket(bucketName)
+		tiphashValue := bucket.Get(tipHashKeyName)
+		if len(tiphashValue) > 0 {
+			hasTip = true
+		}
+		return nil
+	})
+	return hasTip
 }
 
 func (bis *vmblockindexStore) stagingShard(stagingArea *model.StagingArea) *vmblockindexStagingShard {

@@ -19,4 +19,5 @@ type VMI interface {
 	GetMempoolSize() int64
 	ResetTemplate() error
 	Genesis(txs []*types.Tx) *hash.Hash
+	GetBlockID(bh *hash.Hash) uint64
 }

@@ -324,6 +324,18 @@ func (vm *VM) Genesis() *hash.Hash {
 	return nmbb
 }
 
+func (vm *VM) GetBlockID(bh *hash.Hash) uint64 {
+	mbhb := bh.Bytes()
+	qcommon.ReverseBytes(&mbhb)
+	mbh := common.BytesToHash(mbhb)
+
+	bn := chain.ReadBlockNumber(vm.chain.Ether().ChainDb(), mbh)
+	if bn == nil {
+		return 0
+	}
+	return *bn
+}
+
 func New() *VM {
 	return &VM{}
 }

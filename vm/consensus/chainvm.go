@@ -42,4 +42,6 @@ type ChainVM interface {
 	ResetTemplate() error
 
 	Genesis() *hash.Hash
+
+	GetBlockID(bh *hash.Hash) uint64
 }

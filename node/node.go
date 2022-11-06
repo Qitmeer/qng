@@ -44,7 +44,7 @@ func NewNode(cfg *config.Config, database database.DB, chainParams *params.Param
 		Params:                 chainParams,
 		quit:                   quit,
 		shutdownRequestChannel: shutdownRequestChannel,
-		consensus:              consensus.New(cfg, database, quit),
+		consensus:              consensus.New(cfg, database, quit, shutdownRequestChannel),
 	}
 	n.InitServices()
 	return &n, nil

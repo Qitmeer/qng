@@ -1627,3 +1627,7 @@ func (b *BlockChain) GetMainOrder() uint {
 func (b *BlockChain) IsCacheInvalidTx() bool {
 	return b.CacheInvalidTx
 }
+
+func (b *BlockChain) GetBlockHashByOrder(order uint) *hash.Hash {
+	return b.bd.GetBlockHashByOrder(order)
+}

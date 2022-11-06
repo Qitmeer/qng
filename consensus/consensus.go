@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/store/vm_block_index"
@@ -16,14 +17,15 @@ import (
 
 const (
 	defaultPreallocateCaches = true
-	defaultCacheSize         = 10_000
+	defaultCacheSize         = 1_000
 )
 
 type consensus struct {
-	lock            sync.Mutex
-	databaseContext database.DB
-	cfg             *config.Config
-	quit            <-chan struct{}
+	lock                   sync.Mutex
+	databaseContext        database.DB
+	cfg                    *config.Config
+	interrupt              <-chan struct{}
+	shutdownRequestChannel chan struct{}
 	// signature cache
 	sigCache *txscript.SigCache
 	// event system
@@ -47,7 +49,7 @@ func (s *consensus) Init() error {
 	}
 
 	if s.cfg.VMBlockIndex {
-		vmblockindexStore, err := vm_block_index.New(s.databaseContext, 10_000, defaultPreallocateCaches)
+		vmblockindexStore, err := vm_block_index.New(s.databaseContext, defaultCacheSize, defaultPreallocateCaches)
 		if err != nil {
 			return err
 		}
@@ -59,7 +61,7 @@ func (s *consensus) Init() error {
 	// Create a new block chain instance with the appropriate configuration.
 	blockchain, err := blockchain.New(&blockchain.Config{
 		DB:             s.databaseContext,
-		Interrupt:      s.quit,
+		Interrupt:      s.interrupt,
 		ChainParams:    params.ActiveNetParams.Params,
 		TimeSource:     s.mediantimeSource,
 		Events:         &s.events,
@@ -73,6 +75,7 @@ func (s *consensus) Init() error {
 		return err
 	}
 	s.blockchain = blockchain
+	s.subscribe()
 	return blockchain.Init()
 }
 
@@ -108,16 +111,59 @@ func (s *consensus) SigCache() *txscript.SigCache {
 	return s.sigCache
 }
 
-func (s *consensus) Quit() <-chan struct{} {
-	return s.quit
+func (s *consensus) Interrupt() <-chan struct{} {
+	return s.interrupt
 }
 
-func New(cfg *config.Config, databaseContext database.DB, quit <-chan struct{}) *consensus {
+func (s *consensus) Shutdown() {
+	s.shutdownRequestChannel <- struct{}{}
+}
+
+func (s *consensus) GenesisHash() *hash.Hash {
+	return params.ActiveNetParams.Params.GenesisHash
+}
+
+func (s *consensus) subscribe() {
+	ch := make(chan *event.Event)
+	sub := s.events.Subscribe(ch)
+	go func() {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case ev := <-ch:
+				if ev.Data != nil {
+					switch value := ev.Data.(type) {
+					case int:
+						// TODO: The future will be structured
+						if value == event.Initialized {
+							if s.indexManager.(*index.Manager).VMBlockIndex() != nil {
+								err := s.indexManager.(*index.Manager).VMBlockIndex().Init()
+								if err != nil {
+									log.Error(err.Error())
+									s.Shutdown()
+								}
+							}
+						}
+					}
+				}
+				if ev.Ack != nil {
+					ev.Ack <- struct{}{}
+				}
+			case <-s.interrupt:
+				log.Info("Close consensus Event Subscribe")
+				return
+			}
+		}
+	}()
+}
+
+func New(cfg *config.Config, databaseContext database.DB, interrupt <-chan struct{}, shutdownRequestChannel chan struct{}) *consensus {
 	return &consensus{
-		cfg:              cfg,
-		databaseContext:  databaseContext,
-		mediantimeSource: blockchain.NewMedianTime(),
-		quit:             quit,
-		sigCache:         txscript.NewSigCache(cfg.SigCacheMaxSize),
+		cfg:                    cfg,
+		databaseContext:        databaseContext,
+		mediantimeSource:       blockchain.NewMedianTime(),
+		interrupt:              interrupt,
+		sigCache:               txscript.NewSigCache(cfg.SigCacheMaxSize),
+		shutdownRequestChannel: shutdownRequestChannel,
 	}
 }

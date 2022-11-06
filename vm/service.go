@@ -380,6 +380,14 @@ func (s *Service) Genesis(txs []*types.Tx) *hash.Hash {
 	return vm.Genesis()
 }
 
+func (s *Service) GetBlockID(bh *hash.Hash) uint64 {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return 0
+	}
+	return vm.GetBlockID(bh)
+}
+
 func NewService(cfg *config.Config, events *event.Feed, tp consensus.TxPool, Notify consensus.Notify) (*Service, error) {
 	ser := Service{
 		events: events,
