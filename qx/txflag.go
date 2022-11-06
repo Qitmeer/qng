@@ -162,11 +162,11 @@ func (of *TxOutputsFlag) Set(s string) error {
 		return err
 	}
 	scripttype := txscript.PubKeyHashTy.String()
-	if len(output) == 4 {
+	if len(output) >= 4 {
 		scripttype = output[3]
 	}
 	args := ""
-	if len(output) == 5 {
+	if len(output) >= 5 {
 		args = output[4]
 	}
 	of.outputs = append(of.outputs, txOutput{
