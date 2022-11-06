@@ -167,7 +167,12 @@ func TxSign(privkeyStrs []string, rawTxStr string, network string) (string, erro
 	}
 	//
 	if len(privkeyStrs) != len(redeemTx.TxIn) {
-		return "", fmt.Errorf("vin length is %v , but private keys length is %v", len(redeemTx.TxIn), len(privkeyStrs))
+		if len(privkeyStrs) != 1 {
+			return "", fmt.Errorf("vin length is %v , but private keys length is %v", len(redeemTx.TxIn), len(privkeyStrs))
+		}
+		for i := 0; i < len(redeemTx.TxIn)-1; i++ {
+			privkeyStrs = append(privkeyStrs, privkeyStrs[0])
+		}
 	}
 	for i := range redeemTx.TxIn {
 		txSignBase := scriptbasetypes.NewTxSignObject(txtypeIndex.FindInputScriptType(i), txtypeIndex.FindInputScriptLockTime(i))
