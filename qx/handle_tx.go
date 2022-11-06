@@ -251,6 +251,15 @@ func TxEncodeSTDO(version TxVersionFlag, lockTime TxLockTimeFlag, txIn TxInputsF
 			if err != nil {
 				ErrExit(fmt.Errorf("cltvpubkeyhash need a locktime or lockheight"))
 			}
+			if lockT > int64(lockTime) {
+				ErrExit(fmt.Errorf("cltvpubkeyhash nlocktime need >= input lockTime"))
+			}
+			if lockT > txscript.LockTimeThreshold && int64(lockTime) < txscript.LockTimeThreshold {
+				ErrExit(fmt.Errorf("nlocktime is > 5e8,but input locktime < 5e8"))
+			}
+			if lockT < txscript.LockTimeThreshold && int64(lockTime) > txscript.LockTimeThreshold {
+				ErrExit(fmt.Errorf("nlocktime is < 5e8,but input locktime > 5e8"))
+			}
 		}
 		txInputs = append(txInputs, Input{
 			TxID:      hex.EncodeToString(input.txhash),
