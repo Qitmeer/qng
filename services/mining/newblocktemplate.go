@@ -3,6 +3,7 @@ package mining
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/merkle"
@@ -86,7 +87,7 @@ import (
 // TODO, refactor NewBlockTemplate input dependencies
 
 func NewBlockTemplate(policy *Policy, params *params.Params,
-	sigCache *txscript.SigCache, txSource TxSource, timeSource blockchain.MedianTimeSource,
+	sigCache *txscript.SigCache, txSource TxSource, timeSource model.MedianTimeSource,
 	blockManager *blkmgr.BlockManager, payToAddress types.Address, parents []*hash.Hash, powType pow.PowType, coinbaseFlags CoinbaseFlags) (*types.BlockTemplate, error) {
 	if onEnd := log.LogAndMeasureExecutionTime(log.Root(), "NewBlockTemplate"); onEnd != nil {
 		defer onEnd()
@@ -571,7 +572,7 @@ mempool:
 // consensus rules.  Finally, it will update the target difficulty if needed
 // based on the new time for the test networks since their target difficulty can
 // change based upon time.
-func UpdateBlockTime(msgBlock *types.Block, chain *blockchain.BlockChain, timeSource blockchain.MedianTimeSource,
+func UpdateBlockTime(msgBlock *types.Block, chain *blockchain.BlockChain, timeSource model.MedianTimeSource,
 	activeNetParams *params.Params) error {
 
 	// The new timestamp is potentially adjusted to ensure it comes after

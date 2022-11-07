@@ -9,7 +9,7 @@ package index
 import (
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/consensus/model"
 	"sync"
 
 	"github.com/Qitmeer/qng/common/hash"
@@ -19,7 +19,6 @@ import (
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
 )
 
 const (
@@ -634,7 +633,7 @@ func (idx *AddrIndex) NeedsInputs() bool {
 // initialize for this index.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) Init(chain *blockchain.BlockChain) error {
+func (idx *AddrIndex) Init(chain model.BlockChain) error {
 	// Nothing to do.
 	return nil
 }
@@ -710,7 +709,7 @@ func (idx *AddrIndex) indexPkScript(data writeIndexData, pkScript []byte, txIdx 
 // in the parent of the passed block (if they were valid) and all of the stake
 // transactions in the passed block, and maps each of them to the associated
 // transaction using the passed map.
-func (idx *AddrIndex) indexBlock(data writeIndexData, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) {
+func (idx *AddrIndex) indexBlock(data writeIndexData, block *types.SerializedBlock, stxos [][]byte) {
 	index := 0
 	for txIdx, tx := range block.Transactions() {
 		if tx.IsDuplicate {
@@ -730,7 +729,7 @@ func (idx *AddrIndex) indexBlock(data writeIndexData, block *types.SerializedBlo
 				}
 				stxo := stxos[index]
 				index++
-				idx.indexPkScript(data, stxo.PkScript, txIdx)
+				idx.indexPkScript(data, stxo, txIdx)
 			}
 		}
 
@@ -746,8 +745,8 @@ func (idx *AddrIndex) indexBlock(data writeIndexData, block *types.SerializedBlo
 // the transactions in the block involve.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
-	if ib.GetStatus().KnownInvalid() {
+func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
+	if blk.GetStatus().KnownInvalid() {
 		return nil
 	}
 	// The offset and length of the transactions within the serialized
@@ -790,7 +789,7 @@ func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBloc
 // each transaction in the block involve.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
+func (idx *AddrIndex) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte) error {
 
 	// Build all of the address to transaction mappings in a local map.
 	addrsToTxns := make(writeIndexData)
@@ -893,29 +892,9 @@ func (idx *AddrIndex) indexUnconfirmedAddresses(pkScript []byte, tx *types.Tx) {
 // addresses not being indexed.
 //
 // This function is safe for concurrent access.
-func (idx *AddrIndex) AddUnconfirmedTx(tx *types.Tx, utxoView *blockchain.UtxoViewpoint) {
-	// Index addresses of all referenced previous transaction outputs.
-	//
-	// The existence checks are elided since this is only called after the
-	// transaction has already been validated and thus all inputs are
-	// already known to exist.
-	msgTx := tx.Transaction()
-	for _, txIn := range msgTx.TxIn {
-		entry := utxoView.LookupEntry(txIn.PreviousOut)
-		if entry == nil {
-			// Ignore missing entries.  This should never happen
-			// in practice since the function comments specifically
-			// call out all inputs must be available.
-			continue
-		}
-		pkScript := entry.PkScript()
-		//txType := entry.TransactionType()
-		idx.indexUnconfirmedAddresses(pkScript, tx)
-	}
-
-	// Index addresses of all created outputs.
-	for _, txOut := range msgTx.TxOut {
-		idx.indexUnconfirmedAddresses(txOut.PkScript, tx)
+func (idx *AddrIndex) AddUnconfirmedTx(tx *types.Tx, pkScripts [][]byte) {
+	for _, pks := range pkScripts {
+		idx.indexUnconfirmedAddresses(pks, tx)
 	}
 }
 
@@ -977,10 +956,10 @@ func (idx *AddrIndex) UnconfirmedTxnsForAddress(addr types.Address) []*types.Tx 
 // It implements the Indexer interface which plugs into the IndexManager that in
 // turn is used by the blockchain package.  This allows the index to be
 // seamlessly maintained along with the chain.
-func NewAddrIndex(db database.DB, chainParams *params.Params) *AddrIndex {
+func NewAddrIndex(db database.DB) *AddrIndex {
 	return &AddrIndex{
 		db:          db,
-		chainParams: chainParams,
+		chainParams: params.ActiveNetParams.Params,
 		txnsByAddr:  make(map[[addrKeySize]byte]map[hash.Hash]*types.Tx),
 		addrsByTx:   make(map[hash.Hash]map[[addrKeySize]byte]struct{}),
 	}

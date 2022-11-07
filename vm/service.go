@@ -5,7 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	qconfig "github.com/Qitmeer/qng/config"
-	qconsensus "github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
@@ -23,18 +23,11 @@ type Factory interface {
 
 type Service struct {
 	service.Service
-
 	events *event.Feed
-
 	vms map[string]consensus.ChainVM
-
 	cfg *config.Config
-
-	tp consensus.TxPool
-
-	Notify consensus.Notify
-
 	apis []api.API
+	ctx *vm.Context
 }
 
 func (s *Service) Start() error {
@@ -43,12 +36,8 @@ func (s *Service) Start() error {
 		return err
 	}
 	for _, vm := range s.vms {
-		err := vm.Initialize(s.GetVMContext())
-		if err != nil {
-			return err
-		}
 		vm.RegisterAPIs(s.apis)
-		err = vm.Bootstrapping()
+		err := vm.Bootstrapping()
 		if err != nil {
 			return err
 		}
@@ -112,20 +101,6 @@ func (s *Service) registerVMs() error {
 	return err
 }
 
-func (s *Service) GetVMContext() consensus.Context {
-	return &qconsensus.Context{
-		Context: s.Context(),
-		Cfg: &qconfig.Config{
-			DataDir:           s.cfg.DataDir,
-			DebugLevel:        s.cfg.DebugLevel,
-			DebugPrintOrigins: s.cfg.DebugPrintOrigins,
-			EVMEnv:            s.cfg.EVMEnv,
-		},
-		Tp:     s.tp,
-		Notify: s.Notify,
-	}
-}
-
 func (s *Service) subscribe() {
 	ch := make(chan *event.Event)
 	sub := s.events.Subscribe(ch)
@@ -183,7 +158,7 @@ func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 		return 0, fmt.Errorf("Not support:%s\n", tx.GetTxType().String())
 	}
 
-	itx, ok := tx.(*qconsensus.ImportTx)
+	itx, ok := tx.(*vm.ImportTx)
 	if !ok {
 		return 0, fmt.Errorf("Not support tx:%s\n", tx.GetTxType().String())
 	}
@@ -232,10 +207,10 @@ func (s *Service) RemoveTxFromMempool(tx *types.Transaction) error {
 	return v.RemoveTxFromMempool(tx)
 }
 
-func (s *Service) GetTxsFromMempool() ([]*types.Transaction, error) {
+func (s *Service) GetTxsFromMempool() ([]*types.Transaction,[]*hash.Hash, error) {
 	v, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
-		return nil, err
+		return nil,nil, err
 	}
 	return v.GetTxsFromMempool()
 }
@@ -264,40 +239,40 @@ func (s *Service) CheckConnectBlock(block *types.SerializedBlock) error {
 	return vm.CheckConnectBlock(b)
 }
 
-func (s *Service) ConnectBlock(block *types.SerializedBlock) error {
+func (s *Service) ConnectBlock(block *types.SerializedBlock) (uint64,error) {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
-		return err
+		return 0,err
 	}
 	b, err := s.normalizeBlock(block, true)
 	if err != nil {
-		return err
+		return 0,err
 	}
 
 	if len(b.Txs) <= 0 {
-		return nil
+		return 0,nil
 	}
 	return vm.ConnectBlock(b)
 }
 
-func (s *Service) DisconnectBlock(block *types.SerializedBlock) error {
+func (s *Service) DisconnectBlock(block *types.SerializedBlock) (uint64,error) {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
-		return err
+		return 0,err
 	}
 	b, err := s.normalizeBlock(block, false)
 	if err != nil {
-		return err
+		return 0,err
 	}
 
 	if len(b.Txs) <= 0 {
-		return nil
+		return 0,nil
 	}
 	return vm.DisconnectBlock(b)
 }
 
-func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*qconsensus.Block, error) {
-	result := &qconsensus.Block{Id: block.Hash(), Txs: []consensus.Tx{}, Time: block.Block().Header.Timestamp}
+func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*vm.Block, error) {
+	result := &vm.Block{Id: block.Hash(), Txs: []consensus.Tx{}, Time: block.Block().Header.Timestamp}
 
 	for idx, tx := range block.Transactions() {
 		if idx == 0 {
@@ -308,13 +283,13 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*
 		}
 
 		if types.IsCrossChainExportTx(tx.Tx) {
-			ctx, err := qconsensus.NewExportTx(tx.Tx)
+			ctx, err := vm.NewExportTx(tx.Tx)
 			if err != nil {
 				return nil, err
 			}
 			result.Txs = append(result.Txs, ctx)
 		} else if types.IsCrossChainImportTx(tx.Tx) {
-			ctx, err := qconsensus.NewImportTx(tx.Tx)
+			ctx, err := vm.NewImportTx(tx.Tx)
 			if err != nil {
 				return nil, err
 			}
@@ -324,7 +299,7 @@ func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*
 			}
 			result.Txs = append(result.Txs, ctx)
 		} else if types.IsCrossChainVMTx(tx.Tx) {
-			ctx, err := qconsensus.NewVMTx(tx.Tx)
+			ctx, err := vm.NewVMTx(tx.Tx)
 			if err != nil {
 				return nil, err
 			}
@@ -380,19 +355,57 @@ func (s *Service) Genesis(txs []*types.Tx) *hash.Hash {
 	return vm.Genesis()
 }
 
-func NewService(cfg *config.Config, events *event.Feed, tp consensus.TxPool, Notify consensus.Notify) (*Service, error) {
+func (s *Service) GetBlockID(bh *hash.Hash) uint64 {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return 0
+	}
+	return vm.GetBlockID(bh)
+}
+
+func (s *Service) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return 0
+	}
+	return vm.GetBlockIDByTxHash(txhash)
+}
+
+func (s *Service) SetTxPool(tp consensus.TxPool) {
+	s.ctx.Tp=tp
+}
+
+func (s *Service) SetNotify(Notify consensus.Notify) {
+	s.ctx.Notify=Notify
+}
+
+func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
 	ser := Service{
 		events: events,
 		vms:    make(map[string]consensus.ChainVM),
 		cfg:    cfg,
-		tp:     tp,
-		Notify: Notify,
 		apis:   []api.API{},
+	}
+	ser.InitContext()
+	ser.ctx=&vm.Context{
+		Context: ser.Context(),
+		Cfg: &qconfig.Config{
+			DataDir:           cfg.DataDir,
+			DebugLevel:        cfg.DebugLevel,
+			DebugPrintOrigins: cfg.DebugPrintOrigins,
+			EVMEnv:            cfg.EVMEnv,
+		},
 	}
 	if err := ser.registerVMs(); err != nil {
 		log.Error(err.Error())
 		return nil, err
 	}
 
+	for _, vm := range ser.vms {
+		err := vm.Initialize(ser.ctx)
+		if err != nil {
+			return nil,err
+		}
+	}
 	return &ser, nil
 }

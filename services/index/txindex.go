@@ -9,12 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 )
 
 const (
@@ -352,7 +350,7 @@ type TxIndex struct {
 	db       database.DB
 	curOrder int64
 
-	chain *blockchain.BlockChain
+	chain model.BlockChain
 }
 
 // Ensure the TxIndex type implements the Indexer interface.
@@ -363,7 +361,7 @@ var _ Indexer = (*TxIndex)(nil)
 // disconnecting blocks.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) Init(chain *blockchain.BlockChain) error {
+func (idx *TxIndex) Init(chain model.BlockChain) error {
 	idx.chain = chain
 	// Find the latest known block id field for the internal block id
 	// index and initialize it.  This is done because it's a lot more
@@ -422,7 +420,7 @@ func (idx *TxIndex) Init(chain *blockchain.BlockChain) error {
 		return err
 	}
 
-	if chain.CacheInvalidTx {
+	if chain.IsCacheInvalidTx() {
 		if idx.curOrder == -1 {
 			idx.db.Update(func(dbTx database.Tx) error {
 				dbTx.Metadata().Put(dbnamespace.CacheInvalidTxName, []byte{byte(0)})
@@ -500,23 +498,23 @@ func (idx *TxIndex) Create(dbTx database.Tx) error {
 // for every transaction in the passed block.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
+func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
 	// Increment the internal block ID to use for the block being connected
 	// and add all of the transactions in the block to the index.
 	newOrder := idx.curOrder + 1
-	if ib == nil {
+	if blk == nil {
 		return fmt.Errorf("no node %s", block.Hash())
 	}
 	if block.Order() != uint64(newOrder) {
 		return fmt.Errorf("TxIndex.curOrder != block(%s).order(%d)", block.Hash(), block.Order())
 	}
 
-	if !ib.GetStatus().KnownInvalid() {
+	if !blk.GetStatus().KnownInvalid() {
 		if err := dbAddTxIndexEntries(dbTx, block, uint32(newOrder)); err != nil {
 			return err
 		}
 	} else {
-		if idx.chain.CacheInvalidTx {
+		if idx.chain.IsCacheInvalidTx() {
 			if err := dbAddInvalidTxIndexEntries(dbTx, block, uint32(newOrder)); err != nil {
 				return err
 			}
@@ -538,12 +536,12 @@ func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock,
 // hash-to-transaction mapping for every transaction in the block.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
+func (idx *TxIndex) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte) error {
 	// Remove all of the transactions in the block from the index.
 	if err := dbRemoveTxIndexEntries(dbTx, block); err != nil {
 		return err
 	}
-	if idx.chain.CacheInvalidTx {
+	if idx.chain.IsCacheInvalidTx() {
 		if err := dbRemoveInvalidTxIndexEntries(dbTx, block); err != nil {
 			return err
 		}

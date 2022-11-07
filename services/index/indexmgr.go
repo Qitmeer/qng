@@ -7,13 +7,10 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/math"
-	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 )
 
@@ -21,23 +18,47 @@ import (
 // implements the blockchain.IndexManager interface so it can be seamlessly
 // plugged into normal chain processing.
 type Manager struct {
-	params         *params.Params
+	consensus      model.Consensus
+	cfg            *Config
 	db             database.DB
 	enabledIndexes []Indexer
+	vmblockIndex   *VMBlockIndex
 }
 
 // Ensure the Manager type implements the blockchain.IndexManager interface.
-var _ blockchain.IndexManager = (*Manager)(nil)
+var _ model.IndexManager = (*Manager)(nil)
 
 // NewManager returns a new index manager with the provided indexes enabled.
 //
 // The manager returned satisfies the blockchain.IndexManager interface and thus
 // cleanly plugs into the normal blockchain processing path.
-func NewManager(db database.DB, enabledIndexes []Indexer, params *params.Params) *Manager {
+func NewManager(cfg *Config, consensus model.Consensus) *Manager {
+	if cfg == nil {
+		cfg = DefaultConfig()
+	}
+	// Create the transaction and address indexes if needed.
+	var indexers []Indexer
+	if cfg.TxIndex {
+		txIndex := NewTxIndex(consensus.DatabaseContext())
+		indexers = append(indexers, txIndex)
+	}
+	if cfg.AddrIndex {
+		addrIndex := NewAddrIndex(consensus.DatabaseContext())
+		indexers = append(indexers, addrIndex)
+	}
+	var vmbIndex *VMBlockIndex
+	if cfg.VMBlockIndex {
+		vmbIndex = NewVMBlockIndex(consensus)
+	}
+	for _, indexer := range indexers {
+		log.Info(fmt.Sprintf("%s is enabled", indexer.Name()))
+	}
 	return &Manager{
-		db:             db,
-		enabledIndexes: enabledIndexes,
-		params:         params,
+		cfg:            cfg,
+		db:             consensus.DatabaseContext(),
+		enabledIndexes: indexers,
+		vmblockIndex:   vmbIndex,
+		consensus:      consensus,
 	}
 }
 
@@ -49,7 +70,15 @@ func NewManager(db database.DB, enabledIndexes []Indexer, params *params.Params)
 // catch up due to the I/O contention.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) error {
+func (m *Manager) Init() error {
+	interrupt := m.consensus.Interrupt()
+	chain := m.consensus.BlockChain()
+	if m.vmblockIndex != nil {
+		err :=m.vmblockIndex.Init()
+		if err != nil {
+			return err
+		}
+	}
 	// Nothing to do when no indexes are enabled.
 	if len(m.enabledIndexes) == 0 {
 		return nil
@@ -86,13 +115,13 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		}
 	}
 
-	bestOrder := uint32(chain.BestSnapshot().GraphState.GetMainOrder())
+	bestOrder := uint32(chain.GetMainOrder())
 
 	// Rollback indexes to the main chain if their tip is an orphaned fork.
 	// This is fairly unlikely, but it can happen if the chain is
 	// reorganized while the index is disabled.  This has to be done in
 	// reverse order because later indexes can depend on earlier ones.
-	var spentTxos []blockchain.SpentTxOut
+	var spentTxos [][]byte
 	for i := len(m.enabledIndexes); i > 0; i-- {
 		indexer := m.enabledIndexes[i-1]
 
@@ -122,7 +151,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 				}
 				spentTxos = nil
 				if indexNeedsInputs(indexer) {
-					spentTxos, err = chain.FetchSpendJournal(block)
+					spentTxos, err = chain.FetchSpendJournalPKS(block)
 					if err != nil {
 						return err
 					}
@@ -184,7 +213,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 	}
 
 	// Create a progress logger for the indexing process below.
-	progressLogger := progresslog.NewBlockProgressLogger("Indexed", log.Root())
+	progressLogger := progresslog.NewBlockProgressLogger("Indexed", log)
 
 	// At this point, one or more indexes are behind the current best chain
 	// tip and need to be caught up, so log the details and loop through
@@ -198,11 +227,11 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		}
 
 		var block *types.SerializedBlock
-		var ib meerdag.IBlock
+		var blk model.Block
 		err = m.db.Update(func(dbTx database.Tx) error {
 			// Load the block for the height since it is required to index
 			// it.
-			block, ib, err = chain.DBFetchBlockByOrder(dbTx, uint64(order))
+			block, blk, err = chain.DBFetchBlockByOrder(dbTx, uint64(order))
 			if err != nil {
 				return err
 			}
@@ -231,13 +260,13 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			// need to be retrieved from the transaction
 			// index.
 			if spentTxos == nil && indexNeedsInputs(indexer) {
-				spentTxos, err = chain.FetchSpendJournal(block)
+				spentTxos, err = chain.FetchSpendJournalPKS(block)
 				if err != nil {
 					return err
 				}
 			}
 			err = m.db.Update(func(dbTx database.Tx) error {
-				return dbIndexConnectBlock(dbTx, indexer, block, spentTxos, ib)
+				return dbIndexConnectBlock(dbTx, indexer, block, spentTxos, blk)
 			})
 			if err != nil {
 				return err
@@ -316,6 +345,9 @@ func indexNeedsInputs(index Indexer) bool {
 func (m *Manager) maybeCreateIndexes(dbTx database.Tx) error {
 	indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
 	for _, indexer := range m.enabledIndexes {
+		if indexer.Name() == vmblockIndexName {
+			continue
+		}
 		// Nothing to do if the index tip already exists.
 		idxKey := indexer.Key()
 		if indexesBucket.Get(idxKey) != nil {
@@ -345,16 +377,25 @@ func (m *Manager) maybeCreateIndexes(dbTx database.Tx) error {
 // checks, and invokes each indexer.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
+func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block,vmbid uint64) error {
 	// Call each of the currently active optional indexes with the block
 	// being connected so they can update accordingly.
-	for _, index := range m.enabledIndexes {
-		err := dbIndexConnectBlock(dbTx, index, block, stxos, ib)
-		if err != nil {
-			return err
+	err := m.db.Update(func(dbTx database.Tx) error {
+		for _, index := range m.enabledIndexes {
+			err := dbIndexConnectBlock(dbTx, index, block, stxos, blk)
+			if err != nil {
+				return err
+			}
 		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
-	return nil
+	if m.vmblockIndex != nil {
+		return m.vmblockIndex.ConnectBlock(block.Hash(),vmbid)	
+	}
+	return nil	
 }
 
 // DisconnectBlock must be invoked when a block is being disconnected from the
@@ -363,16 +404,32 @@ func (m *Manager) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, s
 // the index entries associated with the block.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
+func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte,vmbid uint64) error {
 	// Call each of the currently active optional indexes with the block
 	// being disconnected so they can update accordingly.
-	for _, index := range m.enabledIndexes {
-		err := m.dbIndexDisconnectBlock(dbTx, index, block, stxos)
-		if err != nil {
-			return err
+	err := m.db.Update(func(dbTx database.Tx) error {
+		for _, index := range m.enabledIndexes {
+			err := m.dbIndexDisconnectBlock(dbTx, index, block, stxos)
+			if err != nil {
+				return err
+			}
 		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if m.vmblockIndex != nil {
+		return m.vmblockIndex.DisconnectBlock(block.Hash(), vmbid)
 	}
 	return nil
+}
+
+func (m *Manager) UpdateMainTip(bh *hash.Hash,order uint64) error {
+	if m.vmblockIndex != nil {
+		return m.vmblockIndex.UpdateMainTip(bh,order)	
+	}
+	return nil	
 }
 
 // HasTransaction
@@ -462,7 +519,7 @@ func DBFetchTxAndBlock(dbTx database.Tx, hash *hash.Hash) (*types.Transaction, *
 // given block using the provided indexer and updates the tip of the indexer
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the passed block.
-func (m *Manager) dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
+func (m *Manager) dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *types.SerializedBlock, stxos [][]byte) error {
 	// Assert that the block being disconnected is the current tip of the
 	// index.
 	idxKey := indexer.Key()
@@ -503,11 +560,59 @@ func (m *Manager) dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, bloc
 	return dbPutIndexerTip(dbTx, idxKey, prevHash, preOrder)
 }
 
+func (m *Manager) Drop() error {
+	if m.db == nil {
+		return fmt.Errorf("No load DB")
+	}
+	err := DropAddrIndex(m.db, make(chan struct{}))
+	if err != nil {
+		return err
+	}
+	return DropTxIndex(m.db, make(chan struct{}))
+}
+
+func (m *Manager) TxIndex() *TxIndex {
+	indexer := m.GetIndex(txIndexName)
+	if indexer != nil {
+		return indexer.(*TxIndex)
+	}
+	return nil
+}
+
+func (m *Manager) AddrIndex() *AddrIndex {
+	indexer := m.GetIndex(addrIndexName)
+	if indexer != nil {
+		return indexer.(*AddrIndex)
+	}
+	return nil
+}
+
+func (m *Manager) VMBlockIndex() *VMBlockIndex {
+	return m.vmblockIndex
+}
+
+func (m *Manager) ExistsAddrIndex() *ExistsAddrIndex {
+	indexer := m.GetIndex(existsAddressIndexName)
+	if indexer != nil {
+		return indexer.(*ExistsAddrIndex)
+	}
+	return nil
+}
+
+func (m *Manager) GetIndex(name string) Indexer {
+	for _, index := range m.enabledIndexes {
+		if index.Name() == name {
+			return index
+		}
+	}
+	return nil
+}
+
 // dbIndexConnectBlock adds all of the index entries associated with the
 // given block using the provided indexer and updates the tip of the indexer
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the previous block for the passed block.
-func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
+func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
 	// Assert that the block being connected properly connects to the
 	// current tip of the index.
 	idxKey := indexer.Key()
@@ -523,7 +628,7 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *types.Seriali
 			order, block.Order())
 	}
 	// Notify the indexer with the connected block so it can index it.
-	if err := indexer.ConnectBlock(dbTx, block, stxos, ib); err != nil {
+	if err := indexer.ConnectBlock(dbTx, block, stxos, blk); err != nil {
 		return err
 	}
 
@@ -595,17 +700,6 @@ func markIndexDeletion(db database.DB, idxKey []byte) error {
 		indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
 		return indexesBucket.Put(indexDropKey(idxKey), idxKey)
 	})
-}
-
-func (m *Manager) Drop() error {
-	if m.db == nil {
-		return fmt.Errorf("No load DB")
-	}
-	err := DropAddrIndex(m.db, make(chan struct{}))
-	if err != nil {
-		return err
-	}
-	return DropTxIndex(m.db, make(chan struct{}))
 }
 
 // indexDropKey returns the key for an index which indicates it is in the

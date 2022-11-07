@@ -207,6 +207,12 @@ function get_evm_txhash_by_id(){
   get_result "$data"
 }
 
+function get_txid_by_evmtxhash(){
+  local etx_hash=$1
+  local data='{"jsonrpc":"2.0","method":"getTxIDByMeerEVMTxHash","params":["'$etx_hash'"],"id":1}'
+  get_result "$data"
+}
+
 # return info about UTXO
 function get_utxo() {
   local tx_hash=$1
@@ -746,6 +752,7 @@ function usage(){
   echo "  evmtxhash <id>"
   echo "  txv2 <id>"
   echo "  txbyhash <hash>"
+  echo "  txidbyevmhash <evm tx hash>"
   echo "  createRawTx"
   echo "  createRawTxV2"
   echo "  createTokenRawTx"
@@ -1163,6 +1170,10 @@ elif [ "$1" == "txbyhash" ]; then
 elif [ "$1" == "evmtxhash" ]; then
   shift
   get_evm_txhash_by_id $@
+
+elif [ "$1" == "txidbyevmhash" ]; then
+  shift
+  get_txid_by_evmtxhash $@
 
 elif [ "$1" == "createRawTx" ]; then
   shift

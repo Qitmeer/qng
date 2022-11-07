@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/event"
@@ -76,7 +76,7 @@ func (mp *TxPool) TxDescs() []*TxDesc {
 	}
 	mp.mtx.RUnlock()
 
-	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	etxs,_, err := mp.cfg.BC.VMService.GetTxsFromMempool()
 	if err != nil {
 		log.Error(err.Error())
 		return descs
@@ -118,8 +118,8 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 		// Remove unconfirmed address index entries associated with the
 		// transaction if enabled.
 		// TODO address index
-		if mp.cfg.AddrIndex != nil {
-			mp.cfg.AddrIndex.RemoveUnconfirmedTx(txHash)
+		if aIndex := mp.cfg.IndexManager.AddrIndex(); aIndex != nil {
+			aIndex.RemoveUnconfirmedTx(txHash)
 		}
 		// Mark the referenced outpoints as unspent by the pool.
 
@@ -199,8 +199,8 @@ func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
 	if !types.IsCrossChainVMTx(tx.Tx) {
 		mp.pool[*tx.Hash()] = txD
 
-		if mp.cfg.ExistsAddrIndex != nil {
-			mp.cfg.ExistsAddrIndex.AddUnconfirmedTx(msgTx)
+		if eaIndex := mp.cfg.IndexManager.ExistsAddrIndex(); eaIndex != nil {
+			eaIndex.AddUnconfirmedTx(msgTx)
 		}
 	}
 
@@ -223,8 +223,8 @@ func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
 
 	// Add unconfirmed address index entries associated with the transaction
 	// if enabled.
-	if mp.cfg.AddrIndex != nil && utxoView != nil {
-		mp.cfg.AddrIndex.AddUnconfirmedTx(tx, utxoView)
+	if aIndex := mp.cfg.IndexManager.AddrIndex(); aIndex != nil && utxoView != nil {
+		mp.AddUnconfirmedTx(tx, utxoView)
 	}
 
 	// Record this tx for fee estimation if enabled.
@@ -415,7 +415,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		if mp.cfg.BC.HasTx(txHash) {
 			return nil, nil, fmt.Errorf("Already have transaction %v", txHash)
 		}
-		itx, err := consensus.NewImportTx(tx.Tx)
+		itx, err := vm.NewImportTx(tx.Tx)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1018,7 +1018,7 @@ func (mp *TxPool) FetchTransaction(txHash *hash.Hash) (*types.Tx, error) {
 		return txDesc.Tx, nil
 	}
 	er := fmt.Errorf("transaction is not in the pool")
-	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	etxs,_, err := mp.cfg.BC.VMService.GetTxsFromMempool()
 	if err != nil {
 		return nil, er
 	}
@@ -1047,7 +1047,7 @@ func (mp *TxPool) FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error) {
 	mp.mtx.RUnlock()
 
 	er := fmt.Errorf("transaction is not in the pool")
-	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	etxs,_, err := mp.cfg.BC.VMService.GetTxsFromMempool()
 	if err != nil {
 		return nil, er
 	}
@@ -1072,7 +1072,7 @@ func (mp *TxPool) FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error) {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) HaveAllTransactions(hashes []hash.Hash) bool {
-	etxs, _ := mp.cfg.BC.VMService.GetTxsFromMempool()
+	etxs,_,_:= mp.cfg.BC.VMService.GetTxsFromMempool()
 	mp.mtx.RLock()
 	inPool := true
 	for _, h := range hashes {
@@ -1128,7 +1128,7 @@ func (mp *TxPool) isTransactionInPool(hash *hash.Hash) bool {
 	if _, exists := mp.pool[*hash]; exists {
 		return true
 	}
-	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	etxs,_, err := mp.cfg.BC.VMService.GetTxsFromMempool()
 	if err != nil {
 		return false
 	}
@@ -1201,7 +1201,7 @@ func (mp *TxPool) MiningDescs() []*types.TxDesc {
 	}
 	mp.mtx.RUnlock()
 
-	etxs, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	etxs,_, err := mp.cfg.BC.VMService.GetTxsFromMempool()
 	if err != nil {
 		log.Error(err.Error())
 		return descs
@@ -1269,4 +1269,27 @@ func (mp *TxPool) GetMainHeight() int64 {
 
 func (mp *TxPool) IsSupportVMTx() bool {
 	return mp.cfg.BC.IsValidTxType(types.TxTypeCrossChainVM)
+}
+
+func (mp *TxPool) AddUnconfirmedTx(tx *types.Tx, utxoView *blockchain.UtxoViewpoint) {
+	var pkScripts [][]byte
+	msgTx := tx.Transaction()
+	for _, txIn := range msgTx.TxIn {
+		entry := utxoView.LookupEntry(txIn.PreviousOut)
+		if entry == nil {
+			// Ignore missing entries.  This should never happen
+			// in practice since the function comments specifically
+			// call out all inputs must be available.
+			continue
+		}
+		pkScript := entry.PkScript()
+		//txType := entry.TransactionType()
+		pkScripts = append(pkScripts, pkScript)
+	}
+
+	// Index addresses of all created outputs.
+	for _, txOut := range msgTx.TxOut {
+		pkScripts = append(pkScripts, txOut.PkScript)
+	}
+	mp.cfg.IndexManager.AddrIndex().AddUnconfirmedTx(tx, pkScripts)
 }

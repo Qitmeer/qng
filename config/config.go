@@ -28,6 +28,7 @@ type Config struct {
 	DropTxIndex        bool     `long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
 	AddrIndex          bool     `long:"addrindex" description:"Maintain a full address-based transaction index which makes the getrawtransactions RPC available"`
 	DropAddrIndex      bool     `long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
+	VMBlockIndex       bool     `long:"vmblockindex" description:"Maintain a full vm block index which makes the GetTxIDByMeerEVMTxHash RPC available"`
 	LightNode          bool     `long:"light" description:"start as a qitmeer light node"`
 	SigCacheMaxSize    uint     `long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
 	DumpBlockchain     string   `long:"dumpblockchain" description:"Write blockchain as a flat file of blocks for use with addblock, to the specified filename"`
@@ -108,7 +109,8 @@ type Config struct {
 
 	Estimatefee bool `long:"estimatefee" description:"Enable estimate fee"`
 
-	AcctMode bool `long:"acctmode" description:"Enable support account system mode"`
+	AcctMode   bool `long:"acctmode" description:"Enable support account system mode"`
+	IsArchival bool `long:"archival" description:"Archival tells the consensus if it should not prune old blocks"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {

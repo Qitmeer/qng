@@ -2,6 +2,7 @@ package ghostdag
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
+	cmodel "github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/meerdag/ghostdag/model"
 	"github.com/pkg/errors"
@@ -38,7 +39,7 @@ type GhostDAG struct {
 //    BluesAnticoneSizes.
 //
 // For further details see the article https://eprint.iacr.org/2018/104.pdf
-func (gm *GhostDAG) GHOSTDAG(stagingArea *model.StagingArea, blockHash *hash.Hash) error {
+func (gm *GhostDAG) GHOSTDAG(stagingArea *cmodel.StagingArea, blockHash *hash.Hash) error {
 	newBlockData := model.NewBlockGHOSTDAGData(0, new(big.Int), nil, make([]*hash.Hash, 0), make([]*hash.Hash, 0), make(map[hash.Hash]model.KType))
 	blockParents, err := gm.dagTopologyManager.Parents(stagingArea, blockHash)
 	if err != nil {
@@ -118,7 +119,7 @@ type chainBlockData struct {
 	blockData *model.BlockGHOSTDAGData
 }
 
-func (gm *GhostDAG) checkBlueCandidate(stagingArea *model.StagingArea, newBlockData *model.BlockGHOSTDAGData,
+func (gm *GhostDAG) checkBlueCandidate(stagingArea *cmodel.StagingArea, newBlockData *model.BlockGHOSTDAGData,
 	blueCandidate *hash.Hash) (isBlue bool, candidateAnticoneSize model.KType,
 	candidateBluesAnticoneSizes map[hash.Hash]model.KType, err error) {
 
@@ -166,7 +167,7 @@ func (gm *GhostDAG) checkBlueCandidate(stagingArea *model.StagingArea, newBlockD
 	return true, candidateAnticoneSize, candidateBluesAnticoneSizes, nil
 }
 
-func (gm *GhostDAG) checkBlueCandidateWithChainBlock(stagingArea *model.StagingArea,
+func (gm *GhostDAG) checkBlueCandidateWithChainBlock(stagingArea *cmodel.StagingArea,
 	newBlockData *model.BlockGHOSTDAGData, chainBlock chainBlockData, blueCandidate *hash.Hash,
 	candidateBluesAnticoneSizes map[hash.Hash]model.KType,
 	candidateAnticoneSize *model.KType) (isBlue, isRed bool, err error) {
@@ -231,7 +232,7 @@ func (gm *GhostDAG) checkBlueCandidateWithChainBlock(stagingArea *model.StagingA
 
 // blueAnticoneSize returns the blue anticone size of 'block' from the worldview of 'context'.
 // Expects 'block' to be in the blue set of 'context'
-func (gm *GhostDAG) blueAnticoneSize(stagingArea *model.StagingArea,
+func (gm *GhostDAG) blueAnticoneSize(stagingArea *cmodel.StagingArea,
 	block *hash.Hash, context *model.BlockGHOSTDAGData) (model.KType, error) {
 
 	isTrustedData := false
@@ -260,7 +261,7 @@ func (gm *GhostDAG) blueAnticoneSize(stagingArea *model.StagingArea,
 }
 
 // compare
-func (gm *GhostDAG) findSelectedParent(stagingArea *model.StagingArea, parentHashes []*hash.Hash) (*hash.Hash, error) {
+func (gm *GhostDAG) findSelectedParent(stagingArea *cmodel.StagingArea, parentHashes []*hash.Hash) (*hash.Hash, error) {
 	var selectedParent *hash.Hash
 	for _, hash := range parentHashes {
 		if selectedParent == nil {
@@ -278,11 +279,11 @@ func (gm *GhostDAG) findSelectedParent(stagingArea *model.StagingArea, parentHas
 	return selectedParent, nil
 }
 
-func (gm *GhostDAG) FindSelectedParent(stagingArea *model.StagingArea, parentHashes []*hash.Hash) (*hash.Hash, error) {
+func (gm *GhostDAG) FindSelectedParent(stagingArea *cmodel.StagingArea, parentHashes []*hash.Hash) (*hash.Hash, error) {
 	return gm.findSelectedParent(stagingArea, parentHashes)
 }
 
-func (gm *GhostDAG) less(stagingArea *model.StagingArea, blockHashA, blockHashB *hash.Hash) (bool, error) {
+func (gm *GhostDAG) less(stagingArea *cmodel.StagingArea, blockHashA, blockHashB *hash.Hash) (bool, error) {
 	chosenSelectedParent, err := gm.ChooseSelectedParent(stagingArea, blockHashA, blockHashB)
 	if err != nil {
 		return false, err
@@ -290,7 +291,7 @@ func (gm *GhostDAG) less(stagingArea *model.StagingArea, blockHashA, blockHashB 
 	return chosenSelectedParent == blockHashB, nil
 }
 
-func (gm *GhostDAG) ChooseSelectedParent(stagingArea *model.StagingArea, blockHashes ...*hash.Hash) (*hash.Hash, error) {
+func (gm *GhostDAG) ChooseSelectedParent(stagingArea *cmodel.StagingArea, blockHashes ...*hash.Hash) (*hash.Hash, error) {
 	selectedParent := blockHashes[0]
 	selectedParentGHOSTDAGData, err := gm.ghostdagDataStore.Get(gm.databaseContext, stagingArea, selectedParent, false)
 	if err != nil {
@@ -326,7 +327,7 @@ func (gm *GhostDAG) Less(blockHashA *hash.Hash, ghostdagDataA *model.BlockGHOSTD
 }
 
 // mergeset
-func (gm *GhostDAG) mergeSetWithoutSelectedParent(stagingArea *model.StagingArea, selectedParent *hash.Hash, blockParents []*hash.Hash) ([]*hash.Hash, error) {
+func (gm *GhostDAG) mergeSetWithoutSelectedParent(stagingArea *cmodel.StagingArea, selectedParent *hash.Hash, blockParents []*hash.Hash) ([]*hash.Hash, error) {
 
 	mergeSetMap := make(map[hash.Hash]struct{}, gm.k)
 	mergeSetSlice := make([]*hash.Hash, 0, gm.k)
@@ -384,7 +385,7 @@ func (gm *GhostDAG) mergeSetWithoutSelectedParent(stagingArea *model.StagingArea
 	return mergeSetSlice, nil
 }
 
-func (gm *GhostDAG) sortMergeSet(stagingArea *model.StagingArea, mergeSetSlice []*hash.Hash) error {
+func (gm *GhostDAG) sortMergeSet(stagingArea *cmodel.StagingArea, mergeSetSlice []*hash.Hash) error {
 	var err error
 	sort.Slice(mergeSetSlice, func(i, j int) bool {
 		if err != nil {
@@ -401,7 +402,7 @@ func (gm *GhostDAG) sortMergeSet(stagingArea *model.StagingArea, mergeSetSlice [
 }
 
 // GetSortedMergeSet return the merge set sorted in a toplogical order.
-func (gm *GhostDAG) GetSortedMergeSet(stagingArea *model.StagingArea,
+func (gm *GhostDAG) GetSortedMergeSet(stagingArea *cmodel.StagingArea,
 	current *hash.Hash) ([]*hash.Hash, error) {
 
 	currentGhostdagData, err := gm.ghostdagDataStore.Get(gm.databaseContext, stagingArea, current, false)

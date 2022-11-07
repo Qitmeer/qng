@@ -5,6 +5,8 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/node/service"
@@ -29,20 +31,20 @@ type Node struct {
 	// database layer
 	DB database.DB
 
-	// event system
-	events event.Feed
-
 	shutdownRequestChannel chan struct{}
+
+	consensus model.Consensus
 }
 
 func NewNode(cfg *config.Config, database database.DB, chainParams *params.Params, shutdownRequestChannel chan struct{}) (*Node, error) {
-
+	quit := make(chan struct{})
 	n := Node{
 		Config:                 cfg,
 		DB:                     database,
 		Params:                 chainParams,
-		quit:                   make(chan struct{}),
+		quit:                   quit,
 		shutdownRequestChannel: shutdownRequestChannel,
+		consensus:              consensus.New(cfg, database, quit, shutdownRequestChannel),
 	}
 	n.InitServices()
 	return &n, nil
@@ -84,7 +86,7 @@ func (n *Node) Start() error {
 	n.startupTime = roughtime.Now().Unix()
 	n.wg.Wrap(n.nodeEventHandler)
 
-	n.events.Send(event.New(event.Initialized))
+	n.consensus.Events().Send(event.New(event.Initialized))
 	return nil
 }
 

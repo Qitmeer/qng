@@ -2,7 +2,7 @@
  * Copyright (c) 2017-2020 The qitmeer developers
  */
 
-package consensus
+package vm
 
 import "github.com/Qitmeer/qng/core/types"
 

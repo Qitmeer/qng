@@ -2,6 +2,7 @@ package meerdag
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"io"
 )
@@ -71,10 +72,10 @@ type IBlock interface {
 	GetHeight() uint
 
 	// SetStatus
-	SetStatus(status BlockStatus)
+	SetStatus(status model.BlockStatus)
 
 	// GetStatus
-	GetStatus() BlockStatus
+	GetStatus() model.BlockStatus
 
 	// encode
 	Encode(w io.Writer) error
@@ -106,7 +107,7 @@ type Block struct {
 	order      uint
 	layer      uint
 	height     uint
-	status     BlockStatus
+	status     model.BlockStatus
 
 	data IBlockData
 }
@@ -410,24 +411,24 @@ func (b *Block) Decode(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	b.status = BlockStatus(status)
+	b.status = model.BlockStatus(status)
 	return nil
 }
 
 // SetStatus
-func (b *Block) SetStatus(status BlockStatus) {
+func (b *Block) SetStatus(status model.BlockStatus) {
 	b.status = status
 }
 
-func (b *Block) GetStatus() BlockStatus {
+func (b *Block) GetStatus() model.BlockStatus {
 	return b.status
 }
 
-func (b *Block) SetStatusFlags(flags BlockStatus) {
+func (b *Block) SetStatusFlags(flags model.BlockStatus) {
 	b.status |= flags
 }
 
-func (b *Block) UnsetStatusFlags(flags BlockStatus) {
+func (b *Block) UnsetStatusFlags(flags model.BlockStatus) {
 	b.status &^= flags
 }
 
@@ -444,31 +445,9 @@ func (b *Block) IsLoaded() bool {
 }
 
 func (b *Block) Valid() {
-	b.UnsetStatusFlags(StatusInvalid)
+	b.UnsetStatusFlags(model.StatusInvalid)
 }
 
 func (b *Block) Invalid() {
-	b.SetStatusFlags(StatusInvalid)
-}
-
-// BlockStatus
-type BlockStatus byte
-
-const (
-	// StatusNone
-	StatusNone BlockStatus = 0
-
-	// StatusBadSide
-	StatusBadSide BlockStatus = 1 << 0
-
-	// StatusInvalid indicates that the block data has failed validation.
-	StatusInvalid BlockStatus = 1 << 2
-)
-
-func (status BlockStatus) IsBadSide() bool {
-	return status&StatusBadSide != 0
-}
-
-func (status BlockStatus) KnownInvalid() bool {
-	return status&StatusInvalid != 0
+	b.SetStatusFlags(model.StatusInvalid)
 }

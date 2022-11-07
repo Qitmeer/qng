@@ -9,6 +9,7 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/consensus/model"
 	"math"
 	"sort"
 	"sync"
@@ -36,23 +37,6 @@ var (
 	maxMedianTimeEntries = 200
 )
 
-// MedianTimeSource provides a mechanism to add several time samples which are
-// used to determine a median time which is then used as an offset to the local
-// clock.
-type MedianTimeSource interface {
-	// AdjustedTime returns the current time adjusted by the median time
-	// offset as calculated from the time samples added by AddTimeSample.
-	AdjustedTime() time.Time
-
-	// AddTimeSample adds a time sample that is used when determining the
-	// median time of the added samples.
-	AddTimeSample(id string, timeVal time.Time)
-
-	// Offset returns the number of seconds to adjust the local clock based
-	// upon the median of the time samples added by AddTimeData.
-	Offset() time.Duration
-}
-
 // int64Sorter implements sort.Interface to allow a slice of 64-bit integers to
 // be sorted.
 type int64Sorter []int64
@@ -76,7 +60,7 @@ func (s int64Sorter) Less(i, j int) bool {
 	return s[i] < s[j]
 }
 
-// medianTime provides an implementation of the MedianTimeSource interface.
+// medianTime provides an implementation of the model.MedianTimeSource interface.
 // It is limited to maxMedianTimeEntries includes the same buggy behavior as
 // the time offset mechanism in Bitcoin Core.  This is necessary because it is
 // used in the consensus code.
@@ -89,7 +73,7 @@ type medianTime struct {
 }
 
 // Ensure the medianTime type implements the MedianTimeSource interface.
-var _ MedianTimeSource = (*medianTime)(nil)
+var _ model.MedianTimeSource = (*medianTime)(nil)
 
 // AdjustedTime returns the current time adjusted by the median time offset as
 // calculated from the time samples added by AddTimeSample.
@@ -216,7 +200,7 @@ func (m *medianTime) Offset() time.Duration {
 // rules necessary for proper time handling in the chain consensus rules and
 // expects the time samples to be added from the timestamp field of the version
 // message received from remote peers that successfully connect and negotiate.
-func NewMedianTime() MedianTimeSource {
+func NewMedianTime() model.MedianTimeSource {
 	return &medianTime{
 		knownIDs: make(map[string]struct{}),
 		offsets:  make([]int64, 0, maxMedianTimeEntries),
