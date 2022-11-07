@@ -133,7 +133,7 @@ var txInputs qx.TxInputsFlag
 var txOutputs qx.TxOutputsFlag
 var txVersion qx.TxVersionFlag
 var txLockTime qx.TxLockTimeFlag
-var privateKey string
+var privateKeys qx.TxPrivateKey
 var msgSignatureMode string
 
 func main() {
@@ -428,25 +428,37 @@ func main() {
 	txVersion = qx.TxVersionFlag(TX_VERION) //set default tx version
 	txEncodeCmd.Var(&txVersion, "v", "the transaction version")
 	txEncodeCmd.Var(&txLockTime, "l", "the transaction lock time")
-	txEncodeCmd.Var(&txInputs, "i", `The set of transaction input points encoded as TXHASH:INDEX:SEQUENCE:TXTYPE. 
-TXHASH is a Base16 transaction hash. INDEX is the 32 bit input index
-in the context of the transaction. SEQUENCE is the optional 32 bit 
-input sequence and defaults to the maximum value.
-TXTYPE is type type
-TxTypeRegular the standard tx
-TxTypeGenesisLock the tx try to lock the genesis output to the stake pool
-TxTypeCrossChainExport Cross chain by import tx
-TxTypeCrossChainImport Cross chain by vm tx
+	txEncodeCmd.Var(&txInputs, "i", `The set of transaction input points encoded as TXHASH:INDEX:SEQUENCE:SCRIPTTYPE:[args].
+TXHASH is a Base16 transaction hash. 
+INDEX is the 32 bit input index in the context of the transaction. 
+SEQUENCE is input sequence and defaults to 0xffffffff.
+SCRIPTTYPE is unlock script type
+- pubkeyhash PayToAddrScript(pkh)
+- pubkey PayToAddrScript(pk)
+- cltvpubkeyhash PayToCLTVPubKeyHashScript(pkh, args)
+- crossimport the special script, the index need 4294967294 and sequence need 258
+example: 
+-i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967295:pubkeyhash
+-i 5fdad6bb6781416b0361a10eb6183dec45fb31edcf2da10d22893ee7bb6502ca:0:4294967294:cltvpubkeyhash:1667298670
 `)
-	txEncodeCmd.Var(&txOutputs, "o", `The set of transaction output data encoded as TARGET:MEER:COINID:TXTYPE. 
-TARGET is an address (pay-to-pubkey-hash or pay-to-script-hash).
-MEER is the 64 bit spend amount in qitmeer.COINID enum {0 => MEER,1=>ETHID}`)
+	txEncodeCmd.Var(&txOutputs, "o", `The set of transaction output data encoded as ADDRESS:AMOUNT:COINID:SCRIPTTYPE:[args].
+ADDRESS is an address (pay-to-pubkey-hash or pay-to-script-hash).
+AMOUNT is the 64 bit spend amount in qitmeer.
+COINID enum {0 => MEERA,1=>MEERB}
+SCRIPTTYPE is lock script type
+- pubkeyhash PayToAddrScript(pkh)
+- pubkey PayToAddrScript(pk)
+- cltvpubkeyhash PayToCLTVPubKeyHashScript(pkh, LOCKTIME)
+example: 
+-o TnTTMZANDBhjeoxbPMAVKb5sM7KuvNpRo2b:9.9999:0:pubkeyhash
+-o TnTTMZANDBhjeoxbPMAVKb5sM7KuvNpRo2b:9.9999:0:cltvpubkeyhash:1667298670
+`)
 
 	txSignCmd := flag.NewFlagSet("tx-sign", flag.ExitOnError)
 	txSignCmd.Usage = func() {
 		cmdUsage(txSignCmd, "Usage: qx tx-sign [raw_tx_base16_string] \n")
 	}
-	txSignCmd.StringVar(&privateKey, "k", "", "the ec private key to sign the raw transaction")
+	txSignCmd.Var(&privateKeys, "k", "the ec private key to sign the raw transaction")
 	txSignCmd.StringVar(&network, "n", "mainnet", "decode rawtx for the target network. (mainnet, testnet, privnet)")
 
 	msgSignCmd := flag.NewFlagSet("msg-sign", flag.ExitOnError)
@@ -1416,7 +1428,7 @@ MEER is the 64 bit spend amount in qitmeer.COINID enum {0 => MEER,1=>ETHID}`)
 			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
 				txSignCmd.Usage()
 			} else {
-				qx.TxSignSTDO(privateKey, os.Args[len(os.Args)-1], network)
+				qx.TxSignSTDO(privateKeys, os.Args[len(os.Args)-1], network)
 			}
 		} else { //try from STDIN
 			src, err := ioutil.ReadAll(os.Stdin)
@@ -1424,7 +1436,7 @@ MEER is the 64 bit spend amount in qitmeer.COINID enum {0 => MEER,1=>ETHID}`)
 				errExit(err)
 			}
 			str := strings.TrimSpace(string(src))
-			qx.TxSignSTDO(privateKey, str, network)
+			qx.TxSignSTDO(privateKeys, str, network)
 		}
 	}
 

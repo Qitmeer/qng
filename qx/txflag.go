@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/engine/txscript"
 	"math"
 	"strconv"
 	"strings"
@@ -12,7 +12,15 @@ import (
 
 type TxVersionFlag uint32
 type TxLockTimeFlag uint32
+type TxPrivateKey []string
 
+func (v *TxPrivateKey) Set(s string) error {
+	*v = append(*v, s)
+	return nil
+}
+func (ver TxPrivateKey) String() string {
+	return strings.Join(ver, ":")
+}
 func (ver TxVersionFlag) String() string {
 	return fmt.Sprintf("%d", ver)
 }
@@ -51,26 +59,28 @@ type TxOutputsFlag struct {
 }
 
 type txInput struct {
-	txhash   []byte
-	index    uint32
-	sequence uint32
-	txtype   string
+	txhash     []byte
+	index      uint32
+	sequence   uint32
+	unlocktype string
+	args       string
 }
 type txOutput struct {
-	target string
-	amount float64
-	coinid int64
-	txtype string
+	target   string
+	amount   float64
+	coinid   int64
+	locktype string
+	args     string
 }
 
 func (i LockAddress) String() string {
 	return fmt.Sprintf("%s:%d:%s", i.Address, i.SignType, string(i.Args))
 }
 func (i txInput) String() string {
-	return fmt.Sprintf("%x:%d:%d:%s", i.txhash[:], i.index, i.sequence, i.txtype)
+	return fmt.Sprintf("%x:%d:%d:%s:%s", i.txhash[:], i.index, i.sequence, i.unlocktype, i.args)
 }
 func (o txOutput) String() string {
-	return fmt.Sprintf("%s:%f:%d:%s", o.target, o.amount, o.coinid, o.txtype)
+	return fmt.Sprintf("%s:%f:%d:%s:%s", o.target, o.amount, o.coinid, o.locktype, o.args)
 }
 
 func (v TxInputsFlag) String() string {
@@ -118,15 +128,20 @@ func (v *TxInputsFlag) Set(s string) error {
 		}
 		seq = uint32(s)
 	}
-	txtype := types.TxTypeRegular.String()
+	scripttype := txscript.PubKeyHashTy.String()
 	if len(input) >= 4 {
-		txtype = input[3]
+		scripttype = input[3]
+	}
+	args := ""
+	if len(input) >= 5 {
+		args = input[4]
 	}
 	i := txInput{
 		data,
 		uint32(index),
 		uint32(seq),
-		txtype,
+		scripttype,
+		args,
 	}
 	v.inputs = append(v.inputs, i)
 	return nil
@@ -146,11 +161,15 @@ func (of *TxOutputsFlag) Set(s string) error {
 	if err != nil {
 		return err
 	}
-	txtype := types.TxTypeRegular.String()
-	if len(output) == 4 {
-		txtype = output[3]
+	scripttype := txscript.PubKeyHashTy.String()
+	if len(output) >= 4 {
+		scripttype = output[3]
+	}
+	args := ""
+	if len(output) >= 5 {
+		args = output[4]
 	}
 	of.outputs = append(of.outputs, txOutput{
-		target, amount, coinid, txtype})
+		target, amount, coinid, scripttype, args})
 	return nil
 }
