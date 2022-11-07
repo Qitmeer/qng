@@ -11,12 +11,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/index"
+	"github.com/Qitmeer/qng/services/common"
 	"path"
 )
 
@@ -39,24 +39,17 @@ func (node *BINode) init(cfg *Config) error {
 
 	node.db = db
 	//
-	var indexes []index.Indexer
-	txIndex := index.NewTxIndex(db)
-	indexes = append(indexes, txIndex)
-	// index-manager
-	indexManager := index.NewManager(nil, db, indexes)
-
-	bc, err := blockchain.New(&blockchain.Config{
-		DB:           db,
-		ChainParams:  params.ActiveNetParams.Params,
-		TimeSource:   blockchain.NewMedianTime(),
-		DAGType:      cfg.DAGType,
-		IndexManager: indexManager,
-	})
+	ccfg:=common.DefaultConfig(node.cfg.HomeDir)
+	ccfg.DataDir=cfg.DataDir
+	ccfg.DbType=cfg.DbType
+	ccfg.DAGType=cfg.DAGType
+	cons:=consensus.NewPure(ccfg,db)
+	err=cons.Init()
 	if err != nil {
 		log.Error(err.Error())
 		return err
 	}
-	node.bc = bc
+	node.bc = cons.BlockChain().(*blockchain.BlockChain)
 	node.name = path.Base(cfg.DataDir)
 
 	log.Info(fmt.Sprintf("Load Data:%s", cfg.DataDir))
