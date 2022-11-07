@@ -16,7 +16,6 @@ bin
 build
 
 # Binaries
-qng
 qng.exe
 *.zip
 *.tar.gz
