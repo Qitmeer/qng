@@ -45,7 +45,7 @@ func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock uint64,
 	}
 	jsonErr := descendantBlock(lastBlock, blk)
 	if jsonErr != nil {
-		log.Error(jsonErr.Error())
+		return nil, jsonErr
 	}
 	return hashList, nil
 }
@@ -195,7 +195,7 @@ fetchRange:
 				var jsonErr error
 				jsonErr = descendantBlock(lastBlockHash, blk)
 				if jsonErr != nil {
-					log.Error(jsonErr.Error())
+
 					return nil, nil, nil, jsonErr
 				}
 			}
