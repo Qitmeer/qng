@@ -58,7 +58,7 @@ func descendantBlock(chain *blockchain.BlockChain, lastBlockHash *hash.Hash, cur
 		return fmt.Errorf("failed fetch order:%v", curBlock.Order()-1)
 	}
 	if !preHash.IsEqual(lastBlockHash) {
-		err = fmt.Errorf("Stopping rescan for reorged block %v (replaced by block order %v)", lastBlockHash, preHash)
+		err = fmt.Errorf("stopping rescan for reorged block %v (replaced by block %v)", lastBlockHash, preHash)
 		log.Error(err.Error())
 		return err
 	}
