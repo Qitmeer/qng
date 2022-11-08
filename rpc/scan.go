@@ -46,6 +46,8 @@ func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock uint64,
 	lastNode := chain.BlockDAG().GetBlock(lastBlock)
 	jsonErr := descendantBlock(lastNode.GetOrder(), blk)
 	if jsonErr != nil {
+		log.Error(fmt.Sprintf("Stopping rescan for reorged block %v "+
+			"(replaced by block %v)", lastBlock, blk.Hash()))
 		return nil, jsonErr
 	}
 	return hashList, nil
@@ -194,7 +196,8 @@ fetchRange:
 				lastNode := chain.BlockDAG().GetBlock(lastBlockHash)
 				jsonErr = descendantBlock(lastNode.GetOrder(), blk)
 				if jsonErr != nil {
-
+					log.Error(fmt.Sprintf("Stopping rescan for reorged block %v "+
+						"(replaced by block %v)", lastBlockHash, blk.Hash()))
 					return nil, nil, nil, jsonErr
 				}
 			}
