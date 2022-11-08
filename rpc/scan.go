@@ -191,7 +191,7 @@ fetchRange:
 				// Ensure the new hashList is on the same fork
 				// as the last block from the old hashList.
 				var jsonErr error
-				lastNode := chain.BlockDAG().GetBlock(&h)
+				lastNode := chain.BlockDAG().GetBlock(lastBlockHash)
 				jsonErr = descendantBlock(lastNode.GetOrder(), blk)
 				if jsonErr != nil {
 
