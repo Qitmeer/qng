@@ -43,23 +43,25 @@ func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock uint64,
 			err))
 		return nil, cmds.ErrRPCBlockNotFound
 	}
-	lastBlock, jsonErr := descendantBlock(lastBlock, blk)
+	jsonErr := descendantBlock(lastBlock, blk)
 	if jsonErr != nil {
-		log.Warn(jsonErr.Error())
+		log.Error(jsonErr.Error())
 	}
 	return hashList, nil
 }
 
 // descendantBlock returns the appropriate JSON-RPC error if a current block
 // fetched during a reorganize is not a direct child of the parent block hash.
-func descendantBlock(prevHash *hash.Hash, curBlock *types.SerializedBlock) (*hash.Hash, error) {
-	curHash := &curBlock.Block().Header.ParentRoot
-	if !prevHash.IsEqual(curHash) {
-		log.Error(fmt.Sprintf("Stopping rescan for reorged block %v "+
-			"(replaced by block %v)", prevHash, curHash))
-		return curHash, ErrRescanReorg
+func descendantBlock(lastBlock *hash.Hash, curBlock *types.SerializedBlock) error {
+	prevHashes := curBlock.Block().Parents
+	for _, v := range prevHashes {
+		if v.IsEqual(lastBlock) {
+			return nil
+		}
 	}
-	return curHash, nil
+	log.Error(fmt.Sprintf("Stopping rescan for reorged block %v "+
+		"(replaced by block %v)", lastBlock, prevHashes))
+	return ErrRescanReorg
 }
 
 // scanBlockChunks executes a rescan in chunked stages. We do this to limit the
@@ -191,9 +193,10 @@ fetchRange:
 				// Ensure the new hashList is on the same fork
 				// as the last block from the old hashList.
 				var jsonErr error
-				lastBlockHash, jsonErr = descendantBlock(lastBlockHash, blk)
+				jsonErr = descendantBlock(lastBlockHash, blk)
 				if jsonErr != nil {
-					log.Warn(jsonErr.Error())
+					log.Error(jsonErr.Error())
+					return nil, nil, nil, jsonErr
 				}
 			}
 
