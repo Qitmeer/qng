@@ -43,11 +43,8 @@ func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock uint64,
 			err))
 		return nil, cmds.ErrRPCBlockNotFound
 	}
-	lastNode := chain.BlockDAG().GetBlock(lastBlock)
-	jsonErr := descendantBlock(lastNode.GetOrder(), blk)
+	jsonErr := descendantBlock(chain, lastBlock, blk)
 	if jsonErr != nil {
-		log.Error(fmt.Sprintf("Stopping rescan for reorged block %v "+
-			"(replaced by block %v)", lastBlock, blk.Hash()))
 		return nil, jsonErr
 	}
 	return hashList, nil
@@ -55,13 +52,18 @@ func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock uint64,
 
 // descendantBlock returns the appropriate JSON-RPC error if a current block
 // fetched during a reorganize is not a direct child of the parent block hash.
-func descendantBlock(lastBlockOrder uint, curBlock *types.SerializedBlock) error {
-	if uint64(lastBlockOrder) == curBlock.Order()-1 {
-		return nil
+func descendantBlock(chain *blockchain.BlockChain, lastBlockHash *hash.Hash, curBlock *types.SerializedBlock) error {
+	preHash, err := chain.BlockHashByOrder(curBlock.Order() - 1)
+	if err != nil {
+		return fmt.Errorf("failed fetch order:%v", curBlock.Order()-1)
 	}
-	log.Error(fmt.Sprintf("Stopping rescan for reorged block order %v "+
-		"(replaced by block order %v)", lastBlockOrder, curBlock.Order()-1))
-	return ErrRescanReorg
+	if !preHash.IsEqual(lastBlockHash) {
+		err = fmt.Errorf("Stopping rescan for reorged block %v (replaced by block order %v)", lastBlockHash, preHash)
+		log.Error(err.Error())
+		return err
+	}
+
+	return nil
 }
 
 // scanBlockChunks executes a rescan in chunked stages. We do this to limit the
@@ -193,11 +195,8 @@ fetchRange:
 				// Ensure the new hashList is on the same fork
 				// as the last block from the old hashList.
 				var jsonErr error
-				lastNode := chain.BlockDAG().GetBlock(lastBlockHash)
-				jsonErr = descendantBlock(lastNode.GetOrder(), blk)
+				jsonErr = descendantBlock(chain, lastBlockHash, blk)
 				if jsonErr != nil {
-					log.Error(fmt.Sprintf("Stopping rescan for reorged block %v "+
-						"(replaced by block %v)", lastBlockHash, blk.Hash()))
 					return nil, nil, nil, jsonErr
 				}
 			}
