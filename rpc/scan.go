@@ -43,7 +43,8 @@ func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock uint64,
 			err))
 		return nil, cmds.ErrRPCBlockNotFound
 	}
-	jsonErr := descendantBlock(lastBlock, blk)
+	lastNode := chain.BlockDAG().GetBlock(lastBlock)
+	jsonErr := descendantBlock(lastNode.GetOrder(), blk)
 	if jsonErr != nil {
 		return nil, jsonErr
 	}
@@ -52,15 +53,12 @@ func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock uint64,
 
 // descendantBlock returns the appropriate JSON-RPC error if a current block
 // fetched during a reorganize is not a direct child of the parent block hash.
-func descendantBlock(lastBlock *hash.Hash, curBlock *types.SerializedBlock) error {
-	prevHashes := curBlock.Block().Parents
-	for _, v := range prevHashes {
-		if v.IsEqual(lastBlock) {
-			return nil
-		}
+func descendantBlock(lastBlockOrder uint, curBlock *types.SerializedBlock) error {
+	if uint64(lastBlockOrder) == curBlock.Order()-1 {
+		return nil
 	}
-	log.Error(fmt.Sprintf("Stopping rescan for reorged block %v "+
-		"(replaced by block %v)", lastBlock, prevHashes))
+	log.Error(fmt.Sprintf("Stopping rescan for reorged block order %v "+
+		"(replaced by block order %v)", lastBlockOrder, curBlock.Order()-1))
 	return ErrRescanReorg
 }
 
@@ -193,7 +191,8 @@ fetchRange:
 				// Ensure the new hashList is on the same fork
 				// as the last block from the old hashList.
 				var jsonErr error
-				jsonErr = descendantBlock(lastBlockHash, blk)
+				lastNode := chain.BlockDAG().GetBlock(&h)
+				jsonErr = descendantBlock(lastNode.GetOrder(), blk)
 				if jsonErr != nil {
 
 					return nil, nil, nil, jsonErr
