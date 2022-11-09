@@ -6,6 +6,11 @@ import (
 	"github.com/Qitmeer/qng/params"
 )
 
+// special script
+// from evm to meer
+const SPECIAL_CROSS_TYPE = "crossimport"
+const SPECIAL_CROSS_VAL txscript.ScriptClass = 255
+
 type TxSignBase interface {
 	Sign(privateKey string, mtx *types.Transaction, inputIndex int, param *params.Params) error
 }
@@ -19,7 +24,7 @@ func NewTxSignObject(scripttype txscript.ScriptClass, lockTime int64) TxSignBase
 		}
 	case txscript.PubKeyTy:
 		s = &PubKeyScript{}
-	case 255:
+	case SPECIAL_CROSS_VAL:
 		s = &CrossImportScript{}
 	default:
 		// pubkeyhash
@@ -36,8 +41,8 @@ func GetScriptType(scriptTyp string) txscript.ScriptClass {
 		return txscript.PubKeyTy
 	case txscript.CLTVPubKeyHashTy.String():
 		return txscript.CLTVPubKeyHashTy
-	case "crossimport":
-		return 255 // special script
+	case SPECIAL_CROSS_TYPE:
+		return SPECIAL_CROSS_VAL // special script
 	default:
 		return txscript.NonStandardTy
 	}
