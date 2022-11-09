@@ -150,6 +150,8 @@ func TxSign(privkeyStrs []string, rawTxStr string, network string) (string, erro
 		param = &params.PrivNetParams
 	case "mixnet":
 		param = &params.MixNetParams
+	default:
+		ErrExit(fmt.Errorf("invalid network (mainnet|testnet|privnet|mixnet)"))
 	}
 
 	if len(rawTxStr)%2 != 0 {
@@ -200,6 +202,8 @@ func TxDecode(network string, rawTxStr string) {
 		param = &params.PrivNetParams
 	case "mixnet":
 		param = &params.MixNetParams
+	default:
+		ErrExit(fmt.Errorf("invalid network (mainnet|testnet|privnet|mixnet)"))
 	}
 	strArr := strings.Split(rawTxStr, MTX_STR_SEPERATE)
 	rawTxStr = strArr[0]
