@@ -44,7 +44,7 @@ const (
 	defaultMiningStateSync        = false
 	defaultMaxInboundPeersPerHost = 25 // The default max total of inbound peer for host
 	defaultTrickleInterval        = 10 * time.Second
-	defaultCacheInvalidTx         = false
+	defaultInvalidTxIndex         = false
 	defaultMempoolExpiry          = int64(time.Hour)
 	defaultRPCUser                = "test"
 	defaultRPCPass                = "test"
@@ -453,9 +453,9 @@ var (
 			Destination: &cfg.Zmqpubrawtx,
 		},
 		&cli.BoolFlag{
-			Name:        "cacheinvalidtx",
-			Usage:       "Cache invalid transactions.",
-			Destination: &cfg.CacheInvalidTx,
+			Name:        "invalidtxindex",
+			Usage:       "invalid transaction index.",
+			Destination: &cfg.InvalidTxIndex,
 		},
 		&cli.BoolFlag{
 			Name:        "ntp",
@@ -944,7 +944,7 @@ func DefaultConfig(homeDir string) *config.Config {
 		DAGType:              defaultDAGType,
 		Banning:              true,
 		MaxInbound:           defaultMaxInboundPeersPerHost,
-		CacheInvalidTx:       defaultCacheInvalidTx,
+		InvalidTxIndex:       defaultInvalidTxIndex,
 		NTP:                  false,
 		MempoolExpiry:        defaultMempoolExpiry,
 		AcceptNonStd:         true,

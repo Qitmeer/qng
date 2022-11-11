@@ -198,10 +198,6 @@ func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
 
 	if !types.IsCrossChainVMTx(tx.Tx) {
 		mp.pool[*tx.Hash()] = txD
-
-		if eaIndex := mp.cfg.IndexManager.ExistsAddrIndex(); eaIndex != nil {
-			eaIndex.AddUnconfirmedTx(msgTx)
-		}
 	}
 
 	if !types.IsCrossChainVMTx(tx.Tx) &&

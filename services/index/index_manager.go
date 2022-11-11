@@ -23,6 +23,7 @@ type Manager struct {
 	db             database.DB
 	enabledIndexes []Indexer
 	vmblockIndex   *VMBlockIndex
+	invalidtxIndex *InvalidTxIndex
 }
 
 // Ensure the Manager type implements the blockchain.IndexManager interface.
@@ -46,20 +47,22 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 		addrIndex := NewAddrIndex(consensus.DatabaseContext())
 		indexers = append(indexers, addrIndex)
 	}
-	var vmbIndex *VMBlockIndex
-	if cfg.VMBlockIndex {
-		vmbIndex = NewVMBlockIndex(consensus)
-	}
 	for _, indexer := range indexers {
 		log.Info(fmt.Sprintf("%s is enabled", indexer.Name()))
 	}
-	return &Manager{
+	im:=&Manager{
 		cfg:            cfg,
 		db:             consensus.DatabaseContext(),
 		enabledIndexes: indexers,
-		vmblockIndex:   vmbIndex,
 		consensus:      consensus,
 	}
+	if cfg.VMBlockIndex {
+		im.vmblockIndex = NewVMBlockIndex(consensus)
+	}
+	if cfg.InvalidTxIndex {
+		im.invalidtxIndex = NewInvalidTxIndex(consensus)
+	}
+	return im
 }
 
 // Init initializes the enabled indexes.  This is called during chain
@@ -75,6 +78,12 @@ func (m *Manager) Init() error {
 	chain := m.consensus.BlockChain()
 	if m.vmblockIndex != nil {
 		err :=m.vmblockIndex.Init()
+		if err != nil {
+			return err
+		}
+	}
+	if m.invalidtxIndex != nil {
+		err :=m.invalidtxIndex.Init()
 		if err != nil {
 			return err
 		}
@@ -395,7 +404,12 @@ func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk
 	if m.vmblockIndex != nil {
 		return m.vmblockIndex.ConnectBlock(block.Hash(),vmbid)	
 	}
-	return nil	
+	if blk.GetStatus().KnownInvalid() {
+		if m.invalidtxIndex != nil {
+			return m.invalidtxIndex.ConnectBlock(uint64(blk.GetID()),block)
+		}
+	}
+	return nil
 }
 
 // DisconnectBlock must be invoked when a block is being disconnected from the
@@ -404,7 +418,7 @@ func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk
 // the index entries associated with the block.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte,vmbid uint64) error {
+func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block,vmbid uint64) error {
 	// Call each of the currently active optional indexes with the block
 	// being disconnected so they can update accordingly.
 	err := m.db.Update(func(dbTx database.Tx) error {
@@ -421,6 +435,9 @@ func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte,v
 	}
 	if m.vmblockIndex != nil {
 		return m.vmblockIndex.DisconnectBlock(block.Hash(), vmbid)
+	}
+	if m.invalidtxIndex != nil {
+		return m.invalidtxIndex.DisconnectBlock(uint64(blk.GetID()),block)
 	}
 	return nil
 }
@@ -591,12 +608,8 @@ func (m *Manager) VMBlockIndex() *VMBlockIndex {
 	return m.vmblockIndex
 }
 
-func (m *Manager) ExistsAddrIndex() *ExistsAddrIndex {
-	indexer := m.GetIndex(existsAddressIndexName)
-	if indexer != nil {
-		return indexer.(*ExistsAddrIndex)
-	}
-	return nil
+func (m *Manager) InvalidTxIndex() *InvalidTxIndex {
+	return m.invalidtxIndex
 }
 
 func (m *Manager) GetIndex(name string) Indexer {
@@ -606,6 +619,18 @@ func (m *Manager) GetIndex(name string) Indexer {
 		}
 	}
 	return nil
+}
+
+// This is part of the Indexer interface.
+func (m *Manager) GetTxBytes(blockRegion *database.BlockRegion) ([]byte, error) {
+	// Load the raw transaction bytes from the database.
+	var txBytes []byte
+	err := m.db.View(func(dbTx database.Tx) error {
+		var err error
+		txBytes, err = dbTx.FetchBlockRegion(blockRegion)
+		return err
+	})
+	return txBytes, err
 }
 
 // dbIndexConnectBlock adds all of the index entries associated with the
@@ -874,7 +899,7 @@ func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan s
 		if err != nil {
 			return err
 		}
-		err = dropInvalidTx(db)
+		err = dropOldInvalidTx(db)
 		if err != nil {
 			return err
 		}

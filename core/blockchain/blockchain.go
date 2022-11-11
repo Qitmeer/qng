@@ -108,9 +108,6 @@ type BlockChain struct {
 	//block dag
 	bd *meerdag.MeerDAG
 
-	// Cache Invalid tx
-	CacheInvalidTx bool
-
 	// cache notification
 	CacheNotifications []*Notification
 
@@ -190,9 +187,6 @@ type Config struct {
 
 	// Setting different dag types will use different consensus
 	DAGType string
-
-	// Cache Invalid tx
-	CacheInvalidTx bool
 
 	// data dir
 	DataDir string
@@ -356,7 +350,6 @@ func New(config *Config) (*BlockChain, error) {
 		sigCache:           config.SigCache,
 		indexManager:       config.IndexManager,
 		orphans:            make(map[hash.Hash]*orphanBlock),
-		CacheInvalidTx:     config.CacheInvalidTx,
 		CacheNotifications: []*Notification{},
 		warningCaches:      newThresholdCaches(VBNumBits),
 		deploymentCaches:   newThresholdCaches(params.DefinedDeployments),
@@ -385,10 +378,6 @@ func (b *BlockChain) Init() error {
 		if err != nil {
 			return err
 		}
-	}
-	err := b.CheckCacheInvalidTxConfig()
-	if err != nil {
-		return err
 	}
 	b.pruner = newChainPruner(b)
 
@@ -1096,7 +1085,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 // the main (best) chain.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
+func (b *BlockChain) disconnectBlock(ib meerdag.IBlock,block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
 	vmbid,err := b.VMService.DisconnectBlock(block)
 	if err != nil {
 		return err
@@ -1129,7 +1118,7 @@ func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoVie
 		for _, stxo := range stxos {
 			pkss = append(pkss, stxo.PkScript)
 		}
-		err := b.indexManager.DisconnectBlock(block, pkss,vmbid)
+		err := b.indexManager.DisconnectBlock(block, pkss,ib,vmbid)
 		if err != nil {
 			return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 		}
@@ -1225,7 +1214,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 
 		//newn.FlushToDB(b)
 
-		err = b.disconnectBlock(block, view, stxos)
+		err = b.disconnectBlock(n.Block,block, view, stxos)
 		if err != nil {
 			return err
 		}
@@ -1471,25 +1460,6 @@ func (b *BlockChain) CalcWeight(ib meerdag.IBlock, bi *meerdag.BlueInfo) int64 {
 	return b.subsidyCache.CalcBlockSubsidy(bi)
 }
 
-func (b *BlockChain) CheckCacheInvalidTxConfig() error {
-	if b.CacheInvalidTx {
-		hasConfig := true
-		b.db.View(func(dbTx database.Tx) error {
-			meta := dbTx.Metadata()
-			citData := meta.Get(dbnamespace.CacheInvalidTxName)
-			if citData == nil {
-				hasConfig = false
-			}
-			return nil
-		})
-		if hasConfig {
-			return nil
-		}
-		return fmt.Errorf("You must use --droptxindex before you use --cacheinvalidtx.")
-	}
-	return nil
-}
-
 // Return chain params
 func (b *BlockChain) ChainParams() *params.Params {
 	return b.params
@@ -1622,10 +1592,6 @@ func (b *BlockChain) IndexManager() model.IndexManager {
 
 func (b *BlockChain) GetMainOrder() uint {
 	return b.BestSnapshot().GraphState.GetMainOrder()
-}
-
-func (b *BlockChain) IsCacheInvalidTx() bool {
-	return b.CacheInvalidTx
 }
 
 func (b *BlockChain) GetBlockHashByOrder(order uint) *hash.Hash {

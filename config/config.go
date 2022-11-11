@@ -25,10 +25,6 @@ type Config struct {
 	DisableTLS         bool     `long:"notls" description:"Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost"`
 	Modules            []string `long:"modules" description:"Modules is a list of API modules(See GetNodeInfo) to expose via the HTTP RPC interface. If the module list is empty, all RPC API endpoints designated public will be exposed."`
 	DisableCheckpoints bool     `long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
-	DropTxIndex        bool     `long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
-	AddrIndex          bool     `long:"addrindex" description:"Maintain a full address-based transaction index which makes the getrawtransactions RPC available"`
-	DropAddrIndex      bool     `long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
-	VMBlockIndex       bool     `long:"vmblockindex" description:"Maintain a full vm block index which makes the GetTxIDByMeerEVMTxHash RPC available"`
 	LightNode          bool     `long:"light" description:"start as a qitmeer light node"`
 	SigCacheMaxSize    uint     `long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
 	DumpBlockchain     string   `long:"dumpblockchain" description:"Write blockchain as a flat file of blocks for use with addblock, to the specified filename"`
@@ -85,8 +81,12 @@ type Config struct {
 	Zmqpubhashtx string `long:"zmqpubhashtx" description:"Enable publish hash transaction in <address>"`
 	Zmqpubrawtx  string `long:"zmqpubrawtx" description:"Enable publish raw transaction in <address>"`
 
-	// Cache Invalid tx
-	CacheInvalidTx bool `long:"cacheinvalidtx" description:"Cache invalid transactions."`
+	// index
+	AddrIndex          bool     `long:"addrindex" description:"Maintain a full address-based transaction index which makes the getrawtransactions RPC available"`
+	VMBlockIndex       bool     `long:"vmblockindex" description:"Maintain a full vm block index which makes the GetTxIDByMeerEVMTxHash RPC available"`
+	InvalidTxIndex     bool     `long:"invalidtxindex" description:"Cache invalid transactions."`
+	DropAddrIndex      bool     `long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
+	DropTxIndex        bool     `long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
 
 	NTP bool `long:"ntp" description:"Auto sync time."`
 

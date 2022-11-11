@@ -4,6 +4,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/consensus/store/invalid_tx_index"
 	"github.com/Qitmeer/qng/consensus/store/vm_block_index"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
@@ -17,8 +18,8 @@ import (
 )
 
 const (
-	defaultPreallocateCaches = true
-	defaultCacheSize         = 1_000
+	defaultPreallocateCaches = false
+	defaultCacheSize         = 10
 )
 
 type consensus struct {
@@ -35,6 +36,7 @@ type consensus struct {
 	mediantimeSource model.MedianTimeSource
 
 	vmblockindexStore model.VMBlockIndexStore
+	invalidtxindexStore model.InvalidTxIndexStore
 
 	blockchain   model.BlockChain
 	indexManager model.IndexManager
@@ -52,11 +54,18 @@ func (s *consensus) Init() error {
 	}
 
 	if s.cfg.VMBlockIndex {
-		vmblockindexStore, err := vm_block_index.New(s.databaseContext, 10, false)
+		vmblockindexStore, err := vm_block_index.New(s.databaseContext, defaultCacheSize, defaultPreallocateCaches)
 		if err != nil {
 			return err
 		}
 		s.vmblockindexStore = vmblockindexStore
+	}
+	if s.cfg.InvalidTxIndex {
+		invalidtxindexStore, err := invalid_tx_index.New(s.databaseContext, defaultCacheSize, defaultPreallocateCaches)
+		if err != nil {
+			return err
+		}
+		s.invalidtxindexStore = invalidtxindexStore
 	}
 	//
 	s.indexManager = index.NewManager(index.ToConfig(s.cfg), s)
@@ -71,7 +80,6 @@ func (s *consensus) Init() error {
 		SigCache:       s.sigCache,
 		IndexManager:   s.indexManager,
 		DAGType:        s.cfg.DAGType,
-		CacheInvalidTx: s.cfg.CacheInvalidTx,
 		DataDir:        s.cfg.DataDir,
 	})
 	if err != nil {
@@ -99,6 +107,10 @@ func (s *consensus) Config() *config.Config {
 
 func (s *consensus) VMBlockIndexStore() model.VMBlockIndexStore {
 	return s.vmblockindexStore
+}
+
+func (s *consensus) InvalidTxIndexStore() model.InvalidTxIndexStore {
+	return s.invalidtxindexStore
 }
 
 func (s *consensus) BlockChain() model.BlockChain {

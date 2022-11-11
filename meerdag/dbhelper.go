@@ -67,6 +67,21 @@ func DBDelDAGBlock(dbTx database.Tx, id uint) error {
 	return bucket.Delete(serializedID[:])
 }
 
+func DBGetDAGBlockHashByID(dbTx database.Tx, id uint64) (*hash.Hash,error) {
+	bucket := dbTx.Metadata().Bucket(BlockIndexBucketName)
+	var serializedID [4]byte
+	ByteOrder.PutUint32(serializedID[:], uint32(id))
+
+	data := bucket.Get(serializedID[:])
+	if data == nil {
+		return nil,nil
+	}
+	if len(data) < 4+hash.HashSize {
+		return nil,fmt.Errorf("block(%d) data error",id)
+	}
+	return hash.NewHash(data[4:hash.HashSize+4])
+}
+
 func GetOrderLogStr(order uint) string {
 	if order == MaxBlockOrder {
 		return "uncertainty"

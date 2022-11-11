@@ -23,7 +23,7 @@ type IndexManager interface {
 
 	// DisconnectBlock is invoked when a block has been disconnected from
 	// the main chain.
-	DisconnectBlock(block *types.SerializedBlock, stxos [][]byte,vmbid uint64) error
+	DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, blk Block,vmbid uint64) error
 
 	UpdateMainTip(bh *hash.Hash,order uint64) error
 

@@ -67,11 +67,6 @@ type Config struct {
 
 	IndexManager *index.Manager
 
-	// ExistsAddrIndex defines the optional exists address index instance
-	// to use for indexing the unconfirmed transactions in the memory pool.
-	// This can be nil if the address index is not enabled.
-	ExistsAddrIndex *index.ExistsAddrIndex
-
 	// block dag
 	BD consensus.BlockDAG
 

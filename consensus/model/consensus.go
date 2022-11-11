@@ -20,5 +20,6 @@ type Consensus interface {
 	MedianTimeSource() MedianTimeSource
 	SigCache() *txscript.SigCache
 	VMBlockIndexStore() VMBlockIndexStore
+	InvalidTxIndexStore() InvalidTxIndexStore
 	Interrupt() <-chan struct{}
 }
