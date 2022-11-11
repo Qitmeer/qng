@@ -148,8 +148,6 @@ func (bis *vmblockindexStore) Tip(stagingArea *model.StagingArea) (uint64, *hash
 	if err != nil {
 		return 0, nil, err
 	}
-	stagingShard.tipOrder = tipOrder
-	stagingShard.tipHash = tipHash
 	return tipOrder, tipHash, nil
 }
 

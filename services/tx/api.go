@@ -269,52 +269,64 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 		if err != nil {
 			return nil, errors.New("Failed to retrieve transaction location")
 		}
+		var dtx *types.Transaction
 		if blockRegion == nil {
-			if api.txManager.bm.GetChain().CacheInvalidTx {
-				blockRegion, err = txIndex.InvalidTxBlockRegion(txHash)
+			if api.txManager.indexManager.InvalidTxIndex() != nil {
+				dtx, err = api.txManager.indexManager.InvalidTxIndex().Get(&txHash)
 				if err != nil {
 					return nil, errors.New("Failed to retrieve transaction location")
+				}
+
+				if !verbose {
+					hexStr, err := marshal.MessageToHex(dtx)
+					if err != nil {
+						return nil, err
+					}
+					return hexStr, nil
 				}
 			} else {
 				return nil, rpc.RpcNoTxInfoError(&txHash)
 			}
+		}else{
+
+			// Load the raw transaction bytes from the database.
+			var txBytes []byte
+			err = api.txManager.db.View(func(dbTx database.Tx) error {
+				var err error
+				txBytes, err = dbTx.FetchBlockRegion(blockRegion)
+				return err
+			})
+			if err != nil {
+				return nil, rpc.RpcNoTxInfoError(&txHash)
+			}
+
+			// When the verbose flag isn't set, simply return the serialized
+			// transaction as a hex-encoded string.  This is done here to
+			// avoid deserializing it only to reserialize it again later.
+			if !verbose {
+				return hex.EncodeToString(txBytes), nil
+			}
+
+			// Grab the block height.
+			blkHash = blockRegion.Hash
+			/*blkOrder, err = api.txManager.bm.GetChain().BlockOrderByHash(blkHash)
+			if err != nil {
+				context := "Failed to retrieve block height"
+				return nil, rpc.RpcInternalError(err.Error(), context)
+			}*/
+
+			// Deserialize the transaction
+			var msgTx types.Transaction
+			err = msgTx.Deserialize(bytes.NewReader(txBytes))
+			log.Trace("GetRawTx", "hex", hex.EncodeToString(txBytes))
+			if err != nil {
+				context := "Failed to deserialize transaction"
+				return nil, rpc.RpcInternalError(err.Error(), context)
+			}
+			dtx=&msgTx
 		}
 
-		// Load the raw transaction bytes from the database.
-		var txBytes []byte
-		err = api.txManager.db.View(func(dbTx database.Tx) error {
-			var err error
-			txBytes, err = dbTx.FetchBlockRegion(blockRegion)
-			return err
-		})
-		if err != nil {
-			return nil, rpc.RpcNoTxInfoError(&txHash)
-		}
-
-		// When the verbose flag isn't set, simply return the serialized
-		// transaction as a hex-encoded string.  This is done here to
-		// avoid deserializing it only to reserialize it again later.
-		if !verbose {
-			return hex.EncodeToString(txBytes), nil
-		}
-
-		// Grab the block height.
-		blkHash = blockRegion.Hash
-		/*blkOrder, err = api.txManager.bm.GetChain().BlockOrderByHash(blkHash)
-		if err != nil {
-			context := "Failed to retrieve block height"
-			return nil, rpc.RpcInternalError(err.Error(), context)
-		}*/
-
-		// Deserialize the transaction
-		var msgTx types.Transaction
-		err = msgTx.Deserialize(bytes.NewReader(txBytes))
-		log.Trace("GetRawTx", "hex", hex.EncodeToString(txBytes))
-		if err != nil {
-			context := "Failed to deserialize transaction"
-			return nil, rpc.RpcInternalError(err.Error(), context)
-		}
-		mtx = types.NewTx(&msgTx)
+		mtx = types.NewTx(dtx)
 		mtx.IsDuplicate = api.txManager.bm.GetChain().IsDuplicateTx(mtx.Hash(), blkHash)
 	} else {
 		// When the verbose flag isn't set, simply return the
@@ -906,8 +918,8 @@ func (api *PublicTxAPI) GetRawTransactionByHash(txHash hash.Hash, verbose bool) 
 	var err error
 	txid, err = txIndex.GetTxIdByHash(txHash)
 	if err != nil {
-		if api.txManager.bm.GetChain().CacheInvalidTx {
-			txid, err = txIndex.GetInvalidTxIdByHash(txHash)
+		if api.txManager.indexManager.InvalidTxIndex() != nil {
+			txid, err = api.txManager.indexManager.InvalidTxIndex().GetIdByHash(&txHash)
 			if err != nil {
 				return nil, fmt.Errorf("no tx")
 			}
@@ -935,32 +947,33 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 			return nil, errors.New("Failed to retrieve transaction location")
 		}
 		if blockRegion == nil {
-			if api.txManager.bm.GetChain().CacheInvalidTx {
-				blockRegion, err = txIndex.InvalidTxBlockRegion(txid)
+			if api.txManager.indexManager.InvalidTxIndex() != nil {
+				dtx, err := api.txManager.indexManager.InvalidTxIndex().Get(&txid)
 				if err != nil {
 					return nil, errors.New("Failed to retrieve transaction location")
 				}
+				mtx = types.NewTx(dtx)
 			} else {
 				return nil, rpc.RpcNoTxInfoError(&txid)
 			}
+		}else{
+			var txBytes []byte
+			err = api.txManager.db.View(func(dbTx database.Tx) error {
+				var err error
+				txBytes, err = dbTx.FetchBlockRegion(blockRegion)
+				return err
+			})
+			if err != nil {
+				return nil, rpc.RpcNoTxInfoError(&txid)
+			}
+			var msgTx types.Transaction
+			err = msgTx.Deserialize(bytes.NewReader(txBytes))
+			if err != nil {
+				context := "Failed to deserialize transaction"
+				return nil, rpc.RpcInternalError(err.Error(), context)
+			}
+			mtx = types.NewTx(&msgTx)
 		}
-
-		var txBytes []byte
-		err = api.txManager.db.View(func(dbTx database.Tx) error {
-			var err error
-			txBytes, err = dbTx.FetchBlockRegion(blockRegion)
-			return err
-		})
-		if err != nil {
-			return nil, rpc.RpcNoTxInfoError(&txid)
-		}
-		var msgTx types.Transaction
-		err = msgTx.Deserialize(bytes.NewReader(txBytes))
-		if err != nil {
-			context := "Failed to deserialize transaction"
-			return nil, rpc.RpcInternalError(err.Error(), context)
-		}
-		mtx = types.NewTx(&msgTx)
 	} else {
 		mtx = tx
 	}

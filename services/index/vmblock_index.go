@@ -20,6 +20,10 @@ type VMBlockIndex struct {
 	consensus model.Consensus
 }
 
+func (idx *VMBlockIndex) Name() string {
+	return vmblockIndexName
+}
+
 func (idx *VMBlockIndex) Init() error {
 	vmbiStore := idx.consensus.VMBlockIndexStore()
 	if vmbiStore == nil {
@@ -68,7 +72,7 @@ func (idx *VMBlockIndex) caughtUpFrom(startOrder uint) error {
 	if mainOrder > 0 {
 		log.Info(fmt.Sprintf("Start caught up vm block index from (order:%d) to tip(hash:%s,order:%d)",startOrder, mainHash, mainOrder))
 		logLvl := l.Glogger().GetVerbosity()
-		bar := progressbar.Default(int64(mainOrder-startOrder), "vmblock index:")
+		bar := progressbar.Default(int64(mainOrder-startOrder), fmt.Sprintf("%s:",idx.Name()))
 		l.Glogger().Verbosity(l.LvlCrit)
 		for i := uint(startOrder); i <= mainOrder; i++ {
 			bar.Add(1)
@@ -92,10 +96,6 @@ func (idx *VMBlockIndex) caughtUpFrom(startOrder uint) error {
 	}
 	log.Info(fmt.Sprintf("Current vmblock index tip:%s,%d",mainHash.String(),mainOrder))
 	return idx.UpdateMainTip(mainHash,uint64(mainOrder))
-}
-
-func (idx *VMBlockIndex) Name() string {
-	return vmblockIndexName
 }
 
 func (idx *VMBlockIndex) ConnectBlock(bh *hash.Hash,vmbid uint64) error {

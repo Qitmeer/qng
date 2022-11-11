@@ -23,6 +23,6 @@ func ToConfig(cfg *config.Config) *Config {
 		TxIndex:        true,
 		AddrIndex:      cfg.AddrIndex,
 		VMBlockIndex:   cfg.VMBlockIndex,
-		InvalidTxIndex: cfg.CacheInvalidTx,
+		InvalidTxIndex: cfg.InvalidTxIndex,
 	}
 }

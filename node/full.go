@@ -16,7 +16,6 @@ import (
 	"github.com/Qitmeer/qng/services/address"
 	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/common"
-	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/services/miner"
 	"github.com/Qitmeer/qng/services/mining"
@@ -59,7 +58,7 @@ func (qm *QitmeerFull) RegisterRpcService() error {
 	if qm.node.Config.DisableRPC {
 		return nil
 	}
-	rpcServer, err := rpc.NewRPCServer(qm.node.Config, qm.node.consensus.Events())
+	rpcServer, err := rpc.NewRPCServer(qm.node.Config, qm.node.consensus)
 	if err != nil {
 		return err
 	}
@@ -280,7 +279,6 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	}
 	if qm.GetRpcServer() != nil {
 		qm.GetRpcServer().BC = bm.GetChain()
-		qm.GetRpcServer().TxIndex = node.consensus.IndexManager().(*index.Manager).TxIndex()
 		qm.GetRpcServer().ChainParams = bm.ChainParams()
 
 		qm.nfManager.(*notifymgr.NotifyMgr).RpcServer = qm.GetRpcServer()

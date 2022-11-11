@@ -17,6 +17,9 @@ type vmblockindexStagingShard struct {
 }
 
 func (biss *vmblockindexStagingShard) Commit(dbTx database.Tx) error {
+	if !biss.isStaged() {
+		return nil
+	}
 	bucket := dbTx.Metadata().Bucket(bucketName)
 	if bucket == nil {
 		var err error

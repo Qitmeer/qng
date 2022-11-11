@@ -11,6 +11,5 @@ type BlockChain interface {
 	DBFetchBlockByOrder(dbTx database.Tx, order uint64) (*types.SerializedBlock, Block, error)
 	FetchSpendJournalPKS(targetBlock *types.SerializedBlock) ([][]byte, error)
 	CalculateDAGDuplicateTxs(block *types.SerializedBlock)
-	IsCacheInvalidTx() bool
 	GetBlockHashByOrder(order uint) *hash.Hash
 }
