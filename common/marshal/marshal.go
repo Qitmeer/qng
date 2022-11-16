@@ -190,7 +190,7 @@ func MarshJsonVout(tx *types.Transaction, filterAddrMap map[string]struct{}, par
 		voutSPK := &vout.ScriptPubKey
 		voutSPK.Addresses = encodedAddrs
 		if len(encodedAddrs) > 0 {
-			if types.CoinID(vout.CoinId) == types.MEERB {
+			if types.CoinID(vout.CoinId.(uint16)) == types.MEERB {
 				ctx, err := qconsensus.NewExportTx(tx)
 				if err == nil {
 					to, err := common.NewMeerEVMAddress(ctx.To)
