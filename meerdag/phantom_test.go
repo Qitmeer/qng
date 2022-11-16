@@ -462,9 +462,7 @@ func checkLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = db.View(func(dbTx database.Tx) error {
-		return bd.Load(dbTx, uint(total), geneis)
-	})
+	err = bd.Load(uint(total), geneis)
 	if err != nil {
 		t.Fatal(err)
 	}

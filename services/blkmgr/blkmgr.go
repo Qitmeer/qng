@@ -139,11 +139,11 @@ func (b *BlockManager) handleNotifyMsg(notification *blockchain.Notification) {
 			break
 		}
 		block := band.Block
-		if band.Flags&blockchain.BFP2PAdd == blockchain.BFP2PAdd {
-			b.progressLogger.LogBlockHeight(block)
-			// reset last progress time
-			b.lastProgressTime = roughtime.Now()
-		}
+		//if band.Flags&blockchain.BFP2PAdd == blockchain.BFP2PAdd {
+		b.progressLogger.LogBlockHeight(block)
+		// reset last progress time
+		b.lastProgressTime = roughtime.Now()
+		//}
 		b.zmqNotify.BlockAccepted(block)
 		// Don't relay if we are not current. Other peers that are current
 		// should already know about it
@@ -375,17 +375,17 @@ out:
 			case processBlockMsg:
 				log.Trace("blkmgr msgChan processBlockMsg", "msg", msg)
 
-				if msg.flags.Has(blockchain.BFRPCAdd) {
-					err := b.chain.BlockDAG().CheckSubMainChainTip(msg.block.Block().Parents)
-					if err != nil {
-						msg.reply <- ProcessBlockResponse{
-							IsOrphan:      false,
-							Err:           fmt.Errorf("The tips of block is expired:%s (error:%s)\n", msg.block.Hash().String(), err.Error()),
-							IsTipsExpired: true,
-						}
-						continue
-					}
-				}
+				//if msg.flags.Has(blockchain.BFRPCAdd) {
+				//	err := b.chain.BlockDAG().CheckSubMainChainTip(msg.block.Block().Parents)
+				//	if err != nil {
+				//		msg.reply <- ProcessBlockResponse{
+				//			IsOrphan:      false,
+				//			Err:           fmt.Errorf("The tips of block is expired:%s (error:%s)\n", msg.block.Hash().String(), err.Error()),
+				//			IsTipsExpired: true,
+				//		}
+				//		continue
+				//	}
+				//}
 
 				isOrphan, err := b.chain.ProcessBlock(
 					msg.block, msg.flags)

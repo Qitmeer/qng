@@ -98,7 +98,11 @@ func (bd *MeerDAG) getBlockById(id uint) IBlock {
 	}
 	block, ok := bd.blocks[id]
 	if !ok {
-		return nil
+		b, err := bd.loadBlock(id)
+		if err != nil {
+			log.Error(err.Error())
+		}
+		return b
 	}
 	return block
 }
@@ -122,22 +126,7 @@ func (bd *MeerDAG) GetBlockByOrder(order uint) IBlock {
 	return bd.getBlockByOrder(order)
 }
 
-func (bd *MeerDAG) GetBlockByOrderWithTx(dbTx database.Tx, order uint) IBlock {
-	bd.stateLock.Lock()
-	defer bd.stateLock.Unlock()
-
-	ib := bd.doGetBlockByOrder(dbTx, order)
-	if ib != nil {
-		return ib
-	}
-	return nil
-}
-
 func (bd *MeerDAG) getBlockByOrder(order uint) IBlock {
-	return bd.doGetBlockByOrder(nil, order)
-}
-
-func (bd *MeerDAG) doGetBlockByOrder(dbTx database.Tx, order uint) IBlock {
 	if order >= MaxBlockOrder {
 		return nil
 	}
@@ -145,31 +134,18 @@ func (bd *MeerDAG) doGetBlockByOrder(dbTx database.Tx, order uint) IBlock {
 	if ok {
 		return bd.getBlockById(id)
 	}
-
 	bid := uint(MaxId)
-
-	if dbTx == nil {
-		err := bd.db.View(func(dbTx database.Tx) error {
-			id, er := DBGetBlockIdByOrder(dbTx, order)
-			if er == nil {
-				bid = uint(id)
-			}
-			return er
-		})
-		if err != nil {
-			log.Error(err.Error())
-			return nil
-		}
-	} else {
-		id, err := DBGetBlockIdByOrder(dbTx, order)
-		if err == nil {
+	err := bd.db.View(func(dbTx database.Tx) error {
+		id, er := DBGetBlockIdByOrder(dbTx, order)
+		if er == nil {
 			bid = uint(id)
-		} else {
-			log.Error(err.Error())
-			return nil
 		}
+		return er
+	})
+	if err != nil {
+		log.Error(err.Error())
+		return nil
 	}
-
 	return bd.getBlockById(bid)
 }
 

@@ -50,7 +50,7 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 	for _, indexer := range indexers {
 		log.Info(fmt.Sprintf("%s is enabled", indexer.Name()))
 	}
-	im:=&Manager{
+	im := &Manager{
 		cfg:            cfg,
 		db:             consensus.DatabaseContext(),
 		enabledIndexes: indexers,
@@ -77,13 +77,13 @@ func (m *Manager) Init() error {
 	interrupt := m.consensus.Interrupt()
 	chain := m.consensus.BlockChain()
 	if m.vmblockIndex != nil {
-		err :=m.vmblockIndex.Init()
+		err := m.vmblockIndex.Init()
 		if err != nil {
 			return err
 		}
 	}
 	if m.invalidtxIndex != nil {
-		err :=m.invalidtxIndex.Init()
+		err := m.invalidtxIndex.Init()
 		if err != nil {
 			return err
 		}
@@ -151,13 +151,13 @@ func (m *Manager) Init() error {
 		}
 		var block *types.SerializedBlock
 		for order > bestOrder {
+			// Load the block for the height since it is required to index
+			// it.
+			block, err = chain.BlockByOrder(uint64(order))
+			if err != nil {
+				return err
+			}
 			err = m.db.Update(func(dbTx database.Tx) error {
-				// Load the block for the height since it is required to index
-				// it.
-				block, _, err = chain.DBFetchBlockByOrder(dbTx, uint64(order))
-				if err != nil {
-					return err
-				}
 				spentTxos = nil
 				if indexNeedsInputs(indexer) {
 					spentTxos, err = chain.FetchSpendJournalPKS(block)
@@ -237,15 +237,9 @@ func (m *Manager) Init() error {
 
 		var block *types.SerializedBlock
 		var blk model.Block
-		err = m.db.Update(func(dbTx database.Tx) error {
-			// Load the block for the height since it is required to index
-			// it.
-			block, blk, err = chain.DBFetchBlockByOrder(dbTx, uint64(order))
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+		// Load the block for the height since it is required to index
+		// it.
+		block, blk, err = chain.DBFetchBlockByOrder(uint64(order))
 		if err != nil {
 			return err
 		}
@@ -386,7 +380,7 @@ func (m *Manager) maybeCreateIndexes(dbTx database.Tx) error {
 // checks, and invokes each indexer.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block,vmbid uint64) error {
+func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block, vmbid uint64) error {
 	// Call each of the currently active optional indexes with the block
 	// being connected so they can update accordingly.
 	err := m.db.Update(func(dbTx database.Tx) error {
@@ -402,11 +396,11 @@ func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk
 		return err
 	}
 	if m.vmblockIndex != nil {
-		return m.vmblockIndex.ConnectBlock(block.Hash(),vmbid)	
+		return m.vmblockIndex.ConnectBlock(block.Hash(), vmbid)
 	}
 	if blk.GetStatus().KnownInvalid() {
 		if m.invalidtxIndex != nil {
-			return m.invalidtxIndex.ConnectBlock(uint64(blk.GetID()),block)
+			return m.invalidtxIndex.ConnectBlock(uint64(blk.GetID()), block)
 		}
 	}
 	return nil
@@ -418,7 +412,7 @@ func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk
 // the index entries associated with the block.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block,vmbid uint64) error {
+func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block, vmbid uint64) error {
 	// Call each of the currently active optional indexes with the block
 	// being disconnected so they can update accordingly.
 	err := m.db.Update(func(dbTx database.Tx) error {
@@ -437,16 +431,16 @@ func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, 
 		return m.vmblockIndex.DisconnectBlock(block.Hash(), vmbid)
 	}
 	if m.invalidtxIndex != nil {
-		return m.invalidtxIndex.DisconnectBlock(uint64(blk.GetID()),block)
+		return m.invalidtxIndex.DisconnectBlock(uint64(blk.GetID()), block)
 	}
 	return nil
 }
 
-func (m *Manager) UpdateMainTip(bh *hash.Hash,order uint64) error {
+func (m *Manager) UpdateMainTip(bh *hash.Hash, order uint64) error {
 	if m.vmblockIndex != nil {
-		return m.vmblockIndex.UpdateMainTip(bh,order)	
+		return m.vmblockIndex.UpdateMainTip(bh, order)
 	}
-	return nil	
+	return nil
 }
 
 // HasTransaction

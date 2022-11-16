@@ -67,19 +67,19 @@ func DBDelDAGBlock(dbTx database.Tx, id uint) error {
 	return bucket.Delete(serializedID[:])
 }
 
-func DBGetDAGBlockHashByID(dbTx database.Tx, id uint64) (*hash.Hash,error) {
+func DBGetDAGBlockHashByID(dbTx database.Tx, id uint64) (*hash.Hash, error) {
 	bucket := dbTx.Metadata().Bucket(BlockIndexBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
 
 	data := bucket.Get(serializedID[:])
 	if data == nil {
-		return nil,nil
+		return nil, nil
 	}
 	if len(data) < 4+hash.HashSize {
-		return nil,fmt.Errorf("block(%d) data error",id)
+		return nil, fmt.Errorf("block(%d) data error", id)
 	}
-	return hash.NewHash(data[4:hash.HashSize+4])
+	return hash.NewHash(data[4 : hash.HashSize+4])
 }
 
 func GetOrderLogStr(order uint) string {
@@ -220,6 +220,32 @@ func DBGetDAGTips(dbTx database.Tx) ([]uint, error) {
 
 func DBDelDAGTip(dbTx database.Tx, id uint) error {
 	bucket := dbTx.Metadata().Bucket(DAGTipsBucketName)
+	var serializedID [4]byte
+	ByteOrder.PutUint32(serializedID[:], uint32(id))
+	return bucket.Delete(serializedID[:])
+}
+
+// diffAnticone
+func DBPutDiffAnticone(dbTx database.Tx, id uint) error {
+	var serializedID [4]byte
+	ByteOrder.PutUint32(serializedID[:], uint32(id))
+	bucket := dbTx.Metadata().Bucket(DiffAnticoneBucketName)
+	return bucket.Put(serializedID[:], []byte{byte(0)})
+}
+
+func DBGetDiffAnticone(dbTx database.Tx) ([]uint, error) {
+	bucket := dbTx.Metadata().Bucket(DiffAnticoneBucketName)
+	cursor := bucket.Cursor()
+	diffs := []uint{}
+	for cok := cursor.First(); cok; cok = cursor.Next() {
+		id := uint(ByteOrder.Uint32(cursor.Key()))
+		diffs = append(diffs, id)
+	}
+	return diffs, nil
+}
+
+func DBDelDiffAnticone(dbTx database.Tx, id uint) error {
+	bucket := dbTx.Metadata().Bucket(DiffAnticoneBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
 	return bucket.Delete(serializedID[:])

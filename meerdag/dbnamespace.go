@@ -38,4 +38,8 @@ var (
 	// DAGTipsBucketName is the name of the db bucket used to house to
 	// the block id -> is main chain
 	DAGTipsBucketName = []byte("dagtips")
+
+	// DiffAnticoneBucketName is the name of the db bucket used to house to
+	// the block id
+	DiffAnticoneBucketName = []byte("diffanticone")
 )

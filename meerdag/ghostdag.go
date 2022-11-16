@@ -6,7 +6,6 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	cmodel "github.com/Qitmeer/qng/consensus/model"
 	s "github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/meerdag/anticone"
 	"github.com/Qitmeer/qng/meerdag/ghostdag"
 	"github.com/Qitmeer/qng/meerdag/ghostdag/model"
@@ -157,7 +156,7 @@ func (gd *GhostDAG) Decode(r io.Reader) error {
 }
 
 // load
-func (gd *GhostDAG) Load(dbTx database.Tx) error {
+func (gd *GhostDAG) Load() error {
 	return nil
 }
 
