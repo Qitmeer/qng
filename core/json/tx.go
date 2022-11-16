@@ -102,7 +102,7 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 // getrawtransaction and decoderawtransaction use the same structure.
 type Vout struct {
 	Coin         string             `json:"coin,omitempty"`
-	CoinId       uint16             `json:"coinid,omitempty"`
+	CoinId       interface{}        `json:"coinid,omitempty"`
 	Amount       uint64             `json:"amount,omitempty"`
 	ScriptPubKey ScriptPubKeyResult `json:"scriptPubKey,omitempty"`
 	To           string             `json:"to,omitempty"`
