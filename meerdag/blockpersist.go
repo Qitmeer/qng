@@ -13,14 +13,15 @@ import (
 )
 
 // Load from database
-func (bd *MeerDAG) Load(dbTx database.Tx, blockTotal uint, genesis *hash.Hash) error {
-	meta := dbTx.Metadata()
-	serializedData := meta.Get(DagInfoBucketName)
-	if serializedData == nil {
-		return fmt.Errorf("dag load error")
-	}
-
-	err := bd.Decode(bytes.NewReader(serializedData))
+func (bd *MeerDAG) Load(blockTotal uint, genesis *hash.Hash) error {
+	err := bd.db.View(func(dbTx database.Tx) error {
+		meta := dbTx.Metadata()
+		serializedData := meta.Get(DagInfoBucketName)
+		if serializedData == nil {
+			return fmt.Errorf("dag load error")
+		}
+		return bd.Decode(bytes.NewReader(serializedData))
+	})
 	if err != nil {
 		return err
 	}
@@ -28,7 +29,7 @@ func (bd *MeerDAG) Load(dbTx database.Tx, blockTotal uint, genesis *hash.Hash) e
 	bd.blockTotal = blockTotal
 	bd.blocks = map[uint]IBlock{}
 	bd.tips = NewIdSet()
-	return bd.instance.Load(dbTx)
+	return bd.instance.Load()
 }
 
 func (bd *MeerDAG) Encode(w io.Writer) error {
@@ -125,4 +126,24 @@ func (bd *MeerDAG) GetBlockDataCacheSize() int {
 	bd.blockDataLock.Lock()
 	defer bd.blockDataLock.Unlock()
 	return len(bd.blockDataCache)
+}
+
+func (bd *MeerDAG) loadBlock(id uint) (IBlock, error) {
+	ph, ok := bd.instance.(*Phantom)
+	if !ok {
+		return nil, fmt.Errorf("MeerDAG instance error")
+	}
+	block := Block{id: id}
+	ib := ph.CreateBlock(&block)
+	err := bd.db.View(func(dbTx database.Tx) error {
+		return DBGetDAGBlock(dbTx, ib)
+	})
+	if err != nil {
+		return nil, err
+	}
+	if id == 0 && !ib.GetHash().IsEqual(ph.bd.GetGenesisHash()) {
+		return nil, fmt.Errorf("genesis data mismatch")
+	}
+	bd.blocks[ib.GetID()] = ib
+	return ib, nil
 }

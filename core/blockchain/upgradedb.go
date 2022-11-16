@@ -16,18 +16,20 @@ func (b *BlockChain) upgradeDB() error {
 	version8 := uint32(8)
 	version9 := uint32(9)
 	version10 := uint32(10)
+	version11 := uint32(11)
 	if b.dbInfo.version == currentDatabaseVersion {
 		return nil
 	} else if b.dbInfo.version != version8 &&
 		b.dbInfo.version != version9 &&
-		b.dbInfo.version != version10 {
-		return fmt.Errorf("Only supported update version(%d or %d,%d) -> version(%d), but cur db is version:%d\n", version8, version9, version10, currentDatabaseVersion, b.dbInfo.version)
+		b.dbInfo.version != version10 &&
+		b.dbInfo.version != version11 {
+		return fmt.Errorf("Only supported update version(%d or %d,%d,%d) -> version(%d), but cur db is version:%d\n", version8, version9, version10, version11, currentDatabaseVersion, b.dbInfo.version)
 	}
 	if onEnd := l.LogAndMeasureExecutionTime(log, "BlockChain.upgradeDB"); onEnd != nil {
 		defer onEnd()
 	}
 	log.Info(fmt.Sprintf("Update cur db to new version: version(%d) -> version(%d) ...", b.dbInfo.version, currentDatabaseVersion))
-	if b.dbInfo.version != version10 {
+	if b.dbInfo.version < version10 {
 		err := b.indexManager.Drop()
 		if err != nil {
 			log.Debug(err.Error())
@@ -46,39 +48,45 @@ func (b *BlockChain) upgradeDB() error {
 		}
 
 		if b.dbInfo.version == version8 {
-			err = b.bd.UpgradeDB(dbTx, &state.hash, state.total, b.params.GenesisHash)
+			err = b.bd.UpgradeDB(dbTx, &state.hash, state.total, b.params.GenesisHash, true)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = b.bd.UpgradeDB(dbTx, &state.hash, state.total, b.params.GenesisHash, false)
 			if err != nil {
 				return err
 			}
 		}
 
 		// token
-		tokenTipID := meerdag.MaxId
-		bid, er := meerdag.DBGetBlockIdByHash(dbTx, &state.tokenTipHash)
-		if er == nil {
-			tokenTipID = uint(bid)
-		}
-		if tokenTipID != meerdag.MaxId {
-			ts := b.GetTokenState(uint32(tokenTipID))
-			if ts == nil {
-				return fmt.Errorf("token state error:%d", tokenTipID)
+		if b.dbInfo.version < version11 {
+			tokenTipID := meerdag.MaxId
+			bid, er := meerdag.DBGetBlockIdByHash(dbTx, &state.tokenTipHash)
+			if er == nil {
+				tokenTipID = uint(bid)
 			}
-			oldIds := ts.Types.Ids()
-			genTS := token.BuildGenesisTokenState()
-			for _, ty := range genTS.Types {
-				_, ok := ts.Types[ty.Id]
-				if !ok || b.dbInfo.version == version10 {
-					ts.Types[ty.Id] = ty
+			if tokenTipID != meerdag.MaxId {
+				ts := b.GetTokenState(uint32(tokenTipID))
+				if ts == nil {
+					return fmt.Errorf("token state error:%d", tokenTipID)
 				}
+				oldIds := ts.Types.Ids()
+				genTS := token.BuildGenesisTokenState()
+				for _, ty := range genTS.Types {
+					_, ok := ts.Types[ty.Id]
+					if !ok || b.dbInfo.version == version10 {
+						ts.Types[ty.Id] = ty
+					}
+				}
+				err = token.DBPutTokenState(dbTx, uint32(tokenTipID), ts)
+				if err != nil {
+					return err
+				}
+				ts.Commit()
+				log.Info(fmt.Sprintf("Upgrade token state(%s)(id=%d):%v => %v", state.tokenTipHash, tokenTipID, oldIds, ts.Types.Ids()))
 			}
-			err = token.DBPutTokenState(dbTx, uint32(tokenTipID), ts)
-			if err != nil {
-				return err
-			}
-			ts.Commit()
-			log.Info(fmt.Sprintf("Upgrade token state(%s)(id=%d):%v => %v", state.tokenTipHash, tokenTipID, oldIds, ts.Types.Ids()))
 		}
-
 		// save
 		b.dbInfo = &databaseInfo{
 			version: currentDatabaseVersion,

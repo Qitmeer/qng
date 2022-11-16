@@ -55,6 +55,8 @@ const MaxPriority = int(math.MaxInt32)
 // block data
 const MinBlockDataCache = 2000
 
+const MinBlockPruneSize = 2000
+
 // It will create different BlockDAG instances
 func NewBlockDAG(dagType string) ConsensusAlgorithm {
 	switch dagType {
@@ -134,7 +136,7 @@ type ConsensusAlgorithm interface {
 	Decode(r io.Reader) error
 
 	// load
-	Load(dbTx database.Tx) error
+	Load() error
 
 	// IsDAG
 	IsDAG(parents []IBlock) bool
@@ -268,6 +270,10 @@ func (bd *MeerDAG) init(dagType string, calcWeight CalcWeight, blockRate float64
 		}
 		//
 		_, err := meta.CreateBucketIfNotExists(DAGTipsBucketName)
+		if err != nil {
+			return err
+		}
+		_, err = meta.CreateBucketIfNotExists(DiffAnticoneBucketName)
 		if err != nil {
 			return err
 		}
@@ -1146,6 +1152,7 @@ func (bd *MeerDAG) commit() error {
 			needPB = true
 		}
 	}
+	ph, ok := bd.instance.(*Phantom)
 	if needPB {
 		err := bd.db.Update(func(dbTx database.Tx) error {
 			return DBPutDAGBlockIdByHash(dbTx, bd.lastSnapshot.block)
@@ -1179,6 +1186,31 @@ func (bd *MeerDAG) commit() error {
 			}
 		}
 
+		if ok {
+			for k := range ph.diffAnticone.GetMap() {
+				if bd.lastSnapshot.diffAnticone.Has(k) {
+					continue
+				}
+				err := bd.db.Update(func(dbTx database.Tx) error {
+					return DBPutDiffAnticone(dbTx, k)
+				})
+				if err != nil {
+					return err
+				}
+			}
+
+			for k := range bd.lastSnapshot.diffAnticone.GetMap() {
+				if ph.diffAnticone.Has(k) {
+					continue
+				}
+				err := bd.db.Update(func(dbTx database.Tx) error {
+					return DBDelDiffAnticone(dbTx, k)
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
 		bd.lastSnapshot.Clean()
 	}
 
@@ -1219,7 +1251,6 @@ func (bd *MeerDAG) commit() error {
 			return err
 		}
 	}
-	ph, ok := bd.instance.(*Phantom)
 	if !ok {
 		return nil
 	}
@@ -1227,11 +1258,7 @@ func (bd *MeerDAG) commit() error {
 	if err != nil {
 		return err
 	}
-	bd.db.Update(func(dbTx database.Tx) error {
-		bd.optimizeTips(dbTx)
-		return nil
-	})
-
+	bd.optimizeTips()
 	return nil
 }
 

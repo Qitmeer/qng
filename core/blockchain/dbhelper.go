@@ -92,19 +92,23 @@ func (bcs *bestChainState) GetTotal() uint64 {
 // dbFetchBlockByOrder uses an existing database transaction to retrieve the
 // raw block for the provided order, deserialize it, and return a Block
 // with the height set.
-func (b *BlockChain) DBFetchBlockByOrder(dbTx database.Tx, order uint64) (*types.SerializedBlock, meerdag.IBlock, error) {
+func (b *BlockChain) DBFetchBlockByOrder(order uint64) (*types.SerializedBlock, meerdag.IBlock, error) {
 	// First find the hash associated with the provided order in the index.
-	ib := b.bd.GetBlockByOrderWithTx(dbTx, uint(order))
+	ib := b.bd.GetBlockByOrder(uint(order))
 	if ib == nil {
 		return nil, nil, fmt.Errorf("No block\n")
 	}
 
-	// Load the raw block bytes from the database.
-	blockBytes, err := dbTx.FetchBlock(ib.GetHash())
+	var blockBytes []byte
+	var err error
+	err = b.db.View(func(dbTx database.Tx) error {
+		// Load the raw block bytes from the database.
+		blockBytes, err = dbTx.FetchBlock(ib.GetHash())
+		return err
+	})
 	if err != nil {
 		return nil, nil, err
 	}
-
 	// Create the encapsulated block and set the order appropriately.
 	block, err := types.NewBlockFromBytes(blockBytes)
 	if err != nil {
@@ -119,12 +123,7 @@ func (b *BlockChain) DBFetchBlockByOrder(dbTx database.Tx, order uint64) (*types
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) BlockByOrder(blockOrder uint64) (*types.SerializedBlock, error) {
-	var block *types.SerializedBlock
-	err := b.db.View(func(dbTx database.Tx) error {
-		var err error
-		block, _, err = b.DBFetchBlockByOrder(dbTx, blockOrder)
-		return err
-	})
+	block, _, err := b.DBFetchBlockByOrder(blockOrder)
 	return block, err
 }
 

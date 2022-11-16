@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/util"
-	"github.com/Qitmeer/qng/database"
 	"github.com/golang-collections/collections/stack"
 	"io"
 	"strconv"
@@ -830,7 +829,7 @@ func (sp *Spectre) Decode(r io.Reader) error {
 	return nil
 }
 
-func (sp *Spectre) Load(dbTx database.Tx) error {
+func (sp *Spectre) Load() error {
 	return nil
 }
 

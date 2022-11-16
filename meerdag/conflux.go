@@ -3,7 +3,6 @@ package meerdag
 import (
 	"container/list"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/database"
 	"io"
 )
 
@@ -371,7 +370,7 @@ func (con *Conflux) Decode(r io.Reader) error {
 	return nil
 }
 
-func (con *Conflux) Load(dbTx database.Tx) error {
+func (con *Conflux) Load() error {
 	return nil
 }
 

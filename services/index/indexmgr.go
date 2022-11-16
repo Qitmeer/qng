@@ -113,13 +113,13 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		}
 		var block *types.SerializedBlock
 		for order > bestOrder {
+			// Load the block for the height since it is required to index
+			// it.
+			block, err = chain.BlockByOrder(uint64(order))
+			if err != nil {
+				return err
+			}
 			err = m.db.Update(func(dbTx database.Tx) error {
-				// Load the block for the height since it is required to index
-				// it.
-				block, _, err = chain.DBFetchBlockByOrder(dbTx, uint64(order))
-				if err != nil {
-					return err
-				}
 				spentTxos = nil
 				if indexNeedsInputs(indexer) {
 					spentTxos, err = chain.FetchSpendJournal(block)
@@ -199,15 +199,9 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 
 		var block *types.SerializedBlock
 		var ib meerdag.IBlock
-		err = m.db.Update(func(dbTx database.Tx) error {
-			// Load the block for the height since it is required to index
-			// it.
-			block, ib, err = chain.DBFetchBlockByOrder(dbTx, uint64(order))
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+		// Load the block for the height since it is required to index
+		// it.
+		block, ib, err = chain.DBFetchBlockByOrder(uint64(order))
 		if err != nil {
 			return err
 		}
