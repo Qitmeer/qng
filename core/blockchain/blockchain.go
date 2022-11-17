@@ -508,6 +508,7 @@ func (b *BlockChain) initChainState(interrupt <-chan struct{}) error {
 		return err
 	}
 
+	var state bestChainState
 	// Attempt to load the chain state from the database.
 	err = b.db.Update(func(dbTx database.Tx) error {
 		// Fetch the stored chain state from the database metadata.
@@ -520,49 +521,56 @@ func (b *BlockChain) initChainState(interrupt <-chan struct{}) error {
 			return fmt.Errorf("No chain state data")
 		}
 		log.Trace("Serialized chain state: ", "serializedData", fmt.Sprintf("%x", serializedData))
-		state, err := DeserializeBestChainState(serializedData)
+		state, err = DeserializeBestChainState(serializedData)
 		if err != nil {
 			return err
 		}
 		log.Trace(fmt.Sprintf("Load chain state:%s %d %d %s %s", state.hash.String(), state.total, state.totalTxns, state.tokenTipHash.String(), state.workSum.Text(16)))
-
-		log.Info("Loading dag ...")
-		bidxStart := roughtime.Now()
-
-		err = b.bd.Load(dbTx, uint(state.total), b.params.GenesisHash)
-		if err != nil {
-			return fmt.Errorf("The dag data was damaged (%s). you can cleanup your block data base by '--cleanup'.", err)
-		}
-
-		if !b.bd.GetMainChainTip().GetHash().IsEqual(&state.hash) {
-			return fmt.Errorf("The dag main tip %s is not the same. %s", state.hash.String(), b.bd.GetMainChainTip().GetHash().String())
-		}
-		log.Info(fmt.Sprintf("Dag loaded:loadTime=%v", roughtime.Since(bidxStart)))
-		// Set the best chain view to the stored best state.
-		// Load the raw block bytes for the best block.
-		mainTip := b.bd.GetMainChainTip()
-		mainTipNode := b.GetBlockNode(mainTip)
-		if mainTipNode == nil {
-			return fmt.Errorf("No main tip\n")
-		}
-		block, err := dbFetchBlockByHash(dbTx, mainTip.GetHash())
-		if err != nil {
-			return err
-		}
-
-		// Initialize the state related to the best block.
-		blockSize := uint64(block.Block().SerializeSize())
-		numTxns := uint64(len(block.Block().Transactions))
-
-		b.TokenTipID = uint32(b.bd.GetBlockId(&state.tokenTipHash))
-		b.stateSnapshot = newBestState(mainTip.GetHash(), mainTipNode.Difficulty(), blockSize, numTxns,
-			b.CalcPastMedianTime(mainTip), state.totalTxns, b.bd.GetMainChainTip().GetWeight(),
-			b.bd.GetGraphState(), &state.tokenTipHash)
 		return nil
 	})
 	if err != nil {
 		return err
 	}
+
+	log.Info("Loading dag ...")
+	bidxStart := roughtime.Now()
+
+	err = b.bd.Load(uint(state.total), b.params.GenesisHash)
+	if err != nil {
+		return fmt.Errorf("The dag data was damaged (%s). you can cleanup your block data base by '--cleanup'.", err)
+	}
+	if !b.bd.GetMainChainTip().GetHash().IsEqual(&state.hash) {
+		return fmt.Errorf("The dag main tip %s is not the same. %s", state.hash.String(), b.bd.GetMainChainTip().GetHash().String())
+	}
+	log.Info(fmt.Sprintf("Dag loaded:loadTime=%v", roughtime.Since(bidxStart)))
+	// Set the best chain view to the stored best state.
+	// Load the raw block bytes for the best block.
+	mainTip := b.bd.GetMainChainTip()
+	mainTipNode := b.GetBlockNode(mainTip)
+	if mainTipNode == nil {
+		return fmt.Errorf("No main tip\n")
+	}
+
+	var block *types.SerializedBlock
+	err = b.db.View(func(dbTx database.Tx) error {
+		block, err = dbFetchBlockByHash(dbTx, mainTip.GetHash())
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Initialize the state related to the best block.
+	blockSize := uint64(block.Block().SerializeSize())
+	numTxns := uint64(len(block.Block().Transactions))
+
+	b.TokenTipID = uint32(b.bd.GetBlockId(&state.tokenTipHash))
+	b.stateSnapshot = newBestState(mainTip.GetHash(), mainTipNode.Difficulty(), blockSize, numTxns,
+		b.CalcPastMedianTime(mainTip), state.totalTxns, b.bd.GetMainChainTip().GetWeight(),
+		b.bd.GetGraphState(), &state.tokenTipHash)
 	ts := b.GetTokenState(b.TokenTipID)
 	if ts == nil {
 		return fmt.Errorf("token state error")

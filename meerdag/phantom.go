@@ -105,7 +105,7 @@ func (ph *Phantom) getExtremeBlue(bs *IdSet, bluest bool) *PhantomBlock {
 		pb := ph.getBlock(k)
 		if pb != nil {
 			ph.bd.GetBlockData(pb)
-		}else{
+		} else {
 			continue
 		}
 		if result == nil {
@@ -276,11 +276,9 @@ func (ph *Phantom) buildSortDiffAnticone(diffAn *IdSet) *IdSet {
 }
 
 func (ph *Phantom) updateMainChain(buestTip *PhantomBlock, pb *PhantomBlock) (*PhantomBlock, *list.List) {
-	if ph.bd.lastSnapshot.IsValid() {
-		ph.bd.lastSnapshot.diffAnticone = ph.diffAnticone.Clone()
-		ph.bd.lastSnapshot.mainChainTip = ph.mainChain.tip
-		ph.bd.lastSnapshot.mainChainGenesis = ph.mainChain.genesis
-	}
+	ph.bd.lastSnapshot.diffAnticone = ph.diffAnticone.Clone()
+	ph.bd.lastSnapshot.mainChainTip = ph.mainChain.tip
+	ph.bd.lastSnapshot.mainChainGenesis = ph.mainChain.genesis
 
 	ph.virtualBlock.SetOrder(MaxBlockOrder)
 	if !ph.isMaxMainTip(buestTip) {
@@ -602,51 +600,29 @@ func (ph *Phantom) Decode(r io.Reader) error {
 }
 
 // load
-func (ph *Phantom) Load(dbTx database.Tx) error {
-	tips, err := DBGetDAGTips(dbTx)
+func (ph *Phantom) Load() error {
+	var tips []uint
+	var diffs []uint
+	err := ph.bd.db.View(func(dbTx database.Tx) error {
+		ts, err := DBGetDAGTips(dbTx)
+		if err != nil {
+			return err
+		}
+		tips = ts
+		//
+		ds, err := DBGetDiffAnticone(dbTx)
+		if err != nil {
+			return err
+		}
+		diffs = ds
+		return nil
+	})
 	if err != nil {
 		return err
 	}
 
 	ph.mainChain.genesis = 0
 	ph.mainChain.tip = tips[0]
-	for i := uint(0); i < ph.bd.blockTotal; i++ {
-		block := Block{id: i}
-		ib := ph.CreateBlock(&block)
-		err := DBGetDAGBlock(dbTx, ib)
-		if err != nil {
-			if err.(*DAGError).IsEmpty() {
-				continue
-			}
-			return err
-		}
-		if i == 0 && !ib.GetHash().IsEqual(ph.bd.GetGenesisHash()) {
-			return fmt.Errorf("genesis data mismatch")
-		}
-		// Make up for missing
-		if ib.HasParents() {
-			parents := ib.GetParents()
-			for k := range parents.GetMap() {
-				parent := ph.bd.getBlockById(k)
-				parents.AddPair(k, parent)
-				parent.AddChild(ib)
-			}
-		}
-		ph.bd.blocks[ib.GetID()] = ib
-
-		if !ib.IsOrdered() {
-			ph.diffAnticone.AddPair(ib.GetID(), ib)
-		} else {
-			// check order index
-			id, err := DBGetBlockIdByOrder(dbTx, ib.GetOrder())
-			if err != nil {
-				return err
-			}
-			if uint(id) != ib.GetID() {
-				return fmt.Errorf("The order(%d) of %s is inconsistent: Order Index (%d)\n", ib.GetOrder(), ib.GetHash(), id)
-			}
-		}
-	}
 	// load tips
 	for _, v := range tips {
 		tip := ph.getBlock(v)
@@ -658,9 +634,22 @@ func (ph *Phantom) Load(dbTx database.Tx) error {
 	if !ph.bd.tips.Has(ph.mainChain.tip) {
 		return fmt.Errorf("Main chain tip and tips is mismatch")
 	}
-	ph.bd.optimizeTips(dbTx)
 
-	return ph.CheckMainChainDB(dbTx)
+	ph.bd.optimizeTips()
+
+	for _, da := range diffs {
+		dab := ph.getBlock(da)
+		if dab == nil {
+			return fmt.Errorf("Can't find tip:%d\n", da)
+		}
+		ph.diffAnticone.AddPair(da, dab)
+	}
+	// check
+	err = ph.CheckBlockOrderDB(MinBlockPruneSize)
+	if err != nil {
+		return err
+	}
+	return ph.CheckMainChainDB(MinBlockPruneSize)
 }
 
 func (ph *Phantom) GetBlues(parents *IdSet) uint {
@@ -814,31 +803,59 @@ func (ph *Phantom) UpdateWeight(ib IBlock) {
 	}
 }
 
-func (ph *Phantom) CheckMainChainDB(dbTx database.Tx) error {
-	mainChainM := map[uint]bool{}
+func (ph *Phantom) CheckMainChainDB(maxDepth uint64) error {
+	depth := uint64(0)
 	var cur *PhantomBlock
 	for cur = ph.getBlock(ph.mainChain.tip); cur != nil; cur = ph.getBlock(cur.mainParent) {
-		mainChainM[cur.id] = true
-		if cur.mainParent == MaxId {
+		depth++
+		if !ph.mainChain.Has(cur.id) {
+			return fmt.Errorf("Main chain error:invalid (%s,%d)\n", cur.hash.String(), cur.id)
+		}
+		if cur.mainParent == MaxId ||
+			cur.id == 0 {
 			break
 		}
-	}
-	if cur.id != 0 {
-		return fmt.Errorf("Main chain genesis error:%d %s\n", cur.id, cur.GetHash().String())
-	}
-	bucket := dbTx.Metadata().Bucket(DagMainChainBucketName)
-	cursor := bucket.Cursor()
-	mcLen := int(0)
-	for cok := cursor.First(); cok; cok = cursor.Next() {
-		id := ByteOrder.Uint32(cursor.Key())
-		_, ok := mainChainM[uint(id)]
-		if !ok {
-			return fmt.Errorf("Main chain error:invalid %d\n", id)
+		if maxDepth > 0 {
+			if depth >= maxDepth {
+				break
+			}
 		}
-		mcLen++
 	}
-	if len(mainChainM) != mcLen {
-		return fmt.Errorf("Inconsistent main chain length:%d != %d\n", len(mainChainM), mcLen)
+	return nil
+}
+
+func (ph *Phantom) CheckBlockOrderDB(maxDepth uint64) error {
+	depth := uint64(0)
+	mainTip := ph.GetMainChainTip()
+	if mainTip.GetOrder() <= 1 {
+		return nil
+	}
+	for i := mainTip.GetOrder() - 1; i > 0; i-- {
+		depth++
+		var blockid uint
+		err := ph.bd.db.View(func(dbTx database.Tx) error {
+			id, err := DBGetBlockIdByOrder(dbTx, i)
+			if err != nil {
+				return err
+			}
+			blockid = uint(id)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		ib := ph.getBlock(blockid)
+		if ib == nil {
+			return fmt.Errorf("No DAG block:order=%d,id=%d", i, blockid)
+		}
+		if blockid != ib.GetID() {
+			return fmt.Errorf("The order(%d) of %s is inconsistent: Order Index (%d)\n", ib.GetOrder(), ib.GetHash(), blockid)
+		}
+		if maxDepth > 0 {
+			if depth >= maxDepth {
+				break
+			}
+		}
 	}
 	return nil
 }

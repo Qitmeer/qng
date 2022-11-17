@@ -129,7 +129,7 @@ func (bd *MeerDAG) updateTips(b IBlock) {
 	bd.tips.AddPair(b.GetID(), b)
 }
 
-func (bd *MeerDAG) optimizeTips(dbTx database.Tx) {
+func (bd *MeerDAG) optimizeTips() {
 	disTipsCount := 0
 	for {
 		disTips := bd.getDiscardedTips()
@@ -137,7 +137,7 @@ func (bd *MeerDAG) optimizeTips(dbTx database.Tx) {
 			break
 		}
 		for _, v := range disTips {
-			err := bd.removeTip(dbTx, v)
+			err := bd.removeTip(v)
 			if err != nil {
 				log.Error(err.Error())
 			} else {
@@ -151,44 +151,50 @@ func (bd *MeerDAG) optimizeTips(dbTx database.Tx) {
 	}
 }
 
-func (bd *MeerDAG) removeTip(dbTx database.Tx, b IBlock) error {
+func (bd *MeerDAG) removeTip(b IBlock) error {
 	bd.tips.Remove(b.GetID())
-	err := DBDelDAGBlock(dbTx, b.GetID())
-	if err != nil {
-		return err
-	}
-	err = DBDelBlockIdByHash(dbTx, b.GetHash())
-	if err != nil {
-		return err
-	}
-	err = DBDelDAGTip(dbTx, b.GetID())
-	if err != nil {
-		return err
-	}
+	parents := bd.GetParents(b)
+	return bd.db.Update(func(dbTx database.Tx) error {
+		err := DBDelDAGBlock(dbTx, b.GetID())
+		if err != nil {
+			return err
+		}
+		err = DBDelBlockIdByHash(dbTx, b.GetHash())
+		if err != nil {
+			return err
+		}
+		err = DBDelDAGTip(dbTx, b.GetID())
+		if err != nil {
+			return err
+		}
 
-	for _, v := range b.GetParents().GetMap() {
-		block := v.(IBlock)
-		block.RemoveChild(b.GetID())
-		if !block.HasChildren() {
-			bd.tips.AddPair(block.GetID(), block)
-			err := DBPutDAGTip(dbTx, block.GetID(), block.GetID() == bd.instance.GetMainChainTipId())
+		for _, v := range parents.GetMap() {
+			block := v.(IBlock)
+			block.RemoveChild(b.GetID())
+			if !block.HasChildren() {
+				bd.tips.AddPair(block.GetID(), block)
+				err := DBPutDAGTip(dbTx, block.GetID(), block.GetID() == bd.instance.GetMainChainTipId())
+				if err != nil {
+					return err
+				}
+			}
+			err = DBPutDAGBlock(dbTx, block)
 			if err != nil {
 				return err
 			}
 		}
-	}
-	delete(bd.blocks, b.GetID())
+		delete(bd.blocks, b.GetID())
 
-	ph, ok := bd.instance.(*Phantom)
-	if !ok {
-		return fmt.Errorf("MeerDAG instance error")
-	}
-	ph.diffAnticone.Remove(b.GetID())
-	if ph.virtualBlock.parents != nil {
-		ph.virtualBlock.parents.Remove(b.GetID())
-	}
-
-	return nil
+		ph, ok := bd.instance.(*Phantom)
+		if !ok {
+			return fmt.Errorf("MeerDAG instance error")
+		}
+		ph.diffAnticone.Remove(b.GetID())
+		if ph.virtualBlock.HasParents() {
+			ph.virtualBlock.RemoveParent(b.GetID())
+		}
+		return DBDelDiffAnticone(dbTx, b.GetID())
+	})
 }
 
 func (bd *MeerDAG) getDiscardedTips() []IBlock {

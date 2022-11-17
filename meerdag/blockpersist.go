@@ -13,14 +13,15 @@ import (
 )
 
 // Load from database
-func (bd *MeerDAG) Load(dbTx database.Tx, blockTotal uint, genesis *hash.Hash) error {
-	meta := dbTx.Metadata()
-	serializedData := meta.Get(DagInfoBucketName)
-	if serializedData == nil {
-		return fmt.Errorf("dag load error")
-	}
-
-	err := bd.Decode(bytes.NewReader(serializedData))
+func (bd *MeerDAG) Load(blockTotal uint, genesis *hash.Hash) error {
+	err := bd.db.View(func(dbTx database.Tx) error {
+		meta := dbTx.Metadata()
+		serializedData := meta.Get(DagInfoBucketName)
+		if serializedData == nil {
+			return fmt.Errorf("dag load error")
+		}
+		return bd.Decode(bytes.NewReader(serializedData))
+	})
 	if err != nil {
 		return err
 	}
@@ -28,7 +29,7 @@ func (bd *MeerDAG) Load(dbTx database.Tx, blockTotal uint, genesis *hash.Hash) e
 	bd.blockTotal = blockTotal
 	bd.blocks = map[uint]IBlock{}
 	bd.tips = NewIdSet()
-	return bd.instance.Load(dbTx)
+	return bd.instance.Load()
 }
 
 func (bd *MeerDAG) Encode(w io.Writer) error {
@@ -95,6 +96,12 @@ func (bd *MeerDAG) updateBlockDataCache() {
 	bd.blockDataLock.Unlock()
 	for k, t := range blockDataCache {
 		if time.Since(t) > maxLife {
+			if !bd.HasLoadedBlock(k) {
+				bd.blockDataLock.Lock()
+				delete(bd.blockDataCache, k)
+				bd.blockDataLock.Unlock()
+				continue
+			}
 			ib := bd.GetBlockById(k)
 			if ib != nil {
 				if math.Abs(float64(mainHeight)-float64(ib.GetHeight())) <= float64(MinBlockDataCache) {
@@ -125,4 +132,143 @@ func (bd *MeerDAG) GetBlockDataCacheSize() int {
 	bd.blockDataLock.Lock()
 	defer bd.blockDataLock.Unlock()
 	return len(bd.blockDataCache)
+}
+
+func (bd *MeerDAG) loadBlock(id uint) (IBlock, error) {
+	ph, ok := bd.instance.(*Phantom)
+	if !ok {
+		return nil, fmt.Errorf("MeerDAG instance error")
+	}
+	block := Block{id: id}
+	ib := ph.CreateBlock(&block)
+	err := bd.db.View(func(dbTx database.Tx) error {
+		return DBGetDAGBlock(dbTx, ib)
+	})
+	if err != nil {
+		return nil, err
+	}
+	if id == 0 && !ib.GetHash().IsEqual(ph.bd.GetGenesisHash()) {
+		return nil, fmt.Errorf("genesis data mismatch")
+	}
+	if ib.HasParents() {
+		parentIDs := ib.GetParents().List()
+		for _, pid := range parentIDs {
+			parent, ok := bd.blocks[pid]
+			if ok {
+				parent.AttachChild(ib)
+				ib.AttachParent(parent)
+			}
+		}
+	}
+	if ib.HasChildren() {
+		childrenIDs := ib.GetChildren().List()
+		for _, pid := range childrenIDs {
+			child, ok := bd.blocks[pid]
+			if ok {
+				child.AttachParent(ib)
+				ib.AttachChild(child)
+			}
+		}
+	}
+	bd.blocks[ib.GetID()] = ib
+	return ib, nil
+}
+
+// get parents from block if it is not loaded, it will be loaded
+func (bd *MeerDAG) GetParents(ib IBlock) *IdSet {
+	if !ib.HasParents() {
+		return ib.GetParents()
+	}
+	parents := ib.GetParents()
+	parentIDs := parents.List()
+	for _, pid := range parentIDs {
+		if parents.IsDataEmpty(pid) {
+			ib.AttachParent(bd.getBlockById(pid))
+		}
+	}
+	return parents
+}
+
+// get children from block if it is not loaded, it will be loaded
+func (bd *MeerDAG) GetChildren(ib IBlock) *IdSet {
+	if !ib.HasChildren() {
+		return ib.GetChildren()
+	}
+	children := ib.GetChildren()
+	childIDs := children.List()
+	for _, cid := range childIDs {
+		if children.IsDataEmpty(cid) {
+			ib.AttachChild(bd.getBlockById(cid))
+		}
+	}
+	return children
+}
+
+func (bd *MeerDAG) GetBlockCacheSize() int {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	return len(bd.blocks)
+}
+
+func (bd *MeerDAG) updateBlockCache() {
+	cacheSize := bd.GetBlockCacheSize()
+	if cacheSize <= MinBlockPruneSize {
+		return
+	}
+	mainTip := bd.GetMainChainTip()
+	need := cacheSize - MinBlockPruneSize
+	deletes := []IBlock{}
+
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	for k, v := range bd.blocks {
+		if k == 0 ||
+			k == mainTip.GetID() ||
+			bd.tips.Has(k) ||
+			v.GetHash().IsEqual(bd.GetGenesisHash()) ||
+			bd.commitBlock.Has(k) {
+			continue
+		}
+		if v.GetHeight()+MinBlockPruneSize < mainTip.GetHeight() {
+			deletes = append(deletes, v)
+		}
+		//
+		need--
+		if need <= 0 {
+			break
+		}
+	}
+	for _, b := range deletes {
+		bd.unloadBlock(b)
+	}
+}
+
+func (bd *MeerDAG) unloadBlock(ib IBlock) {
+	delete(bd.blocks, ib.GetID())
+	if ib.HasParents() {
+		for _, parent := range ib.GetParents().GetMap() {
+			if parent == nil {
+				continue
+			}
+			pib, ok := parent.(IBlock)
+			if !ok {
+				continue
+			}
+			pib.DetachChild(ib)
+		}
+	}
+
+	if ib.HasChildren() {
+		for _, child := range ib.GetChildren().GetMap() {
+			if child == nil {
+				continue
+			}
+			cib, ok := child.(IBlock)
+			if !ok {
+				continue
+			}
+			cib.DetachParent(ib)
+		}
+	}
+
 }

@@ -41,6 +41,8 @@ type IBlock interface {
 	// IsOrdered
 	IsOrdered() bool
 
+	AddParent(parent IBlock)
+
 	// Get all parents set,the dag block has more than one parent
 	GetParents() *IdSet
 
@@ -92,6 +94,12 @@ type IBlock interface {
 
 	// invalid block data
 	Invalid()
+
+	AttachParent(ib IBlock)
+	DetachParent(ib IBlock)
+
+	AttachChild(ib IBlock)
+	DetachChild(ib IBlock)
 }
 
 // It is the element of a DAG. It is the most basic data unit.
@@ -125,6 +133,20 @@ func (b *Block) GetHash() *hash.Hash {
 	return &b.hash
 }
 
+func (b *Block) AddParent(parent IBlock) {
+	if b.parents == nil {
+		b.parents = NewIdSet()
+	}
+	b.parents.AddPair(parent.GetID(), parent)
+}
+
+func (b *Block) RemoveParent(id uint) {
+	if !b.HasParents() {
+		return
+	}
+	b.parents.Remove(id)
+}
+
 // Get all parents set,the dag block has more than one parent
 func (b *Block) GetParents() *IdSet {
 	return b.parents
@@ -143,36 +165,6 @@ func (b *Block) HasParents() bool {
 		return false
 	}
 	return true
-}
-
-// Parent with order in front.
-func (b *Block) GetForwardParent() *Block {
-	if b.parents == nil || b.parents.IsEmpty() {
-		return nil
-	}
-	var result *Block = nil
-	for _, v := range b.parents.GetMap() {
-		parent := v.(*Block)
-		if result == nil || parent.GetOrder() < result.GetOrder() {
-			result = parent
-		}
-	}
-	return result
-}
-
-// Parent with order in back.
-func (b *Block) GetBackParent() *Block {
-	if b == nil || b.parents == nil || b.parents.IsEmpty() {
-		return nil
-	}
-	var result *Block = nil
-	for _, v := range b.parents.GetMap() {
-		parent := v.(*Block)
-		if result == nil || parent.GetOrder() > result.GetOrder() {
-			result = parent
-		}
-	}
-	return result
 }
 
 // Add child nodes to block
@@ -278,21 +270,21 @@ func (b *Block) Encode(w io.Writer) error {
 		}
 	}
 	// children
-	/*children:=[]*hash.Hash{}
+	children := []uint{}
 	if b.HasChildren() {
-		children=b.children.List()
+		children = b.children.List()
 	}
-	childrenSize:=len(children)
-	err=s.WriteElements(w,uint32(childrenSize))
+	childrenSize := len(children)
+	err = s.WriteElements(w, uint32(childrenSize))
 	if err != nil {
 		return err
 	}
-	for i:=0;i<childrenSize ;i++  {
-		err=s.WriteElements(w,children[i])
+	for i := 0; i < childrenSize; i++ {
+		err = s.WriteElements(w, uint32(children[i]))
 		if err != nil {
 			return err
 		}
-	}*/
+	}
 	// mainParent
 	mainParent := uint32(MaxId)
 	if b.mainParent != MaxId {
@@ -353,22 +345,22 @@ func (b *Block) Decode(r io.Reader) error {
 		}
 	}
 	// children
-	/*var childrenSize uint32
-	err=s.ReadElements(r,&childrenSize)
+	var childrenSize uint32
+	err = s.ReadElements(r, &childrenSize)
 	if err != nil {
 		return err
 	}
-	if childrenSize>0 {
-		b.children = NewHashSet()
-		for i:=uint32(0);i<childrenSize ;i++  {
-			var children hash.Hash
-			err:=s.ReadElements(r,&children)
+	if childrenSize > 0 {
+		b.children = NewIdSet()
+		for i := uint32(0); i < childrenSize; i++ {
+			var children uint32
+			err := s.ReadElements(r, &children)
 			if err != nil {
 				return err
 			}
-			b.children.Add(&children)
+			b.children.Add(uint(children))
 		}
-	}*/
+	}
 	// mainParent
 	var mainParent uint32
 	err = s.ReadElements(r, &mainParent)
@@ -449,6 +441,46 @@ func (b *Block) Valid() {
 
 func (b *Block) Invalid() {
 	b.SetStatusFlags(StatusInvalid)
+}
+
+func (b *Block) AttachParent(ib IBlock) {
+	if !b.HasParents() {
+		return
+	}
+	if !b.parents.Has(ib.GetID()) {
+		return
+	}
+	b.AddParent(ib)
+}
+
+func (b *Block) DetachParent(ib IBlock) {
+	if !b.HasParents() {
+		return
+	}
+	if !b.parents.Has(ib.GetID()) {
+		return
+	}
+	b.parents.Add(ib.GetID())
+}
+
+func (b *Block) AttachChild(ib IBlock) {
+	if !b.HasChildren() {
+		return
+	}
+	if !b.children.Has(ib.GetID()) {
+		return
+	}
+	b.AddChild(ib)
+}
+
+func (b *Block) DetachChild(ib IBlock) {
+	if !b.HasChildren() {
+		return
+	}
+	if !b.children.Has(ib.GetID()) {
+		return
+	}
+	b.children.Add(ib.GetID())
 }
 
 // BlockStatus

@@ -167,8 +167,9 @@ func (api *PublicBlockAPI) GetBlock(h hash.Hash, verbose *bool, inclTx *bool, fu
 		return hex.EncodeToString(blkBytes), nil
 	}
 	confirmations := int64(api.bm.chain.BlockDAG().GetConfirmations(node.GetID()))
-	ib := api.bm.chain.BlockDAG().GetBlock(&h)
-	cs := ib.GetChildren()
+	bd := api.bm.chain.BlockDAG()
+	ib := bd.GetBlock(&h)
+	cs := bd.GetChildren(ib)
 	children := []*hash.Hash{}
 	if cs != nil && !cs.IsEmpty() {
 		for _, v := range cs.GetMap() {
@@ -236,8 +237,9 @@ func (api *PublicBlockAPI) GetBlockV2(h hash.Hash, verbose *bool, inclTx *bool, 
 		return hex.EncodeToString(blkBytes), nil
 	}
 	confirmations := int64(api.bm.chain.BlockDAG().GetConfirmations(node.GetID()))
-	ib := api.bm.chain.BlockDAG().GetBlock(&h)
-	cs := ib.GetChildren()
+	bd := api.bm.chain.BlockDAG()
+	ib := bd.GetBlock(&h)
+	cs := bd.GetChildren(ib)
 	children := []*hash.Hash{}
 	if cs != nil && !cs.IsEmpty() {
 		for _, v := range cs.GetMap() {

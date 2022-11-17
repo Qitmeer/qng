@@ -85,8 +85,10 @@ func (b *BlockChain) locateBlocks(locator BlockLocator, hashStop *hash.Hash, max
 	hashesSet := meerdag.NewHashSet()
 
 	// First of all, we need to make sure we have the parents of block.
-	for _, v := range endBlock.GetParents().GetMap() {
-		hashesSet.Add(v.(meerdag.IBlock).GetHash())
+	if endBlock.HasParents() {
+		for _, v := range b.bd.GetParents(endBlock).GetMap() {
+			hashesSet.Add(v.(meerdag.IBlock).GetHash())
+		}
 	}
 
 	curNum := uint32(hashesSet.Size())

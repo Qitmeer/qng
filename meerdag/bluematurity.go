@@ -204,7 +204,7 @@ func (bd *MeerDAG) processMaturity(target IBlock, views []IBlock, mainViewIB IBl
 			continue
 		}
 
-		for _, v := range cur.GetParents().GetMap() {
+		for _, v := range bd.GetParents(cur).GetMap() {
 			ib := v.(IBlock)
 			if queueSet.Has(ib.GetID()) {
 				continue
@@ -265,7 +265,7 @@ func (bd *MeerDAG) CheckMainBlueAndMature(target IBlock, targetMainFork IBlock, 
 			continue
 		}
 
-		for _, v := range cur.GetParents().GetMap() {
+		for _, v := range bd.GetParents(cur).GetMap() {
 			ib := v.(IBlock)
 			if queueSet.Has(ib.GetID()) {
 				continue

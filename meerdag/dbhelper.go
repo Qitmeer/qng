@@ -209,3 +209,29 @@ func DBDelDAGTip(dbTx database.Tx, id uint) error {
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
 	return bucket.Delete(serializedID[:])
 }
+
+// diffAnticone
+func DBPutDiffAnticone(dbTx database.Tx, id uint) error {
+	var serializedID [4]byte
+	ByteOrder.PutUint32(serializedID[:], uint32(id))
+	bucket := dbTx.Metadata().Bucket(DiffAnticoneBucketName)
+	return bucket.Put(serializedID[:], []byte{byte(0)})
+}
+
+func DBGetDiffAnticone(dbTx database.Tx) ([]uint, error) {
+	bucket := dbTx.Metadata().Bucket(DiffAnticoneBucketName)
+	cursor := bucket.Cursor()
+	diffs := []uint{}
+	for cok := cursor.First(); cok; cok = cursor.Next() {
+		id := uint(ByteOrder.Uint32(cursor.Key()))
+		diffs = append(diffs, id)
+	}
+	return diffs, nil
+}
+
+func DBDelDiffAnticone(dbTx database.Tx, id uint) error {
+	bucket := dbTx.Metadata().Bucket(DiffAnticoneBucketName)
+	var serializedID [4]byte
+	ByteOrder.PutUint32(serializedID[:], uint32(id))
+	return bucket.Delete(serializedID[:])
+}

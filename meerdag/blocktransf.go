@@ -98,9 +98,27 @@ func (bd *MeerDAG) getBlockById(id uint) IBlock {
 	}
 	block, ok := bd.blocks[id]
 	if !ok {
-		return nil
+		b, err := bd.loadBlock(id)
+		if err != nil {
+			log.Error(err.Error())
+		}
+		return b
 	}
 	return block
+}
+
+func (bd *MeerDAG) HasLoadedBlock(id uint) bool {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	return bd.hasLoadedBlock(id)
+}
+
+func (bd *MeerDAG) hasLoadedBlock(id uint) bool {
+	if id == MaxId {
+		return false
+	}
+	_, ok := bd.blocks[id]
+	return ok
 }
 
 // Obtain block hash by global order
@@ -122,22 +140,7 @@ func (bd *MeerDAG) GetBlockByOrder(order uint) IBlock {
 	return bd.getBlockByOrder(order)
 }
 
-func (bd *MeerDAG) GetBlockByOrderWithTx(dbTx database.Tx, order uint) IBlock {
-	bd.stateLock.Lock()
-	defer bd.stateLock.Unlock()
-
-	ib := bd.doGetBlockByOrder(dbTx, order)
-	if ib != nil {
-		return ib
-	}
-	return nil
-}
-
 func (bd *MeerDAG) getBlockByOrder(order uint) IBlock {
-	return bd.doGetBlockByOrder(nil, order)
-}
-
-func (bd *MeerDAG) doGetBlockByOrder(dbTx database.Tx, order uint) IBlock {
 	if order >= MaxBlockOrder {
 		return nil
 	}
@@ -145,31 +148,18 @@ func (bd *MeerDAG) doGetBlockByOrder(dbTx database.Tx, order uint) IBlock {
 	if ok {
 		return bd.getBlockById(id)
 	}
-
 	bid := uint(MaxId)
-
-	if dbTx == nil {
-		err := bd.db.View(func(dbTx database.Tx) error {
-			id, er := DBGetBlockIdByOrder(dbTx, order)
-			if er == nil {
-				bid = uint(id)
-			}
-			return er
-		})
-		if err != nil {
-			log.Error(err.Error())
-			return nil
-		}
-	} else {
-		id, err := DBGetBlockIdByOrder(dbTx, order)
-		if err == nil {
+	err := bd.db.View(func(dbTx database.Tx) error {
+		id, er := DBGetBlockIdByOrder(dbTx, order)
+		if er == nil {
 			bid = uint(id)
-		} else {
-			log.Error(err.Error())
-			return nil
 		}
+		return er
+	})
+	if err != nil {
+		log.Error(err.Error())
+		return nil
 	}
-
 	return bd.getBlockById(bid)
 }
 
@@ -325,7 +315,7 @@ func (bd *MeerDAG) locateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
 		}
 		needRec := true
 		if cur.HasChildren() {
-			for _, v := range cur.GetChildren().GetMap() {
+			for _, v := range bd.GetChildren(cur).GetMap() {
 				ib := v.(IBlock)
 				if gs.GetTips().Has(ib.GetHash()) || !fs.Has(ib.GetHash()) && ib.IsOrdered() {
 					needRec = false
@@ -336,7 +326,7 @@ func (bd *MeerDAG) locateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
 		if needRec {
 			fs.AddPair(cur.GetHash(), cur)
 			if cur.HasParents() {
-				for _, v := range cur.GetParents().GetMap() {
+				for _, v := range bd.GetParents(cur).GetMap() {
 					value := v.(IBlock)
 					ib := value
 					if fs.Has(ib.GetHash()) {
@@ -358,7 +348,7 @@ func (bd *MeerDAG) locateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
 		}
 		if ib.HasChildren() {
 			need := true
-			for _, v := range ib.GetChildren().GetMap() {
+			for _, v := range bd.GetChildren(ib).GetMap() {
 				ib := v.(IBlock)
 				if gs.GetTips().Has(ib.GetHash()) {
 					need = false
