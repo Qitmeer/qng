@@ -153,7 +153,7 @@ func (bd *MeerDAG) optimizeTips() {
 
 func (bd *MeerDAG) removeTip(b IBlock) error {
 	bd.tips.Remove(b.GetID())
-	parents := bd.GetParents(b)
+	parents := bd.getParents(b)
 	return bd.db.Update(func(dbTx database.Tx) error {
 		err := DBDelDAGBlock(dbTx, b.GetID())
 		if err != nil {

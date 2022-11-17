@@ -315,7 +315,7 @@ func (bd *MeerDAG) locateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
 		}
 		needRec := true
 		if cur.HasChildren() {
-			for _, v := range bd.GetChildren(cur).GetMap() {
+			for _, v := range bd.getChildren(cur).GetMap() {
 				ib := v.(IBlock)
 				if gs.GetTips().Has(ib.GetHash()) || !fs.Has(ib.GetHash()) && ib.IsOrdered() {
 					needRec = false
@@ -326,7 +326,7 @@ func (bd *MeerDAG) locateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
 		if needRec {
 			fs.AddPair(cur.GetHash(), cur)
 			if cur.HasParents() {
-				for _, v := range bd.GetParents(cur).GetMap() {
+				for _, v := range bd.getParents(cur).GetMap() {
 					value := v.(IBlock)
 					ib := value
 					if fs.Has(ib.GetHash()) {
@@ -348,7 +348,7 @@ func (bd *MeerDAG) locateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
 		}
 		if ib.HasChildren() {
 			need := true
-			for _, v := range bd.GetChildren(ib).GetMap() {
+			for _, v := range bd.getChildren(ib).GetMap() {
 				ib := v.(IBlock)
 				if gs.GetTips().Has(ib.GetHash()) {
 					need = false
