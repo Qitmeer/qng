@@ -57,7 +57,9 @@ func (bd *MeerDAG) Decode(r io.Reader) error {
 func (bd *MeerDAG) GetBlockData(ib IBlock) IBlockData {
 	bd.blockDataLock.Lock()
 	defer bd.blockDataLock.Unlock()
-	bd.blockDataCache[ib.GetID()] = time.Now()
+	if ib.GetID() < bd.blockTotal {
+		bd.blockDataCache[ib.GetID()] = time.Now()
+	}
 	if ib.IsLoaded() {
 		return ib.GetData()
 	}
