@@ -445,6 +445,9 @@ func (b *Block) Invalid() {
 }
 
 func (b *Block) AttachParent(ib IBlock) {
+	if ib == nil {
+		return
+	}
 	if !b.HasParents() {
 		return
 	}
@@ -455,6 +458,9 @@ func (b *Block) AttachParent(ib IBlock) {
 }
 
 func (b *Block) DetachParent(ib IBlock) {
+	if ib == nil {
+		return
+	}
 	if !b.HasParents() {
 		return
 	}
@@ -465,6 +471,9 @@ func (b *Block) DetachParent(ib IBlock) {
 }
 
 func (b *Block) AttachChild(ib IBlock) {
+	if ib == nil {
+		return
+	}
 	if !b.HasChildren() {
 		return
 	}
@@ -475,6 +484,9 @@ func (b *Block) AttachChild(ib IBlock) {
 }
 
 func (b *Block) DetachChild(ib IBlock) {
+	if ib == nil {
+		return
+	}
 	if !b.HasChildren() {
 		return
 	}
