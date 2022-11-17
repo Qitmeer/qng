@@ -226,7 +226,12 @@ func TxDecode(network string, rawTxStr string) {
 	vins := marshal.MarshJsonVin(&tx)
 	if len(strArr) == 2 {
 		for i := range vins {
-			vins[i].TxType = txTypeIndex.FindInputScriptType(i).String()
+			scriptType := txTypeIndex.FindInputScriptType(i)
+			if scriptType == scriptbasetypes.SPECIAL_CROSS_VAL {
+				vins[i].TxType = scriptbasetypes.SPECIAL_CROSS_TYPE
+			} else {
+				vins[i].TxType = txTypeIndex.FindInputScriptType(i).String()
+			}
 		}
 	}
 	jsonTx := &json.OrderedResult{
