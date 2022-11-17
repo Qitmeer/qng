@@ -6,7 +6,9 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/params"
 )
 
 // ThresholdState define the various threshold states used when voting on
@@ -157,7 +159,27 @@ func (b *BlockChain) thresholdState(prevNode meerdag.IBlock, checker thresholdCo
 	if prevNode == nil || confirmationWindow <= 0 || int64(prevNode.GetHeight()+1) < confirmationWindow {
 		return ThresholdDefined, nil
 	}
-
+	if params.ActiveNetParams.Net == protocol.MainNet {
+		if isCheckerTimeMode(checker) {
+			medianTime := b.CalcPastMedianTime(prevNode)
+			medianTimeUnix := uint64(medianTime.Unix())
+			if medianTimeUnix < checker.BeginTime() {
+				return ThresholdDefined, nil
+			} else if medianTimeUnix >= checker.BeginTime() && medianTimeUnix < checker.EndTime() {
+				return ThresholdStarted, nil
+			} else {
+				return ThresholdActive, nil
+			}
+		} else {
+			if uint64(prevNode.GetHeight()) < checker.BeginTime() {
+				return ThresholdDefined, nil
+			} else if uint64(prevNode.GetHeight()) >= checker.BeginTime() && uint64(prevNode.GetHeight()) < checker.EndTime() {
+				return ThresholdStarted, nil
+			} else {
+				return ThresholdActive, nil
+			}
+		}
+	}
 	// Get the ancestor that is the last block of the previous confirmation
 	// window in order to get its threshold state.  This can be done because
 	// the state is the same for all blocks within a given window.

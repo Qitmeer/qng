@@ -73,7 +73,7 @@ func (bd *MeerDAG) getBlueInfo(ib IBlock) *BlueInfo {
 	if ib.GetMainParent() == 0 {
 		return NewBlueInfo(1, 0, 0, int64(ib.GetHeight()))
 	}
-	mainIB, ok := ib.GetParents().Get(ib.GetMainParent()).(IBlock)
+	mainIB, ok := bd.GetParents(ib).Get(ib.GetMainParent()).(IBlock)
 	if !ok {
 		return NewBlueInfo(1, 0, 0, int64(ib.GetHeight()))
 	}

@@ -107,6 +107,20 @@ func (bd *MeerDAG) getBlockById(id uint) IBlock {
 	return block
 }
 
+func (bd *MeerDAG) HasLoadedBlock(id uint) bool {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	return bd.hasLoadedBlock(id)
+}
+
+func (bd *MeerDAG) hasLoadedBlock(id uint) bool {
+	if id == MaxId {
+		return false
+	}
+	_, ok := bd.blocks[id]
+	return ok
+}
+
 // Obtain block hash by global order
 func (bd *MeerDAG) GetBlockHashByOrder(order uint) *hash.Hash {
 	bd.stateLock.Lock()
@@ -301,7 +315,7 @@ func (bd *MeerDAG) locateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
 		}
 		needRec := true
 		if cur.HasChildren() {
-			for _, v := range cur.GetChildren().GetMap() {
+			for _, v := range bd.GetChildren(cur).GetMap() {
 				ib := v.(IBlock)
 				if gs.GetTips().Has(ib.GetHash()) || !fs.Has(ib.GetHash()) && ib.IsOrdered() {
 					needRec = false
@@ -312,7 +326,7 @@ func (bd *MeerDAG) locateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
 		if needRec {
 			fs.AddPair(cur.GetHash(), cur)
 			if cur.HasParents() {
-				for _, v := range cur.GetParents().GetMap() {
+				for _, v := range bd.GetParents(cur).GetMap() {
 					value := v.(IBlock)
 					ib := value
 					if fs.Has(ib.GetHash()) {
@@ -334,7 +348,7 @@ func (bd *MeerDAG) locateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
 		}
 		if ib.HasChildren() {
 			need := true
-			for _, v := range ib.GetChildren().GetMap() {
+			for _, v := range bd.GetChildren(ib).GetMap() {
 				ib := v.(IBlock)
 				if gs.GetTips().Has(ib.GetHash()) {
 					need = false

@@ -153,7 +153,7 @@ func (bd *MeerDAG) optimizeTips() {
 
 func (bd *MeerDAG) removeTip(b IBlock) error {
 	bd.tips.Remove(b.GetID())
-
+	parents := bd.GetParents(b)
 	return bd.db.Update(func(dbTx database.Tx) error {
 		err := DBDelDAGBlock(dbTx, b.GetID())
 		if err != nil {
@@ -168,7 +168,7 @@ func (bd *MeerDAG) removeTip(b IBlock) error {
 			return err
 		}
 
-		for _, v := range b.GetParents().GetMap() {
+		for _, v := range parents.GetMap() {
 			block := v.(IBlock)
 			block.RemoveChild(b.GetID())
 			if !block.HasChildren() {
@@ -178,6 +178,10 @@ func (bd *MeerDAG) removeTip(b IBlock) error {
 					return err
 				}
 			}
+			err = DBPutDAGBlock(dbTx, block)
+			if err != nil {
+				return err
+			}
 		}
 		delete(bd.blocks, b.GetID())
 
@@ -186,8 +190,8 @@ func (bd *MeerDAG) removeTip(b IBlock) error {
 			return fmt.Errorf("MeerDAG instance error")
 		}
 		ph.diffAnticone.Remove(b.GetID())
-		if ph.virtualBlock.parents != nil {
-			ph.virtualBlock.parents.Remove(b.GetID())
+		if ph.virtualBlock.HasParents() {
+			ph.virtualBlock.RemoveParent(b.GetID())
 		}
 		return DBDelDiffAnticone(dbTx, b.GetID())
 	})

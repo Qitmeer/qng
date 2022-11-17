@@ -318,6 +318,13 @@ func (b *OldBlock) GetHash() *hash.Hash {
 	return &b.hash
 }
 
+func (b *OldBlock) AddParent(parent IBlock) {
+	if b.parents == nil {
+		b.parents = NewIdSet()
+	}
+	b.parents.AddPair(parent.GetID(), parent)
+}
+
 func (b *OldBlock) GetParents() *IdSet {
 	return b.parents
 }
@@ -600,4 +607,44 @@ func (b *OldBlock) Valid() {
 
 func (b *OldBlock) Invalid() {
 	b.SetStatusFlags(StatusInvalid)
+}
+
+func (b *OldBlock) AttachParent(ib IBlock) {
+	if !b.HasParents() {
+		return
+	}
+	if !b.parents.Has(ib.GetID()) {
+		return
+	}
+	b.AddParent(ib)
+}
+
+func (b *OldBlock) DetachParent(ib IBlock) {
+	if !b.HasParents() {
+		return
+	}
+	if !b.parents.Has(ib.GetID()) {
+		return
+	}
+	b.parents.Add(ib.GetID())
+}
+
+func (b *OldBlock) AttachChild(ib IBlock) {
+	if !b.HasChildren() {
+		return
+	}
+	if !b.children.Has(ib.GetID()) {
+		return
+	}
+	b.AddChild(ib)
+}
+
+func (b *OldBlock) DetachChild(ib IBlock) {
+	if !b.HasChildren() {
+		return
+	}
+	if !b.children.Has(ib.GetID()) {
+		return
+	}
+	b.children.Add(ib.GetID())
 }

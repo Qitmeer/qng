@@ -539,7 +539,6 @@ func (b *BlockChain) initChainState(interrupt <-chan struct{}) error {
 	if err != nil {
 		return fmt.Errorf("The dag data was damaged (%s). you can cleanup your block data base by '--cleanup'.", err)
 	}
-
 	if !b.bd.GetMainChainTip().GetHash().IsEqual(&state.hash) {
 		return fmt.Errorf("The dag main tip %s is not the same. %s", state.hash.String(), b.bd.GetMainChainTip().GetHash().String())
 	}

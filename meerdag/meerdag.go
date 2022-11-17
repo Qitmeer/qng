@@ -371,12 +371,12 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 	bd.blockTotal++
 
 	if len(parents) > 0 {
-		block.parents = NewIdSet()
 		var maxLayer uint = 0
 		for _, v := range parents {
 			parent := v.(IBlock)
-			block.parents.AddPair(parent.GetID(), parent)
+			ib.AddParent(parent)
 			parent.AddChild(ib)
+			bd.commitBlock.AddPair(parent.GetID(), parent)
 			if block.mainParent > parent.GetID() {
 				block.mainParent = parent.GetID()
 			}
@@ -447,7 +447,7 @@ func (bd *MeerDAG) GetLastTime() *time.Time {
 // Returns a future collection of block. This function is a recursively called function
 // So we should consider its efficiency.
 func (bd *MeerDAG) getFutureSet(fs *IdSet, b IBlock) {
-	children := b.GetChildren()
+	children := bd.GetChildren(b)
 	if children == nil || children.IsEmpty() {
 		return
 	}
@@ -580,7 +580,7 @@ func (bd *MeerDAG) recAnticone(bs *IdSet, futureSet *IdSet, anticone *IdSet, ib 
 		if !futureSet.Has(ib.GetID()) {
 			anticone.AddPair(ib.GetID(), ib)
 		}
-		parents := ib.GetParents()
+		parents := bd.GetParents(ib)
 
 		//Because parents can not be empty, so there is no need to judge.
 		for _, v := range parents.GetMap() {
@@ -696,7 +696,7 @@ func (bd *MeerDAG) getDiffAnticone(b IBlock, verbose bool) *IdSet {
 	if b.GetMainParent() == MaxId {
 		return nil
 	}
-	parents := b.GetParents()
+	parents := bd.GetParents(b)
 	if parents == nil || parents.Size() <= 1 {
 		return nil
 	}
@@ -730,7 +730,7 @@ func (bd *MeerDAG) getDiffAnticone(b IBlock, verbose bool) *IdSet {
 			tb := v.(*Block)
 			realib := bd.getBlockById(tb.GetID())
 			if realib.HasParents() {
-				for _, pv := range realib.GetParents().GetMap() {
+				for _, pv := range bd.GetParents(realib).GetMap() {
 					pib := pv.(IBlock)
 					var cur *Block
 					if anticone.Has(pib.GetID()) {
@@ -808,7 +808,7 @@ func (bd *MeerDAG) GetConfirmations(id uint) uint {
 		if !cur.HasChildren() {
 			continue
 		} else {
-			childList := cur.GetChildren().SortHashList(false)
+			childList := bd.GetChildren(cur).SortHashList(false)
 			for _, v := range childList {
 				ib := cur.GetChildren().Get(v).(IBlock)
 				queue = append(queue, ib)
@@ -974,7 +974,7 @@ func (bd *MeerDAG) IsHourglass(id uint) bool {
 		if !cur.HasParents() {
 			continue
 		}
-		for _, v := range cur.GetParents().GetMap() {
+		for _, v := range bd.GetParents(cur).GetMap() {
 			ib := v.(IBlock)
 			if queueSet.Has(ib.GetID()) || !ib.IsOrdered() {
 				continue
@@ -1047,7 +1047,7 @@ func (bd *MeerDAG) GetMaturity(target uint, views []uint) uint {
 			continue
 		}
 
-		for _, v := range cur.GetParents().GetMap() {
+		for _, v := range bd.GetParents(cur).GetMap() {
 			ib := v.(IBlock)
 			if queueSet.Has(ib.GetID()) {
 				continue
@@ -1085,7 +1085,7 @@ func (bd *MeerDAG) getMainFork(ib IBlock, backward bool) IBlock {
 			if !cur.HasChildren() {
 				continue
 			} else {
-				childList := cur.GetChildren().SortHashList(false)
+				childList := bd.GetChildren(cur).SortHashList(false)
 				for _, v := range childList {
 					ib := cur.GetChildren().Get(v).(IBlock)
 					queue = append(queue, ib)
@@ -1095,7 +1095,7 @@ func (bd *MeerDAG) getMainFork(ib IBlock, backward bool) IBlock {
 			if !cur.HasParents() {
 				continue
 			} else {
-				parentsList := cur.GetParents().SortHashList(false)
+				parentsList := bd.GetParents(cur).SortHashList(false)
 				for _, v := range parentsList {
 					ib := cur.GetParents().Get(v).(IBlock)
 					queue = append(queue, ib)
@@ -1270,7 +1270,7 @@ func (bd *MeerDAG) rollback() error {
 		delete(bd.blocks, block.GetID())
 		bd.commitBlock.Clean()
 
-		for _, v := range block.GetParents().GetMap() {
+		for _, v := range bd.GetParents(block).GetMap() {
 			parent, ok := v.(IBlock)
 			if !ok {
 				log.Error(fmt.Sprintf("Can't remove child info for %s", block.GetHash()))
@@ -1374,7 +1374,7 @@ func (bd *MeerDAG) optimizeReorganizeResult(newOrders *list.List, oldOrders *lis
 
 func (bd *MeerDAG) handler() {
 	log.Trace("MeerDAG handler start")
-	stallTicker := time.NewTicker(params.ActiveNetParams.TargetTimePerBlock)
+	stallTicker := time.NewTicker(params.ActiveNetParams.TargetTimePerBlock * 2)
 	defer stallTicker.Stop()
 
 out:
@@ -1382,6 +1382,7 @@ out:
 		select {
 		case <-stallTicker.C:
 			bd.updateBlockDataCache()
+			bd.updateBlockCache()
 		case <-bd.quit:
 			break out
 		}

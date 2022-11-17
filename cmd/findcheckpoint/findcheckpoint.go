@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/meerdag"
 	_ "github.com/Qitmeer/qng/database/ffldb"
 	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/common/hash"
 	"os"
 )
 
@@ -207,7 +207,7 @@ func processIsCheckpoint(chain *blockchain.BlockChain, cfg *Config) bool {
 
 	var preblock meerdag.IBlock
 	if block.HasChildren() {
-		for k, v := range block.GetChildren().GetMap() {
+		for k, v := range chain.BlockDAG().GetChildren(block).GetMap() {
 			if chain.BlockDAG().IsOnMainChain(k) {
 				preblock = v.(meerdag.IBlock)
 				break

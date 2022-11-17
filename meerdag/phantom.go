@@ -276,11 +276,9 @@ func (ph *Phantom) buildSortDiffAnticone(diffAn *IdSet) *IdSet {
 }
 
 func (ph *Phantom) updateMainChain(buestTip *PhantomBlock, pb *PhantomBlock) (*PhantomBlock, *list.List) {
-	if ph.bd.lastSnapshot.IsValid() {
-		ph.bd.lastSnapshot.diffAnticone = ph.diffAnticone.Clone()
-		ph.bd.lastSnapshot.mainChainTip = ph.mainChain.tip
-		ph.bd.lastSnapshot.mainChainGenesis = ph.mainChain.genesis
-	}
+	ph.bd.lastSnapshot.diffAnticone = ph.diffAnticone.Clone()
+	ph.bd.lastSnapshot.mainChainTip = ph.mainChain.tip
+	ph.bd.lastSnapshot.mainChainGenesis = ph.mainChain.genesis
 
 	ph.virtualBlock.SetOrder(MaxBlockOrder)
 	if !ph.isMaxMainTip(buestTip) {
@@ -832,7 +830,7 @@ func (ph *Phantom) CheckBlockOrderDB(maxDepth uint64) error {
 	if mainTip.GetOrder() <= 1 {
 		return nil
 	}
-	for i := mainTip.GetOrder() - 1; i >= 0; i-- {
+	for i := mainTip.GetOrder() - 1; i > 0; i-- {
 		depth++
 		var blockid uint
 		err := ph.bd.db.View(func(dbTx database.Tx) error {
