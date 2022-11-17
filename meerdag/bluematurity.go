@@ -23,7 +23,7 @@ func (bd *MeerDAG) CheckBlueAndMature(targets []uint, views []uint, max uint) er
 // views: Block DAG perspective when calculate the result
 // max: Max maturity
 func (bd *MeerDAG) CheckBlueAndMatureMT(targets []uint, views []uint, max uint) error {
-	return bd.doCheckBlueAndMature(targets, views, max, true)
+	return bd.doCheckBlueAndMature(targets, views, max, false)
 }
 
 func (bd *MeerDAG) doCheckBlueAndMature(targets []uint, views []uint, max uint, multithreading bool) error {
