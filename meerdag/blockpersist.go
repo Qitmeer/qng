@@ -57,7 +57,6 @@ func (bd *MeerDAG) Decode(r io.Reader) error {
 func (bd *MeerDAG) GetBlockData(ib IBlock) IBlockData {
 	bd.blockDataLock.Lock()
 	defer bd.blockDataLock.Unlock()
-
 	bd.blockDataCache[ib.GetID()] = time.Now()
 	if ib.IsLoaded() {
 		return ib.GetData()
@@ -174,8 +173,14 @@ func (bd *MeerDAG) loadBlock(id uint) (IBlock, error) {
 	return ib, nil
 }
 
-// get parents from block if it is not loaded, it will be loaded
 func (bd *MeerDAG) GetParents(ib IBlock) *IdSet {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	return bd.getParents(ib)
+}
+
+// get parents from block if it is not loaded, it will be loaded
+func (bd *MeerDAG) getParents(ib IBlock) *IdSet {
 	if !ib.HasParents() {
 		return ib.GetParents()
 	}
@@ -189,8 +194,14 @@ func (bd *MeerDAG) GetParents(ib IBlock) *IdSet {
 	return parents
 }
 
-// get children from block if it is not loaded, it will be loaded
 func (bd *MeerDAG) GetChildren(ib IBlock) *IdSet {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	return bd.getChildren(ib)
+}
+
+// get children from block if it is not loaded, it will be loaded
+func (bd *MeerDAG) getChildren(ib IBlock) *IdSet {
 	if !ib.HasChildren() {
 		return ib.GetChildren()
 	}
