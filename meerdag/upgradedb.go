@@ -5,6 +5,8 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/database"
+	l "github.com/Qitmeer/qng/log"
+	"github.com/schollz/progressbar/v3"
 	"io"
 )
 
@@ -18,6 +20,16 @@ func (bd *MeerDAG) UpgradeDB(dbTx database.Tx, mainTip *hash.Hash, total uint64,
 		}
 	}
 	log.Info(fmt.Sprintf("Start upgrade MeerDAG🛠 (total=%d mainTip=%s)", total, mainTip.String()))
+	//
+	var bar *progressbar.ProgressBar
+	logLvl := l.Glogger().GetVerbosity()
+	bar = progressbar.Default(int64(total+1), "MeerDAG:")
+	l.Glogger().Verbosity(l.LvlCrit)
+	defer func() {
+		bar.Finish()
+		l.Glogger().Verbosity(logLvl)
+	}()
+	//
 	blocks := map[uint]IBlock{}
 	var tips *IdSet
 	var mainTipBlock IBlock
@@ -49,6 +61,7 @@ func (bd *MeerDAG) UpgradeDB(dbTx database.Tx, mainTip *hash.Hash, total uint64,
 	}
 	diffAnticone := NewIdSet()
 	for i := uint(0); i < uint(total); i++ {
+		bar.Add(1)
 		block := OldBlock{id: i}
 		ib := &OldPhantomBlock{&block, 0, NewIdSet(), NewIdSet()}
 		err := DBGetDAGBlock(dbTx, ib)
