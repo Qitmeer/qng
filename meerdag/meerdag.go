@@ -448,7 +448,7 @@ func (bd *MeerDAG) GetLastTime() *time.Time {
 // Returns a future collection of block. This function is a recursively called function
 // So we should consider its efficiency.
 func (bd *MeerDAG) getFutureSet(fs *IdSet, b IBlock) {
-	children := bd.GetChildren(b)
+	children := bd.getChildren(b)
 	if children == nil || children.IsEmpty() {
 		return
 	}
@@ -581,7 +581,7 @@ func (bd *MeerDAG) recAnticone(bs *IdSet, futureSet *IdSet, anticone *IdSet, ib 
 		if !futureSet.Has(ib.GetID()) {
 			anticone.AddPair(ib.GetID(), ib)
 		}
-		parents := bd.GetParents(ib)
+		parents := bd.getParents(ib)
 
 		//Because parents can not be empty, so there is no need to judge.
 		for _, v := range parents.GetMap() {
@@ -697,7 +697,7 @@ func (bd *MeerDAG) getDiffAnticone(b IBlock, verbose bool) *IdSet {
 	if b.GetMainParent() == MaxId {
 		return nil
 	}
-	parents := bd.GetParents(b)
+	parents := bd.getParents(b)
 	if parents == nil || parents.Size() <= 1 {
 		return nil
 	}
@@ -731,7 +731,7 @@ func (bd *MeerDAG) getDiffAnticone(b IBlock, verbose bool) *IdSet {
 			tb := v.(*Block)
 			realib := bd.getBlockById(tb.GetID())
 			if realib.HasParents() {
-				for _, pv := range bd.GetParents(realib).GetMap() {
+				for _, pv := range bd.getParents(realib).GetMap() {
 					pib := pv.(IBlock)
 					var cur *Block
 					if anticone.Has(pib.GetID()) {
@@ -809,7 +809,7 @@ func (bd *MeerDAG) GetConfirmations(id uint) uint {
 		if !cur.HasChildren() {
 			continue
 		} else {
-			childList := bd.GetChildren(cur).SortHashList(false)
+			childList := bd.getChildren(cur).SortHashList(false)
 			for _, v := range childList {
 				ib := cur.GetChildren().Get(v).(IBlock)
 				queue = append(queue, ib)
@@ -975,7 +975,7 @@ func (bd *MeerDAG) IsHourglass(id uint) bool {
 		if !cur.HasParents() {
 			continue
 		}
-		for _, v := range bd.GetParents(cur).GetMap() {
+		for _, v := range bd.getParents(cur).GetMap() {
 			ib := v.(IBlock)
 			if queueSet.Has(ib.GetID()) || !ib.IsOrdered() {
 				continue
@@ -1048,7 +1048,7 @@ func (bd *MeerDAG) GetMaturity(target uint, views []uint) uint {
 			continue
 		}
 
-		for _, v := range bd.GetParents(cur).GetMap() {
+		for _, v := range bd.getParents(cur).GetMap() {
 			ib := v.(IBlock)
 			if queueSet.Has(ib.GetID()) {
 				continue
@@ -1086,7 +1086,7 @@ func (bd *MeerDAG) getMainFork(ib IBlock, backward bool) IBlock {
 			if !cur.HasChildren() {
 				continue
 			} else {
-				childList := bd.GetChildren(cur).SortHashList(false)
+				childList := bd.getChildren(cur).SortHashList(false)
 				for _, v := range childList {
 					ib := cur.GetChildren().Get(v).(IBlock)
 					queue = append(queue, ib)
@@ -1096,7 +1096,7 @@ func (bd *MeerDAG) getMainFork(ib IBlock, backward bool) IBlock {
 			if !cur.HasParents() {
 				continue
 			} else {
-				parentsList := bd.GetParents(cur).SortHashList(false)
+				parentsList := bd.getParents(cur).SortHashList(false)
 				for _, v := range parentsList {
 					ib := cur.GetParents().Get(v).(IBlock)
 					queue = append(queue, ib)
@@ -1271,7 +1271,7 @@ func (bd *MeerDAG) rollback() error {
 		delete(bd.blocks, block.GetID())
 		bd.commitBlock.Clean()
 
-		for _, v := range bd.GetParents(block).GetMap() {
+		for _, v := range bd.getParents(block).GetMap() {
 			parent, ok := v.(IBlock)
 			if !ok {
 				log.Error(fmt.Sprintf("Can't remove child info for %s", block.GetHash()))
