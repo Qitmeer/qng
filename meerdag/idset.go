@@ -124,6 +124,18 @@ func (s *IdSet) IsEmpty() bool {
 	return s.Size() == 0
 }
 
+func (s *IdSet) IsDataEmpty(elem uint) bool {
+	if !s.Has(elem) {
+		return true
+	}
+	v := s.m[elem]
+	_, ok := v.(Empty)
+	if ok {
+		return true
+	}
+	return false
+}
+
 func (s *IdSet) List() []uint {
 	list := []uint{}
 	for item := range s.m {

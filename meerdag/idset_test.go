@@ -184,3 +184,16 @@ func Test_SortListHeight(t *testing.T) {
 		}
 	}
 }
+
+func TestIsDataEmpty(t *testing.T) {
+	hs := NewIdSet()
+	hs.Add(1)
+	hs.AddPair(2, int(2))
+
+	if !hs.IsDataEmpty(1) {
+		t.Fatalf("IsDataEmpty:%d = %v is not %v", 1, true, hs.IsDataEmpty(1))
+	}
+	if hs.IsDataEmpty(2) {
+		t.Fatalf("IsDataEmpty:%d = %v is not %v", 1, false, hs.IsDataEmpty(1))
+	}
+}
