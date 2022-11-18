@@ -314,9 +314,9 @@ func (api *PublicBlockChainAPI) GetMeerDAGInfo() (interface{}, error) {
 	md := api.node.GetBlockManager().GetChain().BlockDAG()
 	mdr.Name = md.GetName()
 	mdr.Total = md.GetBlockTotal()
-	mdr.BlockCacheSize = uint(md.GetBlockCacheSize())
-	mdr.BlockCacheRate = float64(mdr.BlockCacheSize) / float64(mdr.Total)
-	mdr.BlockDataCacheSize = md.GetBlockDataCacheSize()
+	mdr.BlockCacheSize = fmt.Sprintf("%d / %d", md.GetBlockCacheSize(), md.GetMinBlockCacheSize())
+	mdr.BlockCacheRate = fmt.Sprintf("%.2f%%", float64(md.GetBlockCacheSize())/float64(mdr.Total)*100)
+	mdr.BlockDataCacheSize = fmt.Sprintf("%d / %d", md.GetBlockDataCacheSize(), md.GetMinBlockDataCacheSize())
 	return mdr, nil
 }
 

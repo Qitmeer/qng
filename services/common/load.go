@@ -542,12 +542,22 @@ var (
 			Usage:       "Enable support account system mode",
 			Destination: &cfg.AcctMode,
 		},
+		&cli.Uint64Flag{
+			Name:        "dagcachesize",
+			Usage:       "DAG block cache size",
+			Destination: &cfg.DAGCacheSize,
+		},
+		&cli.Uint64Flag{
+			Name:        "bdcachesize",
+			Usage:       "Block data cache size",
+			Destination: &cfg.BlockDataCacheSize,
+		},
 	}
 )
 
 // loadConfig initializes and parses the config using a config file and command
 // line options.
-func LoadConfig(ctx *cli.Context,parsefile bool) (*config.Config, error) {
+func LoadConfig(ctx *cli.Context, parsefile bool) (*config.Config, error) {
 	cfg.RPCListeners = RPCListeners.Value()
 	cfg.Modules = Modules.Value()
 	cfg.MiningAddrs = MiningAddrs.Value()
@@ -921,7 +931,7 @@ func removeDuplicateAddresses(addrs []string) []string {
 }
 
 func DefaultConfig(homeDir string) *config.Config {
-	cfg:=&config.Config{
+	cfg := &config.Config{
 		HomeDir:              defaultHomeDir,
 		ConfigFile:           defaultConfigFile,
 		DebugLevel:           defaultLogLevel,
@@ -956,11 +966,11 @@ func DefaultConfig(homeDir string) *config.Config {
 		if err != nil {
 			panic(err)
 		}
-		cfg.HomeDir=hd
-		cfg.ConfigFile  = filepath.Join(cfg.HomeDir, defaultConfigFilename)
-		cfg.DataDir     = filepath.Join(cfg.HomeDir, defaultDataDirname)
-		cfg.LogDir      = filepath.Join(cfg.HomeDir, defaultLogDirname)
-		cfg.RPCKey  = filepath.Join(cfg.HomeDir, "rpc.key")
+		cfg.HomeDir = hd
+		cfg.ConfigFile = filepath.Join(cfg.HomeDir, defaultConfigFilename)
+		cfg.DataDir = filepath.Join(cfg.HomeDir, defaultDataDirname)
+		cfg.LogDir = filepath.Join(cfg.HomeDir, defaultLogDirname)
+		cfg.RPCKey = filepath.Join(cfg.HomeDir, "rpc.key")
 		cfg.RPCCert = filepath.Join(cfg.HomeDir, "rpc.cert")
 	}
 	return cfg

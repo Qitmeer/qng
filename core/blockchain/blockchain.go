@@ -190,6 +190,9 @@ type Config struct {
 
 	// data dir
 	DataDir string
+
+	DAGCacheSize       uint64
+	BlockDataCacheSize uint64
 }
 
 // BestState houses information about the current best block and other info
@@ -360,7 +363,7 @@ func New(config *Config) (*BlockChain, error) {
 	b.bd = meerdag.New(config.DAGType, b.CalcWeight,
 		1.0/float64(par.TargetTimePerBlock/time.Second), b.db, b.getBlockData)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
-
+	b.bd.SetCacheSize(config.DAGCacheSize, config.BlockDataCacheSize)
 	return &b, nil
 }
 

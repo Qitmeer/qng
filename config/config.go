@@ -82,11 +82,11 @@ type Config struct {
 	Zmqpubrawtx  string `long:"zmqpubrawtx" description:"Enable publish raw transaction in <address>"`
 
 	// index
-	AddrIndex          bool     `long:"addrindex" description:"Maintain a full address-based transaction index which makes the getrawtransactions RPC available"`
-	VMBlockIndex       bool     `long:"vmblockindex" description:"Maintain a full vm block index which makes the GetTxIDByMeerEVMTxHash RPC available"`
-	InvalidTxIndex     bool     `long:"invalidtxindex" description:"Cache invalid transactions."`
-	DropAddrIndex      bool     `long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
-	DropTxIndex        bool     `long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
+	AddrIndex      bool `long:"addrindex" description:"Maintain a full address-based transaction index which makes the getrawtransactions RPC available"`
+	VMBlockIndex   bool `long:"vmblockindex" description:"Maintain a full vm block index which makes the GetTxIDByMeerEVMTxHash RPC available"`
+	InvalidTxIndex bool `long:"invalidtxindex" description:"Cache invalid transactions."`
+	DropAddrIndex  bool `long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
+	DropTxIndex    bool `long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
 
 	NTP bool `long:"ntp" description:"Auto sync time."`
 
@@ -111,6 +111,9 @@ type Config struct {
 
 	AcctMode   bool `long:"acctmode" description:"Enable support account system mode"`
 	IsArchival bool `long:"archival" description:"Archival tells the consensus if it should not prune old blocks"`
+
+	DAGCacheSize       uint64 `long:"dagcachesize" description:"DAG block cache size"`
+	BlockDataCacheSize uint64 `long:"bdcachesize" description:"Block data cache size"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {
