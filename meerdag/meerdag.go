@@ -211,6 +211,9 @@ type MeerDAG struct {
 
 	wg   sync.WaitGroup
 	quit chan struct{}
+
+	minCacheSize   uint64
+	minBDCacheSize uint64
 }
 
 // Acquire the name of DAG instance
@@ -1395,6 +1398,8 @@ func New(dagType string, calcWeight CalcWeight, blockRate float64, db database.D
 	md := &MeerDAG{
 		quit:           make(chan struct{}),
 		blockDataCache: map[uint]time.Time{},
+		minCacheSize:   MinBlockPruneSize,
+		minBDCacheSize: MinBlockDataCache,
 	}
 	md.init(dagType, calcWeight, blockRate, db, getBlockData)
 	return md

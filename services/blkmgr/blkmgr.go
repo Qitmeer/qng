@@ -100,16 +100,18 @@ func NewBlockManager(ntmgr consensus.Notify, indexManager blockchain.IndexManage
 	// Create a new block chain instance with the appropriate configuration.
 	var err error
 	bm.chain, err = blockchain.New(&blockchain.Config{
-		DB:             db,
-		Interrupt:      interrupt,
-		ChainParams:    par,
-		TimeSource:     timeSource,
-		Events:         events,
-		SigCache:       sigCache,
-		IndexManager:   indexManager,
-		DAGType:        cfg.DAGType,
-		CacheInvalidTx: cfg.CacheInvalidTx,
-		DataDir:        cfg.DataDir,
+		DB:                 db,
+		Interrupt:          interrupt,
+		ChainParams:        par,
+		TimeSource:         timeSource,
+		Events:             events,
+		SigCache:           sigCache,
+		IndexManager:       indexManager,
+		DAGType:            cfg.DAGType,
+		CacheInvalidTx:     cfg.CacheInvalidTx,
+		DataDir:            cfg.DataDir,
+		DAGCacheSize:       cfg.DAGCacheSize,
+		BlockDataCacheSize: cfg.BlockDataCacheSize,
 	})
 	if err != nil {
 		return nil, err
