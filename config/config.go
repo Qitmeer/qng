@@ -109,6 +109,9 @@ type Config struct {
 	Estimatefee bool `long:"estimatefee" description:"Enable estimate fee"`
 
 	AcctMode bool `long:"acctmode" description:"Enable support account system mode"`
+
+	DAGCacheSize       uint64 `long:"dagcachesize" description:"DAG block cache size"`
+	BlockDataCacheSize uint64 `long:"bdcachesize" description:"Block data cache size"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {

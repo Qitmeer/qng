@@ -566,6 +566,16 @@ var (
 			Usage:       "Enable support account system mode",
 			Destination: &cfg.AcctMode,
 		},
+		&cli.Uint64Flag{
+			Name:        "dagcachesize",
+			Usage:       "DAG block cache size",
+			Destination: &cfg.DAGCacheSize,
+		},
+		&cli.Uint64Flag{
+			Name:        "bdcachesize",
+			Usage:       "Block data cache size",
+			Destination: &cfg.BlockDataCacheSize,
+		},
 	}
 )
 

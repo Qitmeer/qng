@@ -74,13 +74,13 @@ func (bd *MeerDAG) GetBlockData(ib IBlock) IBlockData {
 
 func (bd *MeerDAG) updateBlockDataCache() {
 	cacheSize := bd.GetBlockDataCacheSize()
-	if cacheSize <= MinBlockDataCache {
+	if cacheSize <= bd.minBDCacheSize {
 		return
 	}
 	maxLife := params.ActiveNetParams.TargetTimePerBlock
 	startTime := time.Now()
 	mainHeight := bd.GetMainChainTip().GetHeight()
-	need := cacheSize - MinBlockDataCache
+	need := cacheSize - bd.minBDCacheSize
 	blockDataCache := map[uint]time.Time{}
 	bd.blockDataLock.Lock()
 	const waitTime = time.Second * 2
@@ -105,7 +105,7 @@ func (bd *MeerDAG) updateBlockDataCache() {
 			}
 			ib := bd.GetBlockById(k)
 			if ib != nil {
-				if math.Abs(float64(mainHeight)-float64(ib.GetHeight())) <= float64(MinBlockDataCache) {
+				if math.Abs(float64(mainHeight)-float64(ib.GetHeight())) <= float64(bd.minBDCacheSize) {
 					continue
 				}
 				ib.SetData(nil)
@@ -129,10 +129,16 @@ func (bd *MeerDAG) LoadBlockDataSet(sets *IdSet) {
 	}
 }
 
-func (bd *MeerDAG) GetBlockDataCacheSize() int {
+func (bd *MeerDAG) GetBlockDataCacheSize() uint64 {
 	bd.blockDataLock.Lock()
 	defer bd.blockDataLock.Unlock()
-	return len(bd.blockDataCache)
+	return uint64(len(bd.blockDataCache))
+}
+
+func (bd *MeerDAG) GetMinBlockDataCacheSize() uint64 {
+	bd.blockDataLock.Lock()
+	defer bd.blockDataLock.Unlock()
+	return bd.minBDCacheSize
 }
 
 func (bd *MeerDAG) loadBlock(id uint) (IBlock, error) {
@@ -217,19 +223,25 @@ func (bd *MeerDAG) getChildren(ib IBlock) *IdSet {
 	return children
 }
 
-func (bd *MeerDAG) GetBlockCacheSize() int {
+func (bd *MeerDAG) GetBlockCacheSize() uint64 {
 	bd.stateLock.Lock()
 	defer bd.stateLock.Unlock()
-	return len(bd.blocks)
+	return uint64(len(bd.blocks))
+}
+
+func (bd *MeerDAG) GetMinBlockCacheSize() uint64 {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	return bd.minCacheSize
 }
 
 func (bd *MeerDAG) updateBlockCache() {
 	cacheSize := bd.GetBlockCacheSize()
-	if cacheSize <= MinBlockPruneSize {
+	if cacheSize <= bd.minCacheSize {
 		return
 	}
 	mainTip := bd.GetMainChainTip()
-	need := cacheSize - MinBlockPruneSize
+	need := cacheSize - bd.minCacheSize
 	deletes := []IBlock{}
 
 	bd.stateLock.Lock()
@@ -242,7 +254,7 @@ func (bd *MeerDAG) updateBlockCache() {
 			bd.commitBlock.Has(k) {
 			continue
 		}
-		if v.GetHeight()+MinBlockPruneSize < mainTip.GetHeight() {
+		if v.GetHeight()+uint(bd.minCacheSize) < mainTip.GetHeight() {
 			deletes = append(deletes, v)
 		}
 		//
@@ -284,4 +296,15 @@ func (bd *MeerDAG) unloadBlock(ib IBlock) {
 		}
 	}
 
+}
+
+func (bd *MeerDAG) SetCacheSize(dag uint64, data uint64) {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	if dag > MinBlockPruneSize {
+		bd.minCacheSize = dag
+	}
+	if data > MinBlockDataCache {
+		bd.minBDCacheSize = data
+	}
 }
