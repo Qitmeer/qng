@@ -13,6 +13,7 @@ import (
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/version"
@@ -569,11 +570,13 @@ var (
 		&cli.Uint64Flag{
 			Name:        "dagcachesize",
 			Usage:       "DAG block cache size",
+			Value:       meerdag.MinBlockPruneSize,
 			Destination: &cfg.DAGCacheSize,
 		},
 		&cli.Uint64Flag{
 			Name:        "bdcachesize",
 			Usage:       "Block data cache size",
+			Value:       meerdag.MinBlockDataCache,
 			Destination: &cfg.BlockDataCacheSize,
 		},
 	}
