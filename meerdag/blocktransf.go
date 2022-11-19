@@ -226,11 +226,17 @@ func (bd *MeerDAG) RelativeMainAncestor(block IBlock, distance int64) IBlock {
 }
 
 func (bd *MeerDAG) ValidBlock(block IBlock) {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+
 	block.Valid()
 	bd.commitBlock.AddPair(block.GetID(), block)
 }
 
 func (bd *MeerDAG) InvalidBlock(block IBlock) {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+
 	block.Invalid()
 	bd.commitBlock.AddPair(block.GetID(), block)
 }
