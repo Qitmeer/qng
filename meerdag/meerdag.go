@@ -1135,6 +1135,9 @@ func (bd *MeerDAG) GetBlockConcurrency(h *hash.Hash) (uint, error) {
 }
 
 func (bd *MeerDAG) UpdateWeight(ib IBlock) {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+
 	bd.instance.(*Phantom).UpdateWeight(ib)
 }
 
