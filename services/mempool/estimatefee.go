@@ -267,7 +267,8 @@ func (ef *FeeEstimator) RegisterBlock(block *types.SerializedBlock) error {
 
 		// This shouldn't happen but check just in case to avoid
 		// an out-of-bounds array index later.
-		if blocksToConfirm >= estimateFeeDepth {
+		if blocksToConfirm >= estimateFeeDepth ||
+			blocksToConfirm < 0 {
 			continue
 		}
 
@@ -382,7 +383,10 @@ func (ef *FeeEstimator) rollback() {
 	for _, o := range dropped.transactions {
 		// Which bin was this tx in?
 		blocksToConfirm := o.mined - o.observed - 1
-
+		if blocksToConfirm >= estimateFeeDepth ||
+			blocksToConfirm < 0 {
+			continue
+		}
 		bin := ef.bin[blocksToConfirm]
 
 		var counter = replacementCounters[blocksToConfirm]
