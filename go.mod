@@ -204,4 +204,4 @@ replace (
 	golang.org/x/net v0.0.0-20181005035420-146acd28ed58 => github.com/golang/net v0.0.0-20181005035420-146acd28ed58
 )
 
-replace github.com/ethereum/go-ethereum v1.10.21-qng => github.com/Qitmeer/go-ethereum v1.10.21-q.2
+replace github.com/ethereum/go-ethereum v1.10.21-qng => github.com/Qitmeer/go-ethereum v1.10.21-q.3
