@@ -1,6 +1,7 @@
 package meerdag
 
 import (
+	"container/list"
 	"github.com/Qitmeer/qng/common/hash"
 	"sync"
 )
@@ -110,70 +111,59 @@ func (ds *DAGSync) GetMainLocator(point *hash.Hash) []*hash.Hash {
 		endBlock = ds.bd.getGenesis()
 	}
 	startBlock := ds.bd.getMainChainTip()
-	dist := startBlock.GetHeight() - endBlock.GetHeight()
-	locator := []*hash.Hash{}
+	locator := list.New()
 	cur := startBlock
-	if dist <= MaxMainLocatorNum {
-		for cur.GetID() != endBlock.GetID() {
-			if cur.GetID() == 0 {
-				break
-			}
-			locator = append(locator, cur.GetHash())
-			if cur.GetMainParent() == MaxId {
-				break
-			}
-			cur = ds.bd.getBlockById(cur.GetMainParent())
-			if cur == nil {
-				break
-			}
+	const DefaultMainLocatorNum = 10
+	for i := 0; i < DefaultMainLocatorNum; i++ {
+		if cur.GetID() == 0 ||
+			cur.GetMainParent() == MaxId ||
+			cur.GetID() <= endBlock.GetID() {
+			break
 		}
-	} else {
-		const DefaultMainLocatorNum = 10
-		deep := uint(1)
-		for len(locator) < MaxMainLocatorNum {
-			if cur.GetID() == 0 {
+		locator.PushFront(cur.GetHash())
+		cur = ds.bd.getBlockById(cur.GetMainParent())
+		if cur == nil {
+			break
+		}
+	}
+	if cur.GetID() > endBlock.GetID() {
+		halfStart := cur.GetID()
+		halfEnd := endBlock.GetID()
+		hlocator := []*hash.Hash{}
+		for locator.Len()+len(hlocator)+1 < MaxMainLocatorNum {
+			//for {
+			nextID := (halfStart - halfEnd) / 2
+			if nextID <= 0 {
 				break
 			}
-			if len(locator) < DefaultMainLocatorNum {
-				locator = append(locator, cur.GetHash())
-			} else {
-				height := uint(0)
-				if startBlock.GetHeight()-DefaultMainLocatorNum >= deep {
-					height = startBlock.GetHeight() - DefaultMainLocatorNum - deep
-				}
-				if cur.GetHeight() <= height {
-					locator = append(locator, cur.GetHash())
-					deep *= 2
-				}
-			}
-
-			if cur.GetMainParent() == MaxId {
+			nextID += halfEnd
+			if nextID == halfStart ||
+				nextID == halfEnd {
 				break
 			}
-
-			next := ds.bd.getBlockById(cur.GetMainParent())
-			if next.GetID() == endBlock.GetID() {
-				break
+			if !ds.bd.isOnMainChain(nextID) {
+				halfEnd++
+				continue
 			}
-			cur = next
-			if cur == nil {
-				break
+			ib := ds.bd.getBlockById(nextID)
+			if ib == nil {
+				halfEnd++
+				continue
+			}
+			hlocator = append(hlocator, ib.GetHash())
+			halfEnd = nextID
+		}
+		if len(hlocator) > 0 {
+			for i := len(hlocator) - 1; i >= 0; i-- {
+				locator.PushFront(hlocator[i])
 			}
 		}
 	}
-	locator = append(locator, endBlock.GetHash())
-	if len(locator) >= 2 {
-		tempL := locator
-		locator = []*hash.Hash{}
-		for i := len(tempL) - 1; i >= 0; i-- {
-			if len(locator) >= MaxMainLocatorNum {
-				break
-			}
-			locator = append(locator, tempL[i])
-		}
+	result := []*hash.Hash{endBlock.GetHash()}
+	for i := locator.Front(); i != nil; i = i.Next() {
+		result = append(result, i.Value.(*hash.Hash))
 	}
-
-	return locator
+	return result
 }
 
 func (ds *DAGSync) getBlockChainFromMain(point IBlock, maxHashes uint) []*hash.Hash {
