@@ -504,8 +504,8 @@ func (ph *Phantom) GetTipsList() []IBlock {
 }
 
 // Query whether a given block is on the main chain.
-func (ph *Phantom) IsOnMainChain(b IBlock) bool {
-	if ph.mainChain.Has(b.GetID()) {
+func (ph *Phantom) isOnMainChain(id uint) bool {
+	if ph.mainChain.Has(id) {
 		return true
 	}
 	return false

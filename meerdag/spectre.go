@@ -801,7 +801,7 @@ func (sp *Spectre) voteByUniqueFutureSet(b1 IBlock, b2 IBlock) {
 }
 
 // Currently not supported
-func (sp *Spectre) IsOnMainChain(b IBlock) bool {
+func (sp *Spectre) isOnMainChain(id uint) bool {
 	return false
 }
 

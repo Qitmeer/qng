@@ -333,7 +333,8 @@ func (con *Conflux) isVirtualBlock(b IBlock) bool {
 }
 
 // Query whether a given block is on the main chain.
-func (con *Conflux) IsOnMainChain(b IBlock) bool {
+func (con *Conflux) isOnMainChain(id uint) bool {
+	b := con.bd.getBlockById(id)
 	for p := con.privotTip; p != nil; p = con.bd.getBlockById(p.GetMainParent()) {
 		if p.GetHash().IsEqual(b.GetHash()) {
 			return true

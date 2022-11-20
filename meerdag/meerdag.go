@@ -119,7 +119,7 @@ type ConsensusAlgorithm interface {
 	GetTipsList() []IBlock
 
 	// Query whether a given block is on the main chain.
-	IsOnMainChain(ib IBlock) bool
+	isOnMainChain(id uint) bool
 
 	// return the tip of main chain
 	GetMainChainTip() IBlock
@@ -476,7 +476,7 @@ func (bd *MeerDAG) IsOnMainChain(id uint) bool {
 // Query whether a given block is on the main chain.
 // Note that some DAG protocols may not support this feature.
 func (bd *MeerDAG) isOnMainChain(id uint) bool {
-	return bd.instance.IsOnMainChain(bd.getBlockById(id))
+	return bd.instance.isOnMainChain(id)
 }
 
 // return the tip of main chain
@@ -1069,7 +1069,7 @@ func (bd *MeerDAG) GetMaturity(target uint, views []uint) uint {
 
 // Get path intersection from block to main chain.
 func (bd *MeerDAG) getMainFork(ib IBlock, backward bool) IBlock {
-	if bd.instance.IsOnMainChain(ib) {
+	if bd.instance.isOnMainChain(ib.GetID()) {
 		return ib
 	}
 
@@ -1081,7 +1081,7 @@ func (bd *MeerDAG) getMainFork(ib IBlock, backward bool) IBlock {
 		cur := queue[0]
 		queue = queue[1:]
 
-		if bd.instance.IsOnMainChain(cur) {
+		if bd.instance.isOnMainChain(cur.GetID()) {
 			return cur
 		}
 
