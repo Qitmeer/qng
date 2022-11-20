@@ -63,7 +63,7 @@ func (bd *MeerDAG) doCheckBlueAndMature(targets []uint, views []uint, max uint, 
 			maxViewIB = ib
 		}
 
-		if mainViewIB == nil && bd.instance.IsOnMainChain(ib) {
+		if mainViewIB == nil && bd.instance.isOnMainChain(ib.GetID()) {
 			mainViewIB = ib
 		}
 
@@ -148,7 +148,7 @@ func (bd *MeerDAG) processMaturity(target IBlock, views []IBlock, mainViewIB IBl
 	}
 
 	var targetMainFork IBlock
-	if bd.instance.IsOnMainChain(target) {
+	if bd.instance.isOnMainChain(target.GetID()) {
 		targetMainFork = target
 	} else {
 		targetMainFork = bd.getMainFork(target, true)
@@ -231,7 +231,7 @@ func (bd *MeerDAG) CheckMainBlueAndMature(target IBlock, targetMainFork IBlock, 
 	defer bd.stateLock.Unlock()
 
 	if targetMainFork == nil {
-		if bd.instance.IsOnMainChain(target) {
+		if bd.instance.isOnMainChain(target.GetID()) {
 			targetMainFork = target
 		} else {
 			targetMainFork = bd.getMainFork(target, true)

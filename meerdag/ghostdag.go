@@ -97,7 +97,8 @@ func (gd *GhostDAG) GetTipsList() []IBlock {
 }
 
 // Query whether a given block is on the main chain.
-func (gd *GhostDAG) IsOnMainChain(b IBlock) bool {
+func (gd *GhostDAG) isOnMainChain(id uint) bool {
+	b := gd.bd.getBlockById(id)
 	for cur := gd.mainChainTip; cur != nil; cur = gd.bd.getBlockById(cur.GetMainParent()) {
 		if cur.GetHash().IsEqual(b.GetHash()) {
 			return true
