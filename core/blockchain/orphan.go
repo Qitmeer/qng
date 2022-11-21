@@ -122,47 +122,34 @@ func (b *BlockChain) CheckRecentOrphansParents() []*hash.Hash {
 }
 
 func (b *BlockChain) searchOrphansParentsInDB() {
-	for {
-		inBlockHashs := []*hash.Hash{}
-		b.orphanLock.Lock()
-		for _, v := range b.orphans {
-			for _, h := range v.block.Block().Parents {
-				if b.HasBlockInDB(h) && !b.isOrphan(h) {
-					bh := *h
-					inBlockHashs = append(inBlockHashs, &bh)
-				}
+	inBlockHashs := []*hash.Hash{}
+	b.orphanLock.Lock()
+	for _, v := range b.orphans {
+		for _, h := range v.block.Block().Parents {
+			if !b.isOrphan(h) && !b.bd.HasBlock(h) && b.HasBlockInDB(h) {
+				bh := *h
+				inBlockHashs = append(inBlockHashs, &bh)
 			}
 		}
-		b.orphanLock.Unlock()
+	}
+	b.orphanLock.Unlock()
 
-		if len(inBlockHashs) > 0 {
-			hasBlock := false
-			for _, bh := range inBlockHashs {
-				block, err := b.FetchBlockByHash(bh)
-				if err != nil {
-					continue
-				}
-				serializedHeight, err := ExtractCoinbaseHeight(block.Block().Transactions[0])
-				if err != nil {
-					continue
-				}
-				hasBlock = true
-				expiration := roughtime.Now().Add(MaxOrphanStallDuration)
-				oBlock := &orphanBlock{
-					block:      block,
-					expiration: expiration,
-					height:     serializedHeight,
-				}
-				b.orphanLock.Lock()
-				b.orphans[*block.Hash()] = oBlock
-				b.orphanLock.Unlock()
+	for len(inBlockHashs) > 0 {
+		addOrphans := []*hash.Hash{}
+		for _, bh := range inBlockHashs {
+			block, err := b.FetchBlockByHash(bh)
+			if err != nil {
+				continue
 			}
-			if !hasBlock {
-				return
+			b.addOrphanBlock(block)
+			for _, h := range block.Block().Parents {
+				if !b.HaveBlock(h) && b.HasBlockInDB(h) {
+					bh := *h
+					addOrphans = append(addOrphans, &bh)
+				}
 			}
-		} else {
-			return
 		}
+		inBlockHashs = addOrphans
 	}
 }
 
