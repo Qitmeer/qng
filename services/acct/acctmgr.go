@@ -168,6 +168,8 @@ func (a *AccountManager) rebuild(addrs []string) error {
 	} else {
 		log.Trace("Try to rebuild account index")
 	}
+	ops := []*types.TxOutPoint{}
+	entrys := []*blockchain.UtxoEntry{}
 	err := a.chain.DB().View(func(dbTx database.Tx) error {
 		meta := dbTx.Metadata()
 		utxoBucket := meta.Bucket(dbnamespace.UtxoSetBucketName)
@@ -195,15 +197,21 @@ func (a *AccountManager) rebuild(addrs []string) error {
 					continue
 				}
 			}
-			err = a.apply(true, op, entry)
-			if err != nil {
-				return err
-			}
+			ops = append(ops, op)
+			entrys = append(entrys, entry)
 		}
 		return nil
 	})
 	if err != nil {
 		return err
+	}
+	if len(ops) > 0 {
+		for i := 0; i < len(ops); i++ {
+			err = a.apply(true, ops[i], entrys[i])
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -258,78 +266,82 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain
 		if entry.IsCoinBase() && op.OutIndex != blockchain.CoinbaseOutput_subsidy {
 			return nil
 		}
-		err = a.db.Update(func(dbTx database.Tx) error {
-			balance, er := DBGetACCTBalance(dbTx, addrStr)
-			if er != nil {
-				return er
-			}
-			if balance == nil {
-				if entry.IsCoinBase() ||
-					scriptClass == txscript.CLTVPubKeyHashTy {
-					balance = NewAcctBalance(0, 0, uint64(entry.Amount().Value), 1)
-				} else {
-					balance = NewAcctBalance(uint64(entry.Amount().Value), 1, 0, 0)
-				}
-				a.info.total++
-				er = DBPutACCTInfo(dbTx, a.info)
-				if er != nil {
-					return er
-				}
-			} else {
-				if entry.IsCoinBase() ||
-					scriptClass == txscript.CLTVPubKeyHashTy {
-					balance.locked += uint64(entry.Amount().Value)
-					balance.locUTXONum++
-				} else {
-					balance.normal += uint64(entry.Amount().Value)
-					balance.norUTXONum++
-				}
-
-			}
-			er = DBPutACCTBalance(dbTx, addrStr, balance)
-			if er != nil {
-				return er
-			}
-			au := NewAcctUTXO()
-			au.SetBalance(uint64(entry.Amount().Value))
-
-			wb, exist := a.watchers[addrStr]
-			if entry.IsCoinBase() {
-				au.SetCoinbase()
-				//
-				if !exist {
-					wb = NewAcctBalanceWatcher(addrStr, balance)
-					a.watchers[addrStr] = wb
-				}
-				opk := OutpointKey(op)
-				uw := BuildUTXOWatcher(opk, au, entry, a)
-				if uw != nil {
-					wb.Add(opk, uw)
-				}
-			} else if scriptClass == txscript.CLTVPubKeyHashTy {
-				au.SetCLTV()
-				if !exist {
-					wb = NewAcctBalanceWatcher(addrStr, balance)
-					a.watchers[addrStr] = wb
-				}
-				opk := OutpointKey(op)
-				uw := BuildUTXOWatcher(opk, au, entry, a)
-				if uw != nil {
-					wb.Add(opk, uw)
-				}
-			} else {
-				if exist {
-					wb.ab = balance
-				}
-			}
-			er = DBPutACCTUTXO(dbTx, addrStr, op, au)
-			if er != nil {
-				return er
-			}
-			log.Trace(fmt.Sprintf("Add balance: %s (%s)", addrStr, au.String()))
-			return nil
+		var balance *AcctBalance
+		err = a.db.View(func(dbTx database.Tx) error {
+			balance, err = DBGetACCTBalance(dbTx, addrStr)
+			return err
 		})
-		return err
+		if err != nil {
+			return err
+		}
+
+		if balance == nil {
+			if entry.IsCoinBase() ||
+				scriptClass == txscript.CLTVPubKeyHashTy {
+				balance = NewAcctBalance(0, 0, uint64(entry.Amount().Value), 1)
+			} else {
+				balance = NewAcctBalance(uint64(entry.Amount().Value), 1, 0, 0)
+			}
+			a.info.total++
+			err = a.db.Update(func(tx database.Tx) error {
+				return DBPutACCTInfo(tx, a.info)
+			})
+			if err != nil {
+				return err
+			}
+		} else {
+			if entry.IsCoinBase() ||
+				scriptClass == txscript.CLTVPubKeyHashTy {
+				balance.locked += uint64(entry.Amount().Value)
+				balance.locUTXONum++
+			} else {
+				balance.normal += uint64(entry.Amount().Value)
+				balance.norUTXONum++
+			}
+
+		}
+		err = a.db.Update(func(tx database.Tx) error {
+			return DBPutACCTBalance(tx, addrStr, balance)
+		})
+		if err != nil {
+			return err
+		}
+		au := NewAcctUTXO()
+		au.SetBalance(uint64(entry.Amount().Value))
+
+		wb, exist := a.watchers[addrStr]
+		if entry.IsCoinBase() {
+			au.SetCoinbase()
+			//
+			if !exist {
+				wb = NewAcctBalanceWatcher(addrStr, balance)
+				a.watchers[addrStr] = wb
+			}
+			opk := OutpointKey(op)
+			uw := BuildUTXOWatcher(opk, au, entry, a)
+			if uw != nil {
+				wb.Add(opk, uw)
+			}
+		} else if scriptClass == txscript.CLTVPubKeyHashTy {
+			au.SetCLTV()
+			if !exist {
+				wb = NewAcctBalanceWatcher(addrStr, balance)
+				a.watchers[addrStr] = wb
+			}
+			opk := OutpointKey(op)
+			uw := BuildUTXOWatcher(opk, au, entry, a)
+			if uw != nil {
+				wb.Add(opk, uw)
+			}
+		} else {
+			if exist {
+				wb.ab = balance
+			}
+		}
+		log.Trace(fmt.Sprintf("Add balance: %s (%s)", addrStr, au.String()))
+		return a.db.Update(func(tx database.Tx) error {
+			return DBPutACCTUTXO(tx, addrStr, op, au)
+		})
 	} else {
 		err = a.db.Update(func(dbTx database.Tx) error {
 			balance, er := DBGetACCTBalance(dbTx, addrStr)
@@ -406,6 +418,9 @@ func (a *AccountManager) initWatchers(dbTx database.Tx) error {
 	if balBucket == nil {
 		return nil
 	}
+	kus := [][]byte{}
+	aus := []*AcctUTXO{}
+	wbs := []*AcctBalanceWatcher{}
 	err := balBucket.ForEach(func(k, v []byte) error {
 		balance := &AcctBalance{}
 		err := balance.Decode(bytes.NewReader(v))
@@ -435,16 +450,23 @@ func (a *AccountManager) initWatchers(dbTx database.Tx) error {
 				wb = NewAcctBalanceWatcher(addrStr, balance)
 				a.watchers[addrStr] = wb
 			}
-			uw := BuildUTXOWatcher(ku, au, nil, a)
-			if uw != nil {
-				wb.Add(ku, uw)
-			}
+			kus = append(kus, ku)
+			aus = append(aus, au)
+			wbs = append(wbs, wb)
 			return nil
 		})
 		return nil
 	})
 	if err != nil {
 		return err
+	}
+	if len(aus) > 0 {
+		for i := 0; i < len(aus); i++ {
+			uw := BuildUTXOWatcher(kus[i], aus[i], nil, a)
+			if uw != nil {
+				wbs[i].Add(kus[i], uw)
+			}
+		}
 	}
 	if len(a.watchers) > 0 {
 		for _, w := range a.watchers {
