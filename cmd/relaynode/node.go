@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	pv "github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/node/service"
@@ -97,7 +98,7 @@ func (node *Node) Start() error {
 		return err
 	}
 
-	interrupt := interruptListener()
+	interrupt := system.InterruptListener()
 	<-interrupt
 	return nil
 }
@@ -285,7 +286,7 @@ func (node *Node) RegisterRpcService() error {
 	node.Services().RegisterService(rpcServer)
 	go func() {
 		<-rpcServer.RequestedProcessShutdown()
-		shutdownRequestChannel <- struct{}{}
+		system.ShutdownRequestChannel <- struct{}{}
 	}()
 
 	api := node.api()

@@ -3,6 +3,7 @@ package node
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/coinbase"
@@ -66,7 +67,7 @@ func (qm *QitmeerFull) RegisterRpcService() error {
 
 	go func() {
 		<-rpcServer.RequestedProcessShutdown()
-		qm.node.shutdownRequestChannel <- struct{}{}
+		system.ShutdownRequestChannel <- struct{}{}
 	}()
 	// Gather all the possible APIs to surface
 	apis := qm.APIs()
@@ -266,7 +267,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	if err := qm.RegisterVMService(bm.GetChain().VMService.(*vm.Service)); err != nil {
 		return nil, err
 	}
-	vms:=qm.GetVMService()
+	vms := qm.GetVMService()
 	vms.SetTxPool(txManager.MemPool())
 	vms.SetNotify(qm.nfManager)
 

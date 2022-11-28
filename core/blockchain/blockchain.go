@@ -502,7 +502,7 @@ func (b *BlockChain) initChainState() error {
 	}
 
 	//   Upgrade the database as needed.
-	err = b.upgradeDB()
+	err = b.upgradeDB(interrupt)
 	if err != nil {
 		return err
 	}

@@ -1,10 +1,13 @@
-/*
- * Copyright (c) 2017-2020 The qitmeer developers
- */
+// Copyright (c) 2017-2018 The qitmeer developers
+// Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2015-2016 The Decred developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 
-package main
+package system
 
 import (
+	"github.com/Qitmeer/qng/log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,16 +15,16 @@ import (
 
 // shutdownRequestChannel is used to initiate shutdown from one of the
 // subsystems using the same code paths as when an interrupt signal is received.
-var shutdownRequestChannel = make(chan struct{})
+var ShutdownRequestChannel = make(chan struct{})
 
 // interruptSignals defines the default signals to catch in order to do a proper
 // shutdown.  This may be modified during init depending on the platform.
 var interruptSignals = []os.Signal{os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM}
 
-// interruptListener listens for OS Signals such as SIGINT (Ctrl+C) and shutdown
+// InterruptListener listens for OS Signals such as SIGINT (Ctrl+C) and shutdown
 // requests from shutdownRequestChannel.  It returns a channel that is closed
 // when either signal is received.
-func interruptListener() <-chan struct{} {
+func InterruptListener() <-chan struct{} {
 	c := make(chan struct{})
 	go func() {
 		interruptChannel := make(chan os.Signal, 1)
@@ -33,7 +36,7 @@ func interruptListener() <-chan struct{} {
 		case sig := <-interruptChannel:
 			log.Info("Shutting down...", "Received signal", sig)
 
-		case <-shutdownRequestChannel:
+		case <-ShutdownRequestChannel:
 			log.Info("Shutdown requested. Shutting down...")
 		}
 		close(c)
@@ -45,7 +48,7 @@ func interruptListener() <-chan struct{} {
 			select {
 			case sig := <-interruptChannel:
 				log.Info("Already shutting down...", "Received signal", sig)
-			case <-shutdownRequestChannel:
+			case <-ShutdownRequestChannel:
 				log.Info("Shutdown requested.  Already shutting down...")
 			}
 		}
@@ -54,10 +57,10 @@ func interruptListener() <-chan struct{} {
 	return c
 }
 
-// interruptRequested returns true when the channel returned by
+// InterruptRequested returns true when the channel returned by
 // interruptListener was closed.  This simplifies early shutdown slightly since
 // the caller can just use an if statement instead of a select.
-func interruptRequested(interrupted <-chan struct{}) bool {
+func InterruptRequested(interrupted <-chan struct{}) bool {
 	select {
 	case <-interrupted:
 		return true
