@@ -3,7 +3,6 @@ package node
 
 import (
 	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/database"
@@ -16,8 +15,6 @@ import (
 // such as p2p, rpc, ws etc.
 type Node struct {
 	service.Service
-	wg   util.WaitGroupWrapper
-	quit chan struct{}
 	lock sync.RWMutex
 
 	startupTime int64
@@ -32,17 +29,16 @@ type Node struct {
 	// event system
 	events event.Feed
 
-	shutdownRequestChannel chan struct{}
+	interrupt <-chan struct{}
 }
 
-func NewNode(cfg *config.Config, database database.DB, chainParams *params.Params, shutdownRequestChannel chan struct{}) (*Node, error) {
+func NewNode(cfg *config.Config, database database.DB, chainParams *params.Params, interrupt <-chan struct{}) (*Node, error) {
 
 	n := Node{
-		Config:                 cfg,
-		DB:                     database,
-		Params:                 chainParams,
-		quit:                   make(chan struct{}),
-		shutdownRequestChannel: shutdownRequestChannel,
+		Config:    cfg,
+		DB:        database,
+		Params:    chainParams,
+		interrupt: interrupt,
 	}
 	n.InitServices()
 	return &n, nil
@@ -53,21 +49,7 @@ func (n *Node) Stop() error {
 	if err := n.Service.Stop(); err != nil {
 		return err
 	}
-	// Signal the node quit.
-	close(n.quit)
-
 	return nil
-}
-
-// WaitForShutdown blocks until the main listener and peer handlers are stopped.
-func (n *Node) WaitForShutdown() {
-	log.Info("Waiting for server shutdown")
-	n.wg.Wait()
-}
-
-func (n *Node) nodeEventHandler() {
-	<-n.quit
-	log.Trace("node stop event (quit) received")
 }
 
 func (n *Node) Start() error {
@@ -82,8 +64,6 @@ func (n *Node) Start() error {
 	// Finished node start
 	// Server startup time. Used for the uptime command for uptime calculation.
 	n.startupTime = roughtime.Now().Unix()
-	n.wg.Wrap(n.nodeEventHandler)
-
 	n.events.Send(event.New(event.Initialized))
 	return nil
 }

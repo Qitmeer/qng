@@ -3,6 +3,7 @@ package node
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
@@ -73,7 +74,7 @@ func (qm *QitmeerFull) RegisterRpcService() error {
 
 	go func() {
 		<-rpcServer.RequestedProcessShutdown()
-		qm.node.shutdownRequestChannel <- struct{}{}
+		system.ShutdownRequestChannel <- struct{}{}
 	}()
 	// Gather all the possible APIs to surface
 	apis := qm.APIs()
@@ -103,7 +104,7 @@ func (qm *QitmeerFull) RegisterBlkMgrService(indexManager blockchain.IndexManage
 
 	// block-manager
 	bm, err := blkmgr.NewBlockManager(qm.nfManager, indexManager, qm.node.DB, qm.timeSource, qm.sigCache, qm.node.Config, qm.node.Params,
-		qm.node.quit, &qm.node.events, qm.GetPeerServer())
+		qm.node.interrupt, &qm.node.events, qm.GetPeerServer())
 	if err != nil {
 		return err
 	}
