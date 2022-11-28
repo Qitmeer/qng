@@ -10,10 +10,10 @@ package index
 import (
 	"encoding/binary"
 	"errors"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/core/blockchain"
 )
 
 var (
@@ -99,17 +99,4 @@ type internalBucket interface {
 	Get(key []byte) []byte
 	Put(key []byte, value []byte) error
 	Delete(key []byte) error
-}
-
-// interruptRequested returns true when the provided channel has been closed.
-// This simplifies early shutdown slightly since the caller can just use an if
-// statement instead of a select.
-func interruptRequested(interrupted <-chan struct{}) bool {
-	select {
-	case <-interrupted:
-		return true
-	default:
-	}
-
-	return false
 }

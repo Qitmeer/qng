@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/math"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
@@ -55,7 +56,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		return nil
 	}
 
-	if interruptRequested(interrupt) {
+	if system.InterruptRequested(interrupt) {
 		return errInterruptRequested
 	}
 
@@ -138,7 +139,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			if err != nil {
 				return err
 			}
-			if interruptRequested(interrupt) {
+			if system.InterruptRequested(interrupt) {
 				return errInterruptRequested
 			}
 		}
@@ -193,7 +194,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		bestOrder))
 
 	for order := lowestOrder + 1; order <= int64(bestOrder); order++ {
-		if interruptRequested(interrupt) {
+		if system.InterruptRequested(interrupt) {
 			return errInterruptRequested
 		}
 
@@ -206,7 +207,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			return err
 		}
 
-		if interruptRequested(interrupt) {
+		if system.InterruptRequested(interrupt) {
 			return errInterruptRequested
 		}
 		chain.CalculateDAGDuplicateTxs(block)
@@ -275,7 +276,7 @@ func (m *Manager) maybeFinishDrops(interrupt <-chan struct{}) error {
 		return err
 	}
 
-	if interruptRequested(interrupt) {
+	if system.InterruptRequested(interrupt) {
 		return errInterruptRequested
 	}
 
@@ -697,7 +698,7 @@ func incrementalFlatDrop(db database.DB, idxKey []byte, idxName string, interrup
 			}
 		}
 
-		if interruptRequested(interrupt) {
+		if system.InterruptRequested(interrupt) {
 			return errInterruptRequested
 		}
 

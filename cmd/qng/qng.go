@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/profiling"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	_ "github.com/Qitmeer/qng/database/ffldb"
 	"github.com/Qitmeer/qng/log"
@@ -104,7 +105,7 @@ func qitmeerd(ctx *cli.Context) error {
 	// Get a channel that will be closed when a shutdown signal has been
 	// triggered either from an OS signal such as SIGINT (Ctrl+C) or from
 	// another subsystem such as the RPC server.
-	interrupt := interruptListener()
+	interrupt := system.InterruptListener()
 	defer log.Info("Shutdown complete")
 
 	// Show version and home dir at startup.
@@ -128,7 +129,7 @@ func qitmeerd(ctx *cli.Context) error {
 	}()
 
 	// Return now if an interrupt signal was triggered.
-	if interruptRequested(interrupt) {
+	if system.InterruptRequested(interrupt) {
 		return nil
 	}
 	// Drop indexes and exit if requested.
@@ -157,7 +158,7 @@ func qitmeerd(ctx *cli.Context) error {
 	}
 
 	// Create node and start it.
-	n, err := node.NewNode(cfg, db, params.ActiveNetParams.Params, shutdownRequestChannel)
+	n, err := node.NewNode(cfg, db, params.ActiveNetParams.Params, interrupt)
 	if err != nil {
 		log.Error("Unable to start server", "listeners", cfg.Listener, "error", err)
 		return err
@@ -167,12 +168,10 @@ func qitmeerd(ctx *cli.Context) error {
 		return err
 	}
 	defer func() {
-		log.Info("Gracefully shutting down the server...")
 		err := n.Stop()
 		if err != nil {
-			log.Warn("node stop error", "error", err)
+			log.Error("node stop error", "error", err)
 		}
-		n.WaitForShutdown()
 	}()
 	err = n.Start()
 	if err != nil {

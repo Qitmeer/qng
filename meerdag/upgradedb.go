@@ -3,6 +3,7 @@ package meerdag
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/common/system"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/database"
 	l "github.com/Qitmeer/qng/log"
@@ -11,7 +12,7 @@ import (
 )
 
 // update db to new version
-func (bd *MeerDAG) UpgradeDB(dbTx database.Tx, mainTip *hash.Hash, total uint64, genesis *hash.Hash, fortips bool) error {
+func (bd *MeerDAG) UpgradeDB(dbTx database.Tx, mainTip *hash.Hash, total uint64, genesis *hash.Hash, fortips bool, interrupt <-chan struct{}) error {
 	if fortips {
 		bucket := dbTx.Metadata().Bucket(DAGTipsBucketName)
 		cursor := bucket.Cursor()
@@ -23,7 +24,7 @@ func (bd *MeerDAG) UpgradeDB(dbTx database.Tx, mainTip *hash.Hash, total uint64,
 	//
 	var bar *progressbar.ProgressBar
 	logLvl := l.Glogger().GetVerbosity()
-	bar = progressbar.Default(int64(total+1), "MeerDAG:")
+	bar = progressbar.Default(int64(total), "MeerDAG:")
 	l.Glogger().Verbosity(l.LvlCrit)
 	defer func() {
 		bar.Finish()
@@ -62,6 +63,9 @@ func (bd *MeerDAG) UpgradeDB(dbTx database.Tx, mainTip *hash.Hash, total uint64,
 	diffAnticone := NewIdSet()
 	for i := uint(0); i < uint(total); i++ {
 		bar.Add(1)
+		if system.InterruptRequested(interrupt) {
+			return fmt.Errorf("interrupt upgrade database")
+		}
 		block := OldBlock{id: i}
 		ib := &OldPhantomBlock{&block, 0, NewIdSet(), NewIdSet()}
 		err := DBGetDAGBlock(dbTx, ib)
@@ -95,8 +99,12 @@ func (bd *MeerDAG) UpgradeDB(dbTx database.Tx, mainTip *hash.Hash, total uint64,
 			}
 		}
 	}
-
+	bar = progressbar.Default(int64(len(blocks)), "MeerDAG:")
 	for _, ib := range blocks {
+		bar.Add(1)
+		if system.InterruptRequested(interrupt) {
+			return fmt.Errorf("interrupt upgrade database")
+		}
 		block := ib.(*OldPhantomBlock).toPhantomBlock()
 		err := DBPutDAGBlock(dbTx, block)
 		if err != nil {

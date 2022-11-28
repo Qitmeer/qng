@@ -12,7 +12,7 @@ import (
 )
 
 // update db to new version
-func (b *BlockChain) upgradeDB() error {
+func (b *BlockChain) upgradeDB(interrupt <-chan struct{}) error {
 	version8 := uint32(8)
 	version9 := uint32(9)
 	version10 := uint32(10)
@@ -48,12 +48,12 @@ func (b *BlockChain) upgradeDB() error {
 		}
 
 		if b.dbInfo.version == version8 {
-			err = b.bd.UpgradeDB(dbTx, &state.hash, state.total, b.params.GenesisHash, true)
+			err = b.bd.UpgradeDB(dbTx, &state.hash, state.total, b.params.GenesisHash, true, interrupt)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = b.bd.UpgradeDB(dbTx, &state.hash, state.total, b.params.GenesisHash, false)
+			err = b.bd.UpgradeDB(dbTx, &state.hash, state.total, b.params.GenesisHash, false, interrupt)
 			if err != nil {
 				return err
 			}
@@ -103,7 +103,7 @@ func (b *BlockChain) upgradeDB() error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("You can cleanup your block data base by '--cleanup'.Your data is too old (%d -> %d). %s\n", b.dbInfo.version, currentDatabaseVersion, err)
+		return fmt.Errorf("Upgrade failed:%s. You can cleanup your block data base by '--cleanup'.\n", err)
 	}
 	return nil
 }
