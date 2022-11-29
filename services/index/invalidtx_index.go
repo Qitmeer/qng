@@ -25,7 +25,7 @@ func (idx *InvalidTxIndex) Name() string {
 
 func (idx *InvalidTxIndex) Init() error {
 	// Data compatibility migration
-	err:=dropOldInvalidTx(idx.consensus.DatabaseContext())
+	err := dropOldInvalidTx(idx.consensus.DatabaseContext())
 	if err != nil {
 		return err
 	}
@@ -52,13 +52,13 @@ func (idx *InvalidTxIndex) Init() error {
 				// It shows that the data is encounter
 				bh := bc.GetBlockHashByOrder(uint(tipOrder))
 				if bh != nil && bh.IsEqual(tipHash) {
-					return idx.caughtUpFrom(uint(tipOrder+1))
+					return idx.caughtUpFrom(uint(tipOrder + 1))
 				}
 			}
 			return fmt.Errorf("vm block index(%s:%d) is out of synchronization(%s:%d) and can only be deleted and rebuilt:index --dropvmblock",
 				tipHash, tipOrder, mainHash, mainOrder)
 		}
-		log.Info(fmt.Sprintf("Current %s tip:%s,%d",idx.Name(),tipHash.String(),tipOrder))
+		log.Info(fmt.Sprintf("Current %s tip:%s,%d", idx.Name(), tipHash.String(), tipOrder))
 	}
 	return nil
 }
@@ -75,85 +75,79 @@ func (idx *InvalidTxIndex) caughtUpFrom(startOrder uint) error {
 		return nil
 	}
 	if mainOrder > 0 {
-		log.Info(fmt.Sprintf("Start caught up %s from (order:%d) to tip(hash:%s,order:%d)",idx.Name(),startOrder, mainHash, mainOrder))
+		log.Info(fmt.Sprintf("Start caught up %s from (order:%d) to tip(hash:%s,order:%d)", idx.Name(), startOrder, mainHash, mainOrder))
 		logLvl := l.Glogger().GetVerbosity()
-		bar := progressbar.Default(int64(mainOrder-startOrder), fmt.Sprintf("%s:",idx.Name()))
+		bar := progressbar.Default(int64(mainOrder-startOrder), fmt.Sprintf("%s:", idx.Name()))
 		l.Glogger().Verbosity(l.LvlCrit)
 		for i := uint(startOrder); i <= mainOrder; i++ {
 			bar.Add(1)
 			if i == 0 {
 				continue
 			}
-			var block *types.SerializedBlock
-			var blk model.Block
-			err := idx.consensus.DatabaseContext().View(func(dbTx database.Tx) error {
-				var er error
-				block, blk, er= bc.DBFetchBlockByOrder(dbTx, uint64(i))
-				return er
-			})
+			block, blk, err := bc.DBFetchBlockByOrder(uint64(i))
 			if err != nil {
 				return err
 			}
 			if !blk.GetStatus().KnownInvalid() {
 				continue
 			}
-			err=idx.ConnectBlock(uint64(blk.GetID()),block)
+			err = idx.ConnectBlock(uint64(blk.GetID()), block)
 			if err != nil {
 				return err
 			}
 		}
 		l.Glogger().Verbosity(logLvl)
 	}
-	log.Info(fmt.Sprintf("Current %s tip:%s,%d",idx.Name(),mainHash.String(),mainOrder))
-	return idx.UpdateMainTip(mainHash,uint64(mainOrder))
+	log.Info(fmt.Sprintf("Current %s tip:%s,%d", idx.Name(), mainHash.String(), mainOrder))
+	return idx.UpdateMainTip(mainHash, uint64(mainOrder))
 }
 
-func (idx *InvalidTxIndex) ConnectBlock(bid uint64,block *types.SerializedBlock) error {
+func (idx *InvalidTxIndex) ConnectBlock(bid uint64, block *types.SerializedBlock) error {
 	store := idx.consensus.InvalidTxIndexStore()
 	if store == nil {
 		return fmt.Errorf("No vm block index store")
 	}
 	stagingArea := model.NewStagingArea()
-	store.Stage(stagingArea,bid,block)
+	store.Stage(stagingArea, bid, block)
 	return staging.CommitAllChanges(idx.consensus.DatabaseContext(), stagingArea)
 }
 
-func (idx *InvalidTxIndex) DisconnectBlock(bid uint64,block *types.SerializedBlock) error {
+func (idx *InvalidTxIndex) DisconnectBlock(bid uint64, block *types.SerializedBlock) error {
 	store := idx.consensus.InvalidTxIndexStore()
 	if store == nil {
 		return fmt.Errorf("No vm block index store")
 	}
 	stagingArea := model.NewStagingArea()
-	store.Delete(stagingArea, bid,block)
+	store.Delete(stagingArea, bid, block)
 	return staging.CommitAllChanges(idx.consensus.DatabaseContext(), stagingArea)
 }
 
-func (idx *InvalidTxIndex) UpdateMainTip(bh *hash.Hash,order uint64) error {
+func (idx *InvalidTxIndex) UpdateMainTip(bh *hash.Hash, order uint64) error {
 	store := idx.consensus.InvalidTxIndexStore()
 	if store == nil {
 		return fmt.Errorf("No vm block index store")
 	}
 	stagingArea := model.NewStagingArea()
-	store.StageTip(stagingArea, bh,order)
+	store.StageTip(stagingArea, bh, order)
 	return staging.CommitAllChanges(idx.consensus.DatabaseContext(), stagingArea)
 }
 
 func (idx *InvalidTxIndex) Get(txid *hash.Hash) (*types.Transaction, error) {
 	store := idx.consensus.InvalidTxIndexStore()
 	if store == nil {
-		return nil,fmt.Errorf("No vm block index store")
+		return nil, fmt.Errorf("No vm block index store")
 	}
 	stagingArea := model.NewStagingArea()
-	return store.Get(stagingArea,txid)
+	return store.Get(stagingArea, txid)
 }
 
 func (idx *InvalidTxIndex) GetIdByHash(h *hash.Hash) (*hash.Hash, error) {
 	store := idx.consensus.InvalidTxIndexStore()
 	if store == nil {
-		return nil,fmt.Errorf("No vm block index store")
+		return nil, fmt.Errorf("No vm block index store")
 	}
 	stagingArea := model.NewStagingArea()
-	return store.GetIdByHash(stagingArea,h)
+	return store.GetIdByHash(stagingArea, h)
 }
 
 func NewInvalidTxIndex(consensus model.Consensus) *InvalidTxIndex {

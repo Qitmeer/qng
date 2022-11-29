@@ -3,6 +3,7 @@ package meerdag
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/database"
 	"io"
@@ -300,7 +301,7 @@ type OldBlock struct {
 	order      uint
 	layer      uint
 	height     uint
-	status     BlockStatus
+	status     model.BlockStatus
 
 	data IBlockData
 }
@@ -561,24 +562,24 @@ func (b *OldBlock) Decode(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	b.status = BlockStatus(status)
+	b.status = model.BlockStatus(status)
 	return nil
 }
 
 // SetStatus
-func (b *OldBlock) SetStatus(status BlockStatus) {
+func (b *OldBlock) SetStatus(status model.BlockStatus) {
 	b.status = status
 }
 
-func (b *OldBlock) GetStatus() BlockStatus {
+func (b *OldBlock) GetStatus() model.BlockStatus {
 	return b.status
 }
 
-func (b *OldBlock) SetStatusFlags(flags BlockStatus) {
+func (b *OldBlock) SetStatusFlags(flags model.BlockStatus) {
 	b.status |= flags
 }
 
-func (b *OldBlock) UnsetStatusFlags(flags BlockStatus) {
+func (b *OldBlock) UnsetStatusFlags(flags model.BlockStatus) {
 	b.status &^= flags
 }
 
@@ -595,9 +596,9 @@ func (b *OldBlock) IsLoaded() bool {
 }
 
 func (b *OldBlock) Valid() {
-	b.UnsetStatusFlags(StatusInvalid)
+	b.UnsetStatusFlags(model.StatusInvalid)
 }
 
 func (b *OldBlock) Invalid() {
-	b.SetStatusFlags(StatusInvalid)
+	b.SetStatusFlags(model.StatusInvalid)
 }
