@@ -129,6 +129,8 @@ type BlockChain struct {
 	shutdownTracker *shutdown.Tracker
 
 	consensus model.Consensus
+
+	interrupt <-chan struct{}
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.
@@ -357,6 +359,7 @@ func New(config *Config) (*BlockChain, error) {
 		warningCaches:      newThresholdCaches(VBNumBits),
 		deploymentCaches:   newThresholdCaches(params.DefinedDeployments),
 		shutdownTracker:    shutdown.NewTracker(config.DataDir),
+		interrupt:          config.Interrupt,
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
@@ -502,7 +505,7 @@ func (b *BlockChain) initChainState() error {
 	}
 
 	//   Upgrade the database as needed.
-	err = b.upgradeDB(interrupt)
+	err = b.upgradeDB(b.interrupt)
 	if err != nil {
 		return err
 	}

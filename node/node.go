@@ -3,6 +3,7 @@ package node
 
 import (
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/consensus/model"
