@@ -35,7 +35,7 @@ type consensus struct {
 	// clock time service
 	mediantimeSource model.MedianTimeSource
 
-	vmblockindexStore model.VMBlockIndexStore
+	vmblockindexStore   model.VMBlockIndexStore
 	invalidtxindexStore model.InvalidTxIndexStore
 
 	blockchain   model.BlockChain
@@ -72,15 +72,17 @@ func (s *consensus) Init() error {
 
 	// Create a new block chain instance with the appropriate configuration.
 	blockchain, err := blockchain.New(&blockchain.Config{
-		DB:             s.databaseContext,
-		Interrupt:      s.interrupt,
-		ChainParams:    params.ActiveNetParams.Params,
-		TimeSource:     s.mediantimeSource,
-		Events:         &s.events,
-		SigCache:       s.sigCache,
-		IndexManager:   s.indexManager,
-		DAGType:        s.cfg.DAGType,
-		DataDir:        s.cfg.DataDir,
+		DB:                 s.databaseContext,
+		Interrupt:          s.interrupt,
+		ChainParams:        params.ActiveNetParams.Params,
+		TimeSource:         s.mediantimeSource,
+		Events:             &s.events,
+		SigCache:           s.sigCache,
+		IndexManager:       s.indexManager,
+		DAGType:            s.cfg.DAGType,
+		DataDir:            s.cfg.DataDir,
+		DAGCacheSize:       s.cfg.DAGCacheSize,
+		BlockDataCacheSize: s.cfg.BlockDataCacheSize,
 	})
 	if err != nil {
 		return err
@@ -91,8 +93,8 @@ func (s *consensus) Init() error {
 	if err != nil {
 		return err
 	}
-	s.vmService=vmService
-	blockchain.VMService=vmService
+	s.vmService = vmService
+	blockchain.VMService = vmService
 	s.subscribe()
 	return blockchain.Init()
 }
@@ -178,5 +180,5 @@ func New(cfg *config.Config, databaseContext database.DB, interrupt <-chan struc
 }
 
 func NewPure(cfg *config.Config, databaseContext database.DB) *consensus {
-	return New(cfg, databaseContext, make(chan struct{}),make(chan struct{}))
+	return New(cfg, databaseContext, make(chan struct{}), make(chan struct{}))
 }

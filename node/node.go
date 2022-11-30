@@ -3,6 +3,7 @@ package node
 
 import (
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/consensus/model"
@@ -33,13 +34,13 @@ type Node struct {
 	consensus model.Consensus
 }
 
-func NewNode(cfg *config.Config, database database.DB, chainParams *params.Params,interrupt <-chan struct{}) (*Node, error) {
+func NewNode(cfg *config.Config, database database.DB, chainParams *params.Params, interrupt <-chan struct{}) (*Node, error) {
 	n := Node{
-		Config:                 cfg,
-		DB:                     database,
-		Params:                 chainParams,
+		Config:    cfg,
+		DB:        database,
+		Params:    chainParams,
 		interrupt: interrupt,
-		consensus:              consensus.New(cfg, database, interrupt, system.ShutdownRequestChannel),
+		consensus: consensus.New(cfg, database, interrupt, system.ShutdownRequestChannel),
 	}
 	n.InitServices()
 	return &n, nil

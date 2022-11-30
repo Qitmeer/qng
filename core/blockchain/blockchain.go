@@ -129,6 +129,8 @@ type BlockChain struct {
 	shutdownTracker *shutdown.Tracker
 
 	consensus model.Consensus
+
+	interrupt <-chan struct{}
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.
@@ -357,6 +359,7 @@ func New(config *Config) (*BlockChain, error) {
 		warningCaches:      newThresholdCaches(VBNumBits),
 		deploymentCaches:   newThresholdCaches(params.DefinedDeployments),
 		shutdownTracker:    shutdown.NewTracker(config.DataDir),
+		interrupt:          config.Interrupt,
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
@@ -502,7 +505,7 @@ func (b *BlockChain) initChainState() error {
 	}
 
 	//   Upgrade the database as needed.
-	err = b.upgradeDB(interrupt)
+	err = b.upgradeDB(b.interrupt)
 	if err != nil {
 		return err
 	}
@@ -1000,7 +1003,7 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 	}
 
 	if b.indexManager != nil {
-		err := b.indexManager.UpdateMainTip(mainTip.GetHash(),uint64(mainTip.GetOrder()))
+		err := b.indexManager.UpdateMainTip(mainTip.GetHash(), uint64(mainTip.GetOrder()))
 		if err != nil {
 			return err
 		}
@@ -1034,7 +1037,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		pkss = append(pkss, stxo.PkScript)
 	}
 	if !node.GetStatus().KnownInvalid() {
-		vmbid,err := b.VMService.ConnectBlock(block)
+		vmbid, err := b.VMService.ConnectBlock(block)
 		if err != nil {
 			return err
 		}
@@ -1065,7 +1068,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		// optional indexes with the block being connected so they can
 		// update themselves accordingly.
 		if b.indexManager != nil {
-			err := b.indexManager.ConnectBlock(block, pkss, node,vmbid)
+			err := b.indexManager.ConnectBlock(block, pkss, node, vmbid)
 			if err != nil {
 				return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 			}
@@ -1082,7 +1085,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 	} else {
 		// Atomically insert info into the database.
 		if b.indexManager != nil {
-			err := b.indexManager.ConnectBlock(block, pkss, node,0)
+			err := b.indexManager.ConnectBlock(block, pkss, node, 0)
 			if err != nil {
 				return err
 			}
@@ -1096,8 +1099,8 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 // the main (best) chain.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) disconnectBlock(ib meerdag.IBlock,block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
-	vmbid,err := b.VMService.DisconnectBlock(block)
+func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
+	vmbid, err := b.VMService.DisconnectBlock(block)
 	if err != nil {
 		return err
 	}
@@ -1129,7 +1132,7 @@ func (b *BlockChain) disconnectBlock(ib meerdag.IBlock,block *types.SerializedBl
 		for _, stxo := range stxos {
 			pkss = append(pkss, stxo.PkScript)
 		}
-		err := b.indexManager.DisconnectBlock(block, pkss,ib,vmbid)
+		err := b.indexManager.DisconnectBlock(block, pkss, ib, vmbid)
 		if err != nil {
 			return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 		}
@@ -1225,7 +1228,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 
 		//newn.FlushToDB(b)
 
-		err = b.disconnectBlock(n.Block,block, view, stxos)
+		err = b.disconnectBlock(n.Block, block, view, stxos)
 		if err != nil {
 			return err
 		}

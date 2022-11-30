@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerevm/cmd"
@@ -51,7 +52,7 @@ func indexCmd() *cli.Command {
 						log.LogWrite().Close()
 					}
 				}()
-				interrupt := interruptListener()
+				interrupt := system.InterruptListener()
 				log.Info("System info", "QNG Version", version.String(), "Go version", runtime.Version())
 				log.Info("System info", "Home dir", cfg.HomeDir)
 				if cfg.NoFileLogging {
