@@ -9,12 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 )
 
 const (
@@ -352,7 +349,7 @@ type TxIndex struct {
 	db       database.DB
 	curOrder int64
 
-	chain *blockchain.BlockChain
+	chain model.BlockChain
 }
 
 // Ensure the TxIndex type implements the Indexer interface.
@@ -363,7 +360,7 @@ var _ Indexer = (*TxIndex)(nil)
 // disconnecting blocks.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) Init(chain *blockchain.BlockChain) error {
+func (idx *TxIndex) Init(chain model.BlockChain) error {
 	idx.chain = chain
 	// Find the latest known block id field for the internal block id
 	// index and initialize it.  This is done because it's a lot more
@@ -422,20 +419,6 @@ func (idx *TxIndex) Init(chain *blockchain.BlockChain) error {
 		return err
 	}
 
-	if chain.CacheInvalidTx {
-		if idx.curOrder == -1 {
-			idx.db.Update(func(dbTx database.Tx) error {
-				dbTx.Metadata().Put(dbnamespace.CacheInvalidTxName, []byte{byte(0)})
-				return nil
-			})
-		}
-	} else {
-		idx.db.Update(func(dbTx database.Tx) error {
-			dbTx.Metadata().Delete(dbnamespace.CacheInvalidTxName)
-			return nil
-		})
-	}
-
 	log.Debug("Current internal block ", "block order", idx.curOrder)
 	return nil
 }
@@ -456,18 +439,6 @@ func (idx *TxIndex) Name() string {
 
 // Name returns the human-readable name of the index.
 //
-// This is part of the Indexer interface.
-func (idx *TxIndex) GetTxBytes(blockRegion *database.BlockRegion) ([]byte, error) {
-	// Load the raw transaction bytes from the database.
-	var txBytes []byte
-	err := idx.db.View(func(dbTx database.Tx) error {
-		var err error
-		txBytes, err = dbTx.FetchBlockRegion(blockRegion)
-		return err
-	})
-	return txBytes, err
-}
-
 // Create is invoked when the indexer manager determines the index needs
 // to be created for the first time.  It creates the buckets for the hash-based
 // transaction index and the internal block ID indexes.
@@ -484,13 +455,6 @@ func (idx *TxIndex) Create(dbTx database.Tx) error {
 	if _, err := meta.CreateBucket(txidByTxhashBucketName); err != nil {
 		return err
 	}
-	idx.compatibleOldData(dbTx)
-	if _, err := meta.CreateBucket(itxIndexKey); err != nil {
-		return err
-	}
-	if _, err := meta.CreateBucket(itxidByTxhashBucketName); err != nil {
-		return err
-	}
 	_, err := meta.CreateBucket(txIndexKey)
 	return err
 }
@@ -500,29 +464,22 @@ func (idx *TxIndex) Create(dbTx database.Tx) error {
 // for every transaction in the passed block.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error {
+func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
 	// Increment the internal block ID to use for the block being connected
 	// and add all of the transactions in the block to the index.
 	newOrder := idx.curOrder + 1
-	if ib == nil {
+	if blk == nil {
 		return fmt.Errorf("no node %s", block.Hash())
 	}
 	if block.Order() != uint64(newOrder) {
 		return fmt.Errorf("TxIndex.curOrder != block(%s).order(%d)", block.Hash(), block.Order())
 	}
 
-	if !ib.GetStatus().KnownInvalid() {
+	if !blk.GetStatus().KnownInvalid() {
 		if err := dbAddTxIndexEntries(dbTx, block, uint32(newOrder)); err != nil {
 			return err
 		}
-	} else {
-		if idx.chain.CacheInvalidTx {
-			if err := dbAddInvalidTxIndexEntries(dbTx, block, uint32(newOrder)); err != nil {
-				return err
-			}
-		}
 	}
-
 	// Add the new block ID index entry for the block being connected and
 	// update the current internal block ID accordingly.
 	err := dbPutBlockOrderIndexEntry(dbTx, block.Hash(), uint32(newOrder))
@@ -538,17 +495,11 @@ func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock,
 // hash-to-transaction mapping for every transaction in the block.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error {
+func (idx *TxIndex) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte) error {
 	// Remove all of the transactions in the block from the index.
 	if err := dbRemoveTxIndexEntries(dbTx, block); err != nil {
 		return err
 	}
-	if idx.chain.CacheInvalidTx {
-		if err := dbRemoveInvalidTxIndexEntries(dbTx, block); err != nil {
-			return err
-		}
-	}
-
 	// Remove the block ID index entry for the block being disconnected and
 	// decrement the current internal block ID to account for it.
 	if err := dbRemoveBlockOrderIndexEntry(dbTx, block.Hash()); err != nil {
@@ -626,22 +577,6 @@ func dropBlockIDIndex(db database.DB) error {
 			return err
 		}
 		return meta.DeleteBucket(hashByOrderIndexBucketName)
-	})
-}
-
-func dropInvalidTx(db database.DB) error {
-	return db.Update(func(dbTx database.Tx) error {
-		meta := dbTx.Metadata()
-		if meta.Bucket(itxIndexKey) != nil {
-			err := meta.DeleteBucket(itxIndexKey)
-			if err != nil {
-				return err
-			}
-		}
-		if meta.Bucket(itxidByTxhashBucketName) != nil {
-			return meta.DeleteBucket(itxidByTxhashBucketName)
-		}
-		return nil
 	})
 }
 

@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/services/common"
-	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/vm"
 	"github.com/schollz/progressbar/v3"
 	"path"
@@ -183,42 +183,22 @@ func (node *AidNode) Upgrade() error {
 
 	node.db = db
 	//
-	var indexes []index.Indexer
-	txIndex := index.NewTxIndex(db)
-	indexes = append(indexes, txIndex)
-	// index-manager
-	indexManager := index.NewManager(db, indexes, params.ActiveNetParams.Params)
-
-	bc, err := blockchain.New(&blockchain.Config{
-		DB:           db,
-		ChainParams:  params.ActiveNetParams.Params,
-		TimeSource:   blockchain.NewMedianTime(),
-		DAGType:      node.cfg.DAGType,
-		IndexManager: indexManager,
-	})
+	ccfg:=common.DefaultConfig(node.cfg.HomeDir)
+	ccfg.DataDir=node.cfg.DataDir
+	ccfg.DbType=node.cfg.DbType
+	ccfg.DAGType=node.cfg.DAGType
+	cons:=consensus.NewPure(ccfg,db)
+	err=cons.Init()
 	if err != nil {
 		log.Error(err.Error())
 		return err
 	}
-	node.bc = bc
+	node.bc = cons.BlockChain().(*blockchain.BlockChain)
 	node.name = path.Base(node.cfg.DataDir)
-	// vm
-	vmServer, err := vm.NewService(&config.Config{
-		DataDir:           node.cfg.DataDir,
-		DebugLevel:        "info",
-		DebugPrintOrigins: false,
-		EVMEnv:            "",
-	}, &node.events, nil, nil)
+	err = node.bc.VMService.(*vm.Service).Start()
 	if err != nil {
 		return err
 	}
-	err = vmServer.Start()
-	if err != nil {
-		return err
-	}
-
-	node.bc.VMService = vmServer
-
 	log.Info(fmt.Sprintf("Load new data:%s", node.cfg.DataDir))
 
 	if bar != nil {

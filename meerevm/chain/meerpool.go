@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/ethereum/go-ethereum/miner"
 	"math/big"
@@ -475,7 +476,7 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 	return cost.Int64(), nil
 }
 
-func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, error) {
+func (m *MeerPool) GetTxs() ([]*qtypes.Transaction,[]*hash.Hash, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -483,6 +484,7 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, error) {
 	defer m.snapshotMu.Unlock()
 
 	result := []*qtypes.Transaction{}
+	mtxhs :=[]*hash.Hash{}
 
 	if m.snapshotBlock != nil && len(m.snapshotBlock.Transactions()) > 0 {
 		for _, tx := range m.snapshotBlock.Transactions() {
@@ -500,10 +502,11 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, error) {
 			}
 
 			result = append(result, mtx)
+			mtxhs=append(mtxhs,qcommon.FromEVMHash(tx.Hash()))
 		}
 	}
 
-	return result, nil
+	return result,mtxhs, nil
 }
 
 func (m *MeerPool) GetSize() int64 {

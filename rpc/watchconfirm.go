@@ -7,6 +7,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"github.com/Qitmeer/qng/services/index"
 )
 
 type TxConfirm struct {
@@ -41,11 +42,13 @@ func (w *WatchTxConfirmServer) Handle(wsc *wsClient, currentHeight uint64) {
 	if w == nil || len(*w) <= 0 {
 		return
 	}
-	bc := wsc.server.BC
-	txIndex := wsc.server.TxIndex
-	if txIndex == nil {
-		log.Error("specify --txindex in configuration")
+	if wsc.server.consensus == nil {
+		return
 	}
+	bc := wsc.server.BC
+	indexMgr:=wsc.server.consensus.IndexManager().(*index.Manager)
+	txIndex := indexMgr.TxIndex()
+
 	for tx, txconf := range *w {
 		txHash := hash.MustHexToDecodedHash(tx)
 		blockRegion, err := txIndex.TxBlockRegion(txHash)
@@ -53,9 +56,12 @@ func (w *WatchTxConfirmServer) Handle(wsc *wsClient, currentHeight uint64) {
 			log.Error(err.Error(), "txhash", txHash)
 			continue
 		}
+		// Deserialize the transaction
+		var msgTx *types.Transaction
+
 		if blockRegion == nil {
-			if bc.CacheInvalidTx {
-				blockRegion, err = txIndex.InvalidTxBlockRegion(txHash)
+			if indexMgr.InvalidTxIndex() != nil {
+				msgTx, err = indexMgr.InvalidTxIndex().Get(&txHash)
 				if err != nil {
 					log.Error(err.Error(), "txhash", txHash)
 					continue
@@ -68,23 +74,26 @@ func (w *WatchTxConfirmServer) Handle(wsc *wsClient, currentHeight uint64) {
 				}
 				continue
 			}
+		}else{
+			txBytes, err := indexMgr.GetTxBytes(blockRegion)
+			if err != nil {
+				log.Error("tx not found")
+				continue
+			}
+			msgTx=&types.Transaction{}
+			err = msgTx.Deserialize(bytes.NewReader(txBytes))
+			log.Trace("GetRawTx", "hex", hex.EncodeToString(txBytes))
+			if err != nil {
+				log.Error("Failed to deserialize transaction")
+				w.SendTxNotification(tx, 0, wsc, false, false)
+				continue
+			}
 		}
-		txBytes, err := txIndex.GetTxBytes(blockRegion)
-		if err != nil {
+		if msgTx == nil {
 			log.Error("tx not found")
 			continue
 		}
-
-		// Deserialize the transaction
-		var msgTx types.Transaction
-		err = msgTx.Deserialize(bytes.NewReader(txBytes))
-		log.Trace("GetRawTx", "hex", hex.EncodeToString(txBytes))
-		if err != nil {
-			log.Error("Failed to deserialize transaction")
-			w.SendTxNotification(tx, 0, wsc, false, false)
-			continue
-		}
-		mtx := types.NewTx(&msgTx)
+		mtx := types.NewTx(msgTx)
 		mtx.IsDuplicate = bc.IsDuplicateTx(mtx.Hash(), blockRegion.Hash)
 		ib := bc.BlockDAG().GetBlock(blockRegion.Hash)
 		if ib == nil {

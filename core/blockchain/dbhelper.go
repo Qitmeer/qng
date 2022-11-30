@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
@@ -92,7 +93,7 @@ func (bcs *bestChainState) GetTotal() uint64 {
 // dbFetchBlockByOrder uses an existing database transaction to retrieve the
 // raw block for the provided order, deserialize it, and return a Block
 // with the height set.
-func (b *BlockChain) DBFetchBlockByOrder(order uint64) (*types.SerializedBlock, meerdag.IBlock, error) {
+func (b *BlockChain) DBFetchBlockByOrder(order uint64) (*types.SerializedBlock, model.Block, error) {
 	// First find the hash associated with the provided order in the index.
 	ib := b.bd.GetBlockByOrder(uint(order))
 	if ib == nil {

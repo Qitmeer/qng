@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/merkle"
@@ -73,7 +74,7 @@ func MinimumMedianTime(bc *blockchain.BlockChain) time.Time {
 }
 
 // medianAdjustedTime returns the current time adjusted
-func MedianAdjustedTime(bc *blockchain.BlockChain, timeSource blockchain.MedianTimeSource) time.Time {
+func MedianAdjustedTime(bc *blockchain.BlockChain, timeSource model.MedianTimeSource) time.Time {
 	newTimestamp := timeSource.AdjustedTime()
 	minTimestamp := MinimumMedianTime(bc)
 	if newTimestamp.Before(minTimestamp) {

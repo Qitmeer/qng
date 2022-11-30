@@ -10,7 +10,7 @@ require (
 	github.com/dchest/blake256 v1.1.0
 	github.com/deckarep/golang-set v1.8.0
 	github.com/dgraph-io/ristretto v0.0.2
-	github.com/ethereum/go-ethereum v1.10.21-qng
+	github.com/ethereum/go-ethereum v1.10.26-qng
 	github.com/ferranbt/fastssz v0.0.0-20200514094935-99fccaf93472
 	github.com/go-stack/stack v1.8.1
 	github.com/gogo/protobuf v1.3.2
@@ -204,4 +204,4 @@ replace (
 	golang.org/x/net v0.0.0-20181005035420-146acd28ed58 => github.com/golang/net v0.0.0-20181005035420-146acd28ed58
 )
 
-replace github.com/ethereum/go-ethereum v1.10.21-qng => github.com/Qitmeer/go-ethereum v1.10.21-q.4
+replace github.com/ethereum/go-ethereum v1.10.26-qng => github.com/Qitmeer/go-ethereum v1.10.26-q.1

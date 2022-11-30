@@ -8,12 +8,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/event"
 	ser "github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/websocket"
-	"github.com/Qitmeer/qng/services/index"
 	"github.com/deckarep/golang-set"
 	"golang.org/x/net/context"
 	"io"
@@ -51,9 +50,9 @@ type RpcServer struct {
 
 	ntfnMgr     *wsNotificationManager
 	BC          *blockchain.BlockChain
-	TxIndex     *index.TxIndex
 	ChainParams *params.Params
 	listeners   []net.Listener
+	consensus model.Consensus
 }
 
 // service represents a registered object
@@ -105,11 +104,10 @@ type serverRequest struct {
 }
 
 // newRPCServer returns a new instance of the rpcServer struct.
-func NewRPCServer(cfg *config.Config, events *event.Feed) (*RpcServer, error) {
+func NewRPCServer(cfg *config.Config, consensus model.Consensus) (*RpcServer, error) {
 	rpc := RpcServer{
-
+		consensus: consensus,
 		config: cfg,
-
 		rpcSvcRegistry: make(serviceRegistry),
 		codecs:         mapset.NewSet(),
 
@@ -126,8 +124,8 @@ func NewRPCServer(cfg *config.Config, events *event.Feed) (*RpcServer, error) {
 		rpc.authsha = sha256.Sum256([]byte(auth))
 	}
 	rpc.ntfnMgr = newWsNotificationManager(&rpc)
-	if events != nil {
-		rpc.subscribe(events)
+	if consensus != nil {
+		rpc.subscribe(consensus.Events())
 	}
 
 	return &rpc, nil

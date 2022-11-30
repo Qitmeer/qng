@@ -161,11 +161,11 @@ func (vm *VM) CheckConnectBlock(block consensus.Block) error {
 	return vm.mchain.CheckConnectBlock(block)
 }
 
-func (vm *VM) ConnectBlock(block consensus.Block) error {
+func (vm *VM) ConnectBlock(block consensus.Block) (uint64,error) {
 	return vm.mchain.ConnectBlock(block)
 }
 
-func (vm *VM) DisconnectBlock(block consensus.Block) error {
+func (vm *VM) DisconnectBlock(block consensus.Block) (uint64,error) {
 	return vm.mchain.DisconnectBlock(block)
 }
 
@@ -290,7 +290,7 @@ func (vm *VM) AddTxToMempool(tx *qtypes.Transaction, local bool) (int64, error) 
 	return vm.mchain.MeerPool().AddTx(tx, local)
 }
 
-func (vm *VM) GetTxsFromMempool() ([]*qtypes.Transaction, error) {
+func (vm *VM) GetTxsFromMempool() ([]*qtypes.Transaction,[]*hash.Hash, error) {
 	return vm.mchain.MeerPool().GetTxs()
 }
 
@@ -322,6 +322,22 @@ func (vm *VM) Genesis() *hash.Hash {
 		return nil
 	}
 	return nmbb
+}
+
+func (vm *VM) GetBlockID(bh *hash.Hash) uint64 {
+	bn := chain.ReadBlockNumber(vm.chain.Ether().ChainDb(), qcommon.ToEVMHash(bh))
+	if bn == nil {
+		return 0
+	}
+	return *bn
+}
+
+func (vm *VM) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
+	tx,_, blockNumber,_,_:=vm.chain.Backend().GetTransaction(nil,qcommon.ToEVMHash(txhash))
+	if tx == nil {
+		return 0
+	}
+	return blockNumber
 }
 
 func New() *VM {

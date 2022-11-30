@@ -12,7 +12,6 @@ import (
 	"github.com/Qitmeer/qng/config"
 	_ "github.com/Qitmeer/qng/database/ffldb"
 	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/meerevm/cmd"
 	"github.com/Qitmeer/qng/node"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common"
@@ -54,17 +53,10 @@ func qng() error {
 		},
 		Copyright:            "(c) 2022 Qitmeer",
 		Usage:                "The next generation of the Qitmeer network implementation with the plug-able VMs under the MeerDAG consensus.",
-		Commands:             cmd.Commands,
+		Commands:             commands(),
 		Flags:                common.Flags,
 		EnableBashCompletion: true,
 		Before: func(ctx *cli.Context) error {
-			// Load configuration and parse command line.  This function also
-			// initializes logging and configures it accordingly.
-			cfg, err := common.LoadConfig(ctx)
-			if err != nil {
-				return err
-			}
-			config.Cfg = cfg
 			return nil
 		},
 		Action: qitmeerd,
@@ -79,7 +71,13 @@ func qng() error {
 // requested from the service control manager.
 func qitmeerd(ctx *cli.Context) error {
 	var nodeChan chan<- *node.Node
-	cfg := config.Cfg
+	// Load configuration and parse command line.  This function also
+	// initializes logging and configures it accordingly.
+	cfg, err := common.LoadConfig(ctx,true)
+	if err != nil {
+		return err
+	}
+	config.Cfg = cfg
 	defer func() {
 		if log.LogWrite() != nil {
 			log.LogWrite().Close()

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	qconsensus "github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/protocol"
@@ -105,7 +105,7 @@ func MarshJsonVin(tx *types.Transaction) []json.Vin {
 		}
 		return vinList
 	} else if types.IsCrossChainImportTx(tx) {
-		ctx, err := qconsensus.NewImportTx(tx)
+		ctx, err := vm.NewImportTx(tx)
 		if err != nil {
 			return vinList
 		}
@@ -191,7 +191,7 @@ func MarshJsonVout(tx *types.Transaction, filterAddrMap map[string]struct{}, par
 		voutSPK.Addresses = encodedAddrs
 		if len(encodedAddrs) > 0 {
 			if types.CoinID(vout.CoinId) == types.MEERB {
-				ctx, err := qconsensus.NewExportTx(tx)
+				ctx, err := vm.NewExportTx(tx)
 				if err == nil {
 					to, err := common.NewMeerEVMAddress(ctx.To)
 					if err == nil {
