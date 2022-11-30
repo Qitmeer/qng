@@ -8,7 +8,8 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/common/math"
-	qconsensus "github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/model"
+	qconsensus "github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
@@ -255,7 +256,7 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 
 	if tx == nil {
 		//not found from mem-pool, try db
-		txIndex := api.txManager.txIndex
+		txIndex := api.txManager.indexManager.TxIndex()
 		if txIndex == nil {
 			return nil, fmt.Errorf("the transaction index " +
 				"must be enabled to query the blockchain (specify --txindex in configuration)")
@@ -268,52 +269,64 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 		if err != nil {
 			return nil, errors.New("Failed to retrieve transaction location")
 		}
+		var dtx *types.Transaction
 		if blockRegion == nil {
-			if api.txManager.bm.GetChain().CacheInvalidTx {
-				blockRegion, err = txIndex.InvalidTxBlockRegion(txHash)
+			if api.txManager.indexManager.InvalidTxIndex() != nil {
+				dtx, err = api.txManager.indexManager.InvalidTxIndex().Get(&txHash)
 				if err != nil {
 					return nil, errors.New("Failed to retrieve transaction location")
+				}
+
+				if !verbose {
+					hexStr, err := marshal.MessageToHex(dtx)
+					if err != nil {
+						return nil, err
+					}
+					return hexStr, nil
 				}
 			} else {
 				return nil, rpc.RpcNoTxInfoError(&txHash)
 			}
+		}else{
+
+			// Load the raw transaction bytes from the database.
+			var txBytes []byte
+			err = api.txManager.db.View(func(dbTx database.Tx) error {
+				var err error
+				txBytes, err = dbTx.FetchBlockRegion(blockRegion)
+				return err
+			})
+			if err != nil {
+				return nil, rpc.RpcNoTxInfoError(&txHash)
+			}
+
+			// When the verbose flag isn't set, simply return the serialized
+			// transaction as a hex-encoded string.  This is done here to
+			// avoid deserializing it only to reserialize it again later.
+			if !verbose {
+				return hex.EncodeToString(txBytes), nil
+			}
+
+			// Grab the block height.
+			blkHash = blockRegion.Hash
+			/*blkOrder, err = api.txManager.bm.GetChain().BlockOrderByHash(blkHash)
+			if err != nil {
+				context := "Failed to retrieve block height"
+				return nil, rpc.RpcInternalError(err.Error(), context)
+			}*/
+
+			// Deserialize the transaction
+			var msgTx types.Transaction
+			err = msgTx.Deserialize(bytes.NewReader(txBytes))
+			log.Trace("GetRawTx", "hex", hex.EncodeToString(txBytes))
+			if err != nil {
+				context := "Failed to deserialize transaction"
+				return nil, rpc.RpcInternalError(err.Error(), context)
+			}
+			dtx=&msgTx
 		}
 
-		// Load the raw transaction bytes from the database.
-		var txBytes []byte
-		err = api.txManager.db.View(func(dbTx database.Tx) error {
-			var err error
-			txBytes, err = dbTx.FetchBlockRegion(blockRegion)
-			return err
-		})
-		if err != nil {
-			return nil, rpc.RpcNoTxInfoError(&txHash)
-		}
-
-		// When the verbose flag isn't set, simply return the serialized
-		// transaction as a hex-encoded string.  This is done here to
-		// avoid deserializing it only to reserialize it again later.
-		if !verbose {
-			return hex.EncodeToString(txBytes), nil
-		}
-
-		// Grab the block height.
-		blkHash = blockRegion.Hash
-		/*blkOrder, err = api.txManager.bm.GetChain().BlockOrderByHash(blkHash)
-		if err != nil {
-			context := "Failed to retrieve block height"
-			return nil, rpc.RpcInternalError(err.Error(), context)
-		}*/
-
-		// Deserialize the transaction
-		var msgTx types.Transaction
-		err = msgTx.Deserialize(bytes.NewReader(txBytes))
-		log.Trace("GetRawTx", "hex", hex.EncodeToString(txBytes))
-		if err != nil {
-			context := "Failed to deserialize transaction"
-			return nil, rpc.RpcInternalError(err.Error(), context)
-		}
-		mtx = types.NewTx(&msgTx)
+		mtx = types.NewTx(dtx)
 		mtx.IsDuplicate = api.txManager.bm.GetChain().IsDuplicateTx(mtx.Hash(), blkHash)
 	} else {
 		// When the verbose flag isn't set, simply return the
@@ -482,7 +495,7 @@ func (api *PublicTxAPI) GetUtxo(txHash hash.Hash, vout uint32, includeMempool *b
 
 // handleSearchRawTransactions implements the searchrawtransactions command.
 func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *uint, skip *uint, revers *bool, verbose *bool, filterAddrs *[]string) (interface{}, error) {
-	addrIndex := api.txManager.addrIndex
+	addrIndex := api.txManager.indexManager.AddrIndex()
 	if addrIndex == nil {
 		return nil, fmt.Errorf("Address index must be enabled (--addrindex)")
 	}
@@ -491,7 +504,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 		vinExtra = *vinext
 	}
 
-	if vinExtra && api.txManager.txIndex == nil {
+	if vinExtra && api.txManager.indexManager.TxIndex() == nil {
 		return nil, fmt.Errorf("Transaction index must be enabled (--txindex)")
 	}
 	params := api.txManager.bm.ChainParams()
@@ -697,7 +710,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 func (api *PublicTxAPI) fetchMempoolTxnsForAddress(addr types.Address, numToSkip, numRequested uint32) ([]*types.Tx, uint32) {
 	// There are no entries to return when there are less available than the
 	// number being skipped.
-	mpTxns := api.txManager.addrIndex.UnconfirmedTxnsForAddress(addr)
+	mpTxns := api.txManager.indexManager.AddrIndex().UnconfirmedTxnsForAddress(addr)
 	numAvailable := uint32(len(mpTxns))
 	if numToSkip > numAvailable {
 		return nil, numAvailable
@@ -854,7 +867,7 @@ func (api *PublicTxAPI) fetchInputTxos(tx *types.Tx) (map[types.TxOutPoint]types
 		}
 
 		// Look up the location of the transaction.
-		blockRegion, err := api.txManager.txIndex.TxBlockRegion(origin.Hash)
+		blockRegion, err := api.txManager.indexManager.TxIndex().TxBlockRegion(origin.Hash)
 		if err != nil {
 			context := "Failed to retrieve transaction location"
 			return nil, rpc.RpcInternalError(err.Error(), context)
@@ -896,7 +909,7 @@ func (api *PublicTxAPI) fetchInputTxos(tx *types.Tx) (map[types.TxOutPoint]types
 }
 
 func (api *PublicTxAPI) GetRawTransactionByHash(txHash hash.Hash, verbose bool) (interface{}, error) {
-	txIndex := api.txManager.txIndex
+	txIndex := api.txManager.indexManager.TxIndex()
 	if txIndex == nil {
 		return nil, fmt.Errorf("the transaction index " +
 			"must be enabled to query the blockchain (specify --txindex in configuration)")
@@ -905,8 +918,8 @@ func (api *PublicTxAPI) GetRawTransactionByHash(txHash hash.Hash, verbose bool) 
 	var err error
 	txid, err = txIndex.GetTxIdByHash(txHash)
 	if err != nil {
-		if api.txManager.bm.GetChain().CacheInvalidTx {
-			txid, err = txIndex.GetInvalidTxIdByHash(txHash)
+		if api.txManager.indexManager.InvalidTxIndex() != nil {
+			txid, err = api.txManager.indexManager.InvalidTxIndex().GetIdByHash(&txHash)
 			if err != nil {
 				return nil, fmt.Errorf("no tx")
 			}
@@ -921,7 +934,7 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 	var mtx *types.Tx
 	tx, _ := api.txManager.txMemPool.FetchTransaction(&txid)
 	if tx == nil {
-		txIndex := api.txManager.txIndex
+		txIndex := api.txManager.indexManager.TxIndex()
 		if txIndex == nil {
 			return nil, fmt.Errorf("the transaction index " +
 				"must be enabled to query the blockchain (specify --txindex in configuration)")
@@ -934,32 +947,33 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 			return nil, errors.New("Failed to retrieve transaction location")
 		}
 		if blockRegion == nil {
-			if api.txManager.bm.GetChain().CacheInvalidTx {
-				blockRegion, err = txIndex.InvalidTxBlockRegion(txid)
+			if api.txManager.indexManager.InvalidTxIndex() != nil {
+				dtx, err := api.txManager.indexManager.InvalidTxIndex().Get(&txid)
 				if err != nil {
 					return nil, errors.New("Failed to retrieve transaction location")
 				}
+				mtx = types.NewTx(dtx)
 			} else {
 				return nil, rpc.RpcNoTxInfoError(&txid)
 			}
+		}else{
+			var txBytes []byte
+			err = api.txManager.db.View(func(dbTx database.Tx) error {
+				var err error
+				txBytes, err = dbTx.FetchBlockRegion(blockRegion)
+				return err
+			})
+			if err != nil {
+				return nil, rpc.RpcNoTxInfoError(&txid)
+			}
+			var msgTx types.Transaction
+			err = msgTx.Deserialize(bytes.NewReader(txBytes))
+			if err != nil {
+				context := "Failed to deserialize transaction"
+				return nil, rpc.RpcInternalError(err.Error(), context)
+			}
+			mtx = types.NewTx(&msgTx)
 		}
-
-		var txBytes []byte
-		err = api.txManager.db.View(func(dbTx database.Tx) error {
-			var err error
-			txBytes, err = dbTx.FetchBlockRegion(blockRegion)
-			return err
-		})
-		if err != nil {
-			return nil, rpc.RpcNoTxInfoError(&txid)
-		}
-		var msgTx types.Transaction
-		err = msgTx.Deserialize(bytes.NewReader(txBytes))
-		if err != nil {
-			context := "Failed to deserialize transaction"
-			return nil, rpc.RpcInternalError(err.Error(), context)
-		}
-		mtx = types.NewTx(&msgTx)
 	} else {
 		mtx = tx
 	}
@@ -967,6 +981,46 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 		return nil, fmt.Errorf("%s is not %v", txid, types.DetermineTxType(mtx.Tx))
 	}
 	return fmt.Sprintf("0x%s", mtx.Tx.TxIn[0].PreviousOut.Hash.String()), nil
+}
+
+func (api *PublicTxAPI) GetTxIDByMeerEVMTxHash(etxh hash.Hash) (interface{}, error) {
+	vmi:=api.txManager.bm.GetChain().VMService
+	etxs,txhs, err := vmi.GetTxsFromMempool()
+	if err != nil {
+		return nil,err
+	}
+	if len(txhs) > 0 {
+		for i:=0;i<len(txhs);i++ {
+			if txhs[i].IsEqual(&etxh) {
+				return etxs[i].TxHash().String(),nil
+			}
+		}
+	}
+
+	bid:=vmi.GetBlockIDByTxHash(&etxh)
+	if bid == 0 {
+		return nil,fmt.Errorf("No meerevm tx:%s",etxh.String())
+	}
+	vmbiStore:=api.txManager.consensus.VMBlockIndexStore()
+	if vmbiStore == nil {
+		return nil,fmt.Errorf("You must be enable by --vmblockindex")
+	}
+	bh,err:=vmbiStore.Get(model.NewStagingArea(),bid)
+	if err != nil {
+		return nil,err
+	}
+	block,err:=api.txManager.bm.GetChain().FetchBlockByHash(bh)
+	if err != nil {
+		return nil,err
+	}
+	for _,tx:=range block.Transactions() {
+		if types.IsCrossChainVMTx(tx.Tx) {
+			if etxh.IsEqual(&tx.Tx.TxIn[0].PreviousOut.Hash) {
+				return tx.Hash().String(),nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("No meerevm tx:%s",etxh.String())
 }
 
 type PrivateTxAPI struct {
@@ -1029,7 +1083,7 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 			return nil, err
 		}
 	} else {
-		txIndex := api.txManager.txIndex
+		txIndex := api.txManager.indexManager.TxIndex()
 		if txIndex == nil {
 			return nil, fmt.Errorf("the transaction index " +
 				"must be enabled to query the blockchain (specify --txindex in configuration)")

@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	cmodel "github.com/Qitmeer/qng/consensus/model"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/meerdag/anticone"
 	"github.com/Qitmeer/qng/meerdag/ghostdag"
@@ -244,15 +245,15 @@ func (gd *GhostDAG) UpdateOrders() error {
 
 //---------------
 //implementation
-func (gd *GhostDAG) BlockHeader(dbContext model.DBReader, stagingArea *model.StagingArea, blockHash *hash.Hash) (model.BlockHeader, error) {
+func (gd *GhostDAG) BlockHeader(dbContext model.DBReader, stagingArea *cmodel.StagingArea, blockHash *hash.Hash) (model.BlockHeader, error) {
 	return ghostdag.NewBlockHeader(params.ActiveNetParams.GenesisBlock.Header.Difficulty, params.ActiveNetParams.GenesisBlock.Header.Pow), nil
 }
 
-func (gd *GhostDAG) HasBlockHeader(dbContext model.DBReader, stagingArea *model.StagingArea, blockHash *hash.Hash) (bool, error) {
+func (gd *GhostDAG) HasBlockHeader(dbContext model.DBReader, stagingArea *cmodel.StagingArea, blockHash *hash.Hash) (bool, error) {
 	return true, nil
 }
 
-func (gd *GhostDAG) BlockHeaders(dbContext model.DBReader, stagingArea *model.StagingArea, blockHashes []*hash.Hash) ([]model.BlockHeader, error) {
+func (gd *GhostDAG) BlockHeaders(dbContext model.DBReader, stagingArea *cmodel.StagingArea, blockHashes []*hash.Hash) ([]model.BlockHeader, error) {
 	bhs := []model.BlockHeader{}
 	for _, h := range blockHashes {
 		bh, err := gd.BlockHeader(dbContext, stagingArea, h)
@@ -264,15 +265,15 @@ func (gd *GhostDAG) BlockHeaders(dbContext model.DBReader, stagingArea *model.St
 	return bhs, nil
 }
 
-func (gd *GhostDAG) Delete(stagingArea *model.StagingArea, blockHash *hash.Hash) {
+func (gd *GhostDAG) Delete(stagingArea *cmodel.StagingArea, blockHash *hash.Hash) {
 	panic("implement me")
 }
 
-func (gd *GhostDAG) Count(stagingArea *model.StagingArea) uint64 {
+func (gd *GhostDAG) Count(stagingArea *cmodel.StagingArea) uint64 {
 	return uint64(gd.bd.blockTotal)
 }
 
-func (gd *GhostDAG) Parents(stagingArea *model.StagingArea, blockHash *hash.Hash) ([]*hash.Hash, error) {
+func (gd *GhostDAG) Parents(stagingArea *cmodel.StagingArea, blockHash *hash.Hash) ([]*hash.Hash, error) {
 	var ib IBlock
 	if blockHash.IsEqual(&model.VirtualBlockHash) {
 		ib = gd.virtualBlock
@@ -292,19 +293,19 @@ func (gd *GhostDAG) Parents(stagingArea *model.StagingArea, blockHash *hash.Hash
 	return ps, nil
 }
 
-func (gd *GhostDAG) Children(stagingArea *model.StagingArea, blockHash *hash.Hash) ([]*hash.Hash, error) {
+func (gd *GhostDAG) Children(stagingArea *cmodel.StagingArea, blockHash *hash.Hash) ([]*hash.Hash, error) {
 	return nil, nil
 }
 
-func (gd *GhostDAG) IsParentOf(stagingArea *model.StagingArea, blockHashA *hash.Hash, blockHashB *hash.Hash) (bool, error) {
+func (gd *GhostDAG) IsParentOf(stagingArea *cmodel.StagingArea, blockHashA *hash.Hash, blockHashB *hash.Hash) (bool, error) {
 	return false, nil
 }
 
-func (gd *GhostDAG) IsChildOf(stagingArea *model.StagingArea, blockHashA *hash.Hash, blockHashB *hash.Hash) (bool, error) {
+func (gd *GhostDAG) IsChildOf(stagingArea *cmodel.StagingArea, blockHashA *hash.Hash, blockHashB *hash.Hash) (bool, error) {
 	return false, nil
 }
 
-func (gd *GhostDAG) IsAncestorOf(stagingArea *model.StagingArea, blockHashA *hash.Hash, blockHashB *hash.Hash) (bool, error) {
+func (gd *GhostDAG) IsAncestorOf(stagingArea *cmodel.StagingArea, blockHashA *hash.Hash, blockHashB *hash.Hash) (bool, error) {
 	blockBParents, err := gd.Parents(stagingArea, blockHashB)
 	if err != nil {
 		return false, err
@@ -331,35 +332,35 @@ func (gd *GhostDAG) IsAncestorOf(stagingArea *model.StagingArea, blockHashA *has
 	return false, nil
 }
 
-func (gd *GhostDAG) IsAncestorOfAny(stagingArea *model.StagingArea, blockHash *hash.Hash, potentialDescendants []*hash.Hash) (bool, error) {
+func (gd *GhostDAG) IsAncestorOfAny(stagingArea *cmodel.StagingArea, blockHash *hash.Hash, potentialDescendants []*hash.Hash) (bool, error) {
 	return false, nil
 }
 
-func (gd *GhostDAG) IsAnyAncestorOf(stagingArea *model.StagingArea, potentialAncestors []*hash.Hash, blockHash *hash.Hash) (bool, error) {
+func (gd *GhostDAG) IsAnyAncestorOf(stagingArea *cmodel.StagingArea, potentialAncestors []*hash.Hash, blockHash *hash.Hash) (bool, error) {
 	return false, nil
 }
 
-func (gd *GhostDAG) IsInSelectedParentChainOf(stagingArea *model.StagingArea, blockHashA *hash.Hash, blockHashB *hash.Hash) (bool, error) {
+func (gd *GhostDAG) IsInSelectedParentChainOf(stagingArea *cmodel.StagingArea, blockHashA *hash.Hash, blockHashB *hash.Hash) (bool, error) {
 	return false, nil
 }
 
-func (gd *GhostDAG) ChildInSelectedParentChainOf(stagingArea *model.StagingArea, lowHash, highHash *hash.Hash) (*hash.Hash, error) {
+func (gd *GhostDAG) ChildInSelectedParentChainOf(stagingArea *cmodel.StagingArea, lowHash, highHash *hash.Hash) (*hash.Hash, error) {
 	return nil, nil
 }
 
-func (gd *GhostDAG) SetParents(stagingArea *model.StagingArea, blockHash *hash.Hash, parentHashes []*hash.Hash) error {
+func (gd *GhostDAG) SetParents(stagingArea *cmodel.StagingArea, blockHash *hash.Hash, parentHashes []*hash.Hash) error {
 	return nil
 }
 
-func (gd *GhostDAG) Stage(stagingArea *model.StagingArea, blockHash *hash.Hash, blockGHOSTDAGData *model.BlockGHOSTDAGData, isTrustedData bool) {
+func (gd *GhostDAG) Stage(stagingArea *cmodel.StagingArea, blockHash *hash.Hash, blockGHOSTDAGData *model.BlockGHOSTDAGData, isTrustedData bool) {
 	gd.bgdDatas[*blockHash] = blockGHOSTDAGData
 }
 
-func (gd *GhostDAG) IsStaged(stagingArea *model.StagingArea) bool {
+func (gd *GhostDAG) IsStaged(stagingArea *cmodel.StagingArea) bool {
 	return true
 }
 
-func (gd *GhostDAG) Get(dbContext model.DBReader, stagingArea *model.StagingArea, blockHash *hash.Hash, isTrustedData bool) (*model.BlockGHOSTDAGData, error) {
+func (gd *GhostDAG) Get(dbContext model.DBReader, stagingArea *cmodel.StagingArea, blockHash *hash.Hash, isTrustedData bool) (*model.BlockGHOSTDAGData, error) {
 	v, ok := gd.bgdDatas[*blockHash]
 	if ok {
 		return v, nil
@@ -367,5 +368,5 @@ func (gd *GhostDAG) Get(dbContext model.DBReader, stagingArea *model.StagingArea
 	return nil, nil
 }
 
-func (gd *GhostDAG) UnstageAll(stagingArea *model.StagingArea) {
+func (gd *GhostDAG) UnstageAll(stagingArea *cmodel.StagingArea) {
 }

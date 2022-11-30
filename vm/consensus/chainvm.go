@@ -27,7 +27,7 @@ type ChainVM interface {
 
 	AddTxToMempool(tx *types.Transaction, local bool) (int64, error)
 
-	GetTxsFromMempool() ([]*types.Transaction, error)
+	GetTxsFromMempool() ([]*types.Transaction,[]*hash.Hash, error)
 
 	GetMempoolSize() int64
 
@@ -35,11 +35,14 @@ type ChainVM interface {
 
 	CheckConnectBlock(block Block) error
 
-	ConnectBlock(block Block) error
+	ConnectBlock(block Block) (uint64,error)
 
-	DisconnectBlock(block Block) error
+	DisconnectBlock(block Block) (uint64,error)
 
 	ResetTemplate() error
 
 	Genesis() *hash.Hash
+
+	GetBlockID(bh *hash.Hash) uint64
+	GetBlockIDByTxHash(txhash *hash.Hash) uint64
 }

@@ -10,10 +10,9 @@ package index
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/meerdag"
 )
 
 var (
@@ -48,15 +47,15 @@ type Indexer interface {
 	// Init is invoked when the index manager is first initializing the
 	// index.  This differs from the Create method in that it is called on
 	// every load, including the case the index was just created.
-	Init(chain *blockchain.BlockChain) error
+	Init(chain model.BlockChain) error
 
 	// ConnectBlock is invoked when the index manager is notified that a new
 	// block has been connected to the main chain.
-	ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut, ib meerdag.IBlock) error
+	ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error
 
 	// DisconnectBlock is invoked when the index manager is notified that a
 	// block has been disconnected from the main chain.
-	DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos []blockchain.SpentTxOut) error
+	DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte) error
 }
 
 // IndexDropper provides a method to remove an index from the database. Indexers

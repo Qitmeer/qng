@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"time"
 
@@ -463,43 +462,35 @@ func dbDumpTrie(ctx *cli.Context) error {
 }
 
 func freezerInspect(ctx *cli.Context) error {
-	var (
-		start, end    int64
-		disableSnappy bool
-		err           error
-	)
-	if ctx.NArg() < 3 {
+	if ctx.NArg() < 4 {
 		return fmt.Errorf("required arguments: %v", ctx.Command.ArgsUsage)
 	}
-	kind := ctx.Args().Get(0)
-	if noSnap, ok := rawdb.FreezerNoSnappy[kind]; !ok {
-		var options []string
-		for opt := range rawdb.FreezerNoSnappy {
-			options = append(options, opt)
-		}
-		sort.Strings(options)
-		return fmt.Errorf("Could read freezer-type '%v'. Available options: %v", kind, options)
-	} else {
-		disableSnappy = noSnap
-	}
-	if start, err = strconv.ParseInt(ctx.Args().Get(1), 10, 64); err != nil {
-		log.Info("Could read start-param", "error", err)
+	var (
+		freezer = ctx.Args().Get(0)
+		table   = ctx.Args().Get(1)
+	)
+	start, err := strconv.ParseInt(ctx.Args().Get(2), 10, 64)
+	if err != nil {
+		log.Info("Could not read start-param", "err", err)
 		return err
 	}
-	if end, err = strconv.ParseInt(ctx.Args().Get(2), 10, 64); err != nil {
-		log.Info("Could read count param", "error", err)
+	end, err := strconv.ParseInt(ctx.Args().Get(3), 10, 64)
+	if err != nil {
+		log.Info("Could not read count param", "err", err)
 		return err
 	}
 	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg.DataDir)
 	defer stack.Close()
-	path := filepath.Join(stack.ResolvePath("chaindata"), "ancient")
-	log.Info("Opening freezer", "location", path, "name", kind)
-	if f, err := rawdb.NewFreezerTable(path, kind, disableSnappy, true); err != nil {
+
+	db := utils.MakeChainDatabase(ctx, stack, true)
+	defer db.Close()
+
+	ancient, err := db.AncientDatadir()
+	if err != nil {
+		log.Info("Failed to retrieve ancient root", "err", err)
 		return err
-	} else {
-		f.DumpIndex(start, end)
 	}
-	return nil
+	return rawdb.InspectFreezerTable(ancient, freezer, table, start, end)
 }
 
 func freezerMigrate(ctx *cli.Context) error {

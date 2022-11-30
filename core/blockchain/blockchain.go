@@ -9,8 +9,9 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/util"
-	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/consensus/forks"
+	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
@@ -56,10 +57,10 @@ type BlockChain struct {
 
 	db           database.DB
 	dbInfo       *databaseInfo
-	timeSource   MedianTimeSource
+	timeSource   model.MedianTimeSource
 	events       *event.Feed
 	sigCache     *txscript.SigCache
-	indexManager IndexManager
+	indexManager model.IndexManager
 
 	// subsidyCache is the cache that provides quick lookup of subsidy
 	// values.
@@ -107,9 +108,6 @@ type BlockChain struct {
 	//block dag
 	bd *meerdag.MeerDAG
 
-	// Cache Invalid tx
-	CacheInvalidTx bool
-
 	// cache notification
 	CacheNotifications []*Notification
 
@@ -124,11 +122,15 @@ type BlockChain struct {
 	unknownRulesWarned bool
 	deploymentMux      sync.RWMutex
 
-	VMService consensus.VMI
+	VMService vm.VMI
 
 	Acct ACCTI
 
 	shutdownTracker *shutdown.Tracker
+
+	consensus model.Consensus
+
+	interrupt <-chan struct{}
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.
@@ -158,7 +160,7 @@ type Config struct {
 	// The caller is expected to keep a reference to the time source as well
 	// and add time samples from other peers on the network so the local
 	// time is adjusted to be in agreement with other peers.
-	TimeSource MedianTimeSource
+	TimeSource model.MedianTimeSource
 
 	// Events defines a event manager to which notifications will be sent
 	// when various events take place.  See the documentation for
@@ -183,13 +185,10 @@ type Config struct {
 	//
 	// This field can be nil if the caller does not wish to make use of an
 	// index manager.
-	IndexManager IndexManager
+	IndexManager model.IndexManager
 
 	// Setting different dag types will use different consensus
 	DAGType string
-
-	// Cache Invalid tx
-	CacheInvalidTx bool
 
 	// data dir
 	DataDir string
@@ -356,11 +355,11 @@ func New(config *Config) (*BlockChain, error) {
 		sigCache:           config.SigCache,
 		indexManager:       config.IndexManager,
 		orphans:            make(map[hash.Hash]*orphanBlock),
-		CacheInvalidTx:     config.CacheInvalidTx,
 		CacheNotifications: []*Notification{},
 		warningCaches:      newThresholdCaches(VBNumBits),
 		deploymentCaches:   newThresholdCaches(params.DefinedDeployments),
 		shutdownTracker:    shutdown.NewTracker(config.DataDir),
+		interrupt:          config.Interrupt,
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
@@ -368,29 +367,29 @@ func New(config *Config) (*BlockChain, error) {
 		1.0/float64(par.TargetTimePerBlock/time.Second), b.db, b.getBlockData)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
 	b.bd.SetCacheSize(config.DAGCacheSize, config.BlockDataCacheSize)
+	return &b, nil
+}
+
+func (b *BlockChain) Init() error {
 	// Initialize the chain state from the passed database.  When the db
 	// does not yet contain any chain state, both it and the chain state
 	// will be initialized to contain only the genesis block.
-	if err := b.initChainState(config.Interrupt); err != nil {
-		return nil, err
+	if err := b.initChainState(); err != nil {
+		return err
 	}
 	// Initialize and catch up all of the currently active optional indexes
 	// as needed.
-	if config.IndexManager != nil {
-		err := config.IndexManager.Init(&b, config.Interrupt)
+	if b.indexManager != nil {
+		err := b.indexManager.Init()
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-	err := b.CheckCacheInvalidTxConfig()
-	if err != nil {
-		return nil, err
-	}
-	b.pruner = newChainPruner(&b)
+	b.pruner = newChainPruner(b)
 
 	// Initialize rule change threshold state caches.
 	if err := b.initThresholdCaches(); err != nil {
-		return nil, err
+		return err
 	}
 
 	log.Info(fmt.Sprintf("DAG Type:%s", b.bd.GetName()))
@@ -403,14 +402,13 @@ func New(config *Config) (*BlockChain, error) {
 	for _, v := range tips {
 		log.Info(fmt.Sprintf("hash=%s,order=%s,height=%d", v.GetHash(), meerdag.GetOrderLogStr(v.GetOrder()), v.GetHeight()))
 	}
-
-	return &b, nil
+	return nil
 }
 
 // initChainState attempts to load and initialize the chain state from the
 // database.  When the db does not yet contain any chain state, both it and the
 // chain state are initialized to the genesis block.
-func (b *BlockChain) initChainState(interrupt <-chan struct{}) error {
+func (b *BlockChain) initChainState() error {
 	// Update database versioning scheme if needed.
 	err := b.db.Update(func(dbTx database.Tx) error {
 		// No versioning upgrade is needed if the dbinfo bucket does not
@@ -507,7 +505,7 @@ func (b *BlockChain) initChainState(interrupt <-chan struct{}) error {
 	}
 
 	//   Upgrade the database as needed.
-	err = b.upgradeDB(interrupt)
+	err = b.upgradeDB(b.interrupt)
 	if err != nil {
 		return err
 	}
@@ -1000,9 +998,15 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 		}
 		return nil
 	})
-
 	if err != nil {
 		return err
+	}
+
+	if b.indexManager != nil {
+		err := b.indexManager.UpdateMainTip(mainTip.GetHash(), uint64(mainTip.GetOrder()))
+		if err != nil {
+			return err
+		}
 	}
 	// Update the state for the best block.  Notice how this replaces the
 	// entire struct instead of updating the existing one.  This effectively
@@ -1028,8 +1032,12 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut, connectedBlocks *list.List) error {
+	pkss := [][]byte{}
+	for _, stxo := range stxos {
+		pkss = append(pkss, stxo.PkScript)
+	}
 	if !node.GetStatus().KnownInvalid() {
-		err := b.VMService.ConnectBlock(block)
+		vmbid, err := b.VMService.ConnectBlock(block)
 		if err != nil {
 			return err
 		}
@@ -1050,19 +1058,20 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 			if err != nil {
 				return err
 			}
-			// Allow the index manager to call each of the currently active
-			// optional indexes with the block being connected so they can
-			// update themselves accordingly.
-			if b.indexManager != nil {
-				err := b.indexManager.ConnectBlock(dbTx, block, stxos, node)
-				if err != nil {
-					return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
-				}
-			}
 			return nil
 		})
 		if err != nil {
 			return err
+		}
+
+		// Allow the index manager to call each of the currently active
+		// optional indexes with the block being connected so they can
+		// update themselves accordingly.
+		if b.indexManager != nil {
+			err := b.indexManager.ConnectBlock(block, pkss, node, vmbid)
+			if err != nil {
+				return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
+			}
 		}
 
 		// Prune fully spent entries and mark all entries in the view unmodified
@@ -1075,17 +1084,11 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		}
 	} else {
 		// Atomically insert info into the database.
-		err := b.db.Update(func(dbTx database.Tx) error {
-			if b.indexManager != nil {
-				err := b.indexManager.ConnectBlock(dbTx, block, stxos, node)
-				if err != nil {
-					return err
-				}
+		if b.indexManager != nil {
+			err := b.indexManager.ConnectBlock(block, pkss, node, 0)
+			if err != nil {
+				return err
 			}
-			return nil
-		})
-		if err != nil {
-			return err
 		}
 	}
 	connectedBlocks.PushBack([]interface{}{block, b.bd.IsOnMainChain(node.GetID())})
@@ -1096,8 +1099,8 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 // the main (best) chain.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
-	err := b.VMService.DisconnectBlock(block)
+func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
+	vmbid, err := b.VMService.DisconnectBlock(block)
 	if err != nil {
 		return err
 	}
@@ -1116,21 +1119,24 @@ func (b *BlockChain) disconnectBlock(block *types.SerializedBlock, view *UtxoVie
 		if err != nil {
 			return err
 		}
-		// Allow the index manager to call each of the currently active
-		// optional indexes with the block being disconnected so they
-		// can update themselves accordingly.
-		if b.indexManager != nil {
-			err := b.indexManager.DisconnectBlock(dbTx, block, stxos)
-			if err != nil {
-				return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
-			}
-		}
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-
+	// Allow the index manager to call each of the currently active
+	// optional indexes with the block being disconnected so they
+	// can update themselves accordingly.
+	if b.indexManager != nil {
+		pkss := [][]byte{}
+		for _, stxo := range stxos {
+			pkss = append(pkss, stxo.PkScript)
+		}
+		err := b.indexManager.DisconnectBlock(block, pkss, ib, vmbid)
+		if err != nil {
+			return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
+		}
+	}
 	// Prune fully spent entries and mark all entries in the view unmodified
 	// now that the modifications have been committed to the database.
 	view.commit()
@@ -1222,7 +1228,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 
 		//newn.FlushToDB(b)
 
-		err = b.disconnectBlock(block, view, stxos)
+		err = b.disconnectBlock(n.Block, block, view, stxos)
 		if err != nil {
 			return err
 		}
@@ -1306,7 +1312,7 @@ func (b *BlockChain) BlockDAG() *meerdag.MeerDAG {
 }
 
 // Return median time source
-func (b *BlockChain) TimeSource() MedianTimeSource {
+func (b *BlockChain) TimeSource() model.MedianTimeSource {
 	return b.timeSource
 }
 
@@ -1331,6 +1337,20 @@ func (b *BlockChain) fetchSpendJournal(targetBlock *types.SerializedBlock) ([]Sp
 	}
 
 	return spendEntries, nil
+}
+
+func (b *BlockChain) FetchSpendJournalPKS(targetBlock *types.SerializedBlock) ([][]byte, error) {
+	b.ChainRLock()
+	defer b.ChainRUnlock()
+	ret := [][]byte{}
+	stxo, err := b.fetchSpendJournal(targetBlock)
+	if err != nil {
+		return nil, err
+	}
+	for _, so := range stxo {
+		ret = append(ret, so.PkScript)
+	}
+	return ret, nil
 }
 
 // expect priority
@@ -1452,25 +1472,6 @@ func (b *BlockChain) CalcWeight(ib meerdag.IBlock, bi *meerdag.BlueInfo) int64 {
 		return 0
 	}
 	return b.subsidyCache.CalcBlockSubsidy(bi)
-}
-
-func (b *BlockChain) CheckCacheInvalidTxConfig() error {
-	if b.CacheInvalidTx {
-		hasConfig := true
-		b.db.View(func(dbTx database.Tx) error {
-			meta := dbTx.Metadata()
-			citData := meta.Get(dbnamespace.CacheInvalidTxName)
-			if citData == nil {
-				hasConfig = false
-			}
-			return nil
-		})
-		if hasConfig {
-			return nil
-		}
-		return fmt.Errorf("You must use --droptxindex before you use --cacheinvalidtx.")
-	}
-	return nil
 }
 
 // Return chain params
@@ -1597,4 +1598,16 @@ func (b *BlockChain) HasTx(txid *hash.Hash) bool {
 
 func (b *BlockChain) DB() database.DB {
 	return b.db
+}
+
+func (b *BlockChain) IndexManager() model.IndexManager {
+	return b.indexManager
+}
+
+func (b *BlockChain) GetMainOrder() uint {
+	return b.BestSnapshot().GraphState.GetMainOrder()
+}
+
+func (b *BlockChain) GetBlockHashByOrder(order uint) *hash.Hash {
+	return b.bd.GetBlockHashByOrder(order)
 }

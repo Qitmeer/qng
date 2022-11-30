@@ -469,11 +469,12 @@ func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
 
 func makeFullNode(ctx *cli.Context, cfg *MeerethConfig) (*node.Node, *eth.EthAPIBackend, *eth.Ethereum) {
 	stack := makeConfigNode(ctx, cfg)
-	if ctx.IsSet(utils.OverrideGrayGlacierFlag.Name) {
-		cfg.Eth.OverrideGrayGlacier = new(big.Int).SetUint64(ctx.Uint64(utils.OverrideGrayGlacierFlag.Name))
-	}
 	if ctx.IsSet(utils.OverrideTerminalTotalDifficulty.Name) {
 		cfg.Eth.OverrideTerminalTotalDifficulty = qcommon.GlobalBig(ctx, utils.OverrideTerminalTotalDifficulty.Name)
+	}
+	if ctx.IsSet(utils.OverrideTerminalTotalDifficultyPassed.Name) {
+		override := ctx.Bool(utils.OverrideTerminalTotalDifficultyPassed.Name)
+		cfg.Eth.OverrideTerminalTotalDifficultyPassed = &override
 	}
 	backend, ethe := utils.RegisterEthService(stack, &cfg.Eth)
 
@@ -492,9 +493,11 @@ func makeFullNode(ctx *cli.Context, cfg *MeerethConfig) (*node.Node, *eth.EthAPI
 			log.Warn("Database has receipts with a legacy format. Please run `qng db freezer-migrate`.")
 		}
 	}
+	// Configure log filter RPC API.
+	filterSystem := utils.RegisterFilterAPI(stack, backend, &cfg.Eth)
 
 	if ctx.IsSet(utils.GraphQLEnabledFlag.Name) {
-		utils.RegisterGraphQLService(stack, backend, cfg.Node)
+		utils.RegisterGraphQLService(stack, backend,filterSystem, &cfg.Node)
 	}
 	if cfg.Ethstats.URL != "" {
 		utils.RegisterEthStatsService(stack, backend, cfg.Ethstats.URL)

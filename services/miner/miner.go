@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
@@ -48,7 +49,7 @@ type Miner struct {
 	cfg          *config.Config
 	events       *event.Feed
 	txSource     mining.TxSource
-	timeSource   blockchain.MedianTimeSource
+	timeSource   model.MedianTimeSource
 	blockManager *blkmgr.BlockManager
 	policy       *mining.Policy
 	sigCache     *txscript.SigCache
@@ -690,7 +691,7 @@ func (m *Miner) sendNotification(url string, jsonData []byte) {
 
 func NewMiner(cfg *config.Config, policy *mining.Policy,
 	sigCache *txscript.SigCache,
-	txSource mining.TxSource, tsource blockchain.MedianTimeSource, blkMgr *blkmgr.BlockManager, events *event.Feed) *Miner {
+	txSource mining.TxSource, tsource model.MedianTimeSource, blkMgr *blkmgr.BlockManager, events *event.Feed) *Miner {
 	m := Miner{
 		msgChan:       make(chan interface{}),
 		quit:          make(chan struct{}),
