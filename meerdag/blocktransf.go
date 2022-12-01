@@ -384,6 +384,51 @@ func (bd *MeerDAG) locateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
 	return result
 }
 
+// Fuzzy and quick locate all eligible block by current graph state.
+// And maxHashes param cannot be empty.
+func (bd *MeerDAG) locateBlocksFuzzy(gs *GraphState, maxHashes uint) []*hash.Hash {
+	if gs.IsExcellent(bd.getGraphState()) {
+		return nil
+	}
+	curID := MaxId
+	for _, k := range gs.tips {
+		gst := bd.getBlock(&k)
+		if gst == nil || !gst.IsOrdered() {
+			continue
+		}
+		if gst.GetID() < curID {
+			curID = gst.GetID()
+		}
+	}
+	fsSlice := BlockSlice{}
+	mainTipID := bd.instance.GetMainChainTipId()
+	for ; curID <= mainTipID; curID++ {
+		ib := bd.getBlockById(curID)
+		if ib == nil {
+			continue
+		}
+		if gs.GetTips().Has(ib.GetHash()) {
+			continue
+		}
+		if !ib.IsOrdered() {
+			continue
+		}
+		fsSlice = append(fsSlice, ib)
+		if uint(len(fsSlice)) >= maxHashes {
+			break
+		}
+	}
+
+	result := []*hash.Hash{}
+	if len(fsSlice) >= 2 {
+		sort.Sort(fsSlice)
+	}
+	for i := 0; i < len(fsSlice); i++ {
+		result = append(result, fsSlice[i].GetHash())
+	}
+	return result
+}
+
 // Return the layer of block,it is stable.
 // You can imagine that this is the main chain.
 func (bd *MeerDAG) GetLayer(id uint) uint {

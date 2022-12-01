@@ -82,7 +82,7 @@ func (ds *DAGSync) CalcSyncBlocks(gs *GraphState, locator []*hash.Hash, mode Syn
 		break
 	}
 	if isSubDAG {
-		return ds.bd.locateBlocks(gs, maxHashes), point.GetHash()
+		return ds.bd.locateBlocksFuzzy(gs, maxHashes), point.GetHash()
 	}
 	return ds.getBlockChainFromMain(point, maxHashes), point.GetHash()
 }
