@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/protocol"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/evm/engine"
@@ -408,8 +409,9 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain, error) {
 	return ec, nil
 }
 
-func NewETHChain(datadir string) (*ETHChain, error) {
-	config, err := MakeMeerethConfig(datadir)
+func NewETHChain(cfg *config.Config) (*ETHChain, error) {
+	InitEnv(cfg.EVMEnv)
+	config, err := MakeMeerethConfig(cfg.DataDir)
 	if err != nil {
 		return nil, err
 	}
@@ -497,7 +499,7 @@ func makeFullNode(ctx *cli.Context, cfg *MeerethConfig) (*node.Node, *eth.EthAPI
 	filterSystem := utils.RegisterFilterAPI(stack, backend, &cfg.Eth)
 
 	if ctx.IsSet(utils.GraphQLEnabledFlag.Name) {
-		utils.RegisterGraphQLService(stack, backend,filterSystem, &cfg.Node)
+		utils.RegisterGraphQLService(stack, backend, filterSystem, &cfg.Node)
 	}
 	if cfg.Ethstats.URL != "" {
 		utils.RegisterEthStatsService(stack, backend, cfg.Ethstats.URL)
@@ -525,13 +527,53 @@ func makeConfigNode(ctx *cli.Context, cfg *MeerethConfig) *node.Node {
 	return stack
 }
 
-func MakeMeerethConfigNode(ctx *cli.Context, datadir string) (*node.Node, *MeerethConfig) {
-	config, err := MakeMeerethConfig(datadir)
+func makeNakedNode(config *MeerethConfig) (*node.Node, error) {
+	app := cli.NewApp()
+	app.Name = ClientIdentifier
+	app.Authors = []*cli.Author{
+		{Name: ClientIdentifier, Email: ClientIdentifier},
+	}
+	app.Version = params.VersionWithMeta
+	app.Usage = ClientIdentifier
+
+	//
+
+	utils.CacheFlag.Value = 4096
+
+	var n *node.Node
+	app.Action = func(ctx *cli.Context) error {
+		n = makeConfigNode(ctx, config)
+		return nil
+	}
+	app.HideVersion = true
+	app.Copyright = ClientIdentifier
+
+	app.Flags = append(app.Flags, NodeFlags...)
+	app.Flags = append(app.Flags, RpcFlags...)
+	app.Flags = append(app.Flags, MetricsFlags...)
+
+	err := app.Run(Args)
+	if err != nil {
+		return nil, err
+	}
+
+	return n, nil
+}
+
+func MakeMeerethConfigNode(ctx *cli.Context, cfg *config.Config) (*node.Node, *MeerethConfig) {
+	InitEnv(cfg.EVMEnv)
+	config, err := MakeMeerethConfig(cfg.DataDir)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, nil
 	}
-	return makeConfigNode(ctx, config), config
+	var n *node.Node
+	n, err = makeNakedNode(config)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, nil
+	}
+	return n, config
 }
 
 func setAccountManagerBackends(stack *node.Node) error {

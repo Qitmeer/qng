@@ -16,6 +16,10 @@ func commands() []*cli.Command {
 	cmds := []*cli.Command{}
 	cmds = append(cmds, indexCmd())
 	cmds = append(cmds, cmd.Commands...)
+
+	for _, cmd := range cmds {
+		cmd.Before = loadConfig
+	}
 	return cmds
 }
 
@@ -35,14 +39,6 @@ func indexCmd() *cli.Command {
 				Value:       false,
 				Destination: &dropvmblock,
 			},
-		},
-		Before: func(ctx *cli.Context) error {
-			cfg, err := common.LoadConfig(ctx, false)
-			if err != nil {
-				return err
-			}
-			config.Cfg = cfg
-			return nil
 		},
 		Action: func(ctx *cli.Context) error {
 			if dropvmblock {
@@ -73,4 +69,13 @@ func indexCmd() *cli.Command {
 			return nil
 		},
 	}
+}
+
+func loadConfig(ctx *cli.Context) error {
+	cfg, err := common.LoadConfig(ctx, false)
+	if err != nil {
+		return err
+	}
+	config.Cfg = cfg
+	return nil
 }
