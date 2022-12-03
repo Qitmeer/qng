@@ -130,108 +130,7 @@ type BlockChain struct {
 
 	consensus model.Consensus
 
-	interrupt <-chan struct{}
-}
-
-// Config is a descriptor which specifies the blockchain instance configuration.
-type Config struct {
-	// DB defines the database which houses the blocks and will be used to
-	// store all metadata created by this package such as the utxo set.
-	//
-	// This field is required.
-	DB database.DB
-
-	// Interrupt specifies a channel the caller can close to signal that
-	// long running operations, such as catching up indexes or performing
-	// database migrations, should be interrupted.
-	//
-	// This field can be nil if the caller does not desire the behavior.
-	Interrupt <-chan struct{}
-
-	// ChainParams identifies which chain parameters the chain is associated
-	// with.
-	//
-	// This field is required.
-	ChainParams *params.Params
-
-	// TimeSource defines the median time source to use for things such as
-	// block processing and determining whether or not the chain is current.
-	//
-	// The caller is expected to keep a reference to the time source as well
-	// and add time samples from other peers on the network so the local
-	// time is adjusted to be in agreement with other peers.
-	TimeSource model.MedianTimeSource
-
-	// Events defines a event manager to which notifications will be sent
-	// when various events take place.  See the documentation for
-	// Notification and NotificationType for details on the types and
-	// contents of notifications.
-	//
-	// This field can be nil if the caller is not interested in receiving
-	// notifications.
-	Events *event.Feed
-
-	// SigCache defines a signature cache to use when when validating
-	// signatures.  This is typically most useful when individual
-	// transactions are already being validated prior to their inclusion in
-	// a block such as what is usually done via a transaction memory pool.
-	//
-	// This field can be nil if the caller is not interested in using a
-	// signature cache.
-	SigCache *txscript.SigCache
-
-	// IndexManager defines an index manager to use when initializing the
-	// chain and connecting and disconnecting blocks.
-	//
-	// This field can be nil if the caller does not wish to make use of an
-	// index manager.
-	IndexManager model.IndexManager
-
-	// Setting different dag types will use different consensus
-	DAGType string
-
-	// data dir
-	DataDir string
-
-	DAGCacheSize       uint64
-	BlockDataCacheSize uint64
-}
-
-// BestState houses information about the current best block and other info
-// related to the state of the main chain as it exists from the point of view of
-// the current best block.
-//
-// The BestSnapshot method can be used to obtain access to this information
-// in a concurrent safe manner and the data will not be changed out from under
-// the caller when chain state changes occur as the function name implies.
-// However, the returned snapshot must be treated as immutable since it is
-// shared by all callers.
-type BestState struct {
-	Hash         hash.Hash           // The hash of the main chain tip.
-	Bits         uint32              // The difficulty bits of the main chain tip.
-	BlockSize    uint64              // The size of the main chain tip.
-	NumTxns      uint64              // The number of txns in the main chain tip.
-	MedianTime   time.Time           // Median time as per CalcPastMedianTime.
-	TotalTxns    uint64              // The total number of txns in the chain.
-	TotalSubsidy uint64              // The total subsidy for the chain.
-	TokenTipHash *hash.Hash          // The Hash of token state tip for the chain.
-	GraphState   *meerdag.GraphState // The graph state of dag
-}
-
-// newBestState returns a new best stats instance for the given parameters.
-func newBestState(tipHash *hash.Hash, bits uint32, blockSize, numTxns uint64, medianTime time.Time,
-	totalTxns uint64, totalsubsidy uint64, gs *meerdag.GraphState, tokenTipHash *hash.Hash) *BestState {
-	return &BestState{
-		Hash:         *tipHash,
-		Bits:         bits,
-		BlockSize:    blockSize,
-		NumTxns:      numTxns,
-		MedianTime:   medianTime,
-		TotalTxns:    totalTxns,
-		TotalSubsidy: totalsubsidy,
-		TokenTipHash: tokenTipHash,
-		GraphState:   gs,
-	}
+	validator  model.Validator // Block and state validator interface
 }
 
 // BestSnapshot returns information about the current best chain block and
@@ -300,17 +199,17 @@ func (b *BlockChain) OrderRange(startOrder, endOrder uint64) ([]hash.Hash, error
 }
 
 // New returns a BlockChain instance using the provided configuration details.
-func New(config *Config) (*BlockChain, error) {
+func New(consensus model.Consensus) (*BlockChain, error) {
 	// Enforce required config fields.
-	if config.DB == nil {
+	if consensus.DatabaseContext() == nil {
 		return nil, AssertError("blockchain.New database is nil")
 	}
-	if config.ChainParams == nil {
+	if consensus.Params() == nil {
 		return nil, AssertError("blockchain.New chain parameters nil")
 	}
 
 	// Generate a checkpoint by height map from the provided checkpoints.
-	par := config.ChainParams
+	par := consensus.Params()
 	var checkpointsByLayer map[uint64]*params.Checkpoint
 	var prevCheckpointLayer uint64
 	if len(par.Checkpoints) > 0 {
@@ -345,21 +244,21 @@ func New(config *Config) (*BlockChain, error) {
 			return nil, AssertError("blockchain.New chain parameters Deployments error")
 		}
 	}
-
+	config:=consensus.Config()
 	b := BlockChain{
+		consensus: consensus,
 		checkpointsByLayer: checkpointsByLayer,
-		db:                 config.DB,
+		db:                 consensus.DatabaseContext(),
 		params:             par,
-		timeSource:         config.TimeSource,
-		events:             config.Events,
-		sigCache:           config.SigCache,
-		indexManager:       config.IndexManager,
+		timeSource:         consensus.MedianTimeSource(),
+		events:             consensus.Events(),
+		sigCache:           consensus.SigCache(),
+		indexManager:       consensus.IndexManager(),
 		orphans:            make(map[hash.Hash]*orphanBlock),
 		CacheNotifications: []*Notification{},
 		warningCaches:      newThresholdCaches(VBNumBits),
 		deploymentCaches:   newThresholdCaches(params.DefinedDeployments),
 		shutdownTracker:    shutdown.NewTracker(config.DataDir),
-		interrupt:          config.Interrupt,
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
@@ -505,7 +404,7 @@ func (b *BlockChain) initChainState() error {
 	}
 
 	//   Upgrade the database as needed.
-	err = b.upgradeDB(b.interrupt)
+	err = b.upgradeDB(b.consensus.Interrupt())
 	if err != nil {
 		return err
 	}
