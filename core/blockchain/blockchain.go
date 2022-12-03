@@ -126,8 +126,6 @@ type BlockChain struct {
 	shutdownTracker *shutdown.Tracker
 
 	consensus model.Consensus
-
-	validator model.Validator // Block and state validator interface
 }
 
 // BestSnapshot returns information about the current best chain block and
