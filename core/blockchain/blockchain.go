@@ -1507,5 +1507,8 @@ func (b *BlockChain) GetBlockHashByOrder(order uint) *hash.Hash {
 }
 
 func (b *BlockChain) VMService() model.VMI {
+	if b.consensus == nil {
+		return nil
+	}
 	return b.consensus.VMService()
 }

@@ -183,19 +183,19 @@ func (node *AidNode) Upgrade() error {
 
 	node.db = db
 	//
-	ccfg:=common.DefaultConfig(node.cfg.HomeDir)
-	ccfg.DataDir=node.cfg.DataDir
-	ccfg.DbType=node.cfg.DbType
-	ccfg.DAGType=node.cfg.DAGType
-	cons:=consensus.NewPure(ccfg,db)
-	err=cons.Init()
+	ccfg := common.DefaultConfig(node.cfg.HomeDir)
+	ccfg.DataDir = node.cfg.DataDir
+	ccfg.DbType = node.cfg.DbType
+	ccfg.DAGType = node.cfg.DAGType
+	cons := consensus.NewPure(ccfg, db)
+	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
 		return err
 	}
 	node.bc = cons.BlockChain().(*blockchain.BlockChain)
 	node.name = path.Base(node.cfg.DataDir)
-	err = node.bc.VMService.(*vm.Service).Start()
+	err = node.bc.VMService().(*vm.Service).Start()
 	if err != nil {
 		return err
 	}
