@@ -3,6 +3,7 @@ package vm
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/types"
@@ -13,10 +14,10 @@ import (
 type VMTx struct {
 	*Tx
 	*types.Transaction
-	vmi VMI
+	vmi model.VMI
 }
 
-func (vt *VMTx) SetVMI(vmi VMI) {
+func (vt *VMTx) SetVMI(vmi model.VMI) {
 	vt.vmi = vmi
 }
 

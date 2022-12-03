@@ -76,7 +76,7 @@ func (mp *TxPool) TxDescs() []*TxDesc {
 	}
 	mp.mtx.RUnlock()
 
-	etxs,_, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	etxs, _, err := mp.cfg.BC.VMService().GetTxsFromMempool()
 	if err != nil {
 		log.Error(err.Error())
 		return descs
@@ -142,7 +142,7 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 	// Protect concurrent access.
 	mp.mtx.Lock()
 	if opreturn.IsMeerEVMTx(tx.Tx) {
-		err := mp.cfg.BC.VMService.RemoveTxFromMempool(tx.Tx)
+		err := mp.cfg.BC.VMService().RemoveTxFromMempool(tx.Tx)
 		if err != nil {
 			log.Error(err.Error())
 		}
@@ -433,7 +433,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			}
 			return nil, nil, err
 		}
-		fee, err := mp.cfg.BC.VMService.VerifyTx(itx)
+		fee, err := mp.cfg.BC.VMService().VerifyTx(itx)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -463,7 +463,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			if mp.cfg.BC.HasTx(txHash) {
 				return nil, nil, fmt.Errorf("Already have transaction %v", txHash)
 			}
-			fee, err := mp.cfg.BC.VMService.AddTxToMempool(tx.Tx, false)
+			fee, err := mp.cfg.BC.VMService().AddTxToMempool(tx.Tx, false)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -1014,7 +1014,7 @@ func (mp *TxPool) FetchTransaction(txHash *hash.Hash) (*types.Tx, error) {
 		return txDesc.Tx, nil
 	}
 	er := fmt.Errorf("transaction is not in the pool")
-	etxs,_, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	etxs, _, err := mp.cfg.BC.VMService().GetTxsFromMempool()
 	if err != nil {
 		return nil, er
 	}
@@ -1043,7 +1043,7 @@ func (mp *TxPool) FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error) {
 	mp.mtx.RUnlock()
 
 	er := fmt.Errorf("transaction is not in the pool")
-	etxs,_, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	etxs, _, err := mp.cfg.BC.VMService().GetTxsFromMempool()
 	if err != nil {
 		return nil, er
 	}
@@ -1068,7 +1068,7 @@ func (mp *TxPool) FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error) {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) HaveAllTransactions(hashes []hash.Hash) bool {
-	etxs,_,_:= mp.cfg.BC.VMService.GetTxsFromMempool()
+	etxs, _, _ := mp.cfg.BC.VMService().GetTxsFromMempool()
 	mp.mtx.RLock()
 	inPool := true
 	for _, h := range hashes {
@@ -1124,7 +1124,7 @@ func (mp *TxPool) isTransactionInPool(hash *hash.Hash) bool {
 	if _, exists := mp.pool[*hash]; exists {
 		return true
 	}
-	etxs,_, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	etxs, _, err := mp.cfg.BC.VMService().GetTxsFromMempool()
 	if err != nil {
 		return false
 	}
@@ -1197,7 +1197,7 @@ func (mp *TxPool) MiningDescs() []*types.TxDesc {
 	}
 	mp.mtx.RUnlock()
 
-	etxs,_, err := mp.cfg.BC.VMService.GetTxsFromMempool()
+	etxs, _, err := mp.cfg.BC.VMService().GetTxsFromMempool()
 	if err != nil {
 		log.Error(err.Error())
 		return descs
@@ -1250,7 +1250,7 @@ func (mp *TxPool) Count() int {
 	count := len(mp.pool)
 	mp.mtx.RUnlock()
 
-	count += int(mp.cfg.BC.VMService.GetMempoolSize())
+	count += int(mp.cfg.BC.VMService().GetMempoolSize())
 
 	return count
 }

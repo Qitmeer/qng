@@ -6,6 +6,7 @@ package consensus
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"time"
 )
 
@@ -16,7 +17,7 @@ type Block interface {
 	Bytes() []byte
 	Height() uint64
 	Timestamp() time.Time
-	Transactions() []Tx
+	Transactions() []model.Tx
 }
 
 type BlockHeader interface {

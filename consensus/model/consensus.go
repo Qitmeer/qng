@@ -24,4 +24,5 @@ type Consensus interface {
 	InvalidTxIndexStore() InvalidTxIndexStore
 	Interrupt() <-chan struct{}
 	Params() *params.Params
+	VMService() VMI
 }

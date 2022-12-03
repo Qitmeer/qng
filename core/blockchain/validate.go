@@ -330,7 +330,7 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinba
 			return err
 		}
 		if bc != nil {
-			vtx.SetVMI(bc.VMService)
+			vtx.SetVMI(bc.VMService())
 		}
 		if coinbase != nil {
 			err = vtx.SetCoinbaseTx(coinbase)
@@ -939,7 +939,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 	if err != nil {
 		return err
 	}
-	return b.VMService.CheckConnectBlock(block)
+	return b.VMService().CheckConnectBlock(block)
 }
 
 // consensusScriptVerifyFlags returns the script flags that must be used when
@@ -1008,7 +1008,7 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			if err != nil {
 				return err
 			}
-			fee, err := b.VMService.VerifyTx(itx)
+			fee, err := b.VMService().VerifyTx(itx)
 			if err != nil {
 				return err
 			}
@@ -1023,7 +1023,7 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			if err != nil {
 				return err
 			}
-			_, err = b.VMService.VerifyTx(vtx)
+			_, err = b.VMService().VerifyTx(vtx)
 			if err != nil {
 				return err
 			}

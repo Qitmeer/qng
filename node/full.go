@@ -264,10 +264,10 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	// init address api
 	qm.addressApi = address.NewAddressApi(cfg, node.Params, bm.GetChain())
 
-	if err := qm.RegisterVMService(bm.GetChain().VMService.(*vm.Service)); err != nil {
+	if err := qm.RegisterVMService(node.consensus.VMService().(*vm.Service)); err != nil {
 		return nil, err
 	}
-	vms:=qm.GetVMService()
+	vms := qm.GetVMService()
 	vms.SetTxPool(txManager.MemPool())
 	vms.SetNotify(qm.nfManager)
 

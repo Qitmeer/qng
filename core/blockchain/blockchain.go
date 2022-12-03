@@ -11,7 +11,6 @@ import (
 	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
@@ -122,15 +121,13 @@ type BlockChain struct {
 	unknownRulesWarned bool
 	deploymentMux      sync.RWMutex
 
-	VMService vm.VMI
-
 	Acct ACCTI
 
 	shutdownTracker *shutdown.Tracker
 
 	consensus model.Consensus
 
-	validator  model.Validator // Block and state validator interface
+	validator model.Validator // Block and state validator interface
 }
 
 // BestSnapshot returns information about the current best chain block and
@@ -244,9 +241,9 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 			return nil, AssertError("blockchain.New chain parameters Deployments error")
 		}
 	}
-	config:=consensus.Config()
+	config := consensus.Config()
 	b := BlockChain{
-		consensus: consensus,
+		consensus:          consensus,
 		checkpointsByLayer: checkpointsByLayer,
 		db:                 consensus.DatabaseContext(),
 		params:             par,
@@ -936,7 +933,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		pkss = append(pkss, stxo.PkScript)
 	}
 	if !node.GetStatus().KnownInvalid() {
-		vmbid, err := b.VMService.ConnectBlock(block)
+		vmbid, err := b.VMService().ConnectBlock(block)
 		if err != nil {
 			return err
 		}
@@ -999,7 +996,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, view *UtxoViewpoint, stxos []SpentTxOut) error {
-	vmbid, err := b.VMService.DisconnectBlock(block)
+	vmbid, err := b.VMService().DisconnectBlock(block)
 	if err != nil {
 		return err
 	}
@@ -1415,8 +1412,8 @@ func (b *BlockChain) CalculateTokenStateRoot(txs []*types.Tx) *hash.Hash {
 
 func (b *BlockChain) CalculateStateRoot(txs []*types.Tx) *hash.Hash {
 	var vmGenesis *hash.Hash
-	if b.VMService != nil {
-		vmGenesis = b.VMService.Genesis(txs)
+	if b.VMService() != nil {
+		vmGenesis = b.VMService().Genesis(txs)
 	}
 	tokenStateRoot := b.CalculateTokenStateRoot(txs)
 	if tokenStateRoot.IsEqual(zeroHash) {
@@ -1509,4 +1506,8 @@ func (b *BlockChain) GetMainOrder() uint {
 
 func (b *BlockChain) GetBlockHashByOrder(order uint) *hash.Hash {
 	return b.bd.GetBlockHashByOrder(order)
+}
+
+func (b *BlockChain) VMService() model.VMI {
+	return b.consensus.VMService()
 }

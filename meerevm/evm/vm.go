@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/address"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/meerevm/chain"
@@ -151,7 +152,7 @@ func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
 	return &Block{id: &h, ethBlock: block, vm: vm, status: consensus.Accepted}, nil
 }
 
-func (vm *VM) BuildBlock(txs []consensus.Tx) (consensus.Block, error) {
+func (vm *VM) BuildBlock(txs []model.Tx) (consensus.Block, error) {
 	return nil, nil
 }
 
@@ -211,7 +212,7 @@ func (vm *VM) GetBalance(addre string) (int64, error) {
 	return ba.Int64(), nil
 }
 
-func (vm *VM) VerifyTx(tx consensus.Tx) (int64, error) {
+func (vm *VM) VerifyTx(tx model.Tx) (int64, error) {
 	if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
 		txb := common.FromHex(string(tx.GetData()))
 		var txe = &types.Transaction{}
@@ -230,7 +231,7 @@ func (vm *VM) VerifyTx(tx consensus.Tx) (int64, error) {
 	return 0, fmt.Errorf("Not support")
 }
 
-func (vm *VM) VerifyTxSanity(tx consensus.Tx) error {
+func (vm *VM) VerifyTxSanity(tx model.Tx) error {
 	if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
 		txb := common.FromHex(string(tx.GetData()))
 		var txe = &types.Transaction{}

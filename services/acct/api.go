@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/meerevm/evm"
 )
 
 // PublicEthereumAPI provides an API to access Ethereum full node-related
@@ -22,11 +21,7 @@ func (api *PublicAccountManagerAPI) GetBalance(addr string, coinID types.CoinID)
 	if coinID == types.MEERA {
 		return api.a.GetBalance(addr)
 	} else if coinID == types.MEERB {
-		cv, err := api.a.chain.VMService.GetVM(evm.MeerEVMID)
-		if err != nil {
-			return nil, err
-		}
-		return cv.GetBalance(addr)
+		return api.a.chain.VMService().GetBalance(addr)
 	}
 	return nil, fmt.Errorf("Not support %v", coinID)
 }
@@ -58,11 +53,7 @@ func (api *PublicAccountManagerAPI) GetBalanceInfo(addr string, coinID types.Coi
 		}
 		return result, nil
 	} else if coinID == types.MEERB {
-		cv, err := api.a.chain.VMService.GetVM(evm.MeerEVMID)
-		if err != nil {
-			return nil, err
-		}
-		ba, err := cv.GetBalance(addr)
+		ba, err := api.a.chain.VMService().GetBalance(addr)
 		if err != nil {
 			return nil, err
 		}

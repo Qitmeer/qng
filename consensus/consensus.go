@@ -82,7 +82,6 @@ func (s *consensus) Init() error {
 		return err
 	}
 	s.vmService = vmService
-	blockchain.VMService = vmService
 	s.subscribe()
 	return blockchain.Init()
 }
@@ -137,6 +136,10 @@ func (s *consensus) GenesisHash() *hash.Hash {
 
 func (s *consensus) Params() *params.Params {
 	return params.ActiveNetParams.Params
+}
+
+func (s *consensus) VMService() model.VMI {
+	return s.vmService
 }
 
 func (s *consensus) subscribe() {

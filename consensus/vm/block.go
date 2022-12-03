@@ -7,13 +7,14 @@ package vm
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/vm/consensus"
 	"time"
 )
 
 type Block struct {
 	Id   *hash.Hash
-	Txs  []consensus.Tx
+	Txs  []model.Tx
 	Time time.Time
 }
 
@@ -65,6 +66,6 @@ func (b *Block) String() string {
 	return fmt.Sprintf("%s", b.ID().String())
 }
 
-func (b *Block) Transactions() []consensus.Tx {
+func (b *Block) Transactions() []model.Tx {
 	return b.Txs
 }

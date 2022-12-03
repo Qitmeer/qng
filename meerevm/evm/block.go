@@ -7,6 +7,7 @@ package evm
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -71,6 +72,6 @@ func (b *Block) Bytes() []byte {
 
 func (b *Block) String() string { return fmt.Sprintf("EVM block, ID = %s", b.ID()) }
 
-func (b *Block) Transactions() []consensus.Tx {
+func (b *Block) Transactions() []model.Tx {
 	return nil
 }

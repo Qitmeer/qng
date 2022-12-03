@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	qconfig "github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
@@ -24,10 +25,10 @@ type Factory interface {
 type Service struct {
 	service.Service
 	events *event.Feed
-	vms map[string]consensus.ChainVM
-	cfg *config.Config
-	apis []api.API
-	ctx *vm.Context
+	vms    map[string]consensus.ChainVM
+	cfg    *config.Config
+	apis   []api.API
+	ctx    *vm.Context
 }
 
 func (s *Service) Start() error {
@@ -145,7 +146,7 @@ func (s *Service) SetLogLevel(level string) {
 	}
 }
 
-func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
+func (s *Service) VerifyTx(tx model.Tx) (int64, error) {
 	v, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
 		return 0, err
@@ -180,7 +181,7 @@ func (s *Service) VerifyTx(tx consensus.Tx) (int64, error) {
 	return ba - itx.Transaction.TxOut[0].Amount.Value, nil
 }
 
-func (s *Service) VerifyTxSanity(tx consensus.Tx) error {
+func (s *Service) VerifyTxSanity(tx model.Tx) error {
 	v, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
 		return err
@@ -207,10 +208,10 @@ func (s *Service) RemoveTxFromMempool(tx *types.Transaction) error {
 	return v.RemoveTxFromMempool(tx)
 }
 
-func (s *Service) GetTxsFromMempool() ([]*types.Transaction,[]*hash.Hash, error) {
+func (s *Service) GetTxsFromMempool() ([]*types.Transaction, []*hash.Hash, error) {
 	v, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
-		return nil,nil, err
+		return nil, nil, err
 	}
 	return v.GetTxsFromMempool()
 }
@@ -239,40 +240,40 @@ func (s *Service) CheckConnectBlock(block *types.SerializedBlock) error {
 	return vm.CheckConnectBlock(b)
 }
 
-func (s *Service) ConnectBlock(block *types.SerializedBlock) (uint64,error) {
+func (s *Service) ConnectBlock(block *types.SerializedBlock) (uint64, error) {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
-		return 0,err
+		return 0, err
 	}
 	b, err := s.normalizeBlock(block, true)
 	if err != nil {
-		return 0,err
+		return 0, err
 	}
 
 	if len(b.Txs) <= 0 {
-		return 0,nil
+		return 0, nil
 	}
 	return vm.ConnectBlock(b)
 }
 
-func (s *Service) DisconnectBlock(block *types.SerializedBlock) (uint64,error) {
+func (s *Service) DisconnectBlock(block *types.SerializedBlock) (uint64, error) {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
-		return 0,err
+		return 0, err
 	}
 	b, err := s.normalizeBlock(block, false)
 	if err != nil {
-		return 0,err
+		return 0, err
 	}
 
 	if len(b.Txs) <= 0 {
-		return 0,nil
+		return 0, nil
 	}
 	return vm.DisconnectBlock(b)
 }
 
 func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*vm.Block, error) {
-	result := &vm.Block{Id: block.Hash(), Txs: []consensus.Tx{}, Time: block.Block().Header.Timestamp}
+	result := &vm.Block{Id: block.Hash(), Txs: []model.Tx{}, Time: block.Block().Header.Timestamp}
 
 	for idx, tx := range block.Transactions() {
 		if idx == 0 {
@@ -372,11 +373,19 @@ func (s *Service) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
 }
 
 func (s *Service) SetTxPool(tp consensus.TxPool) {
-	s.ctx.Tp=tp
+	s.ctx.Tp = tp
 }
 
 func (s *Service) SetNotify(Notify consensus.Notify) {
-	s.ctx.Notify=Notify
+	s.ctx.Notify = Notify
+}
+
+func (s *Service) GetBalance(addr string) (int64, error) {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return 0, err
+	}
+	return vm.GetBalance(addr)
 }
 
 func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
@@ -387,7 +396,7 @@ func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
 		apis:   []api.API{},
 	}
 	ser.InitContext()
-	ser.ctx=&vm.Context{
+	ser.ctx = &vm.Context{
 		Context: ser.Context(),
 		Cfg: &qconfig.Config{
 			DataDir:           cfg.DataDir,
@@ -404,7 +413,7 @@ func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
 	for _, vm := range ser.vms {
 		err := vm.Initialize(ser.ctx)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 	}
 	return &ser, nil
