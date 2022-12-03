@@ -56,12 +56,12 @@ func (node *Node) init(cfg *Config) error {
 
 	node.db = db
 	//
-	ccfg:=common.DefaultConfig(node.cfg.HomeDir)
-	ccfg.DataDir=cfg.DataDir
-	ccfg.DbType=cfg.DbType
-	ccfg.DAGType=cfg.DAGType
-	cons:=consensus.NewPure(ccfg,db)
-	err=cons.Init()
+	ccfg := common.DefaultConfig(node.cfg.HomeDir)
+	ccfg.DataDir = cfg.DataDir
+	ccfg.DbType = cfg.DbType
+	ccfg.DAGType = cfg.DAGType
+	cons := consensus.NewPure(ccfg, db)
+	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -71,11 +71,11 @@ func (node *Node) init(cfg *Config) error {
 
 	log.Info(fmt.Sprintf("Load Data:%s", cfg.DataDir))
 
-	return node.bc.VMService.(*vm.Service).Start()
+	return node.bc.VMService().(*vm.Service).Start()
 }
 
 func (node *Node) exit() error {
-	err := node.bc.VMService.(*vm.Service).Stop()
+	err := node.bc.VMService().(*vm.Service).Stop()
 	if err != nil {
 		return nil
 	}
@@ -364,12 +364,12 @@ func (node *Node) Upgrade() error {
 
 	node.db = db
 	//
-	ccfg:=common.DefaultConfig(node.cfg.HomeDir)
-	ccfg.DataDir=node.cfg.DataDir
-	ccfg.DbType=node.cfg.DbType
-	ccfg.DAGType=node.cfg.DAGType
-	cons:=consensus.NewPure(ccfg,db)
-	err=cons.Init()
+	ccfg := common.DefaultConfig(node.cfg.HomeDir)
+	ccfg.DataDir = node.cfg.DataDir
+	ccfg.DbType = node.cfg.DbType
+	ccfg.DAGType = node.cfg.DAGType
+	cons := consensus.NewPure(ccfg, db)
+	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -377,7 +377,7 @@ func (node *Node) Upgrade() error {
 	node.bc = cons.BlockChain().(*blockchain.BlockChain)
 	node.name = path.Base(node.cfg.DataDir)
 
-	err = node.bc.VMService.(*vm.Service).Start()
+	err = node.bc.VMService().(*vm.Service).Start()
 	if err != nil {
 		return err
 	}

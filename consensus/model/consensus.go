@@ -6,6 +6,7 @@ import (
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/params"
 )
 
 // Consensus maintains the current core state of the node
@@ -22,4 +23,6 @@ type Consensus interface {
 	VMBlockIndexStore() VMBlockIndexStore
 	InvalidTxIndexStore() InvalidTxIndexStore
 	Interrupt() <-chan struct{}
+	Params() *params.Params
+	VMService() VMI
 }

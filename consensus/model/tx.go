@@ -1,4 +1,4 @@
-package consensus
+package model
 
 import "github.com/Qitmeer/qng/core/types"
 

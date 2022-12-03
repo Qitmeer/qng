@@ -287,7 +287,7 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 			} else {
 				return nil, rpc.RpcNoTxInfoError(&txHash)
 			}
-		}else{
+		} else {
 
 			// Load the raw transaction bytes from the database.
 			var txBytes []byte
@@ -323,7 +323,7 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 				context := "Failed to deserialize transaction"
 				return nil, rpc.RpcInternalError(err.Error(), context)
 			}
-			dtx=&msgTx
+			dtx = &msgTx
 		}
 
 		mtx = types.NewTx(dtx)
@@ -956,7 +956,7 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 			} else {
 				return nil, rpc.RpcNoTxInfoError(&txid)
 			}
-		}else{
+		} else {
 			var txBytes []byte
 			err = api.txManager.db.View(func(dbTx database.Tx) error {
 				var err error
@@ -984,43 +984,43 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 }
 
 func (api *PublicTxAPI) GetTxIDByMeerEVMTxHash(etxh hash.Hash) (interface{}, error) {
-	vmi:=api.txManager.bm.GetChain().VMService
-	etxs,txhs, err := vmi.GetTxsFromMempool()
+	vmi := api.txManager.bm.GetChain().VMService()
+	etxs, txhs, err := vmi.GetTxsFromMempool()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	if len(txhs) > 0 {
-		for i:=0;i<len(txhs);i++ {
+		for i := 0; i < len(txhs); i++ {
 			if txhs[i].IsEqual(&etxh) {
-				return etxs[i].TxHash().String(),nil
+				return etxs[i].TxHash().String(), nil
 			}
 		}
 	}
 
-	bid:=vmi.GetBlockIDByTxHash(&etxh)
+	bid := vmi.GetBlockIDByTxHash(&etxh)
 	if bid == 0 {
-		return nil,fmt.Errorf("No meerevm tx:%s",etxh.String())
+		return nil, fmt.Errorf("No meerevm tx:%s", etxh.String())
 	}
-	vmbiStore:=api.txManager.consensus.VMBlockIndexStore()
+	vmbiStore := api.txManager.consensus.VMBlockIndexStore()
 	if vmbiStore == nil {
-		return nil,fmt.Errorf("You must be enable by --vmblockindex")
+		return nil, fmt.Errorf("You must be enable by --vmblockindex")
 	}
-	bh,err:=vmbiStore.Get(model.NewStagingArea(),bid)
+	bh, err := vmbiStore.Get(model.NewStagingArea(), bid)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	block,err:=api.txManager.bm.GetChain().FetchBlockByHash(bh)
+	block, err := api.txManager.bm.GetChain().FetchBlockByHash(bh)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	for _,tx:=range block.Transactions() {
+	for _, tx := range block.Transactions() {
 		if types.IsCrossChainVMTx(tx.Tx) {
 			if etxh.IsEqual(&tx.Tx.TxIn[0].PreviousOut.Hash) {
-				return tx.Hash().String(),nil
+				return tx.Hash().String(), nil
 			}
 		}
 	}
-	return nil, fmt.Errorf("No meerevm tx:%s",etxh.String())
+	return nil, fmt.Errorf("No meerevm tx:%s", etxh.String())
 }
 
 type PrivateTxAPI struct {

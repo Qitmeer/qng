@@ -428,7 +428,7 @@ func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
 	econfig.NetworkId = uint64(qparams.ActiveNetParams.MeerEVMCfg.ChainID)
 	econfig.Genesis = genesis
 	econfig.SyncMode = downloader.FullSync
-	econfig.NoPruning = true
+	econfig.NoPruning = false
 	econfig.SkipBcVersionCheck = false
 	econfig.TrieDirtyCache = 0
 	econfig.ConsensusEngine = CreateConsensusEngine

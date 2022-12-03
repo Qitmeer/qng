@@ -71,19 +71,7 @@ func (s *consensus) Init() error {
 	s.indexManager = index.NewManager(index.ToConfig(s.cfg), s)
 
 	// Create a new block chain instance with the appropriate configuration.
-	blockchain, err := blockchain.New(&blockchain.Config{
-		DB:                 s.databaseContext,
-		Interrupt:          s.interrupt,
-		ChainParams:        params.ActiveNetParams.Params,
-		TimeSource:         s.mediantimeSource,
-		Events:             &s.events,
-		SigCache:           s.sigCache,
-		IndexManager:       s.indexManager,
-		DAGType:            s.cfg.DAGType,
-		DataDir:            s.cfg.DataDir,
-		DAGCacheSize:       s.cfg.DAGCacheSize,
-		BlockDataCacheSize: s.cfg.BlockDataCacheSize,
-	})
+	blockchain, err := blockchain.New(s)
 	if err != nil {
 		return err
 	}
@@ -94,7 +82,6 @@ func (s *consensus) Init() error {
 		return err
 	}
 	s.vmService = vmService
-	blockchain.VMService = vmService
 	s.subscribe()
 	return blockchain.Init()
 }
@@ -145,6 +132,14 @@ func (s *consensus) Shutdown() {
 
 func (s *consensus) GenesisHash() *hash.Hash {
 	return params.ActiveNetParams.Params.GenesisHash
+}
+
+func (s *consensus) Params() *params.Params {
+	return params.ActiveNetParams.Params
+}
+
+func (s *consensus) VMService() model.VMI {
+	return s.vmService
 }
 
 func (s *consensus) subscribe() {
