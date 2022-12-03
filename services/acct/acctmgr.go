@@ -479,11 +479,11 @@ func (a *AccountManager) initWatchers(dbTx database.Tx) error {
 	return nil
 }
 
-func (a *AccountManager) Apply(add bool, op *types.TxOutPoint, entry *blockchain.UtxoEntry) error {
+func (a *AccountManager) Apply(add bool, op *types.TxOutPoint, entry interface{}) error {
 	if !a.cfg.AcctMode {
 		return nil
 	}
-	a.utxoops = append(a.utxoops, &UTXOOP{add: add, op: op, entry: entry})
+	a.utxoops = append(a.utxoops, &UTXOOP{add: add, op: op, entry: entry.(*blockchain.UtxoEntry)})
 	return nil
 }
 

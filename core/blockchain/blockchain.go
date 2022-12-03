@@ -121,7 +121,7 @@ type BlockChain struct {
 	unknownRulesWarned bool
 	deploymentMux      sync.RWMutex
 
-	Acct ACCTI
+	Acct model.Acct
 
 	shutdownTracker *shutdown.Tracker
 
