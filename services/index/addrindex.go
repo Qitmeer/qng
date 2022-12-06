@@ -163,7 +163,7 @@ func serializeAddrIndexEntry(blockID uint32, txLoc types.TxLoc) []byte {
 func deserializeAddrIndexEntry(serialized []byte, region *database.BlockRegion, fetchBlockHash fetchBlockHashFunc) error {
 	// Ensure there are enough bytes to decode.
 	if len(serialized) < txEntrySize {
-		return errDeserialize("unexpected end of data")
+		return model.ErrDeserialize("unexpected end of data")
 	}
 
 	hash, err := fetchBlockHash(serialized[0:4])
@@ -320,7 +320,7 @@ func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, n
 		if err != nil {
 			// Ensure any deserialization errors are returned as
 			// database corruption errors.
-			if isDeserializeErr(err) {
+			if model.IsDeserializeErr(err) {
 				err = database.Error{
 					ErrorCode: database.ErrCorruption,
 					Description: fmt.Sprintf("failed to "+
@@ -400,7 +400,7 @@ func dbRemoveAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, 
 		curLevelKey := keyForLevel(addrKey, level)
 		curLevelData := bucket.Get(curLevelKey[:])
 		if len(curLevelData) == 0 && numRemaining > 0 {
-			return AssertError(fmt.Sprintf("dbRemoveAddrIndexEntries "+
+			return model.AssertError(fmt.Sprintf("dbRemoveAddrIndexEntries "+
 				"not enough entries for address key %x to "+
 				"delete %d entries", addrKey, count))
 		}
