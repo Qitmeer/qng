@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
+	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/meerdag"
 )
 
@@ -116,6 +119,64 @@ func (b *BlockChain) OrderRange(startOrder, endOrder uint64) ([]hash.Hash, error
 
 func (b *BlockChain) GetBlockHashByOrder(order uint) *hash.Hash {
 	return b.bd.GetBlockHashByOrder(order)
+}
+
+// dbFetchBlockByOrder uses an existing database transaction to retrieve the
+// raw block for the provided order, deserialize it, and return a Block
+// with the height set.
+func (b *BlockChain) FetchBlockByOrder(order uint64) (*types.SerializedBlock, model.Block, error) {
+	// First find the hash associated with the provided order in the index.
+	ib := b.bd.GetBlockByOrder(uint(order))
+	if ib == nil {
+		return nil, nil, fmt.Errorf("No block\n")
+	}
+
+	var blockBytes []byte
+	var err error
+	err = b.db.View(func(dbTx database.Tx) error {
+		// Load the raw block bytes from the database.
+		blockBytes, err = dbTx.FetchBlock(ib.GetHash())
+		return err
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	// Create the encapsulated block and set the order appropriately.
+	block, err := types.NewBlockFromBytes(blockBytes)
+	if err != nil {
+		return nil, nil, err
+	}
+	block.SetOrder(order)
+	block.SetHeight(ib.GetHeight())
+	return block, ib, nil
+}
+
+// BlockByHeight returns the block at the given height in the main chain.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) BlockByOrder(blockOrder uint64) (*types.SerializedBlock, error) {
+	block, _, err := b.FetchBlockByOrder(blockOrder)
+	return block, err
+}
+
+// BlockHashByOrder returns the hash of the block at the given order in the
+// main chain.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) BlockHashByOrder(blockOrder uint64) (*hash.Hash, error) {
+	hash := b.bd.GetBlockHashByOrder(uint(blockOrder))
+	if hash == nil {
+		return nil, fmt.Errorf("Can't find block")
+	}
+	return hash, nil
+}
+
+// MainChainHasBlock returns whether or not the block with the given hash is in
+// the main chain.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) MainChainHasBlock(hash *hash.Hash) bool {
+	return b.bd.IsOnMainChain(b.bd.GetBlockId(hash))
 }
 
 func (b *BlockChain) GetMainOrder() uint {

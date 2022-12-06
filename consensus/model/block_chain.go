@@ -7,7 +7,7 @@ import (
 
 type BlockChain interface {
 	GetMainOrder() uint
-	DBFetchBlockByOrder(order uint64) (*types.SerializedBlock, Block, error)
+	FetchBlockByOrder(order uint64) (*types.SerializedBlock, Block, error)
 	FetchSpendJournalPKS(targetBlock *types.SerializedBlock) ([][]byte, error)
 	CalculateDAGDuplicateTxs(block *types.SerializedBlock)
 	GetBlockHashByOrder(order uint) *hash.Hash
