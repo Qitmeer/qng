@@ -1,4 +1,4 @@
-package blockchain
+package utxo
 
 import (
 	"github.com/Qitmeer/qng/common/hash"

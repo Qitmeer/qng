@@ -3,9 +3,10 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockchain
+package utxo
 
 import (
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
@@ -500,7 +501,7 @@ func decodeCompressedTxOut(serialized []byte) (uint64, []byte, int, error) {
 	// remaining for the compressed script.
 	compressedAmount, bytesRead := serialization.DeserializeVLQ(serialized)
 	if bytesRead >= len(serialized) {
-		return 0, nil, bytesRead, errDeserialize("unexpected end of " +
+		return 0, nil, bytesRead, model.ErrDeserialize("unexpected end of " +
 			"data after compressed amount")
 	}
 
@@ -508,10 +509,10 @@ func decodeCompressedTxOut(serialized []byte) (uint64, []byte, int, error) {
 	// left in the slice for it.
 	scriptSize := decodeCompressedScriptSize(serialized[bytesRead:])
 	if scriptSize < 0 {
-		return 0, nil, bytesRead, errDeserialize("negative script size")
+		return 0, nil, bytesRead, model.ErrDeserialize("negative script size")
 	}
 	if len(serialized[bytesRead:]) < scriptSize {
-		return 0, nil, bytesRead, errDeserialize("unexpected end of " +
+		return 0, nil, bytesRead, model.ErrDeserialize("unexpected end of " +
 			"data after script size")
 	}
 

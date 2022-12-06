@@ -16,7 +16,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng/core/dbnamespace"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
@@ -835,7 +835,7 @@ func (b *BlockChain) checkBlockHeaderContext(block *types.SerializedBlock, prevN
 // the bulk of its work.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, utxoView *UtxoViewpoint, stxos *[]SpentTxOut) error {
+func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, utxoView *utxo.UtxoViewpoint, stxos *[]utxo.SpentTxOut) error {
 	// If the side chain blocks end up in the database, a call to
 	// CheckBlockSanity should be done here in case a previous version
 	// allowed a block that is no longer valid.  However, since the
@@ -879,7 +879,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 	// scripts.
 	// Do this for all TxTrees.
 
-	err = utxoView.fetchInputUtxos(b.db, block, b)
+	err = b.fetchInputUtxos(b.db, block, utxoView)
 	if err != nil {
 		return err
 	}
@@ -964,7 +964,7 @@ func (b *BlockChain) consensusScriptVerifyFlags() (txscript.ScriptFlags, error) 
 // transaction inputs for a transaction list given a predetermined TxStore.
 // After ensuring the transaction is valid, the transaction is connected to the
 // UTXO viewpoint.  TxTree true == Regular, false == Stake
-func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.SerializedBlock, subsidyCache *SubsidyCache, utxoView *UtxoViewpoint, stxos *[]SpentTxOut) error {
+func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.SerializedBlock, subsidyCache *SubsidyCache, utxoView *utxo.UtxoViewpoint, stxos *[]utxo.SpentTxOut) error {
 	transactions := block.Transactions()
 	totalSigOpCost := 0
 	for _, tx := range transactions {
@@ -996,7 +996,7 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 				if err != nil {
 					return err
 				}
-				err = utxoView.connectTransaction(tx, node, uint32(idx), stxos, b)
+				err = b.connectTransaction(tx, node, uint32(idx), stxos, utxoView)
 				if err != nil {
 					return err
 				}
@@ -1012,7 +1012,7 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			if err != nil {
 				return err
 			}
-			err = utxoView.connectImportTransaction(tx, node, uint32(idx), stxos, b, fee+int64(itx.Value))
+			err = connectImportTransaction(tx, node, uint32(idx), stxos, fee+int64(itx.Value), utxoView)
 			if err != nil {
 				return err
 			}
@@ -1045,7 +1045,7 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 
 		}
 
-		err = utxoView.connectTransaction(tx, node, uint32(idx), stxos, b)
+		err = b.connectTransaction(tx, node, uint32(idx), stxos, utxoView)
 		if err != nil {
 			return err
 		}
@@ -1074,7 +1074,7 @@ func SequenceLockActive(lock *SequenceLock, blockHeight int64, medianTime time.T
 // sure they don't overflow the limits.  It takes a cumulative number of sig
 // ops as an argument and increments will each call.
 // TxTree true == Regular, false == Stake
-func checkNumSigOps(tx *types.Tx, utxoView *UtxoViewpoint, index int, txTree bool, cumulativeSigOps int) (int, error) {
+func checkNumSigOps(tx *types.Tx, utxoView *utxo.UtxoViewpoint, index int, txTree bool, cumulativeSigOps int) (int, error) {
 
 	numsigOps := CountSigOps(tx)
 
@@ -1110,7 +1110,7 @@ func checkNumSigOps(tx *types.Tx, utxoView *UtxoViewpoint, index int, txTree boo
 // transactions which are of the pay-to-script-hash type.  This uses the
 // precise, signature operation counting mechanism from the script engine which
 // requires access to the input transaction scripts.
-func CountP2SHSigOps(tx *types.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint) (int, error) {
+func CountP2SHSigOps(tx *types.Tx, isCoinBaseTx bool, utxoView *utxo.UtxoViewpoint) (int, error) {
 	// Coinbase transactions have no interesting inputs.
 	if isCoinBaseTx {
 		return 0, nil
@@ -1170,7 +1170,7 @@ func CountP2SHSigOps(tx *types.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint) (
 //
 // NOTE: The transaction MUST have already been sanity checked with the
 // CheckTransactionSanity function prior to calling this function.
-func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoint) (types.AmountMap, error) {
+func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *utxo.UtxoViewpoint) (types.AmountMap, error) {
 	msgTx := tx.Transaction()
 
 	txHash := tx.Hash()
@@ -1198,13 +1198,13 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 		}
 
 		// Ensure the coinId is known
-		err := types.CheckCoinID(utxoEntry.amount.Id)
+		err := types.CheckCoinID(utxoEntry.Amount().Id)
 		if err != nil {
 			return nil, err
 		}
 		if isCCExportTx {
-			if utxoEntry.amount.Id != types.MEERA {
-				return nil, fmt.Errorf("%s has illegal inputs %s", types.DetermineTxType(tx.Tx), utxoEntry.amount.Id.Name())
+			if utxoEntry.Amount().Id != types.MEERA {
+				return nil, fmt.Errorf("%s has illegal inputs %s", types.DetermineTxType(tx.Tx), utxoEntry.Amount().Id.Name())
 			}
 		}
 
@@ -1265,7 +1265,7 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoin
 
 	if len(targets) > 0 {
 		viewpoints := []uint{}
-		for _, blockHash := range utxoView.viewpoints {
+		for _, blockHash := range utxoView.Viewpoints() {
 			vIB := bd.GetBlock(blockHash)
 			if vIB != nil {
 				viewpoints = append(viewpoints, vIB.GetID())
@@ -1374,7 +1374,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) err
 		return err
 	}
 
-	view := NewUtxoViewpoint()
+	view := utxo.NewUtxoViewpoint()
 	view.SetViewpoints(block.Block().Parents)
 
 	err = b.checkConnectBlock(virBlock, block, view, nil)
@@ -1382,6 +1382,82 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) err
 		return err
 	}
 	return nil
+}
+
+func (b *BlockChain) CheckStateRoot(block *types.SerializedBlock) error {
+	// Build merkle tree and ensure the calculated merkle root matches the
+	// entry in the block header.  This also has the effect of caching all
+	// of the hashes in the block to speed up future hash
+	// checks.
+	calculatedStateRoot := b.CalculateStateRoot(block.Transactions())
+	if !block.Block().Header.StateRoot.IsEqual(calculatedStateRoot) {
+		str := fmt.Sprintf("block merkle state root is invalid - block "+
+			"header indicates %s, but calculated value is %s",
+			block.Block().Header.StateRoot, calculatedStateRoot)
+		return ruleError(ErrBadMerkleRoot, str)
+	}
+	return nil
+}
+
+// IsFinalizedTransaction determines whether or not a transaction is finalized.
+func IsFinalizedTransaction(tx *types.Tx, blockHeight uint64, blockTime time.Time) bool {
+	// Lock time of zero means the transaction is finalized.
+	msgTx := tx.Transaction()
+	lockTime := msgTx.LockTime
+	if lockTime == 0 {
+		return true
+	}
+
+	// The lock time field of a transaction is either a block height at
+	// which the transaction is finalized or a timestamp depending on if the
+	// value is before the txscript.LockTimeThreshold.  When it is under the
+	// threshold it is a block height.
+	var blockTimeOrHeight int64
+	if lockTime < txscript.LockTimeThreshold {
+		//TODO, remove the type conversion
+		blockTimeOrHeight = int64(blockHeight)
+	} else {
+		blockTimeOrHeight = blockTime.Unix()
+	}
+	if int64(lockTime) < blockTimeOrHeight {
+		return true
+	}
+
+	// At this point, the transaction's lock time hasn't occurred yet, but
+	// the transaction might still be finalized if the sequence number
+	// for all transaction inputs is maxed out.
+	for _, txIn := range msgTx.TxIn {
+		if txIn.Sequence != math.MaxUint32 {
+			return false
+		}
+	}
+	return true
+}
+
+func (b *BlockChain) IsValidTxType(tt types.TxType) bool {
+	txTypesCfg := types.StdTxs
+	var ok bool
+	var err error
+	ok, err = b.IsDeploymentActive(params.DeploymentToken)
+	if err == nil && ok && len(types.TokenTxs) > 0 {
+		txTypesCfg = append(txTypesCfg, types.TokenTxs...)
+	}
+	if forks.IsMeerEVMForkHeight(int64(b.BestSnapshot().GraphState.GetMainHeight())) {
+		ok = true
+		err = nil
+	} else {
+		ok, err = b.IsDeploymentActive(params.DeploymentMeerEVM)
+	}
+	if err == nil && ok && len(types.MeerEVMTxs) > 0 {
+		txTypesCfg = append(txTypesCfg, types.MeerEVMTxs...)
+	}
+
+	for _, txt := range txTypesCfg {
+		if txt == tt {
+			return true
+		}
+	}
+	return false
 }
 
 func ExtractCoinbaseHeight(coinbaseTx *types.Transaction) (uint64, error) {
@@ -1416,126 +1492,20 @@ func ExtractCoinbaseHeight(coinbaseTx *types.Transaction) (uint64, error) {
 	return serializedHeight, nil
 }
 
-func (b *BlockChain) CheckTokenTransactionInputs(tx *types.Tx, utxoView *UtxoViewpoint) error {
-	msgTx := tx.Transaction()
-	totalAtomIn := int64(0)
-	targets := []uint{}
-
-	for idx, txIn := range msgTx.TxIn {
-		if idx == 0 {
-			continue
-		}
-		utxoEntry := utxoView.LookupEntry(txIn.PreviousOut)
-		if utxoEntry == nil || utxoEntry.IsSpent() {
-			str := fmt.Sprintf("output %v referenced from "+
-				"transaction %s:%d either does not exist or "+
-				"has already been spent", txIn.PreviousOut,
-				tx.Hash(), idx)
-			return ruleError(ErrMissingTxOut, str)
-		}
-		if !utxoEntry.amount.Id.IsBase() {
-			return fmt.Errorf("Token transaction(%s) input (%s %d) must be MEERA\n", tx.Hash(), txIn.PreviousOut.Hash, txIn.PreviousOut.OutIndex)
-		}
-
-		originTxAtom := utxoEntry.Amount()
-		if originTxAtom.Value < 0 {
-			str := fmt.Sprintf("transaction output has negative "+
-				"value of %v", originTxAtom)
-			return ruleError(ErrInvalidTxOutValue, str)
-		}
-		if originTxAtom.Value > types.MaxAmount {
-			str := fmt.Sprintf("transaction output value of %v is "+
-				"higher than max allowed value of %v",
-				originTxAtom, types.MaxAmount)
-			return ruleError(ErrInvalidTxOutValue, str)
-		}
-
-		if utxoEntry.IsCoinBase() {
-			ubhIB := b.bd.GetBlock(utxoEntry.BlockHash())
-			if ubhIB == nil {
-				str := fmt.Sprintf("utxoEntry blockhash error:%s", utxoEntry.BlockHash())
-				return ruleError(ErrNoViewpoint, str)
-			}
-			targets = append(targets, ubhIB.GetID())
-			if !utxoEntry.BlockHash().IsEqual(b.params.GenesisHash) {
-				if originTxAtom.Id == types.MEERA {
-					if txIn.PreviousOut.OutIndex == CoinbaseOutput_subsidy {
-						originTxAtom.Value += b.GetFeeByCoinID(utxoEntry.BlockHash(), originTxAtom.Id)
-					}
-				} else {
-					originTxAtom.Value = b.GetFeeByCoinID(utxoEntry.BlockHash(), originTxAtom.Id)
-				}
-			}
-		}
-
-		totalAtomIn += originTxAtom.Value
+// checkCoinbaseUniqueHeight checks to ensure that for all blocks height > 1 the
+// coinbase contains the height encoding to make coinbase hash collisions
+// impossible.
+func checkCoinbaseUniqueHeight(blockHeight uint64, block *types.SerializedBlock) error {
+	// check height
+	serializedHeight, err := ExtractCoinbaseHeight(block.Block().Transactions[0])
+	if err != nil {
+		return err
 	}
-
-	lockMeer := int64(dbnamespace.ByteOrder.Uint64(msgTx.TxIn[0].PreviousOut.Hash[0:8]))
-	if totalAtomIn != lockMeer {
-		return fmt.Errorf("Utxo (%d) and input amount (%d) are inconsistent\n", totalAtomIn, lockMeer)
-	}
-
-	//
-	if len(targets) > 0 {
-		viewpoints := []uint{}
-		for _, blockHash := range utxoView.viewpoints {
-			vIB := b.bd.GetBlock(blockHash)
-			if vIB != nil {
-				viewpoints = append(viewpoints, vIB.GetID())
-			}
-		}
-		if len(viewpoints) == 0 {
-			str := fmt.Sprintf("transaction %s has no viewpoints", tx.Hash())
-			return ruleError(ErrNoViewpoint, str)
-		}
-		err := b.bd.CheckBlueAndMatureMT(targets, viewpoints, uint(b.params.CoinbaseMaturity))
-		if err != nil {
-			return ruleError(ErrImmatureSpend, err.Error())
-		}
-	}
-	//
-
-	totalAtomOut := int64(0)
-	state := b.GetTokenState(b.TokenTipID)
-	if state == nil {
-		return fmt.Errorf("Token state error\n")
-	}
-	coinId := msgTx.TxOut[0].Amount.Id
-	tt, ok := state.Types[coinId]
-	if !ok {
-		return fmt.Errorf("It doesn't exist: Coin id (%d)\n", coinId)
-	}
-	tokenAmount := int64(0)
-	tb, ok := state.Balances[coinId]
-	if ok {
-		tokenAmount = tb.Balance
-	}
-
-	for idx, txOut := range tx.Transaction().TxOut {
-		if txOut.Amount.Id != coinId {
-			return fmt.Errorf("Transaction(%s) output(%d) coin id is invalid\n", tx.Hash(), idx)
-		}
-		totalAtomOut += txOut.Amount.Value
-	}
-	if totalAtomOut+tokenAmount > int64(tt.UpLimit) {
-		return fmt.Errorf("Token transaction mint (%d) exceeds the maximum (%d)\n", totalAtomOut, tt.UpLimit)
-	}
-
-	return nil
-}
-
-func (b *BlockChain) CheckStateRoot(block *types.SerializedBlock) error {
-	// Build merkle tree and ensure the calculated merkle root matches the
-	// entry in the block header.  This also has the effect of caching all
-	// of the hashes in the block to speed up future hash
-	// checks.
-	calculatedStateRoot := b.CalculateStateRoot(block.Transactions())
-	if !block.Block().Header.StateRoot.IsEqual(calculatedStateRoot) {
-		str := fmt.Sprintf("block merkle state root is invalid - block "+
-			"header indicates %s, but calculated value is %s",
-			block.Block().Header.StateRoot, calculatedStateRoot)
-		return ruleError(ErrBadMerkleRoot, str)
+	if uint64(serializedHeight) != blockHeight {
+		str := fmt.Sprintf("the coinbase signature script serialized "+
+			"block height is %d when %d was expected",
+			serializedHeight, blockHeight)
+		return ruleError(ErrCoinbaseHeight, str)
 	}
 	return nil
 }

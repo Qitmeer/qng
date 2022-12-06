@@ -6,6 +6,7 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
@@ -229,7 +230,7 @@ func (b *BlockChain) thresholdState(prevNode meerdag.IBlock, checker thresholdCo
 		var ok bool
 		state, ok = cache.Lookup(prevNode.GetID())
 		if !ok {
-			return ThresholdFailed, AssertError(fmt.Sprintf(
+			return ThresholdFailed, model.AssertError(fmt.Sprintf(
 				"thresholdState: cache lookup failed for %v",
 				prevNode.GetHash()))
 		}

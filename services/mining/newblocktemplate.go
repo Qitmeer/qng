@@ -6,6 +6,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/merkle"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
@@ -157,7 +158,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	// avoided.
 	blockTxns := make([]*types.Tx, 0, len(sourceTxns))
 	blockTxns = append(blockTxns, coinbaseTx)
-	blockUtxos := blockchain.NewUtxoViewpoint()
+	blockUtxos := utxo.NewUtxoViewpoint()
 	if parents == nil {
 		blockUtxos.SetViewpoints(blockManager.GetChain().GetMiningTips(len(blockTxns)))
 	} else {
@@ -599,7 +600,7 @@ func UpdateBlockTime(msgBlock *types.Block, chain *blockchain.BlockChain, timeSo
 // viewA will contain all of its original entries plus all of the entries
 // in viewB.  It will replace any entries in viewB which also exist in viewA
 // if the entry in viewA is fully spent.
-func mergeUtxoView(viewA *blockchain.UtxoViewpoint, viewB *blockchain.UtxoViewpoint) {
+func mergeUtxoView(viewA *utxo.UtxoViewpoint, viewB *utxo.UtxoViewpoint) {
 	viewAEntries := viewA.Entries()
 	for outpoint, entryB := range viewB.Entries() {
 		if entryA, exists := viewAEntries[outpoint]; !exists ||
@@ -627,7 +628,7 @@ func logSkippedDeps(tx *types.Tx, deps map[hash.Hash]*WeightedRandTx) {
 // spendTransaction updates the passed view by marking the inputs to the passed
 // transaction as spent.  It also adds all outputs in the passed transaction
 // which are not provably unspendable as available unspent transaction outputs.
-func spendTransaction(utxoView *blockchain.UtxoViewpoint, tx *types.Tx, blockHash *hash.Hash) error {
+func spendTransaction(utxoView *utxo.UtxoViewpoint, tx *types.Tx, blockHash *hash.Hash) error {
 	for _, txIn := range tx.Transaction().TxIn {
 		entry := utxoView.LookupEntry(txIn.PreviousOut)
 		if entry != nil {

@@ -5,34 +5,13 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/meerdag"
 	"math/big"
 	"time"
 )
-
-// errDeserialize signifies that a problem was encountered when deserializing
-// data.
-type errDeserialize string
-
-// Error implements the error interface.
-func (e errDeserialize) Error() string {
-	return string(e)
-}
-
-// isDeserializeErr returns whether or not the passed error is an errDeserialize
-// error.
-func isDeserializeErr(err error) bool {
-	_, ok := err.(errDeserialize)
-	return ok
-}
 
 // -----------------------------------------------------------------------------
 // The database information contains information about the version and date
@@ -196,103 +175,6 @@ func dbFetchDatabaseInfo(dbTx database.Tx) (*databaseInfo, error) {
 	}, nil
 }
 
-// createChainState initializes both the database and the chain state to the
-// genesis block.  This includes creating the necessary buckets and inserting
-// the genesis block, so it must only be called on an uninitialized database.
-func (b *BlockChain) createChainState() error {
-	// Create a new node from the genesis block and set it as the best node.
-	genesisBlock := types.NewBlock(b.params.GenesisBlock)
-	genesisBlock.SetOrder(0)
-	header := &genesisBlock.Block().Header
-	node := NewBlockNode(genesisBlock, genesisBlock.Block().Parents)
-	_, _, ib, _ := b.bd.AddBlock(node)
-	//node.FlushToDB(b)
-	// Initialize the state related to the best block.  Since it is the
-	// genesis block, use its timestamp for the median time.
-	numTxns := uint64(len(genesisBlock.Block().Transactions))
-	blockSize := uint64(genesisBlock.Block().SerializeSize())
-	b.stateSnapshot = newBestState(node.GetHash(), node.Difficulty(), blockSize, numTxns,
-		time.Unix(node.GetTimestamp(), 0), numTxns, 0, b.bd.GetGraphState(), node.GetHash())
-	b.TokenTipID = 0
-	// Create the initial the database chain state including creating the
-	// necessary index buckets and inserting the genesis block.
-	err := b.db.Update(func(dbTx database.Tx) error {
-		meta := dbTx.Metadata()
-
-		// Create the bucket that houses information about the database's
-		// creation and version.
-		_, err := meta.CreateBucket(dbnamespace.BCDBInfoBucketName)
-		if err != nil {
-			return err
-		}
-
-		b.dbInfo = &databaseInfo{
-			version: currentDatabaseVersion,
-			compVer: serialization.CurrentCompressionVersion,
-			bidxVer: currentBlockIndexVersion,
-			created: roughtime.Now(),
-		}
-		err = dbPutDatabaseInfo(dbTx, b.dbInfo)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the spend journal data.
-		_, err = meta.CreateBucket(dbnamespace.SpendJournalBucketName)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the utxo set.  Note that the
-		// genesis block coinbase transaction is intentionally not
-		// inserted here since it is not spendable by consensus rules.
-		_, err = meta.CreateBucket(dbnamespace.UtxoSetBucketName)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket which house the token state
-		if _, err := meta.CreateBucket(dbnamespace.TokenBucketName); err != nil {
-			return err
-		}
-		initTS := token.BuildGenesisTokenState()
-		err = initTS.Commit()
-		if err != nil {
-			return err
-		}
-		err = token.DBPutTokenState(dbTx, uint32(ib.GetID()), initTS)
-		if err != nil {
-			return err
-		}
-		// Store the current best chain state into the database.
-		err = dbPutBestState(dbTx, b.stateSnapshot, pow.CalcWork(header.Difficulty, header.Pow.GetPowType()))
-		if err != nil {
-			return err
-		}
-
-		// Add genesis utxo
-		view := NewUtxoViewpoint()
-		view.SetViewpoints([]*hash.Hash{genesisBlock.Hash()})
-		for _, tx := range genesisBlock.Transactions() {
-			view.AddTxOuts(tx, genesisBlock.Hash())
-		}
-		err = b.dbPutUtxoView(dbTx, view)
-		if err != nil {
-			return err
-		}
-
-		// Store the genesis block into the database.
-		if err := dbTx.StoreBlock(genesisBlock); err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return b.bd.Commit()
-}
-
 // dbPutDatabaseInfo uses an existing database transaction to store the database
 // information.
 func dbPutDatabaseInfo(dbTx database.Tx, dbi *databaseInfo) error {
@@ -442,18 +324,6 @@ func dbFetchBlockByHash(dbTx database.Tx, hash *hash.Hash) (*types.SerializedBlo
 	}
 
 	return block, nil
-}
-
-// BlockOrderByHash returns the order of the block with the given hash in the
-// chain.
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) BlockOrderByHash(hash *hash.Hash) (uint64, error) {
-	ib := b.bd.GetBlock(hash)
-	if ib == nil {
-		return uint64(meerdag.MaxBlockOrder), fmt.Errorf("No block\n")
-	}
-	return uint64(ib.GetOrder()), nil
 }
 
 // dbFetchHeaderByHash uses an existing database transaction to retrieve the

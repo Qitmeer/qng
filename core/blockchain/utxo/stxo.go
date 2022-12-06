@@ -1,9 +1,10 @@
-package blockchain
+package utxo
 
 import (
 	"encoding/binary"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
@@ -166,13 +167,13 @@ func putSpentTxOut(target []byte, stxo *SpentTxOut) int {
 func decodeSpentTxOut(serialized []byte, stxo *SpentTxOut) (int, error) {
 	// Ensure there are bytes to decode.
 	if len(serialized) == 0 {
-		return 0, errDeserialize("no serialized bytes")
+		return 0, model.ErrDeserialize("no serialized bytes")
 	}
 
 	// Deserialize the header code.
 	code, offset := serialization.DeserializeVLQ(serialized)
 	if offset >= len(serialized) {
-		return offset, errDeserialize("unexpected end of data after " +
+		return offset, model.ErrDeserialize("unexpected end of data after " +
 			"header code")
 	}
 
@@ -206,7 +207,7 @@ func decodeSpentTxOut(serialized []byte, stxo *SpentTxOut) (int, error) {
 		serialized[offset:])
 	offset += bytesRead
 	if err != nil {
-		return offset, errDeserialize(fmt.Sprintf("unable to decode "+
+		return offset, model.ErrDeserialize(fmt.Sprintf("unable to decode "+
 			"txout: %v", err))
 	}
 	stxo.Amount = types.Amount{Value: int64(amount), Id: types.CoinID(amountCoinId)}
@@ -239,7 +240,7 @@ func deserializeSpendJournalEntry(serialized []byte, txns []*types.Transaction) 
 		n, err := decodeSpentTxOut(serialized[offset:], stxo)
 		offset += n
 		if err != nil {
-			return nil, errDeserialize(fmt.Sprintf("unable "+
+			return nil, model.ErrDeserialize(fmt.Sprintf("unable "+
 				"to decode stxo for %v: %v",
 				stxoIdx, err))
 		}
@@ -275,7 +276,7 @@ func serializeSpendJournalEntry(stxos []SpentTxOut) ([]byte, error) {
 		offset += putSpentTxOut(serialized[offset:], &stxos[i])
 
 		if offset-oldOffset != sizes[i] {
-			return nil, AssertError(fmt.Sprintf("bad write; expect sz %v, "+
+			return nil, model.AssertError(fmt.Sprintf("bad write; expect sz %v, "+
 				"got sz %v (wrote %x)", sizes[i], offset-oldOffset,
 				serialized[oldOffset:offset]))
 		}
@@ -288,7 +289,7 @@ func serializeSpendJournalEntry(stxos []SpentTxOut) ([]byte, error) {
 // view MUST have the utxos referenced by all of the transactions available for
 // the passed block since that information is required to reconstruct the spent
 // txouts.
-func dbFetchSpendJournalEntry(dbTx database.Tx, block *types.SerializedBlock) ([]SpentTxOut, error) {
+func DBFetchSpendJournalEntry(dbTx database.Tx, block *types.SerializedBlock) ([]SpentTxOut, error) {
 	// Exclude the coinbase transaction since it can't spend anything.
 	spendBucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
 	serialized := spendBucket.Get(block.Hash()[:])
@@ -298,7 +299,7 @@ func dbFetchSpendJournalEntry(dbTx database.Tx, block *types.SerializedBlock) ([
 	if err != nil {
 		// Ensure any deserialization errors are returned as database
 		// corruption errors.
-		if isDeserializeErr(err) {
+		if model.IsDeserializeErr(err) {
 			return nil, database.Error{
 				ErrorCode: database.ErrCorruption,
 				Description: fmt.Sprintf("corrupt spend "+
@@ -317,7 +318,7 @@ func dbFetchSpendJournalEntry(dbTx database.Tx, block *types.SerializedBlock) ([
 // spend journal entry for the given block hash using the provided slice of
 // spent txouts.   The spent txouts slice must contain an entry for every txout
 // the transactions in the block spend in the order they are spent.
-func dbPutSpendJournalEntry(dbTx database.Tx, blockHash *hash.Hash, stxos []SpentTxOut) error {
+func DBPutSpendJournalEntry(dbTx database.Tx, blockHash *hash.Hash, stxos []SpentTxOut) error {
 	if len(stxos) == 0 {
 		return nil
 	}
@@ -331,7 +332,7 @@ func dbPutSpendJournalEntry(dbTx database.Tx, blockHash *hash.Hash, stxos []Spen
 
 // dbRemoveSpendJournalEntry uses an existing database transaction to remove the
 // spend journal entry for the passed block hash.
-func dbRemoveSpendJournalEntry(dbTx database.Tx, blockHash *hash.Hash) error {
+func DBRemoveSpendJournalEntry(dbTx database.Tx, blockHash *hash.Hash) error {
 	spendBucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
 	return spendBucket.Delete(blockHash[:])
 }

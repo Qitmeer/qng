@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
-	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 )
@@ -84,14 +84,14 @@ type AcctUTXOIWatcher interface {
 	GetName() string
 }
 
-func BuildUTXOWatcher(op []byte, au *AcctUTXO, entry *blockchain.UtxoEntry, am *AccountManager) AcctUTXOIWatcher {
+func BuildUTXOWatcher(op []byte, au *AcctUTXO, entry *utxo.UtxoEntry, am *AccountManager) AcctUTXOIWatcher {
 	if entry == nil {
 		outpoint, err := parseOutpoint(op)
 		if err != nil {
 			return nil
 		}
 		err = am.chain.DB().View(func(dbTx database.Tx) error {
-			entry, err = blockchain.DBFetchUtxoEntry(dbTx, *outpoint)
+			entry, err = utxo.DBFetchUtxoEntry(dbTx, *outpoint)
 			return err
 		})
 		if err != nil {
