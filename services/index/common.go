@@ -65,32 +65,6 @@ type IndexDropper interface {
 	DropIndex(db database.DB, interrupt <-chan struct{}) error
 }
 
-// AssertError identifies an error that indicates an internal code consistency
-// issue and should be treated as a critical and unrecoverable error.
-type AssertError string
-
-// Error returns the assertion error as a huma-readable string and satisfies
-// the error interface.
-func (e AssertError) Error() string {
-	return "assertion failed: " + string(e)
-}
-
-// errDeserialize signifies that a problem was encountered when deserializing
-// data.
-type errDeserialize string
-
-// Error implements the error interface.
-func (e errDeserialize) Error() string {
-	return string(e)
-}
-
-// isDeserializeErr returns whether or not the passed error is an errDeserialize
-// error.
-func isDeserializeErr(err error) bool {
-	_, ok := err.(errDeserialize)
-	return ok
-}
-
 // internalBucket is an abstraction over a database bucket.  It is used to make
 // the code easier to test since it allows mock objects in the tests to only
 // implement these functions instead of everything a database.Bucket supports.

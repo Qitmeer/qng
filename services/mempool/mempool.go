@@ -13,6 +13,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/message"
 	"github.com/Qitmeer/qng/core/types"
@@ -177,7 +178,7 @@ func (mp *TxPool) RemoveDoubleSpends(tx *types.Tx) {
 // helper for maybeAcceptTransaction.
 //
 // This function MUST be called with the mempool lock held (for writes).
-func (mp *TxPool) addTransaction(utxoView *blockchain.UtxoViewpoint,
+func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 	tx *types.Tx, height uint64, fee int64) *TxDesc {
 	// Add the transaction to the pool and mark the referenced outpoints
 	// as spent by the pool.
@@ -372,7 +373,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 
 	if types.IsTokenTx(tx.Tx) {
 
-		utxoView := blockchain.NewUtxoViewpoint()
+		utxoView := utxo.NewUtxoViewpoint()
 		if types.IsTokenMintTx(tx.Tx) {
 			utxoView, err = mp.fetchInputUtxos(tx)
 			if err != nil {
@@ -419,7 +420,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		if err != nil {
 			return nil, nil, err
 		}
-		utxoView := blockchain.NewUtxoViewpoint()
+		utxoView := utxo.NewUtxoViewpoint()
 		utxoView.AddTokenTxOut(tx.Tx.TxIn[0].PreviousOut, pks)
 		vtsTx, err := itx.GetTransactionForEngine()
 		if err != nil {
@@ -691,7 +692,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 // transaction pool.
 //
 // This function MUST be called with the mempool lock held (for reads).
-func (mp *TxPool) fetchInputUtxos(tx *types.Tx) (*blockchain.UtxoViewpoint, error) {
+func (mp *TxPool) fetchInputUtxos(tx *types.Tx) (*utxo.UtxoViewpoint, error) {
 	utxoView, err := mp.cfg.FetchUtxoView(tx)
 	if err != nil {
 		return nil, err
@@ -1267,7 +1268,7 @@ func (mp *TxPool) IsSupportVMTx() bool {
 	return mp.cfg.BC.IsValidTxType(types.TxTypeCrossChainVM)
 }
 
-func (mp *TxPool) AddUnconfirmedTx(tx *types.Tx, utxoView *blockchain.UtxoViewpoint) {
+func (mp *TxPool) AddUnconfirmedTx(tx *types.Tx, utxoView *utxo.UtxoViewpoint) {
 	var pkScripts [][]byte
 	msgTx := tx.Transaction()
 	for _, txIn := range msgTx.TxIn {

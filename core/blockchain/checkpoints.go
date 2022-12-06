@@ -9,9 +9,10 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"time"
 )
@@ -153,7 +154,7 @@ func (b *BlockChain) findPreviousCheckpoint() (meerdag.IBlock, error) {
 	// it.
 	checkpointNode := b.bd.GetBlock(b.nextCheckpoint.Hash)
 	if checkpointNode == nil {
-		return nil, AssertError(fmt.Sprintf("findPreviousCheckpoint "+
+		return nil, model.AssertError(fmt.Sprintf("findPreviousCheckpoint "+
 			"failed lookup of known good block node %s",
 			b.nextCheckpoint.Hash))
 	}

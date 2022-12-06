@@ -84,7 +84,7 @@ func (idx *InvalidTxIndex) caughtUpFrom(startOrder uint) error {
 			if i == 0 {
 				continue
 			}
-			block, blk, err := bc.DBFetchBlockByOrder(uint64(i))
+			block, blk, err := bc.FetchBlockByOrder(uint64(i))
 			if err != nil {
 				return err
 			}

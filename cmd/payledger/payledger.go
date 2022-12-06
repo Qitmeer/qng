@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
@@ -202,7 +202,7 @@ func buildLedger(node INode, config *Config) error {
 			return fmt.Errorf("deserializeVLQ:%s", cursorKeys[i])
 		}
 		// Deserialize the utxo entry and return it.
-		entry, err := blockchain.DeserializeUtxoEntry(serializedUtxo)
+		entry, err := utxo.DeserializeUtxoEntry(serializedUtxo)
 		if err != nil {
 			return err
 		}

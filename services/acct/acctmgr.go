@@ -7,6 +7,7 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
@@ -169,7 +170,7 @@ func (a *AccountManager) rebuild(addrs []string) error {
 		log.Trace("Try to rebuild account index")
 	}
 	ops := []*types.TxOutPoint{}
-	entrys := []*blockchain.UtxoEntry{}
+	entrys := []*utxo.UtxoEntry{}
 	err := a.chain.DB().View(func(dbTx database.Tx) error {
 		meta := dbTx.Metadata()
 		utxoBucket := meta.Bucket(dbnamespace.UtxoSetBucketName)
@@ -181,7 +182,7 @@ func (a *AccountManager) rebuild(addrs []string) error {
 			}
 			serializedUtxo := cursor.Value()
 			// Deserialize the utxo entry and return it.
-			entry, err := blockchain.DeserializeUtxoEntry(serializedUtxo)
+			entry, err := utxo.DeserializeUtxoEntry(serializedUtxo)
 			if err != nil {
 				return err
 			}
@@ -216,7 +217,7 @@ func (a *AccountManager) rebuild(addrs []string) error {
 	return nil
 }
 
-func (a *AccountManager) checkUtxoEntry(entry *blockchain.UtxoEntry, tracks []string) (string, txscript.ScriptClass, error) {
+func (a *AccountManager) checkUtxoEntry(entry *utxo.UtxoEntry, tracks []string) (string, txscript.ScriptClass, error) {
 	if entry.Amount().Id != types.MEERA {
 		return "", txscript.NonStandardTy, nil
 	}
@@ -251,7 +252,7 @@ func (a *AccountManager) checkUtxoEntry(entry *blockchain.UtxoEntry, tracks []st
 	return addrStr, scriptClass, nil
 }
 
-func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *blockchain.UtxoEntry) error {
+func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *utxo.UtxoEntry) error {
 	addrStr, scriptClass, err := a.checkUtxoEntry(entry, a.info.addrs)
 	if err != nil {
 		return err
@@ -483,7 +484,7 @@ func (a *AccountManager) Apply(add bool, op *types.TxOutPoint, entry interface{}
 	if !a.cfg.AcctMode {
 		return nil
 	}
-	a.utxoops = append(a.utxoops, &UTXOOP{add: add, op: op, entry: entry.(*blockchain.UtxoEntry)})
+	a.utxoops = append(a.utxoops, &UTXOOP{add: add, op: op, entry: entry.(*utxo.UtxoEntry)})
 	return nil
 }
 

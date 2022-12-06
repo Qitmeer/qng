@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/vm"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"math"
 	"runtime"
 
@@ -31,7 +32,7 @@ type txValidator struct {
 	validateChan chan *txValidateItem
 	quitChan     chan struct{}
 	resultChan   chan error
-	utxoView     *UtxoViewpoint
+	utxoView     *utxo.UtxoViewpoint
 	flags        txscript.ScriptFlags
 	sigCache     *txscript.SigCache
 }
@@ -171,7 +172,7 @@ func (v *txValidator) Validate(items []*txValidateItem) error {
 
 // newTxValidator returns a new instance of txValidator to be used for
 // validating transaction scripts asynchronously.
-func newTxValidator(utxoView *UtxoViewpoint, flags txscript.ScriptFlags, sigCache *txscript.SigCache) *txValidator {
+func newTxValidator(utxoView *utxo.UtxoViewpoint, flags txscript.ScriptFlags, sigCache *txscript.SigCache) *txValidator {
 	return &txValidator{
 		validateChan: make(chan *txValidateItem),
 		quitChan:     make(chan struct{}),
@@ -184,7 +185,7 @@ func newTxValidator(utxoView *UtxoViewpoint, flags txscript.ScriptFlags, sigCach
 
 // ValidateTransactionScripts validates the scripts for the passed transaction
 // using multiple goroutines.
-func ValidateTransactionScripts(tx *types.Tx, utxoView *UtxoViewpoint, flags txscript.ScriptFlags, sigCache *txscript.SigCache, height int64) error {
+func ValidateTransactionScripts(tx *types.Tx, utxoView *utxo.UtxoViewpoint, flags txscript.ScriptFlags, sigCache *txscript.SigCache, height int64) error {
 	// Collect all of the transaction inputs and required information for
 	// validation.
 	txIns := tx.Transaction().TxIn
@@ -213,7 +214,7 @@ func ValidateTransactionScripts(tx *types.Tx, utxoView *UtxoViewpoint, flags txs
 // checkBlockScripts executes and validates the scripts for all transactions in
 // the passed block using multiple goroutines.
 // txTree = true is TxTreeRegular, txTree = false is TxTreeStake.
-func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *UtxoViewpoint,
+func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *utxo.UtxoViewpoint,
 	scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
 
 	// Collect all of the transaction inputs and required information for

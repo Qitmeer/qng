@@ -8,6 +8,7 @@ package mempool
 import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
@@ -35,7 +36,7 @@ type Config struct {
 
 	// FetchUtxoView defines the function to use to fetch unspent
 	// transaction output information.
-	FetchUtxoView func(*types.Tx) (*blockchain.UtxoViewpoint, error)
+	FetchUtxoView func(*types.Tx) (*utxo.UtxoViewpoint, error)
 
 	// BlockByHash defines the function use to fetch the block identified
 	// by the given hash.
@@ -57,7 +58,7 @@ type Config struct {
 	// CalcSequenceLock defines the function to use in order to generate
 	// the current sequence lock for the given transaction using the passed
 	// utxo view.
-	CalcSequenceLock func(*types.Tx, *blockchain.UtxoViewpoint) (*blockchain.SequenceLock, error)
+	CalcSequenceLock func(*types.Tx, *utxo.UtxoViewpoint) (*blockchain.SequenceLock, error)
 
 	// SubsidyCache defines a subsidy cache to use.
 	SubsidyCache *blockchain.SubsidyCache
