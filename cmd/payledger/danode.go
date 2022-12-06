@@ -14,6 +14,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
@@ -48,12 +49,12 @@ func (node *DebugAddressNode) init(cfg *Config) error {
 
 	node.db = db
 	//
-	ccfg:=common.DefaultConfig(node.cfg.HomeDir)
-	ccfg.DataDir=cfg.DataDir
-	ccfg.DbType=cfg.DbType
-	ccfg.DAGType=cfg.DAGType
-	cons:=consensus.NewPure(ccfg,db)
-	err=cons.Init()
+	ccfg := common.DefaultConfig(node.cfg.HomeDir)
+	ccfg.DataDir = cfg.DataDir
+	ccfg.DbType = cfg.DbType
+	ccfg.DAGType = cfg.DAGType
+	cons := consensus.NewPure(ccfg, db)
+	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -317,7 +318,7 @@ func (node *DebugAddressNode) checkUTXO(blueM *map[uint]bool) error {
 	}
 	for _, serializedUtxo := range serializedUtxos {
 		// Deserialize the utxo entry and return it.
-		entry, err := blockchain.DeserializeUtxoEntry(serializedUtxo)
+		entry, err := utxo.DeserializeUtxoEntry(serializedUtxo)
 		if err != nil {
 			return err
 		}
