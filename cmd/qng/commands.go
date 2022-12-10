@@ -32,7 +32,7 @@ func indexCmd() *cli.Command {
 		Description: "index manager",
 		Subcommands: []*cli.Command{
 			&cli.Command{
-				Name:        "dropvmblock",
+				Name:        "dropvmblockindex",
 				Aliases:     []string{"dv"},
 				Usage:       "Deletes the vm block index from the database on start up and then exits",
 				Description: "Deletes the vm block index from the database on start up and then exits",
@@ -59,7 +59,7 @@ func indexCmd() *cli.Command {
 				},
 			},
 			&cli.Command{
-				Name:        "dropinvalidtx",
+				Name:        "dropinvalidtxindex",
 				Aliases:     []string{"di"},
 				Usage:       "Deletes the invalid tx index from the database on start up and then exits",
 				Description: "Deletes the invalid tx index from the database on start up and then exits",
