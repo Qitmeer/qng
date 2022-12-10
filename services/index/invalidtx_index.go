@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/staging"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/consensus/store/invalid_tx_index"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	l "github.com/Qitmeer/qng/log"
@@ -155,6 +156,23 @@ func NewInvalidTxIndex(consensus model.Consensus) *InvalidTxIndex {
 	return &InvalidTxIndex{
 		consensus: consensus,
 	}
+}
+
+func DropInvalidTxIndex(db database.DB, interrupt <-chan struct{}) error {
+	log.Info("Start drop invalidtx index")
+	itiStore, err := invalid_tx_index.New(db, 10, false)
+	if err != nil {
+		return err
+	}
+	if itiStore.IsEmpty() {
+		return fmt.Errorf("No data needs to be deleted")
+	}
+	tipOrder, tipHash, err := itiStore.Tip(model.NewStagingArea())
+	if err != nil {
+		return err
+	}
+	log.Info(fmt.Sprintf("All invalidtx index at (%s,%d) will be deleted", tipHash, tipOrder))
+	return itiStore.Clean()
 }
 
 // TODO: Discard in the future

@@ -34,7 +34,7 @@ type MeerChain struct {
 }
 
 func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
-	_, _, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
+	_, _, _, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
 		return err
 	}
@@ -42,21 +42,18 @@ func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
 }
 
 func (b *MeerChain) ConnectBlock(block qconsensus.Block) (uint64, error) {
-
-	mblock, _, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
-
+	mblock, receipts, statedb, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
 		return 0, err
 	}
-
-	num, err := b.chain.Ether().BlockChain().InsertChain(types.Blocks{mblock})
+	logs := []*types.Log{}
+	for _, re := range receipts {
+		logs = append(logs, re.Logs...)
+	}
+	_, err = b.chain.Ether().BlockChain().WriteBlockAndSetHead(mblock, receipts, logs, statedb, true)
 	if err != nil {
 		return 0, err
 	}
-	if num != 1 {
-		return 0, fmt.Errorf("BuildBlock error")
-	}
-
 	//
 	mbh := qcommon.ToEVMHash(block.ID())
 	//
@@ -102,7 +99,7 @@ func (b *MeerChain) DisconnectBlock(block qconsensus.Block) (uint64, error) {
 	return *bn, nil
 }
 
-func (b *MeerChain) buildBlock(qtxs []model.Tx, timestamp int64) (*types.Block, types.Receipts, error) {
+func (b *MeerChain) buildBlock(qtxs []model.Tx, timestamp int64) (*types.Block, types.Receipts, *state.StateDB, error) {
 	config := b.chain.Config().Eth.Genesis.Config
 	engine := b.chain.Ether().Engine()
 	db := b.chain.Ether().ChainDb()
@@ -115,7 +112,7 @@ func (b *MeerChain) buildBlock(qtxs []model.Tx, timestamp int64) (*types.Block, 
 
 	statedb, err := state.New(parent.Root(), state.NewDatabase(db), nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	header := makeHeader(&b.chain.Config().Eth, parent, statedb, timestamp, qparams.ActiveNetParams.MeerEVMCfg.GasLimit)
@@ -125,22 +122,22 @@ func (b *MeerChain) buildBlock(qtxs []model.Tx, timestamp int64) (*types.Block, 
 	}
 	txs, receipts, err := b.fillBlock(qtxs, header, statedb)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	root, err := statedb.Commit(config.IsEIP158(header.Number))
 	if err != nil {
-		return nil, nil, fmt.Errorf(fmt.Sprintf("state write error: %v", err))
+		return nil, nil, nil, fmt.Errorf(fmt.Sprintf("state write error: %v", err))
 	}
 	if err := statedb.Database().TrieDB().Commit(root, false, nil); err != nil {
-		return nil, nil, fmt.Errorf(fmt.Sprintf("trie write error: %v", err))
+		return nil, nil, nil, fmt.Errorf(fmt.Sprintf("trie write error: %v", err))
 	}
-	return block, receipts, nil
+	return block, receipts, statedb, nil
 }
 
 func (b *MeerChain) fillBlock(qtxs []model.Tx, header *types.Header, statedb *state.StateDB) ([]*types.Transaction, []*types.Receipt, error) {
