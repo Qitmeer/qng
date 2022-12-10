@@ -438,6 +438,9 @@ func (m *Manager) UpdateMainTip(bh *hash.Hash, order uint64) error {
 	if m.vmblockIndex != nil {
 		return m.vmblockIndex.UpdateMainTip(bh, order)
 	}
+	if m.invalidtxIndex != nil {
+		return m.invalidtxIndex.UpdateMainTip(bh, order)
+	}
 	return nil
 }
 
@@ -697,7 +700,7 @@ func dbPutIndexerTip(dbTx database.Tx, idxKey []byte, h *hash.Hash, order uint32
 }
 
 func DBPutIndexerTip(dbTx database.Tx, idxKey []byte, h *hash.Hash, order uint32) error {
-	return dbPutIndexerTip(dbTx,idxKey,h,order)
+	return dbPutIndexerTip(dbTx, idxKey, h, order)
 }
 
 // existsIndex returns whether the index keyed by idxKey exists in the database.
