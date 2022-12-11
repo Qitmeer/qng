@@ -25,4 +25,5 @@ type Consensus interface {
 	Interrupt() <-chan struct{}
 	Params() *params.Params
 	VMService() VMI
+	Rebuild() error
 }

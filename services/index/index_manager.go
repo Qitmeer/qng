@@ -349,9 +349,6 @@ func indexNeedsInputs(index Indexer) bool {
 func (m *Manager) maybeCreateIndexes(dbTx database.Tx) error {
 	indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
 	for _, indexer := range m.enabledIndexes {
-		if indexer.Name() == vmblockIndexName {
-			continue
-		}
 		// Nothing to do if the index tip already exists.
 		idxKey := indexer.Key()
 		if indexesBucket.Get(idxKey) != nil {
@@ -440,6 +437,9 @@ func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, 
 func (m *Manager) UpdateMainTip(bh *hash.Hash, order uint64) error {
 	if m.vmblockIndex != nil {
 		return m.vmblockIndex.UpdateMainTip(bh, order)
+	}
+	if m.invalidtxIndex != nil {
+		return m.invalidtxIndex.UpdateMainTip(bh, order)
 	}
 	return nil
 }
@@ -697,6 +697,10 @@ func dbPutIndexerTip(dbTx database.Tx, idxKey []byte, h *hash.Hash, order uint32
 
 	indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
 	return indexesBucket.Put(idxKey, serialized)
+}
+
+func DBPutIndexerTip(dbTx database.Tx, idxKey []byte, h *hash.Hash, order uint32) error {
+	return dbPutIndexerTip(dbTx, idxKey, h, order)
 }
 
 // existsIndex returns whether the index keyed by idxKey exists in the database.

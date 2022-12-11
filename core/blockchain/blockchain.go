@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/token"
@@ -21,9 +22,11 @@ import (
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
+	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common/progresslog"
+	"github.com/schollz/progressbar/v3"
 	"os"
 	"sort"
 	"sync"
@@ -1086,6 +1089,104 @@ func (b *BlockChain) BlockDAG() *meerdag.MeerDAG {
 // Return median time source
 func (b *BlockChain) TimeSource() model.MedianTimeSource {
 	return b.timeSource
+}
+
+func (b *BlockChain) Rebuild() error {
+	b.TokenTipID = 0
+	initTS := token.BuildGenesisTokenState()
+	err := initTS.Commit()
+	if err != nil {
+		return err
+	}
+	gib := b.BlockDAG().GetBlockById(0)
+	if gib == nil {
+		return fmt.Errorf("No genesis block")
+	}
+	err = b.db.Update(func(tx database.Tx) error {
+		err = token.DBPutTokenState(tx, uint32(gib.GetID()), initTS)
+		if err != nil {
+			return err
+		}
+		genesisBlock := types.NewBlock(params.ActiveNetParams.GenesisBlock)
+		genesisBlock.SetOrder(0)
+
+		view := utxo.NewUtxoViewpoint()
+		view.SetViewpoints([]*hash.Hash{genesisBlock.Hash()})
+		for _, tx := range genesisBlock.Transactions() {
+			view.AddTxOuts(tx, genesisBlock.Hash())
+		}
+		err = b.dbPutUtxoView(tx, view)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	//
+	logLvl := l.Glogger().GetVerbosity()
+	bar := progressbar.Default(int64(b.GetMainOrder()), fmt.Sprintf("Rebuild:"))
+	l.Glogger().Verbosity(l.LvlCrit)
+	b.VMService().SetLogLevel(l.LvlCrit.String())
+	defer func() {
+		l.Glogger().Verbosity(logLvl)
+		b.VMService().SetLogLevel(logLvl.String())
+	}()
+
+	var block *types.SerializedBlock
+	for i := uint(0); i <= b.GetMainOrder(); i++ {
+		bar.Add(1)
+		if system.InterruptRequested(b.consensus.Interrupt()) {
+			return fmt.Errorf("interrupt rebuild")
+		}
+		ib := b.bd.GetBlockByOrder(i)
+		if ib == nil {
+			return fmt.Errorf("No block order:%d", i)
+		}
+		err = nil
+		block, err = b.fetchBlockByHash(ib.GetHash())
+		if err != nil {
+			return err
+		}
+		block.SetOrder(uint64(ib.GetOrder()))
+		block.SetHeight(ib.GetHeight())
+
+		if i == 0 {
+			if b.indexManager != nil {
+				err = b.indexManager.ConnectBlock(block, nil, ib, 0)
+				if err != nil {
+					return err
+				}
+			}
+			continue
+		}
+
+		view := utxo.NewUtxoViewpoint()
+		view.SetViewpoints([]*hash.Hash{ib.GetHash()})
+		stxos := []utxo.SpentTxOut{}
+		err = b.checkConnectBlock(ib, block, view, &stxos)
+		if err != nil {
+			b.bd.InvalidBlock(ib)
+			stxos = []utxo.SpentTxOut{}
+			view.Clean()
+		}
+		connectedBlocks := list.New()
+		err = b.connectBlock(ib, block, view, stxos, connectedBlocks)
+		if err != nil {
+			b.bd.InvalidBlock(ib)
+			return err
+		}
+		if !ib.GetStatus().KnownInvalid() {
+			b.bd.ValidBlock(ib)
+		}
+		b.bd.UpdateWeight(ib)
+		err = b.bd.Commit()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // New returns a BlockChain instance using the provided configuration details.
