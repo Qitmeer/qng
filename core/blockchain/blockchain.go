@@ -1128,10 +1128,14 @@ func (b *BlockChain) Rebuild() error {
 	logLvl := l.Glogger().GetVerbosity()
 	bar := progressbar.Default(int64(b.GetMainOrder()), fmt.Sprintf("Rebuild:"))
 	l.Glogger().Verbosity(l.LvlCrit)
-	defer l.Glogger().Verbosity(logLvl)
+	b.VMService().SetLogLevel(l.LvlCrit.String())
+	defer func() {
+		l.Glogger().Verbosity(logLvl)
+		b.VMService().SetLogLevel(logLvl.String())
+	}()
 
 	var block *types.SerializedBlock
-	for i := uint(0); i < b.GetMainOrder(); i++ {
+	for i := uint(0); i <= b.GetMainOrder(); i++ {
 		bar.Add(1)
 		if system.InterruptRequested(b.consensus.Interrupt()) {
 			return fmt.Errorf("interrupt rebuild")
