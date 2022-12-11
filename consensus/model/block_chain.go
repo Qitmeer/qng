@@ -12,4 +12,5 @@ type BlockChain interface {
 	CalculateDAGDuplicateTxs(block *types.SerializedBlock)
 	GetBlockHashByOrder(order uint) *hash.Hash
 	BlockByOrder(blockOrder uint64) (*types.SerializedBlock, error)
+	Rebuild() error
 }

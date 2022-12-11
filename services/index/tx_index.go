@@ -553,6 +553,10 @@ func (idx *TxIndex) GetTxIdByHash(txhash hash.Hash) (*hash.Hash, error) {
 	return txid, err
 }
 
+func (idx *TxIndex) SetCurOrder(order int64) {
+	idx.curOrder = order
+}
+
 // NewTxIndex returns a new instance of an indexer that is used to create a
 // mapping of the hashes of all transactions in the blockchain to the respective
 // block, location within the block, and size of the transaction.

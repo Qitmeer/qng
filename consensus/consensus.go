@@ -7,6 +7,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/store/invalid_tx_index"
 	"github.com/Qitmeer/qng/consensus/store/vm_block_index"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
@@ -14,6 +15,7 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/vm"
+	"math"
 	"sync"
 )
 
@@ -161,6 +163,83 @@ func (s *consensus) subscribe() {
 	//		}
 	//	}
 	//}()
+}
+
+func (s *consensus) Rebuild() error {
+	err := s.vmService.Start()
+	if err != nil {
+		return err
+	}
+	//
+	err = index.DropVMBlockIndex(s.databaseContext, s.interrupt)
+	if err != nil {
+		log.Info(err.Error())
+	}
+	err = index.DropInvalidTxIndex(s.databaseContext, s.interrupt)
+	if err != nil {
+		log.Info(err.Error())
+	}
+	err = index.DropTxIndex(s.databaseContext, s.interrupt)
+	if err != nil {
+		log.Info(err.Error())
+	}
+	//
+	err = s.databaseContext.Update(func(tx database.Tx) error {
+		meta := tx.Metadata()
+		err = meta.DeleteBucket(dbnamespace.SpendJournalBucketName)
+		if err != nil {
+			return err
+		}
+		err = meta.DeleteBucket(dbnamespace.UtxoSetBucketName)
+		if err != nil {
+			return err
+		}
+		err = meta.DeleteBucket(dbnamespace.TokenBucketName)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	//
+	err = s.databaseContext.Update(func(tx database.Tx) error {
+		meta := tx.Metadata()
+		_, err = meta.CreateBucket(dbnamespace.SpendJournalBucketName)
+		if err != nil {
+			return err
+		}
+		_, err = meta.CreateBucket(dbnamespace.UtxoSetBucketName)
+		if err != nil {
+			return err
+		}
+		_, err = meta.CreateBucket(dbnamespace.TokenBucketName)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	txIndex := s.indexManager.(*index.Manager).TxIndex()
+	txIndex.SetCurOrder(-1)
+	err = s.databaseContext.Update(func(tx database.Tx) error {
+		err = txIndex.Create(tx)
+		if err != nil {
+			return err
+		}
+		err = index.DBPutIndexerTip(tx, txIndex.Key(), &hash.ZeroHash, math.MaxUint32)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return s.blockchain.Rebuild()
 }
 
 func New(cfg *config.Config, databaseContext database.DB, interrupt <-chan struct{}, shutdownRequestChannel chan struct{}) *consensus {
