@@ -102,15 +102,13 @@ func (b *MeerChain) DisconnectBlock(block qconsensus.Block) (uint64, error) {
 func (b *MeerChain) buildBlock(qtxs []model.Tx, timestamp int64) (*types.Block, types.Receipts, *state.StateDB, error) {
 	config := b.chain.Config().Eth.Genesis.Config
 	engine := b.chain.Ether().Engine()
-	db := b.chain.Ether().ChainDb()
-
 	parent := b.chain.Ether().BlockChain().CurrentBlock()
 
 	uncles := []*types.Header{}
 
 	chainreader := &fakeChainReader{config: config}
 
-	statedb, err := state.New(parent.Root(), state.NewDatabase(db), nil)
+	statedb, err := b.chain.Ether().BlockChain().StateAt(parent.Root())
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -128,14 +126,6 @@ func (b *MeerChain) buildBlock(qtxs []model.Tx, timestamp int64) (*types.Block, 
 	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts)
 	if err != nil {
 		return nil, nil, nil, err
-	}
-
-	root, err := statedb.Commit(config.IsEIP158(header.Number))
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf(fmt.Sprintf("state write error: %v", err))
-	}
-	if err := statedb.Database().TrieDB().Commit(root, false, nil); err != nil {
-		return nil, nil, nil, fmt.Errorf(fmt.Sprintf("trie write error: %v", err))
 	}
 	return block, receipts, statedb, nil
 }
