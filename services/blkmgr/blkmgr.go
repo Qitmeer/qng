@@ -45,10 +45,6 @@ type BlockManager struct {
 	startHeader      *list.Element
 	nextCheckpoint   *params.Checkpoint
 
-	//block template cache
-	cachedCurrentTemplate *types.BlockTemplate
-	cachedParentTemplate  *types.BlockTemplate
-
 	lastProgressTime time.Time
 
 	// zmq notification
@@ -90,15 +86,6 @@ func NewBlockManager(ntmgr vmconsensus.Notify, consensus model.Consensus, peerSe
 		}
 	} else {
 		log.Info("Checkpoints are disabled")
-	}
-
-	if cfg.DumpBlockchain != "" {
-		err := bm.chain.DumpBlockChain(cfg.DumpBlockchain, par, uint64(best.GraphState.GetTotal())-1)
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, fmt.Errorf("closing after dumping blockchain")
 	}
 
 	bm.zmqNotify = zmq.NewZMQNotification(cfg)

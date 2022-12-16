@@ -476,14 +476,15 @@ func (b *BlockChain) TipGeneration() ([]hash.Hash, error) {
 	return tiphashs, nil
 }
 
-// dumpBlockChain dumps a map of the blockchain blocks as serialized bytes.
-func (b *BlockChain) DumpBlockChain(dumpFile string, params *params.Params, order uint64) error {
+// dump BlockChain dumps a map of the blockchain blocks as serialized bytes.
+func (b *BlockChain) Dump(filePath string, order uint64) error {
 	log.Info("Writing the blockchain to disk as a flat file, " +
 		"please wait...")
 
 	progressLogger := progresslog.NewBlockProgressLogger("Written", log)
+	par := params.ActiveNetParams.Params
 
-	file, err := os.Create(dumpFile)
+	file, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
@@ -491,7 +492,7 @@ func (b *BlockChain) DumpBlockChain(dumpFile string, params *params.Params, orde
 
 	// Store the network ID in an array for later writing.
 	var net [4]byte
-	binary.LittleEndian.PutUint32(net[:], uint32(params.Net))
+	binary.LittleEndian.PutUint32(net[:], uint32(par.Net))
 
 	// Write the blocks sequentially, excluding the genesis block.
 	var sz [4]byte
@@ -529,8 +530,8 @@ func (b *BlockChain) DumpBlockChain(dumpFile string, params *params.Params, orde
 		progressLogger.LogBlockHeight(bl)
 	}
 
-	log.Info("Successfully dumped the blockchain (%v blocks) to %v.",
-		order, dumpFile)
+	log.Info(fmt.Sprintf("Successfully dumped the blockchain (%v blocks) to %v.",
+		order, filePath))
 
 	return nil
 }
