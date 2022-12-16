@@ -653,23 +653,3 @@ func txIndexFromTxList(hash hash.Hash, list []*types.Tx) int {
 
 	return -1
 }
-
-// handleCreatedBlockTemplate stores a successfully created block template to
-// the appropriate cache if needed, then returns the template to the miner to
-// work on. The stored template is a copy of the template, to prevent races
-// from occurring in case the template is mined on by the CPUminer.
-// TODO, revisit the block template cache design
-func handleCreatedBlockTemplate(blockTemplate *types.BlockTemplate, bm *blkmgr.BlockManager) (*types.BlockTemplate, error) {
-	curTemplate := bm.GetCurrentTemplate()
-
-	nextBlockHeight := blockTemplate.Height
-
-	// Overwrite the old cached block if it's out of date.
-	if curTemplate != nil {
-		if curTemplate.Height == nextBlockHeight {
-			bm.SetCurrentTemplate(blockTemplate)
-		}
-	}
-
-	return blockTemplate, nil
-}

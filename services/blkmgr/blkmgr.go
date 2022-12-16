@@ -11,7 +11,6 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common/progresslog"
@@ -19,20 +18,6 @@ import (
 	vmconsensus "github.com/Qitmeer/qng/vm/consensus"
 	"sync"
 	"time"
-)
-
-const (
-	// maxStallDuration is the time after which we will disconnect our
-	// current sync peer if we haven't made progress.
-	MaxStallDuration = 3 * time.Minute
-
-	// stallSampleInterval the interval at which we will check to see if our
-	// sync has stalled.
-	StallSampleInterval = 3 * time.Second
-
-	// maxStallDuration is the time after which we will disconnect our
-	// current sync peer if we haven't made progress.
-	MaxBlockStallDuration = 3 * time.Second
 )
 
 // BlockManager provides a concurrency safe block manager for handling all
@@ -354,9 +339,6 @@ func (b *BlockManager) resetHeaderState(newestHash *hash.Hash, newestHeight uint
 }
 
 func (b *BlockManager) blockHandler() {
-	stallTicker := time.NewTicker(StallSampleInterval)
-	defer stallTicker.Stop()
-
 out:
 	for {
 		select {
@@ -433,40 +415,10 @@ out:
 			case isCurrentMsg:
 				log.Trace("blkmgr msgChan isCurrentMsg", "msg", msg)
 				msg.isCurrentReply <- b.IsCurrent()
-				/*
-					case pauseMsg:
-						// Wait until the sender unpauses the manager.
-						<-msg.unpause
-				*/
-			case getCurrentTemplateMsg:
-				log.Trace("blkmgr msgChan getCurrentTemplateMsg", "msg", msg)
-				cur := deepCopyBlockTemplate(b.cachedCurrentTemplate)
-				msg.reply <- getCurrentTemplateResponse{
-					Template: cur,
-				}
 
-			case setCurrentTemplateMsg:
-				log.Trace("blkmgr msgChan setCurrentTemplateMsg", "msg", msg)
-				b.cachedCurrentTemplate = deepCopyBlockTemplate(msg.Template)
-				msg.reply <- setCurrentTemplateResponse{}
-
-			case getParentTemplateMsg:
-				log.Trace("blkmgr msgChan getParentTemplateMsg", "msg", msg)
-				par := deepCopyBlockTemplate(b.cachedParentTemplate)
-				msg.reply <- getParentTemplateResponse{
-					Template: par,
-				}
-
-			case setParentTemplateMsg:
-				log.Trace("blkmgr msgChan setParentTemplateMsg", "msg", msg)
-				b.cachedParentTemplate = deepCopyBlockTemplate(msg.Template)
-				msg.reply <- setParentTemplateResponse{}
 			default:
 				log.Error("Unknown message type", "msg", msg)
 			}
-
-		case <-stallTicker.C:
-			b.handleStallSample()
 
 		case <-b.quit:
 			log.Trace("blkmgr quit received, break out")
@@ -576,24 +528,9 @@ func (b *BlockManager) TipGeneration() ([]hash.Hash, error) {
 	return response.hashes, response.err
 }
 
-// handleStallSample will switch to a new sync peer if the current one has
-// stalled. This is detected when by comparing the last progress timestamp with
-// the current time, and disconnecting the peer if we stalled before reaching
-// their highest advertised block.
-func (b *BlockManager) handleStallSample() {
-	if b.IsShutdown() {
-		return
-	}
-}
-
 // Return chain params
 func (b *BlockManager) ChainParams() *params.Params {
 	return b.params
-}
-
-// DAGSync
-func (b *BlockManager) DAGSync() *meerdag.DAGSync {
-	return nil
 }
 
 func (b *BlockManager) SetTxManager(txManager TxManager) {
