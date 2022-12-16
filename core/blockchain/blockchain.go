@@ -88,6 +88,11 @@ type BlockChain struct {
 	nextCheckpoint *params.Checkpoint
 	checkpointNode meerdag.IBlock
 
+	// The following fields are used for headers-first mode.
+	headersFirstMode bool
+	headerList       *list.List
+	startHeader      *list.Element
+
 	// The state is used as a fairly efficient way to cache information
 	// about the current best chain state that is returned to callers when
 	// requested.  It operates on the principle of MVCC such that any time a
@@ -152,7 +157,12 @@ func (b *BlockChain) Init() error {
 	if err := b.initThresholdCaches(); err != nil {
 		return err
 	}
+	err := b.initCheckPoints()
+	if err != nil {
+		return err
+	}
 
+	//
 	log.Info(fmt.Sprintf("DAG Type:%s", b.bd.GetName()))
 	log.Info("Blockchain database version", "chain", b.dbInfo.version, "compression", b.dbInfo.compVer,
 		"index", b.dbInfo.bidxVer)
@@ -1251,6 +1261,7 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		warningCaches:      newThresholdCaches(VBNumBits),
 		deploymentCaches:   newThresholdCaches(params.DefinedDeployments),
 		shutdownTracker:    shutdown.NewTracker(config.DataDir),
+		headerList:         list.New(),
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
