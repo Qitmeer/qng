@@ -404,7 +404,7 @@ func (api *PublicBlockAPI) IsCurrent() (interface{}, error) {
 
 // Return a list hash of the tip blocks of the DAG at this moment.
 func (api *PublicBlockAPI) Tips() (interface{}, error) {
-	tipsList, err := api.bm.TipGeneration()
+	tipsList, err := api.bm.chain.TipGeneration()
 	if err != nil {
 		return nil, err
 	}

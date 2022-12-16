@@ -332,15 +332,6 @@ out:
 		case m := <-b.msgChan:
 			log.Trace("blkmgr msgChan received ...", "msg", m)
 			switch msg := m.(type) {
-
-			case tipGenerationMsg:
-				log.Trace("blkmgr msgChan tipGenerationMsg", "msg", msg)
-				g, err := b.chain.TipGeneration()
-				msg.reply <- tipGenerationResponse{
-					hashes: g,
-					err:    err,
-				}
-
 			case processBlockMsg:
 				log.Trace("blkmgr msgChan processBlockMsg", "msg", msg)
 
@@ -489,30 +480,6 @@ func (b *BlockManager) Current() bool {
 	log.Trace("send isCurrentMsg to blkmgr msgChan")
 	b.msgChan <- isCurrentMsg{isCurrentReply: reply}
 	return <-reply
-}
-
-// tipGenerationResponse is a response sent to the reply channel of a
-// tipGenerationMsg query.
-type tipGenerationResponse struct {
-	hashes []hash.Hash
-	err    error
-}
-
-// tipGenerationMsg is a message type to be sent across the message
-// channel for requesting the required the entire generation of a
-// block node.
-type tipGenerationMsg struct {
-	reply chan tipGenerationResponse
-}
-
-// TipGeneration returns the hashes of all the children of the current best
-// chain tip.  It is funneled through the block manager since blockchain is not
-// safe for concurrent access.
-func (b *BlockManager) TipGeneration() ([]hash.Hash, error) {
-	reply := make(chan tipGenerationResponse)
-	b.msgChan <- tipGenerationMsg{reply: reply}
-	response := <-reply
-	return response.hashes, response.err
 }
 
 // Return chain params
