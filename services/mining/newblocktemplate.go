@@ -15,7 +15,7 @@ import (
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/blkmgr"
+	"github.com/Qitmeer/qng/services/mempool"
 	"golang.org/x/net/context"
 	"time"
 )
@@ -88,14 +88,15 @@ import (
 // TODO, refactor NewBlockTemplate input dependencies
 
 func NewBlockTemplate(policy *Policy, params *params.Params,
-	sigCache *txscript.SigCache, txSource TxSource, timeSource model.MedianTimeSource,
-	blockManager *blkmgr.BlockManager, payToAddress types.Address, parents []*hash.Hash, powType pow.PowType, coinbaseFlags CoinbaseFlags) (*types.BlockTemplate, error) {
+	sigCache *txscript.SigCache, txpool *mempool.TxPool, timeSource model.MedianTimeSource,
+	consensus model.Consensus, payToAddress types.Address, parents []*hash.Hash, powType pow.PowType, coinbaseFlags CoinbaseFlags) (*types.BlockTemplate, error) {
 	if onEnd := log.LogAndMeasureExecutionTime(log.Root(), "NewBlockTemplate"); onEnd != nil {
 		defer onEnd()
 	}
-	subsidyCache := blockManager.GetChain().FetchSubsidyCache()
-	bd := blockManager.GetChain().BlockDAG()
-	best := blockManager.GetChain().BestSnapshot()
+	bc:=consensus.BlockChain().(*blockchain.BlockChain)
+	subsidyCache := bc.FetchSubsidyCache()
+	bd := bc.BlockDAG()
+	best := bc.BestSnapshot()
 	nextBlockHeight := uint64(0)
 	nextBlockOrder := uint64(best.GraphState.GetTotal())
 	//nextBlockLayer:=uint64(best.GraphState.GetLayer()+1)
@@ -149,7 +150,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	// number of items that are available for the priority queue.  Also,
 	// choose the initial sort order for the priority queue based on whether
 	// or not there is an area allocated for high-priority transactions.
-	sourceTxns := txSource.MiningDescs()
+	sourceTxns := txpool.MiningDescs()
 	sortedByFee := policy.BlockPrioritySize == 0
 	weightedRandQueue := newWeightedRandQueue(len(sourceTxns))
 	// Create a slice to hold the transactions to be included in the
@@ -160,7 +161,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	blockTxns = append(blockTxns, coinbaseTx)
 	blockUtxos := utxo.NewUtxoViewpoint()
 	if parents == nil {
-		blockUtxos.SetViewpoints(blockManager.GetChain().GetMiningTips(len(blockTxns)))
+		blockUtxos.SetViewpoints(bc.GetMiningTips(len(blockTxns)))
 	} else {
 		blockUtxos.SetViewpoints(parents)
 	}
@@ -189,7 +190,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	// ==== fix parents size
 	expectParents := []*hash.Hash{}
 	if parents == nil {
-		expectParents = blockManager.GetChain().GetMiningTips(meerdag.MaxPriority)
+		expectParents = bc.GetMiningTips(meerdag.MaxPriority)
 	}
 	blockSize += uint32(s.VarIntSerializeSize(uint64(len(expectParents))))
 	for i := 0; i < len(expectParents); i++ {
@@ -210,7 +211,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 		}
 		if types.IsTokenTx(tx.Tx) {
 			log.Trace(fmt.Sprintf("Skipping token tx %s", tx.Hash()))
-			if blockManager.GetChain().HasTx(tx.Hash()) {
+			if bc.HasTx(tx.Hash()) {
 				log.Info(fmt.Sprintf("Ignore token tx:is duplicate"))
 				continue
 			}
@@ -237,9 +238,9 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 				log.Info(fmt.Sprintf("Ignore meerevm tx:Your miner address is not supported, please use PKAddress by (./qx ec-to-pkaddr) for --miningaddr"))
 				continue
 			}
-			if blockManager.GetChain().HasTx(tx.Hash()) {
+			if bc.HasTx(tx.Hash()) {
 				log.Info(fmt.Sprintf("Ignore meerevm tx:is duplicate:%s(qng)", tx.Hash()))
-				blockManager.GetTxManager().MemPool().RemoveTransaction(tx, false)
+				txpool.RemoveTransaction(tx, false)
 				continue
 			}
 			log.Trace(fmt.Sprintf("Skipping cross chain tx %s", tx.Hash()))
@@ -320,7 +321,7 @@ mempool:
 		_, ok := fetchUtxo[tx.Hash().String()]
 		if !ok {
 			fetchUtxo[tx.Hash().String()] = struct{}{}
-			utxos, err := blockManager.GetChain().FetchUtxoView(tx)
+			utxos, err := bc.FetchUtxoView(tx)
 			if err != nil {
 				log.Warn(fmt.Sprintf("Unable to fetch utxo view for tx %s: %v",
 					tx.Hash(), err))
@@ -331,7 +332,7 @@ mempool:
 				originHash := &txIn.PreviousOut.Hash
 				entry := utxos.LookupEntry(txIn.PreviousOut)
 				if entry == nil || entry.IsSpent() {
-					if !txSource.HaveTransaction(originHash) {
+					if !txpool.HaveTransaction(originHash) {
 						log.Trace(fmt.Sprintf("Skipping tx %s because it "+
 							"references unspent output %v "+
 							"which is not available",
@@ -415,7 +416,7 @@ mempool:
 
 		// Ensure the transaction inputs pass all of the necessary
 		// preconditions before allowing it to be added to the block.
-		txFeesMap, err := blockManager.GetChain().CheckTransactionInputs(tx, blockUtxos)
+		txFeesMap, err := bc.CheckTransactionInputs(tx, blockUtxos)
 		if err != nil {
 			log.Trace(fmt.Sprintf("Skipping tx %s due to error in "+
 				"CheckTransactionInputs: %v", tx.Hash(), err))
@@ -487,26 +488,26 @@ mempool:
 		return nil, miningRuleError(ErrCreatingCoinbase, err.Error())
 	}
 
-	ts := MedianAdjustedTime(blockManager.GetChain(), timeSource)
+	ts := MedianAdjustedTime(bc, timeSource)
 
 	//
-	reqCompactDifficulty, err := blockManager.GetChain().CalcNextRequiredDifficulty(ts, powType)
+	reqCompactDifficulty, err := bc.CalcNextRequiredDifficulty(ts, powType)
 	if err != nil {
 		return nil, miningRuleError(ErrGettingDifficulty, err.Error())
 	}
 
 	// Choose the block version to generate based on the network.
-	blockVersion, err := blockManager.GetChain().CalcNextBlockVersion()
+	blockVersion, err := bc.CalcNextBlockVersion()
 	if err != nil {
 		return nil, miningRuleError(ErrFailedToGetGeneration, err.Error())
 	}
 	// Create a new block ready to be solved.
 	merkles := merkle.BuildMerkleTreeStore(blockTxns, false)
 
-	blockManager.GetChain().ChainLock()
-	defer blockManager.GetChain().ChainUnlock()
+	bc.ChainLock()
+	defer bc.ChainUnlock()
 	if parents == nil {
-		parents = blockManager.GetChain().GetMiningTips(len(blockTxns))
+		parents = bc.GetMiningTips(len(blockTxns))
 	}
 
 	paMerkles := merkle.BuildParentsMerkleTreeStore(parents)
@@ -515,7 +516,7 @@ mempool:
 		Version:    blockVersion,
 		ParentRoot: *paMerkles[len(paMerkles)-1],
 		TxRoot:     *merkles[len(merkles)-1],
-		StateRoot:  *blockManager.GetChain().CalculateStateRoot(blockTxns),
+		StateRoot:  *bc.CalculateStateRoot(blockTxns),
 		Timestamp:  ts,
 		Difficulty: reqCompactDifficulty,
 		Pow:        pow.GetInstance(powType, 0, []byte{}),
@@ -534,7 +535,7 @@ mempool:
 	sblock := types.NewBlock(&block)
 	sblock.SetOrder(nextBlockOrder)
 	sblock.SetHeight(uint(nextBlockHeight))
-	err = blockManager.GetChain().CheckConnectBlockTemplate(sblock)
+	err = bc.CheckConnectBlockTemplate(sblock)
 	if err != nil {
 		str := fmt.Sprintf("failed to do final check for check connect "+
 			"block when making new block template: %v",
@@ -652,24 +653,4 @@ func txIndexFromTxList(hash hash.Hash, list []*types.Tx) int {
 	}
 
 	return -1
-}
-
-// handleCreatedBlockTemplate stores a successfully created block template to
-// the appropriate cache if needed, then returns the template to the miner to
-// work on. The stored template is a copy of the template, to prevent races
-// from occurring in case the template is mined on by the CPUminer.
-// TODO, revisit the block template cache design
-func handleCreatedBlockTemplate(blockTemplate *types.BlockTemplate, bm *blkmgr.BlockManager) (*types.BlockTemplate, error) {
-	curTemplate := bm.GetCurrentTemplate()
-
-	nextBlockHeight := blockTemplate.Height
-
-	// Overwrite the old cached block if it's out of date.
-	if curTemplate != nil {
-		if curTemplate.Height == nextBlockHeight {
-			bm.SetCurrentTemplate(blockTemplate)
-		}
-	}
-
-	return blockTemplate, nil
 }

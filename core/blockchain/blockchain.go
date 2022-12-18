@@ -24,6 +24,7 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 	"github.com/schollz/progressbar/v3"
@@ -50,6 +51,8 @@ const (
 // blocks follow all rules, orphan handling, checkpoint handling, and best chain
 // selection with reorganization.
 type BlockChain struct {
+	service.Service
+
 	params *params.Params
 
 	// The following fields are set when the instance is created and can't
@@ -87,6 +90,11 @@ type BlockChain struct {
 	// by the chain lock.
 	nextCheckpoint *params.Checkpoint
 	checkpointNode meerdag.IBlock
+
+	// The following fields are used for headers-first mode.
+	headersFirstMode bool
+	headerList       *list.List
+	startHeader      *list.Element
 
 	// The state is used as a fairly efficient way to cache information
 	// about the current best chain state that is returned to callers when
@@ -129,6 +137,8 @@ type BlockChain struct {
 	shutdownTracker *shutdown.Tracker
 
 	consensus model.Consensus
+
+	progressLogger *progresslog.BlockProgressLogger
 }
 
 func (b *BlockChain) Init() error {
@@ -152,7 +162,12 @@ func (b *BlockChain) Init() error {
 	if err := b.initThresholdCaches(); err != nil {
 		return err
 	}
+	err := b.initCheckPoints()
+	if err != nil {
+		return err
+	}
 
+	//
 	log.Info(fmt.Sprintf("DAG Type:%s", b.bd.GetName()))
 	log.Info("Blockchain database version", "chain", b.dbInfo.version, "compression", b.dbInfo.compVer,
 		"index", b.dbInfo.bidxVer)
@@ -399,6 +414,20 @@ func (b *BlockChain) createChainState() error {
 	return b.bd.Commit()
 }
 
+func (b *BlockChain) Start() error {
+	if err := b.Service.Start(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *BlockChain) Stop() error {
+	if err := b.Service.Stop(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // HaveBlock returns whether or not the chain instance has the block represented
 // by the passed hash.  This includes checking the various places a block can
 // be like part of the main chain, on a side chain, or in the orphan pool.
@@ -476,14 +505,15 @@ func (b *BlockChain) TipGeneration() ([]hash.Hash, error) {
 	return tiphashs, nil
 }
 
-// dumpBlockChain dumps a map of the blockchain blocks as serialized bytes.
-func (b *BlockChain) DumpBlockChain(dumpFile string, params *params.Params, order uint64) error {
+// dump BlockChain dumps a map of the blockchain blocks as serialized bytes.
+func (b *BlockChain) Dump(filePath string, order uint64) error {
 	log.Info("Writing the blockchain to disk as a flat file, " +
 		"please wait...")
 
 	progressLogger := progresslog.NewBlockProgressLogger("Written", log)
+	par := params.ActiveNetParams.Params
 
-	file, err := os.Create(dumpFile)
+	file, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
@@ -491,7 +521,7 @@ func (b *BlockChain) DumpBlockChain(dumpFile string, params *params.Params, orde
 
 	// Store the network ID in an array for later writing.
 	var net [4]byte
-	binary.LittleEndian.PutUint32(net[:], uint32(params.Net))
+	binary.LittleEndian.PutUint32(net[:], uint32(par.Net))
 
 	// Write the blocks sequentially, excluding the genesis block.
 	var sz [4]byte
@@ -529,8 +559,8 @@ func (b *BlockChain) DumpBlockChain(dumpFile string, params *params.Params, orde
 		progressLogger.LogBlockHeight(bl)
 	}
 
-	log.Info("Successfully dumped the blockchain (%v blocks) to %v.",
-		order, dumpFile)
+	log.Info(fmt.Sprintf("Successfully dumped the blockchain (%v blocks) to %v.",
+		order, filePath))
 
 	return nil
 }
@@ -1250,6 +1280,8 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		warningCaches:      newThresholdCaches(VBNumBits),
 		deploymentCaches:   newThresholdCaches(params.DefinedDeployments),
 		shutdownTracker:    shutdown.NewTracker(config.DataDir),
+		headerList:         list.New(),
+		progressLogger: progresslog.NewBlockProgressLogger("Processed", log),
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
@@ -1257,5 +1289,8 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		1.0/float64(par.TargetTimePerBlock/time.Second), b.db, b.getBlockData)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
 	b.bd.SetCacheSize(config.DAGCacheSize, config.BlockDataCacheSize)
+
+	b.InitServices()
+	b.Services().RegisterService(b.bd)
 	return &b, nil
 }

@@ -405,7 +405,7 @@ func (w *CPUWorker) solveBlock() bool {
 				return false
 			}
 
-			err := mining.UpdateBlockTime(block, w.miner.blockManager.GetChain(), w.miner.timeSource, params.ActiveNetParams.Params)
+			err := mining.UpdateBlockTime(block, w.miner.BlockChain(), w.miner.timeSource, params.ActiveNetParams.Params)
 			if err != nil {
 				log.Warn(fmt.Sprintf("CPU miner unable to update block template time: %v", err))
 				return false

@@ -20,7 +20,7 @@ import (
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
-	"github.com/Qitmeer/qng/services/blkmgr"
+	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/services/mining"
 	"math/rand"
 	"net/http"
@@ -48,9 +48,9 @@ type Miner struct {
 
 	cfg          *config.Config
 	events       *event.Feed
-	txSource     mining.TxSource
+	txpool *mempool.TxPool
 	timeSource   model.MedianTimeSource
-	blockManager *blkmgr.BlockManager
+	consensus model.Consensus
 	policy       *mining.Policy
 	sigCache     *txscript.SigCache
 	worker       IWorker
@@ -73,6 +73,7 @@ type Miner struct {
 	reqWG sync.WaitGroup
 
 	RpcSer *rpc.RpcServer
+	p2pSer model.P2PService
 }
 
 func (m *Miner) Start() error {
@@ -292,14 +293,14 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 	}
 	if !reCreate {
 		parentsSet := meerdag.NewHashSet()
-		parentsSet.AddList(m.blockManager.GetChain().GetMiningTips(meerdag.MaxPriority))
+		parentsSet.AddList(m.consensus.BlockChain().GetMiningTips(meerdag.MaxPriority))
 
 		tparentSet := meerdag.NewHashSet()
 		tparentSet.AddList(m.template.Block.Parents)
 		if !parentsSet.IsEqual(tparentSet) {
 			reCreate = true
 		} else {
-			lastTxUpdate := m.txSource.LastUpdated()
+			lastTxUpdate := m.txpool.LastUpdated()
 			if lastTxUpdate.IsZero() {
 				lastTxUpdate = roughtime.Now()
 			}
@@ -310,26 +311,26 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 	}
 
 	if reCreate {
-		template, err := mining.NewBlockTemplate(m.policy, params.ActiveNetParams.Params, m.sigCache, m.txSource, m.timeSource, m.blockManager, m.coinbaseAddress, nil, m.powType, m.coinbaseFlags)
+		template, err := mining.NewBlockTemplate(m.policy, params.ActiveNetParams.Params, m.sigCache, m.txpool, m.timeSource,m.consensus, m.coinbaseAddress, nil, m.powType, m.coinbaseFlags)
 		if err != nil {
 			e := fmt.Errorf("Failed to create new block template: %s", err.Error())
 			log.Warn(e.Error())
-			m.blockManager.GetChain().VMService().ResetTemplate()
+			m.consensus.VMService().ResetTemplate()
 			return e
 		}
 		m.template = template
-		m.lastTxUpdate = m.txSource.LastUpdated()
+		m.lastTxUpdate = m.txpool.LastUpdated()
 		m.lastTemplate = time.Now()
 
 		// Get the minimum allowed timestamp for the block based on the
 		// median timestamp of the last several blocks per the chain
 		// consensus rules.
-		m.minTimestamp = mining.MinimumMedianTime(m.blockManager.GetChain())
+		m.minTimestamp = mining.MinimumMedianTime(m.consensus.BlockChain().(*blockchain.BlockChain))
 
 		m.notifyBlockTemplate()
 		return nil
 	} else {
-		err := mining.UpdateBlockTime(m.template.Block, m.blockManager.GetChain(), m.timeSource, params.ActiveNetParams.Params)
+		err := mining.UpdateBlockTime(m.template.Block, m.BlockChain(), m.timeSource, params.ActiveNetParams.Params)
 		if err != nil {
 			log.Warn(fmt.Sprintf("%s unable to update block template time: %v", m.worker.GetType(), err))
 			return err
@@ -398,16 +399,16 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 
 	// Process this block using the same rules as blocks coming from other
 	// nodes. This will in turn relay it to the network like normal.
-	rsp := m.blockManager.ProcessBlock(block, blockchain.BFRPCAdd)
-	if rsp.Err != nil {
-		if rsp.IsTipsExpired {
+	IsOrphan,IsTipsExpired,err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd)
+	if err != nil {
+		if IsTipsExpired {
 			go m.BlockChainChange()
 		}
 		// Anything other than a rule violation is an unexpected error,
 		// so log that error as an internal error.
-		rErr, ok := rsp.Err.(blockchain.RuleError)
+		rErr, ok := err.(blockchain.RuleError)
 		if !ok {
-			return nil, fmt.Errorf(fmt.Sprintf("Unexpected error while processing block submitted miner: %v (%s)", rsp.Err, m.worker.GetType()))
+			return nil, fmt.Errorf(fmt.Sprintf("Unexpected error while processing block submitted miner: %v (%s)", err, m.worker.GetType()))
 		}
 		// Occasionally errors are given out for timing errors with
 		// ReduceMinDifficulty and high block works that is above
@@ -416,14 +417,16 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 			rErr.ErrorCode == blockchain.ErrHighHash {
 			return nil, fmt.Errorf(fmt.Sprintf("Block submitted via miner rejected "+
 				"because of ReduceMinDifficulty time sync failure: %v (%s)",
-				rsp.Err, m.worker.GetType()))
+				err, m.worker.GetType()))
 		}
 		// Other rule errors should be reported.
-		return nil, fmt.Errorf(fmt.Sprintf("Block submitted via %s rejected: %v ", m.worker.GetType(), rsp.Err))
+		return nil, fmt.Errorf(fmt.Sprintf("Block submitted via %s rejected: %v ", m.worker.GetType(), err))
 	}
-	if rsp.IsOrphan {
+	if IsOrphan {
 		return nil, fmt.Errorf(fmt.Sprintf("Block submitted via %s is an orphan building "+
 			"on parent %v", m.worker.GetType(), block.Block().Header.ParentRoot))
+	}else{
+		m.txpool.PruneExpiredTx()
 	}
 
 	m.successSubmit++
@@ -478,8 +481,8 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 }
 
 func (m *Miner) CanMining() error {
-	currentOrder := m.blockManager.GetChain().BestSnapshot().GraphState.GetTotal() - 1
-	if currentOrder != 0 && !m.blockManager.IsCurrent() {
+	currentOrder := m.BlockChain().BestSnapshot().GraphState.GetTotal() - 1
+	if currentOrder != 0 && !m.p2pSer.IsCurrent() {
 		log.Trace("Client in initial download, qitmeer is downloading blocks...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading blocks...")
@@ -689,21 +692,24 @@ func (m *Miner) sendNotification(url string, jsonData []byte) {
 	}
 }
 
-func NewMiner(cfg *config.Config, policy *mining.Policy,
-	sigCache *txscript.SigCache,
-	txSource mining.TxSource, tsource model.MedianTimeSource, blkMgr *blkmgr.BlockManager, events *event.Feed) *Miner {
+func (m *Miner) BlockChain() *blockchain.BlockChain {
+	return m.consensus.BlockChain().(*blockchain.BlockChain)
+}
+
+func NewMiner(consensus model.Consensus,policy *mining.Policy, txpool *mempool.TxPool,p2pSer model.P2PService) *Miner {
 	m := Miner{
 		msgChan:       make(chan interface{}),
 		quit:          make(chan struct{}),
-		cfg:           cfg,
+		cfg:           consensus.Config(),
 		policy:        policy,
-		sigCache:      sigCache,
-		txSource:      txSource,
-		timeSource:    tsource,
-		blockManager:  blkMgr,
+		sigCache:      consensus.SigCache(),
+		txpool:      txpool,
+		timeSource:    consensus.MedianTimeSource(),
 		powType:       pow.MEERXKECCAKV1,
-		events:        events,
+		events:        consensus.Events(),
 		coinbaseFlags: mining.CoinbaseFlagsStatic,
+		consensus: consensus,
+		p2pSer: p2pSer,
 	}
 
 	return &m

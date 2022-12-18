@@ -13,4 +13,6 @@ type BlockChain interface {
 	GetBlockHashByOrder(order uint) *hash.Hash
 	BlockByOrder(blockOrder uint64) (*types.SerializedBlock, error)
 	Rebuild() error
+	Dump(filePath string, order uint64) error
+	GetMiningTips(expectPriority int) []*hash.Hash
 }

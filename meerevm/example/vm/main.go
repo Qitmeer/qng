@@ -6,9 +6,10 @@ package main
 
 import (
 	"context"
+	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/meerevm/evm"
 	"github.com/Qitmeer/qng/meerevm/evm/util"
-	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -22,7 +23,7 @@ func (ctx *MContext) GetConfig() *config.Config {
 	return ctx.Cfg
 }
 
-func (ctx *MContext) GetTxPool() consensus.TxPool {
+func (ctx *MContext) GetTxPool() model.TxPool {
 	return nil
 }
 

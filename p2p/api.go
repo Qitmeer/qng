@@ -118,6 +118,11 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, network *string) (interface{
 	return infos, nil
 }
 
+// Return IsCurrent
+func (api *PublicP2PAPI) IsCurrent() (interface{}, error) {
+	return api.s.IsCurrent(), nil
+}
+
 type PrivateP2PAPI struct {
 	s *Service
 }

@@ -34,8 +34,44 @@ import (
 // best chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
+// return IsOrphan,IsTipsExpired,error
+func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool,bool,error) {
+	if flags.Has(BFRPCAdd) {
+		err := b.BlockDAG().CheckSubMainChainTip(block.Block().Parents)
+		if err != nil {
+			return false,true,fmt.Errorf("The tips of block is expired:%s (error:%s)\n", block.Hash().String(), err.Error())
+		}
+	}
+	isOrphan, err := b.processBlock(block, flags)
+	return isOrphan,false,err
+}
+
+func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
+	isorphan, err := b.preProcessBlock(block, flags)
+	if err != nil || isorphan {
+		return isorphan, err
+	}
+	// The block has passed all context independent checks and appears sane
+	// enough to potentially accept it into the block chain.
+	err = b.maybeAcceptBlock(block, flags)
+	if err != nil {
+		return false, err
+	}
+	// Accept any orphan blocks that depend on this block (they are no
+	// longer orphans) and repeat for those accepted blocks until there are
+	// no more.
+	err = b.RefreshOrphans()
+	if err != nil {
+		return false, err
+	}
+
+	log.Debug("Accepted block", "hash", block.Hash().String())
+	return false, nil
+}
+
+func (b *BlockChain) preProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
 	b.ChainRLock()
+	defer b.ChainRUnlock()
 
 	fastAdd := flags&BFFastAdd == BFFastAdd
 
@@ -45,21 +81,18 @@ func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFl
 	// The block must not already exist in the main chain or side chains.
 	if b.bd.HasBlock(blockHash) {
 		str := fmt.Sprintf("already have block %v", blockHash)
-		b.ChainRUnlock()
 		return false, ruleError(ErrDuplicateBlock, str)
 	}
 
 	// The block must not already exist as an orphan.
 	if b.IsOrphan(blockHash) {
 		str := fmt.Sprintf("already have block (orphan) %v", blockHash)
-		b.ChainRUnlock()
-		return false, ruleError(ErrDuplicateBlock, str)
+		return true, ruleError(ErrDuplicateBlock, str)
 	}
 
 	// Perform preliminary sanity checks on the block and its transactions.
 	err := b.checkBlockSanity(block, b.timeSource, flags, b.params)
 	if err != nil {
-		b.ChainRUnlock()
 		return false, err
 	}
 
@@ -72,7 +105,6 @@ func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFl
 	blockHeader := &block.Block().Header
 	checkpoint, err := b.findPreviousCheckpoint()
 	if err != nil {
-		b.ChainRUnlock()
 		return false, err
 	}
 	checkpointNode := b.GetBlockNode(checkpoint)
@@ -83,7 +115,6 @@ func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFl
 			str := fmt.Sprintf("block %v has timestamp %v before "+
 				"last checkpoint timestamp %v", blockHash,
 				blockHeader.Timestamp, checkpointTime)
-			b.ChainRUnlock()
 			return false, ruleError(ErrCheckpointTimeTooOld, str)
 		}
 
@@ -102,7 +133,6 @@ func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFl
 				str := fmt.Sprintf("block target difficulty of %064x "+
 					"is too low when compared to the previous "+
 					"checkpoint", currentTarget)
-				b.ChainRUnlock()
 				return false, ruleError(ErrDifficultyTooLow, str)
 			}
 		}
@@ -116,27 +146,9 @@ func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFl
 
 			// The fork length of orphans is unknown since they, by definition, do
 			// not connect to the best chain.
-			b.ChainRUnlock()
 			return true, nil
 		}
 	}
-	b.ChainRUnlock()
-	// The block has passed all context independent checks and appears sane
-	// enough to potentially accept it into the block chain.
-	err = b.maybeAcceptBlock(block, flags)
-	if err != nil {
-		return false, err
-	}
-	// Accept any orphan blocks that depend on this block (they are no
-	// longer orphans) and repeat for those accepted blocks until there are
-	// no more.
-	err = b.RefreshOrphans()
-	if err != nil {
-		return false, err
-	}
-
-	log.Debug("Accepted block", "hash", blockHash)
-
 	return false, nil
 }
 
@@ -164,17 +176,21 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	}()
 
 	newNode := NewBlockNode(block, block.Block().Parents)
-	mainParent := b.bd.GetMainParentByHashs(block.Block().Parents)
-	if mainParent == nil {
-		b.ChainUnlock()
-		return fmt.Errorf("Can't find main parent\n")
-	}
-	// The block must pass all of the validation rules which depend on the
-	// position of the block within the block chain.
-	err := b.checkBlockContext(block, mainParent, flags)
-	if err != nil {
-		b.ChainUnlock()
-		return err
+
+	fastAdd := flags&BFFastAdd == BFFastAdd
+	if !fastAdd {
+		mainParent := b.bd.GetMainParentByHashs(block.Block().Parents)
+		if mainParent == nil {
+			b.ChainUnlock()
+			return fmt.Errorf("Can't find main parent\n")
+		}
+		// The block must pass all of the validation rules which depend on the
+		// position of the block within the block chain.
+		err := b.checkBlockContext(block, mainParent, flags)
+		if err != nil {
+			b.ChainUnlock()
+			return err
+		}
 	}
 
 	// Prune stake nodes which are no longer needed before creating a new
@@ -200,7 +216,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	// blocks that fail to connect available for further analysis.
 	//
 	// Also, store the associated block index entry.
-	err = b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx database.Tx) error {
 		exists, err := dbTx.HasBlock(block.Hash())
 		if err != nil {
 			return err
@@ -247,6 +263,10 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		}
 	}
 
+	if flags&BFP2PAdd == BFP2PAdd {
+		b.progressLogger.LogBlockHeight(block)
+	}
+
 	// Notify the caller that the new block was accepted into the block
 	// chain.  The caller would typically want to react by relaying the
 	// inventory to other peers.
@@ -265,53 +285,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 }
 
 func (b *BlockChain) FastAcceptBlock(block *types.SerializedBlock, flags BehaviorFlags) error {
-	b.ChainLock()
-	defer func() {
-		b.ChainUnlock()
-		b.flushNotifications()
-	}()
-
-	newNode := NewBlockNode(block, block.Block().Parents)
-
-	fastAdd := flags&BFFastAdd == BFFastAdd
-	if !fastAdd {
-		mainParent := b.bd.GetMainParentByHashs(block.Block().Parents)
-		if mainParent == nil {
-			return fmt.Errorf("Can't find main parent\n")
-		}
-		// The block must pass all of the validation rules which depend on the
-		// position of the block within the block chain.
-		err := b.checkBlockContext(block, mainParent, flags)
-		if err != nil {
-			return err
-		}
-	}
-	//dag
-	newOrders, oldOrders, ib, _ := b.bd.AddBlock(newNode)
-	if ib == nil {
-		return fmt.Errorf("Irreparable error![%s]\n", newNode.GetHash().String())
-	}
-
-	block.SetOrder(uint64(ib.GetOrder()))
-	block.SetHeight(ib.GetHeight())
-
-	err := b.db.Update(func(dbTx database.Tx) error {
-		if err := dbMaybeStoreBlock(dbTx, block); err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	connectedBlocks := list.New()
-	_, err = b.connectDagChain(ib, block, newOrders, oldOrders, connectedBlocks)
-	if err != nil {
-		panic(err)
-	}
-
-	return b.updateBestState(ib, block, newOrders)
+	return b.maybeAcceptBlock(block, flags)
 }
 
 // connectBestChain handles connecting the passed block to the chain while

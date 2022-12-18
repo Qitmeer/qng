@@ -277,3 +277,74 @@ func (b *BlockChain) IsCheckpointCandidate(preBlock, block meerdag.IBlock) (bool
 
 	return b.BlockDAG().IsHourglass(block.GetID()), nil
 }
+
+func (b *BlockChain) initCheckPoints() error {
+	best := b.BestSnapshot()
+	b.DisableCheckpoints(b.consensus.Config().DisableCheckpoints)
+	if !b.consensus.Config().DisableCheckpoints {
+		// Initialize the next checkpoint based on the current height.
+		b.nextCheckpoint = b.findNextHeaderCheckpoint(uint64(best.GraphState.GetMainHeight()))
+		if b.nextCheckpoint != nil {
+			b.resetHeaderState(&best.Hash, uint64(best.GraphState.GetMainHeight()))
+		}
+	} else {
+		log.Info("Checkpoints are disabled")
+	}
+	return nil
+}
+
+// findNextHeaderCheckpoint returns the next checkpoint after the passed layer.
+// It returns nil when there is not one either because the height is already
+// later than the final checkpoint or some other reason such as disabled
+// checkpoints.
+func (b *BlockChain) findNextHeaderCheckpoint(layer uint64) *params.Checkpoint {
+	// There is no next checkpoint if checkpoints are disabled or there are
+	// none for this current network.
+	if b.consensus.Config().DisableCheckpoints {
+		return nil
+	}
+	checkpoints := b.params.Checkpoints
+	if len(checkpoints) == 0 {
+		return nil
+	}
+
+	// There is no next checkpoint if the height is already after the final
+	// checkpoint.
+	finalCheckpoint := &checkpoints[len(checkpoints)-1]
+	if layer >= finalCheckpoint.Layer {
+		return nil
+	}
+
+	// Find the next checkpoint.
+	nextCheckpoint := finalCheckpoint
+	for i := len(checkpoints) - 2; i >= 0; i-- {
+		if layer >= checkpoints[i].Layer {
+			break
+		}
+		nextCheckpoint = &checkpoints[i]
+	}
+	return nextCheckpoint
+}
+
+// resetHeaderState sets the headers-first mode state to values appropriate for
+// syncing from a new peer.
+func (b *BlockChain) resetHeaderState(newestHash *hash.Hash, newestHeight uint64) {
+	b.headersFirstMode = false
+	b.headerList.Init()
+	b.startHeader = nil
+
+	// When there is a next checkpoint, add an entry for the latest known
+	// block into the header pool.  This allows the next downloaded header
+	// to prove it links to the chain properly.
+	if b.nextCheckpoint != nil {
+		node := headerNode{height: newestHeight, hash: newestHash}
+		b.headerList.PushBack(&node)
+	}
+}
+
+// headerNode is used as a node in a list of headers that are linked together
+// between checkpoints.
+type headerNode struct {
+	height uint64
+	hash   *hash.Hash
+}

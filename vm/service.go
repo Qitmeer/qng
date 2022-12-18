@@ -372,7 +372,7 @@ func (s *Service) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
 	return vm.GetBlockIDByTxHash(txhash)
 }
 
-func (s *Service) SetTxPool(tp consensus.TxPool) {
+func (s *Service) SetTxPool(tp model.TxPool) {
 	s.ctx.Tp = tp
 }
 
