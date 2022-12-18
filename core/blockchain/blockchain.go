@@ -24,6 +24,7 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 	"github.com/schollz/progressbar/v3"
@@ -50,6 +51,8 @@ const (
 // blocks follow all rules, orphan handling, checkpoint handling, and best chain
 // selection with reorganization.
 type BlockChain struct {
+	service.Service
+
 	params *params.Params
 
 	// The following fields are set when the instance is created and can't
@@ -134,6 +137,8 @@ type BlockChain struct {
 	shutdownTracker *shutdown.Tracker
 
 	consensus model.Consensus
+
+	progressLogger *progresslog.BlockProgressLogger
 }
 
 func (b *BlockChain) Init() error {
@@ -407,6 +412,20 @@ func (b *BlockChain) createChainState() error {
 		return err
 	}
 	return b.bd.Commit()
+}
+
+func (b *BlockChain) Start() error {
+	if err := b.Service.Start(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *BlockChain) Stop() error {
+	if err := b.Service.Stop(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // HaveBlock returns whether or not the chain instance has the block represented
@@ -1262,6 +1281,7 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		deploymentCaches:   newThresholdCaches(params.DefinedDeployments),
 		shutdownTracker:    shutdown.NewTracker(config.DataDir),
 		headerList:         list.New(),
+		progressLogger: progresslog.NewBlockProgressLogger("Processed", log),
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
@@ -1269,5 +1289,8 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		1.0/float64(par.TargetTimePerBlock/time.Second), b.db, b.getBlockData)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
 	b.bd.SetCacheSize(config.DAGCacheSize, config.BlockDataCacheSize)
+
+	b.InitServices()
+	b.Services().RegisterService(b.bd)
 	return &b, nil
 }

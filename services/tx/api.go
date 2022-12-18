@@ -120,7 +120,7 @@ func (api *PublicTxAPI) CreateRawTransactionV2(inputs []json.TransactionInput,
 		default:
 			return nil, rpc.RpcAddressKeyError("Invalid type: %T", addr)
 		}
-		if !address.IsForNetwork(addr, api.txManager.bm.ChainParams()) {
+		if !address.IsForNetwork(addr, api.txManager.consensus.Params()) {
 			return nil, rpc.RpcAddressKeyError("Wrong network: %v",
 				addr)
 		}
@@ -206,7 +206,7 @@ func (api *PublicTxAPI) SendRawTransaction(hexTx string, allowHighFees *bool) (i
 	}
 
 	tx := types.NewTx(msgtx)
-	acceptedTxs, err := api.txManager.bm.ProcessTransaction(tx, false,
+	acceptedTxs, err := api.txManager.txMemPool.ProcessTransaction(tx, false,
 		false, highFees)
 	if err != nil {
 		// When the error is a rule error, it means the transaction was
@@ -327,7 +327,7 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 		}
 
 		mtx = types.NewTx(dtx)
-		mtx.IsDuplicate = api.txManager.bm.GetChain().IsDuplicateTx(mtx.Hash(), blkHash)
+		mtx.IsDuplicate = api.txManager.GetChain().IsDuplicateTx(mtx.Hash(), blkHash)
 	} else {
 		// When the verbose flag isn't set, simply return the
 		// network-serialized transaction as a hex-encoded string.
@@ -351,14 +351,14 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 	coinbaseAmout := types.AmountMap{}
 	if blkHash != nil {
 		blkHashStr = blkHash.String()
-		ib := api.txManager.bm.GetChain().BlockDAG().GetBlock(blkHash)
+		ib := api.txManager.GetChain().BlockDAG().GetBlock(blkHash)
 		if ib != nil {
-			confirmations = int64(api.txManager.bm.GetChain().BlockDAG().GetConfirmations(ib.GetID()))
+			confirmations = int64(api.txManager.GetChain().BlockDAG().GetConfirmations(ib.GetID()))
 			txsvalid = !ib.GetStatus().KnownInvalid()
 		}
 
 		if mtx.Tx.IsCoinBase() {
-			coinbaseFees := api.txManager.bm.GetChain().GetFees(blkHash)
+			coinbaseFees := api.txManager.GetChain().GetFees(blkHash)
 			if coinbaseFees == nil {
 				coinbaseAmout[mtx.Tx.TxOut[0].Amount.Id] = mtx.Tx.TxOut[0].Amount.Value
 			} else {
@@ -370,7 +370,7 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 	if tx != nil {
 		confirmations = 0
 	}
-	return marshal.MarshalJsonTransaction(mtx, api.txManager.bm.ChainParams(), blkHashStr, confirmations, coinbaseAmout, txsvalid)
+	return marshal.MarshalJsonTransaction(mtx, api.txManager.consensus.Params(), blkHashStr, confirmations, coinbaseAmout, txsvalid)
 }
 
 // Returns information about an unspent transaction output
@@ -418,7 +418,7 @@ func (api *PublicTxAPI) GetUtxo(txHash hash.Hash, vout uint32, includeMempool *b
 			if txOut == nil {
 				return nil, nil
 			}
-			best := api.txManager.bm.GetChain().BestSnapshot()
+			best := api.txManager.GetChain().BestSnapshot()
 			bestBlockHash = best.Hash.String()
 			confirmations = 0
 			txVersion = tx.Version
@@ -431,21 +431,21 @@ func (api *PublicTxAPI) GetUtxo(txHash hash.Hash, vout uint32, includeMempool *b
 	// otherwise try to lookup utxo set
 	if bestBlockHash == "" {
 		out := types.TxOutPoint{Hash: txHash, OutIndex: vout}
-		entry, err := api.txManager.bm.GetChain().FetchUtxoEntry(out)
+		entry, err := api.txManager.GetChain().FetchUtxoEntry(out)
 		if err != nil {
 			return nil, rpc.RpcNoTxInfoError(&txHash)
 		}
 		if entry == nil || entry.IsSpent() {
 			return nil, nil
 		}
-		best := api.txManager.bm.GetChain().BestSnapshot()
+		best := api.txManager.GetChain().BestSnapshot()
 		bestBlockHash = best.Hash.String()
 
 		amount = entry.Amount()
 		if hash.ZeroHash.IsEqual(entry.BlockHash()) {
 			confirmations = 0
 		} else {
-			block := api.txManager.bm.GetChain().BlockDAG().GetBlock(entry.BlockHash())
+			block := api.txManager.GetChain().BlockDAG().GetBlock(entry.BlockHash())
 			if block == nil {
 				confirmations = 0
 			} else {
@@ -453,7 +453,7 @@ func (api *PublicTxAPI) GetUtxo(txHash hash.Hash, vout uint32, includeMempool *b
 			}
 			if entry.IsCoinBase() {
 				//TODO, even the entry is coinbase, should not change the amount by tx fee, need consider output index
-				amount.Value += api.txManager.bm.GetChain().GetFeeByCoinID(block.GetHash(), amount.Id)
+				amount.Value += api.txManager.GetChain().GetFeeByCoinID(block.GetHash(), amount.Id)
 			}
 		}
 
@@ -470,7 +470,7 @@ func (api *PublicTxAPI) GetUtxo(txHash hash.Hash, vout uint32, includeMempool *b
 	// Get further info about the script.  Ignore the error here since an
 	// error means the script couldn't parse and there is no additional
 	// information about it anyways.
-	scriptClass, addrs, reqSigs, _ := txscript.ExtractPkScriptAddrs(script, api.txManager.bm.ChainParams())
+	scriptClass, addrs, reqSigs, _ := txscript.ExtractPkScriptAddrs(script, api.txManager.consensus.Params())
 	addresses := make([]string, len(addrs))
 	for i, addr := range addrs {
 		addresses[i] = addr.String()
@@ -507,7 +507,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 	if vinExtra && api.txManager.indexManager.TxIndex() == nil {
 		return nil, fmt.Errorf("Transaction index must be enabled (--txindex)")
 	}
-	params := api.txManager.bm.ChainParams()
+	params := api.txManager.consensus.Params()
 	addr, err := address.DecodeAddress(addre)
 	if err != nil {
 		return nil, fmt.Errorf("Invalid address or key: " + err.Error())
@@ -668,7 +668,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 		}
 
 		if mtx.Tx.IsCoinBase() {
-			amountMap := api.txManager.bm.GetChain().GetFees(rtx.blkHash)
+			amountMap := api.txManager.GetChain().GetFees(rtx.blkHash)
 			result.Vout = marshal.MarshJsonCoinbaseVout(mtx.Tx, filterAddrMap, params, amountMap)
 		} else {
 			result.Vout = marshal.MarshJsonVout(mtx.Tx, filterAddrMap, params)
@@ -684,7 +684,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 		var blkHashStr string
 		if blkHash := rtx.blkHash; blkHash != nil {
 			// Fetch the header from chain.
-			header, err := api.txManager.bm.GetChain().HeaderByHash(blkHash)
+			header, err := api.txManager.GetChain().HeaderByHash(blkHash)
 			if err != nil {
 				return nil, rpc.RpcInternalError("Block not found", "")
 			}
@@ -699,8 +699,8 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 			result.Time = blkHeader.Timestamp.Unix()
 			result.Blocktime = blkHeader.Timestamp.Unix()
 			result.BlockHash = blkHashStr
-			result.Confirmations = uint64(api.txManager.bm.GetChain().BlockDAG().GetConfirmations(
-				api.txManager.bm.GetChain().BlockDAG().GetBlockId(rtx.blkHash)))
+			result.Confirmations = uint64(api.txManager.GetChain().BlockDAG().GetConfirmations(
+				api.txManager.GetChain().BlockDAG().GetBlockId(rtx.blkHash)))
 		}
 	}
 
@@ -984,7 +984,7 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 }
 
 func (api *PublicTxAPI) GetTxIDByMeerEVMTxHash(etxh hash.Hash) (interface{}, error) {
-	vmi := api.txManager.bm.GetChain().VMService()
+	vmi := api.txManager.GetChain().VMService()
 	etxs, txhs, err := vmi.GetTxsFromMempool()
 	if err != nil {
 		return nil, err
@@ -1009,7 +1009,7 @@ func (api *PublicTxAPI) GetTxIDByMeerEVMTxHash(etxh hash.Hash) (interface{}, err
 	if err != nil {
 		return nil, err
 	}
-	block, err := api.txManager.bm.GetChain().FetchBlockByHash(bh)
+	block, err := api.txManager.GetChain().FetchBlockByHash(bh)
 	if err != nil {
 		return nil, err
 	}
@@ -1091,7 +1091,7 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 		var tokenPkScript []byte
 		var tokenPrivkey ecc.PrivateKey
 		if types.IsTokenMintTx(&redeemTx) {
-			tokenPkScript, err = api.txManager.bm.GetChain().GetCurTokenOwners(redeemTx.TxOut[0].Amount.Id)
+			tokenPkScript, err = api.txManager.GetChain().GetCurTokenOwners(redeemTx.TxOut[0].Amount.Id)
 			if err != nil {
 				return nil, err
 			}
@@ -1151,7 +1151,7 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 			}
 
 			//
-			blockNode := api.txManager.bm.GetChain().BlockDAG().GetBlock(blockRegion.Hash)
+			blockNode := api.txManager.GetChain().BlockDAG().GetBlock(blockRegion.Hash)
 			if blockNode == nil {
 				return nil, fmt.Errorf("Can't find block %s", blockRegion.Hash)
 			}
@@ -1231,7 +1231,7 @@ func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, 
 			prevOut := types.NewOutPoint(txid, input.Vout)
 			txIn := types.NewTxInput(prevOut, []byte{})
 
-			entry, err := api.txManager.bm.GetChain().FetchUtxoEntry(*prevOut)
+			entry, err := api.txManager.GetChain().FetchUtxoEntry(*prevOut)
 			if err != nil {
 				return nil, rpc.RpcNoTxInfoError(txid)
 			}
@@ -1264,7 +1264,7 @@ func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, 
 					"address: %v", err)
 			}
 
-			if !address.IsForNetwork(addr, api.txManager.bm.ChainParams()) {
+			if !address.IsForNetwork(addr, api.txManager.consensus.Params()) {
 				return nil, rpc.RpcAddressKeyError("Wrong network: %v",
 					addr)
 			}
@@ -1323,7 +1323,7 @@ func (api *PublicTxAPI) CreateTokenRawTransaction(txtype string, coinId uint16, 
 			}
 			mtx.AddTxOut(&types.TxOutput{PkScript: pkScript})
 		} else {
-			state := api.txManager.bm.GetChain().GetCurTokenState()
+			state := api.txManager.GetChain().GetCurTokenState()
 			if state == nil {
 				return nil, fmt.Errorf("Token state error\n")
 			}
@@ -1378,7 +1378,7 @@ func (api *PublicTxAPI) CreateImportRawTransaction(pkAddress string, amount int6
 		return nil, rpc.RpcAddressKeyError("Could not decode "+
 			"address: %v", err)
 	}
-	if !address.IsForNetwork(addr, api.txManager.bm.ChainParams()) {
+	if !address.IsForNetwork(addr, api.txManager.consensus.Params()) {
 		return nil, rpc.RpcAddressKeyError("Wrong network: %v",
 			addr)
 	}

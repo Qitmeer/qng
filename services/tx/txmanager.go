@@ -10,7 +10,6 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/node/service"
-	"github.com/Qitmeer/qng/services/blkmgr"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/services/mempool"
@@ -20,9 +19,6 @@ import (
 
 type TxManager struct {
 	service.Service
-
-	bm *blkmgr.BlockManager
-
 	indexManager *index.Manager
 
 	// mempool hold tx that need to be mined into blocks and relayed to other peers.
@@ -90,7 +86,7 @@ func (tm *TxManager) initFeeEstimator() error {
 
 	// If no feeEstimator has been found, or if the one that has been found
 	// is behind somehow, create a new one and start over.
-	if tm.feeEstimator == nil || tm.feeEstimator.LastKnownHeight() != int32(tm.bm.GetChain().BestSnapshot().GraphState.GetMainHeight()) {
+	if tm.feeEstimator == nil || tm.feeEstimator.LastKnownHeight() != int32(tm.GetChain().BestSnapshot().GraphState.GetMainHeight()) {
 		tm.feeEstimator = mempool.NewFeeEstimator(
 			mempool.DefaultEstimateFeeMaxRollback,
 			mempool.DefaultEstimateFeeMinRegisteredBlocks)
@@ -127,11 +123,11 @@ func (tm *TxManager) Stop() error {
 	return nil
 }
 
-func (tm *TxManager) MemPool() vmconsensus.TxPool {
+func (tm *TxManager) MemPool() model.TxPool {
 	return tm.txMemPool
 }
 
-func (tm *TxManager) FeeEstimator() vmconsensus.FeeEstimator {
+func (tm *TxManager) FeeEstimator() model.FeeEstimator {
 	if tm.feeEstimator != nil {
 		return tm.feeEstimator
 	}
@@ -144,9 +140,63 @@ func (tm *TxManager) InitDefaultFeeEstimator() {
 		mempool.DefaultEstimateFeeMinRegisteredBlocks)
 }
 
-func NewTxManager(consensus model.Consensus, bm *blkmgr.BlockManager, ntmgr vmconsensus.Notify) (*TxManager, error) {
+func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
+	switch notification.Type {
+	case blockchain.BlockConnected:
+		blockSlice, ok := notification.Data.([]interface{})
+		if !ok {
+			log.Warn("Chain connected notification is not a block slice.")
+			break
+		}
+
+		if len(blockSlice) != 2 {
+			log.Warn("Chain connected notification is wrong size slice.")
+			break
+		}
+
+		block := blockSlice[0].(*types.SerializedBlock)
+		txds := []*types.TxDesc{}
+		for _, tx := range block.Transactions()[1:] {
+			tm.MemPool().RemoveTransaction(tx, false)
+			tm.MemPool().RemoveDoubleSpends(tx)
+			tm.MemPool().RemoveOrphan(tx.Hash())
+			tm.ntmgr.TransactionConfirmed(tx)
+			acceptedTxs := tm.MemPool().ProcessOrphans(tx.Hash())
+			txds = append(txds, acceptedTxs...)
+		}
+		tm.ntmgr.AnnounceNewTransactions(txds, nil)
+		// Register block with the fee estimator, if it exists.
+		if tm.FeeEstimator() != nil && blockSlice[1].(bool) {
+			err := tm.FeeEstimator().RegisterBlock(block)
+
+			// If an error is somehow generated then the fee estimator
+			// has entered an invalid state. Since it doesn't know how
+			// to recover, create a new one.
+			if err != nil {
+				tm.InitDefaultFeeEstimator()
+			}
+		}
+	case blockchain.BlockDisconnected:
+		block, ok := notification.Data.(*types.SerializedBlock)
+		if !ok {
+			log.Warn("Chain disconnected notification is not a block slice.")
+			break
+		}
+		// Rollback previous block recorded by the fee estimator.
+		if tm.FeeEstimator() != nil {
+			tm.FeeEstimator().Rollback(block.Hash())
+		}
+	}
+}
+
+func (tm *TxManager) GetChain() *blockchain.BlockChain {
+	return tm.consensus.BlockChain().(*blockchain.BlockChain)
+}
+
+func NewTxManager(consensus model.Consensus, ntmgr vmconsensus.Notify) (*TxManager, error) {
 	cfg := consensus.Config()
 	sigCache := consensus.SigCache()
+	bc:=consensus.BlockChain().(*blockchain.BlockChain)
 	// mem-pool
 	amt, _ := types.NewMeer(uint64(cfg.MinTxFee))
 	txC := mempool.Config{
@@ -165,18 +215,18 @@ func NewTxManager(consensus model.Consensus, bm *blkmgr.BlockManager, ntmgr vmco
 				return common.StandardScriptVerifyFlags()
 			},
 		},
-		ChainParams:      bm.ChainParams(),
-		FetchUtxoView:    bm.GetChain().FetchUtxoView, //TODO, duplicated dependence of miner
-		BlockByHash:      bm.GetChain().FetchBlockByHash,
-		BestHash:         func() *hash.Hash { return &bm.GetChain().BestSnapshot().Hash },
-		BestHeight:       func() uint64 { return uint64(bm.GetChain().BestSnapshot().GraphState.GetMainHeight()) },
-		CalcSequenceLock: bm.GetChain().CalcSequenceLock,
-		SubsidyCache:     bm.GetChain().FetchSubsidyCache(),
+		ChainParams:     consensus.Params(),
+		FetchUtxoView:    bc.FetchUtxoView, //TODO, duplicated dependence of miner
+		BlockByHash:      bc.FetchBlockByHash,
+		BestHash:         func() *hash.Hash { return &bc.BestSnapshot().Hash },
+		BestHeight:       func() uint64 { return uint64(bc.BestSnapshot().GraphState.GetMainHeight()) },
+		CalcSequenceLock: bc.CalcSequenceLock,
+		SubsidyCache:     bc.FetchSubsidyCache(),
 		SigCache:         sigCache,
-		PastMedianTime:   func() time.Time { return bm.GetChain().BestSnapshot().MedianTime },
+		PastMedianTime:   func() time.Time { return bc.BestSnapshot().MedianTime },
 		IndexManager:     consensus.IndexManager().(*index.Manager),
-		BD:               bm.GetChain().BlockDAG(),
-		BC:               bm.GetChain(),
+		BD:               bc.BlockDAG(),
+		BC:               bc,
 		DataDir:          cfg.DataDir,
 		Expiry:           time.Duration(cfg.MempoolExpiry),
 		Persist:          cfg.Persistmempool,
@@ -185,5 +235,14 @@ func NewTxManager(consensus model.Consensus, bm *blkmgr.BlockManager, ntmgr vmco
 	}
 	txMemPool := mempool.New(&txC)
 	invalidTx := make(map[hash.Hash]*meerdag.HashSet)
-	return &TxManager{consensus: consensus,bm: bm, indexManager: consensus.IndexManager().(*index.Manager), txMemPool: txMemPool, ntmgr: ntmgr, db: consensus.DatabaseContext(), invalidTx: invalidTx, enableFeeEst: cfg.Estimatefee}, nil
+	tm:= &TxManager{
+		consensus: consensus,
+		indexManager: consensus.IndexManager().(*index.Manager),
+		txMemPool: txMemPool,
+		ntmgr: ntmgr,
+		db: consensus.DatabaseContext(),
+		invalidTx: invalidTx,
+		enableFeeEst: cfg.Estimatefee}
+	consensus.BlockChain().(*blockchain.BlockChain).Subscribe(tm.handleNotifyMsg)
+	return tm,nil
 }

@@ -2,12 +2,15 @@ package notifymgr
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/notifymgr/notify"
+	"github.com/Qitmeer/qng/services/zmq"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"sync"
 	"time"
@@ -33,6 +36,9 @@ type NotifyMgr struct {
 	sync.Mutex
 
 	lastProTime time.Time
+
+	// zmq notification
+	zmqNotify zmq.IZMQNotification
 }
 
 // AnnounceNewTransactions generates and relays inventory vectors and notifies
@@ -109,6 +115,7 @@ func (ntmgr *NotifyMgr) Stop() error {
 	close(ntmgr.quit)
 	ntmgr.wg.Wait()
 
+	ntmgr.zmqNotify.Shutdown()
 	return nil
 }
 
@@ -167,13 +174,60 @@ func (ntmgr *NotifyMgr) Reset() {
 	}
 }
 
-func New(p2pServer *p2p.Service) *NotifyMgr {
+func (ntmgr *NotifyMgr) handleNotifyMsg(notification *blockchain.Notification) {
+	switch notification.Type {
+	case blockchain.BlockAccepted:
+		band, ok := notification.Data.(*blockchain.BlockAcceptedNotifyData)
+		if !ok {
+			log.Warn("Chain accepted notification is not BlockAcceptedNotifyData.")
+			break
+		}
+		block := band.Block
+		ntmgr.zmqNotify.BlockAccepted(block)
+		// Don't relay if we are not current. Other peers that are current
+		// should already know about it
+		if !ntmgr.Server.IsCurrent() {
+			log.Trace("we are not current")
+			return
+		}
+		log.Trace("we are current, can do relay")
+		ntmgr.RelayInventory(block.Block().Header, nil)
+
+	// A block has been connected to the main block chain.
+	case blockchain.BlockConnected:
+		blockSlice, ok := notification.Data.([]interface{})
+		if !ok {
+			log.Warn("Chain connected notification is not a block slice.")
+			break
+		}
+		if len(blockSlice) != 2 {
+			log.Warn("Chain connected notification is wrong size slice.")
+			break
+		}
+		block := blockSlice[0].(*types.SerializedBlock)
+		ntmgr.zmqNotify.BlockConnected(block)
+
+	// A block has been disconnected from the main block chain.
+	case blockchain.BlockDisconnected:
+		log.Trace("Chain disconnected notification.")
+		block, ok := notification.Data.(*types.SerializedBlock)
+		if !ok {
+			log.Warn("Chain disconnected notification is not a block slice.")
+			break
+		}
+		ntmgr.zmqNotify.BlockDisconnected(block)
+	}
+}
+
+func New(p2pServer *p2p.Service,consensus model.Consensus) *NotifyMgr {
 	ntmgr := &NotifyMgr{
 		quit:        make(chan struct{}),
 		ticker:      time.NewTicker(time.Second),
 		nds:         []*notify.NotifyData{},
 		Server:      p2pServer,
 		lastProTime: time.Now(),
+		zmqNotify: zmq.NewZMQNotification(consensus.Config()),
 	}
+	consensus.BlockChain().(*blockchain.BlockChain).Subscribe(ntmgr.handleNotifyMsg)
 	return ntmgr
 }

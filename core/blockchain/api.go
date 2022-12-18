@@ -1,6 +1,6 @@
 // Copyright (c) 2017-2018 The qitmeer developers
 
-package blkmgr
+package blockchain
 
 import (
 	"bytes"
@@ -8,12 +8,10 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"strconv"
@@ -23,10 +21,7 @@ const (
 	LatestBlockOrder = int64(-1)
 )
 
-func (b *BlockManager) GetChain() *blockchain.BlockChain {
-	return b.chain
-}
-func (b *BlockManager) APIs() []api.API {
+func (b *BlockChain) APIs() []api.API {
 	return []api.API{
 		api.API{
 			NameSpace: cmds.DefaultServiceNameSpace,
@@ -37,19 +32,18 @@ func (b *BlockManager) APIs() []api.API {
 }
 
 type PublicBlockAPI struct {
-	bm *BlockManager
+	chain *BlockChain
 }
 
-func NewPublicBlockAPI(bm *BlockManager) *PublicBlockAPI {
-	return &PublicBlockAPI{bm}
+func NewPublicBlockAPI(bc *BlockChain) *PublicBlockAPI {
+	return &PublicBlockAPI{chain: bc}
 }
 
-//TODO, refactor BlkMgr API
 func (api *PublicBlockAPI) GetBlockhash(order int64) (string, error) {
 	if order == LatestBlockOrder {
-		order = int64(api.bm.chain.BestSnapshot().GraphState.GetMainOrder())
+		order = int64(api.chain.BestSnapshot().GraphState.GetMainOrder())
 	}
-	blockHash, err := api.bm.chain.BlockHashByOrder(uint64(order))
+	blockHash, err := api.chain.BlockHashByOrder(uint64(order))
 	if err != nil {
 		return "", err
 	}
@@ -60,13 +54,13 @@ func (api *PublicBlockAPI) GetBlockhash(order int64) (string, error) {
 // if 'end' is equal to zero, 'start' is the number that from the last block to the Gen
 // if 'start' is greater than or equal to 'end', it will just return the hash of 'start'
 func (api *PublicBlockAPI) GetBlockhashByRange(start int64, end int64) ([]string, error) {
-	totalOrder := int64(api.bm.chain.BestSnapshot().GraphState.GetMainOrder())
+	totalOrder := int64(api.chain.BestSnapshot().GraphState.GetMainOrder())
 	if start > totalOrder {
 		return nil, fmt.Errorf("startOrder(%d) is greater than or equal to the totalOrder(%d)", start, totalOrder)
 	}
 	result := []string{}
 	if start >= end && end != 0 && end != LatestBlockOrder {
-		block, err := api.bm.chain.BlockByOrder(uint64(start))
+		block, err := api.chain.BlockByOrder(uint64(start))
 		if err != nil {
 			return nil, err
 		}
@@ -76,7 +70,7 @@ func (api *PublicBlockAPI) GetBlockhashByRange(start int64, end int64) ([]string
 			if int64(len(result)) >= start {
 				break
 			}
-			block, err := api.bm.chain.BlockByOrder(uint64(i))
+			block, err := api.chain.BlockByOrder(uint64(i))
 			if err != nil {
 				return nil, err
 			}
@@ -87,7 +81,7 @@ func (api *PublicBlockAPI) GetBlockhashByRange(start int64, end int64) ([]string
 			if i > end && end != LatestBlockOrder {
 				break
 			}
-			block, err := api.bm.chain.BlockByOrder(uint64(i))
+			block, err := api.chain.BlockByOrder(uint64(i))
 			if err != nil {
 				return nil, err
 			}
@@ -98,7 +92,7 @@ func (api *PublicBlockAPI) GetBlockhashByRange(start int64, end int64) ([]string
 }
 
 func (api *PublicBlockAPI) GetBlockByOrder(order int64, verbose *bool, inclTx *bool, fullTx *bool) (interface{}, error) {
-	mainOrder := int64(api.bm.chain.BestSnapshot().GraphState.GetMainOrder())
+	mainOrder := int64(api.chain.BestSnapshot().GraphState.GetMainOrder())
 	if order == LatestBlockOrder {
 		order = mainOrder
 	} else {
@@ -107,7 +101,7 @@ func (api *PublicBlockAPI) GetBlockByOrder(order int64, verbose *bool, inclTx *b
 		}
 	}
 
-	blockHash, err := api.bm.chain.BlockHashByOrder(uint64(order))
+	blockHash, err := api.chain.BlockHashByOrder(uint64(order))
 	if err != nil {
 		return nil, err
 	}
@@ -145,11 +139,11 @@ func (api *PublicBlockAPI) GetBlock(h hash.Hash, verbose *bool, inclTx *bool, fu
 	// Note :
 	// FetchBlockByHash differs from BlockByHash in that this one also returns blocks
 	// that are not part of the main chain (if they are known).
-	blk, err := api.bm.chain.FetchBlockByHash(&h)
+	blk, err := api.chain.FetchBlockByHash(&h)
 	if err != nil {
 		return nil, err
 	}
-	node := api.bm.chain.BlockDAG().GetBlock(&h)
+	node := api.chain.BlockDAG().GetBlock(&h)
 	if node == nil {
 		return nil, fmt.Errorf("no node")
 	}
@@ -161,13 +155,13 @@ func (api *PublicBlockAPI) GetBlock(h hash.Hash, verbose *bool, inclTx *bool, fu
 	if !vb {
 		blkBytes, err := blk.Bytes()
 		if err != nil {
-			return nil, rpc.RpcInternalError(err.Error(),
+			return nil, internalError(err.Error(),
 				"Could not serialize block")
 		}
 		return hex.EncodeToString(blkBytes), nil
 	}
-	confirmations := int64(api.bm.chain.BlockDAG().GetConfirmations(node.GetID()))
-	bd := api.bm.chain.BlockDAG()
+	confirmations := int64(api.chain.BlockDAG().GetConfirmations(node.GetID()))
+	bd := api.chain.BlockDAG()
 	ib := bd.GetBlock(&h)
 	cs := bd.GetChildren(ib)
 	children := []*hash.Hash{}
@@ -176,10 +170,10 @@ func (api *PublicBlockAPI) GetBlock(h hash.Hash, verbose *bool, inclTx *bool, fu
 			children = append(children, v.(meerdag.IBlock).GetHash())
 		}
 	}
-	api.bm.chain.CalculateDAGDuplicateTxs(blk)
+	api.chain.CalculateDAGDuplicateTxs(blk)
 
 	coinbaseAmout := types.AmountMap{}
-	coinbaseFees := api.bm.chain.CalculateFees(blk)
+	coinbaseFees := api.chain.CalculateFees(blk)
 	if coinbaseFees == nil {
 		coinbaseAmout[blk.Transactions()[0].Tx.TxOut[0].Amount.Id] = blk.Transactions()[0].Tx.TxOut[0].Amount.Value
 	} else {
@@ -188,7 +182,7 @@ func (api *PublicBlockAPI) GetBlock(h hash.Hash, verbose *bool, inclTx *bool, fu
 	}
 
 	//TODO, refactor marshal api
-	fields, err := marshal.MarshalJsonBlock(blk, iTx, fTx, api.bm.params, confirmations, children,
+	fields, err := marshal.MarshalJsonBlock(blk, iTx, fTx, api.chain.params, confirmations, children,
 		!node.GetStatus().KnownInvalid(), node.IsOrdered(), coinbaseAmout, nil)
 	if err != nil {
 		return nil, err
@@ -215,11 +209,11 @@ func (api *PublicBlockAPI) GetBlockV2(h hash.Hash, verbose *bool, inclTx *bool, 
 	// Note :
 	// FetchBlockByHash differs from BlockByHash in that this one also returns blocks
 	// that are not part of the main chain (if they are known).
-	blk, err := api.bm.chain.FetchBlockByHash(&h)
+	blk, err := api.chain.FetchBlockByHash(&h)
 	if err != nil {
 		return nil, err
 	}
-	node := api.bm.chain.BlockDAG().GetBlock(&h)
+	node := api.chain.BlockDAG().GetBlock(&h)
 	if node == nil {
 		return nil, fmt.Errorf("no node")
 	}
@@ -231,13 +225,13 @@ func (api *PublicBlockAPI) GetBlockV2(h hash.Hash, verbose *bool, inclTx *bool, 
 	if !vb {
 		blkBytes, err := blk.Bytes()
 		if err != nil {
-			return nil, rpc.RpcInternalError(err.Error(),
+			return nil, internalError(err.Error(),
 				"Could not serialize block")
 		}
 		return hex.EncodeToString(blkBytes), nil
 	}
-	confirmations := int64(api.bm.chain.BlockDAG().GetConfirmations(node.GetID()))
-	bd := api.bm.chain.BlockDAG()
+	confirmations := int64(api.chain.BlockDAG().GetConfirmations(node.GetID()))
+	bd := api.chain.BlockDAG()
 	ib := bd.GetBlock(&h)
 	cs := bd.GetChildren(ib)
 	children := []*hash.Hash{}
@@ -246,13 +240,13 @@ func (api *PublicBlockAPI) GetBlockV2(h hash.Hash, verbose *bool, inclTx *bool, 
 			children = append(children, v.(meerdag.IBlock).GetHash())
 		}
 	}
-	api.bm.chain.CalculateDAGDuplicateTxs(blk)
-	coinbaseFees := api.bm.chain.CalculateFees(blk)
+	api.chain.CalculateDAGDuplicateTxs(blk)
+	coinbaseFees := api.chain.CalculateFees(blk)
 	coinbaseAmout := types.AmountMap{}
 	coinbaseAmout[blk.Transactions()[0].Tx.TxOut[0].Amount.Id] = blk.Transactions()[0].Tx.TxOut[0].Amount.Value
 
 	//TODO, refactor marshal api
-	fields, err := marshal.MarshalJsonBlock(blk, iTx, fTx, api.bm.params, confirmations, children,
+	fields, err := marshal.MarshalJsonBlock(blk, iTx, fTx, api.chain.params, confirmations, children,
 		!node.GetStatus().KnownInvalid(), node.IsOrdered(), coinbaseAmout, coinbaseFees)
 	if err != nil {
 		return nil, err
@@ -262,19 +256,19 @@ func (api *PublicBlockAPI) GetBlockV2(h hash.Hash, verbose *bool, inclTx *bool, 
 }
 
 func (api *PublicBlockAPI) GetBestBlockHash() (interface{}, error) {
-	best := api.bm.chain.BestSnapshot()
+	best := api.chain.BestSnapshot()
 	return best.Hash.String(), nil
 }
 
 // The total ordered Block count
 func (api *PublicBlockAPI) GetBlockCount() (interface{}, error) {
-	best := api.bm.chain.BestSnapshot()
+	best := api.chain.BestSnapshot()
 	return best.GraphState.GetMainOrder() + 1, nil
 }
 
 // The total Block count, included possible blocks have not ordered by BlockDAG consensus yet at the moments.
 func (api *PublicBlockAPI) GetBlockTotal() (interface{}, error) {
-	best := api.bm.chain.BestSnapshot()
+	best := api.chain.BestSnapshot()
 	return best.GraphState.GetTotal(), nil
 }
 
@@ -282,14 +276,14 @@ func (api *PublicBlockAPI) GetBlockTotal() (interface{}, error) {
 func (api *PublicBlockAPI) GetBlockHeader(hash hash.Hash, verbose bool) (interface{}, error) {
 
 	// Fetch the block node
-	node := api.bm.chain.BlockDAG().GetBlock(&hash)
+	node := api.chain.BlockDAG().GetBlock(&hash)
 	if node == nil {
-		return nil, rpc.RpcInternalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %v", hash))
+		return nil, internalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %v", hash))
 	}
 	// Fetch the header from chain.
-	blockHeader, err := api.bm.chain.HeaderByHash(&hash)
+	blockHeader, err := api.chain.HeaderByHash(&hash)
 	if err != nil {
-		return nil, rpc.RpcInternalError(err.Error(), fmt.Sprintf("Block not found: %v", hash))
+		return nil, internalError(err.Error(), fmt.Sprintf("Block not found: %v", hash))
 	}
 
 	// When the verbose flag isn't set, simply return the serialized block
@@ -299,13 +293,13 @@ func (api *PublicBlockAPI) GetBlockHeader(hash hash.Hash, verbose bool) (interfa
 		err := blockHeader.Serialize(&headerBuf)
 		if err != nil {
 			context := "Failed to serialize block header"
-			return nil, rpc.RpcInternalError(err.Error(), context)
+			return nil, internalError(err.Error(), context)
 		}
 		return hex.EncodeToString(headerBuf.Bytes()), nil
 	}
 	// Get next block hash unless there are none.
-	confirmations := int64(api.bm.chain.BlockDAG().GetConfirmations(node.GetID()))
-	layer := api.bm.chain.BlockDAG().GetLayer(node.GetID())
+	confirmations := int64(api.chain.BlockDAG().GetConfirmations(node.GetID()))
+	layer := api.chain.BlockDAG().GetLayer(node.GetID())
 	blockHeaderReply := json.GetBlockHeaderVerboseResult{
 		Hash:          hash.String(),
 		Confirmations: confirmations,
@@ -326,32 +320,32 @@ func (api *PublicBlockAPI) GetBlockHeader(hash hash.Hash, verbose bool) (interfa
 // Query whether a given block is on the main chain.
 // Note that some DAG protocols may not support this feature.
 func (api *PublicBlockAPI) IsOnMainChain(h hash.Hash) (interface{}, error) {
-	node := api.bm.chain.BlockDAG().GetBlock(&h)
+	node := api.chain.BlockDAG().GetBlock(&h)
 	if node == nil {
-		return nil, rpc.RpcInternalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %v", h))
+		return nil, internalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %v", h))
 	}
-	isOn := api.bm.chain.BlockDAG().IsOnMainChain(node.GetID())
+	isOn := api.chain.BlockDAG().IsOnMainChain(node.GetID())
 
 	return strconv.FormatBool(isOn), nil
 }
 
 // Return the current height of DAG main chain
 func (api *PublicBlockAPI) GetMainChainHeight() (interface{}, error) {
-	return strconv.FormatUint(uint64(api.bm.GetChain().BlockDAG().GetMainChainTip().GetHeight()), 10), nil
+	return strconv.FormatUint(uint64(api.chain.BlockDAG().GetMainChainTip().GetHeight()), 10), nil
 }
 
 // Return the weight of block
 func (api *PublicBlockAPI) GetBlockWeight(h hash.Hash) (interface{}, error) {
-	block, err := api.bm.chain.FetchBlockByHash(&h)
+	block, err := api.chain.FetchBlockByHash(&h)
 	if err != nil {
-		return nil, rpc.RpcInternalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %v", h))
+		return nil, internalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %v", h))
 	}
 	return strconv.FormatInt(int64(types.GetBlockWeight(block.Block())), 10), nil
 }
 
 // Return the total number of orphan blocks, orphan block are the blocks have not been included into the DAG at this moment.
 func (api *PublicBlockAPI) GetOrphansTotal() (interface{}, error) {
-	return api.bm.GetChain().GetOrphansTotal(), nil
+	return api.chain.GetOrphansTotal(), nil
 }
 
 // Obsoleted GetBlockByID Method, since the confused naming, replaced by GetBlockByNum method
@@ -362,9 +356,9 @@ func (api *PublicBlockAPI) GetBlockByID(id uint64, verbose *bool, inclTx *bool, 
 // GetBlockByNum works like GetBlockByOrder, the different is the GetBlockByNum is return the order result from
 // the current node's DAG directly instead of according to the consensus of BlockDAG algorithm.
 func (api *PublicBlockAPI) GetBlockByNum(num uint64, verbose *bool, inclTx *bool, fullTx *bool) (interface{}, error) {
-	blockHash := api.bm.GetChain().BlockDAG().GetBlockHash(uint(num))
+	blockHash := api.chain.BlockDAG().GetBlockHash(uint(num))
 	if blockHash == nil {
-		return nil, rpc.RpcInternalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %v", num))
+		return nil, internalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %v", num))
 	}
 	vb := false
 	if verbose != nil {
@@ -383,28 +377,23 @@ func (api *PublicBlockAPI) GetBlockByNum(num uint64, verbose *bool, inclTx *bool
 
 // IsBlue:0:not blue;  1：blue  2：Cannot confirm
 func (api *PublicBlockAPI) IsBlue(h hash.Hash) (interface{}, error) {
-	ib := api.bm.chain.BlockDAG().GetBlock(&h)
+	ib := api.chain.BlockDAG().GetBlock(&h)
 	if ib == nil {
-		return 2, rpc.RpcInternalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %s", h.String()))
+		return 2, internalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %s", h.String()))
 	}
-	confirmations := api.bm.chain.BlockDAG().GetConfirmations(ib.GetID())
+	confirmations := api.chain.BlockDAG().GetConfirmations(ib.GetID())
 	if confirmations == 0 {
 		return 2, nil
 	}
-	if api.bm.chain.BlockDAG().IsBlue(ib.GetID()) {
+	if api.chain.BlockDAG().IsBlue(ib.GetID()) {
 		return 1, nil
 	}
 	return 0, nil
 }
 
-// Return IsCurrent
-func (api *PublicBlockAPI) IsCurrent() (interface{}, error) {
-	return api.bm.IsCurrent(), nil
-}
-
 // Return a list hash of the tip blocks of the DAG at this moment.
 func (api *PublicBlockAPI) Tips() (interface{}, error) {
-	tipsList, err := api.bm.chain.TipGeneration()
+	tipsList, err := api.chain.TipGeneration()
 	if err != nil {
 		return nil, err
 	}
@@ -421,7 +410,7 @@ func (api *PublicBlockAPI) GetCoinbase(h hash.Hash, verbose *bool) (interface{},
 	if verbose != nil {
 		vb = *verbose
 	}
-	blk, err := api.bm.chain.FetchBlockByHash(&h)
+	blk, err := api.chain.FetchBlockByHash(&h)
 	if err != nil {
 		return nil, err
 	}
@@ -442,7 +431,7 @@ func (api *PublicBlockAPI) GetCoinbase(h hash.Hash, verbose *bool) (interface{},
 // GetCoinbase
 func (api *PublicBlockAPI) GetFees(h hash.Hash) (interface{}, error) {
 	feesMap := map[string]int64{}
-	fsm := api.bm.chain.GetFees(&h)
+	fsm := api.chain.GetFees(&h)
 	for coinId, v := range fsm {
 		if v <= 0 {
 			continue
@@ -453,7 +442,7 @@ func (api *PublicBlockAPI) GetFees(h hash.Hash) (interface{}, error) {
 }
 
 func (api *PublicBlockAPI) GetTokenInfo() (interface{}, error) {
-	state := api.bm.chain.GetCurTokenState()
+	state := api.chain.GetCurTokenState()
 	if state == nil {
 		return nil, nil
 	}
@@ -477,4 +466,8 @@ func (api *PublicBlockAPI) GetTokenInfo() (interface{}, error) {
 		tbs = append(tbs, ts)
 	}
 	return tbs, nil
+}
+
+func internalError(err, context string) error {
+	return fmt.Errorf("%s : %s", context, err)
 }

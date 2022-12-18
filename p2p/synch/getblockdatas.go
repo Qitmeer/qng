@@ -254,12 +254,12 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 			continue
 		}
 		//
-		rsp := ps.sy.p2p.BLKManager().ProcessBlock(block, behaviorFlags)
-		if rsp.Err != nil {
-			log.Error(fmt.Sprintf("Failed to process block:hash=%s err=%s", block.Hash(), rsp.Err))
+		IsOrphan,_,err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags)
+		if err != nil {
+			log.Error(fmt.Sprintf("Failed to process block:hash=%s err=%s", block.Hash(), err))
 			continue
 		}
-		if rsp.IsOrphan {
+		if IsOrphan {
 			hasOrphan = true
 			continue
 		}

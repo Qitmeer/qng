@@ -34,8 +34,20 @@ import (
 // best chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
-	isorphan, err := b.processBlock(block, flags)
+// return IsOrphan,IsTipsExpired,error
+func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool,bool,error) {
+	if flags.Has(BFRPCAdd) {
+		err := b.BlockDAG().CheckSubMainChainTip(block.Block().Parents)
+		if err != nil {
+			return false,true,fmt.Errorf("The tips of block is expired:%s (error:%s)\n", block.Hash().String(), err.Error())
+		}
+	}
+	isOrphan, err := b.processBlock(block, flags)
+	return isOrphan,false,err
+}
+
+func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
+	isorphan, err := b.preProcessBlock(block, flags)
 	if err != nil || isorphan {
 		return isorphan, err
 	}
@@ -57,7 +69,7 @@ func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFl
 	return false, nil
 }
 
-func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
+func (b *BlockChain) preProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
 	b.ChainRLock()
 	defer b.ChainRUnlock()
 
@@ -249,6 +261,10 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		for e := connectedBlocks.Front(); e != nil; e = e.Next() {
 			b.sendNotification(BlockConnected, e.Value)
 		}
+	}
+
+	if flags&BFP2PAdd == BFP2PAdd {
+		b.progressLogger.LogBlockHeight(block)
 	}
 
 	// Notify the caller that the new block was accepted into the block

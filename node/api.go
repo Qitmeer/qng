@@ -56,16 +56,16 @@ func NewPublicBlockChainAPI(node *QitmeerFull) *PublicBlockChainAPI {
 
 // Return the node info
 func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
-	best := api.node.GetBlockManager().GetChain().BestSnapshot()
-	node := api.node.GetBlockManager().GetChain().BlockDAG().GetBlock(&best.Hash)
-	powNodes := api.node.GetBlockManager().GetChain().GetCurrentPowDiff(node, pow.MEERXKECCAKV1)
+	best := api.node.GetBlockChain().BestSnapshot()
+	node := api.node.GetBlockChain().BlockDAG().GetBlock(&best.Hash)
+	powNodes := api.node.GetBlockChain().GetCurrentPowDiff(node, pow.MEERXKECCAKV1)
 	ret := &json.InfoNodeResult{
 		ID:              api.node.GetPeerServer().PeerID().String(),
 		Version:         int32(1000000*version.Major + 10000*version.Minor + 100*version.Patch),
 		BuildVersion:    version.String(),
 		ProtocolVersion: int32(protocol.ProtocolVersion),
 		TotalSubsidy:    best.TotalSubsidy,
-		TimeOffset:      int64(api.node.GetBlockManager().GetChain().TimeSource().Offset().Seconds()),
+		TimeOffset:      int64(api.node.GetBlockChain().TimeSource().Offset().Seconds()),
 		Connections:     int32(len(api.node.GetPeerServer().Peers().Connected())),
 		PowDiff: &json.PowDiff{
 			CurrentDiff: getDifficultyRatio(powNodes, api.node.node.Params, pow.MEERXKECCAKV1),
@@ -109,7 +109,7 @@ func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 
 		// Query the chain for the current status of the deployment as
 		// identified by its deployment ID.
-		deploymentStatus, err := api.node.GetBlockManager().GetChain().ThresholdState(uint32(deployment))
+		deploymentStatus, err := api.node.GetBlockChain().ThresholdState(uint32(deployment))
 		if err != nil {
 			return nil, fmt.Errorf("Failed to obtain deployment status\n")
 		}
@@ -256,10 +256,10 @@ func (api *PublicBlockChainAPI) GetNetworkInfo() (interface{}, error) {
 }
 
 func (api *PublicBlockChainAPI) GetSubsidy() (interface{}, error) {
-	best := api.node.GetBlockManager().GetChain().BestSnapshot()
-	sc := api.node.GetBlockManager().GetChain().GetSubsidyCache()
+	best := api.node.GetBlockChain().BestSnapshot()
+	sc := api.node.GetBlockChain().GetSubsidyCache()
 	mainHeight := int64(best.GraphState.GetMainHeight())
-	binfo := api.node.GetBlockManager().GetChain().BlockDAG().GetBlueInfo(api.node.GetBlockManager().GetChain().BlockDAG().GetMainChainTip())
+	binfo := api.node.GetBlockChain().BlockDAG().GetBlueInfo(api.node.GetBlockChain().BlockDAG().GetMainChainTip())
 
 	info := &json.SubsidyInfo{Mode: sc.GetMode(mainHeight), TotalSubsidy: best.TotalSubsidy, BaseSubsidy: params.ActiveNetParams.BaseSubsidy}
 
@@ -278,8 +278,8 @@ func (api *PublicBlockChainAPI) GetSubsidy() (interface{}, error) {
 		totalTime := time.Duration(info.TargetTotalSubsidy / info.BaseSubsidy * int64(params.ActiveNetParams.TargetTimePerBlock))
 		info.TotalTime = totalTime.Truncate(time.Second).String()
 
-		firstMBlock := api.node.GetBlockManager().GetChain().BlockDAG().GetBlockByOrder(1)
-		startTime := time.Unix(api.node.GetBlockManager().GetChain().BlockDAG().GetBlockData(firstMBlock).GetTimestamp(), 0)
+		firstMBlock := api.node.GetBlockChain().BlockDAG().GetBlockByOrder(1)
+		startTime := time.Unix(api.node.GetBlockChain().BlockDAG().GetBlockData(firstMBlock).GetTimestamp(), 0)
 		leftTotalTime := totalTime - time.Since(startTime)
 		if leftTotalTime < 0 {
 			leftTotalTime = 0
@@ -311,7 +311,7 @@ func (api *PublicBlockChainAPI) GetRpcModules() (interface{}, error) {
 
 func (api *PublicBlockChainAPI) GetMeerDAGInfo() (interface{}, error) {
 	mdr := json.MeerDAGInfoResult{}
-	md := api.node.GetBlockManager().GetChain().BlockDAG()
+	md := api.node.GetBlockChain().BlockDAG()
 	mdr.Name = md.GetName()
 	mdr.Total = md.GetBlockTotal()
 	mdr.BlockCacheSize = fmt.Sprintf("%d / %d", md.GetBlockCacheSize(), md.GetMinBlockCacheSize())
