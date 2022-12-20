@@ -71,13 +71,11 @@ qx:
 	@go build -o $(GOBIN)/qx $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qx"
 relay:
 	@go build -o $(GOBIN)/relaynode $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/relaynode"
-fastibd:
-	@go build -o $(GOBIN)/fastibd $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/fastibd"
 
 checkversion: qng-build
 #	@echo version $(VERSION)
 
-all: qng-build qx relay fastibd
+all: qng-build qx relay
 
 # amd64 release
 build/release/%: OS=$(word 3,$(subst /, ,$(@)))
