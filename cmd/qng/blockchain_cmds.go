@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
@@ -230,23 +231,10 @@ func blockchainCmd() *cli.Command {
 						return err
 					}
 					//
-					cfg.InvalidTxIndex = false
-					cfg.VMBlockIndex = false
-					cfg.AddrIndex = false
-					cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
-					err = cons.Init()
-					if err != nil {
-						log.Error(err.Error())
-						return err
-					}
-					err = cons.VMService().(*vm.Service).Start()
-					if err != nil {
-						return err
-					}
 					if len(inputPath) <= 0 {
 						inputPath = cfg.HomeDir
 					}
-					return upgradeBlockChain(cons, inputPath, endPoint, byID)
+					return upgradeBlockChain(cfg, db, interrupt, inputPath, endPoint, byID, aidMode)
 				},
 			},
 		},
@@ -425,93 +413,192 @@ func importBlockChain(consensus model.Consensus, inputPath string) error {
 	return nil
 }
 
-func upgradeBlockChain(cons model.Consensus, inputPath string, end string, byID bool) error {
-	bc := cons.BlockChain().(*blockchain.BlockChain)
-	mainTip := bc.BlockDAG().GetMainChainTip()
-	if mainTip.GetOrder() <= 0 {
-		return fmt.Errorf("No blocks in database")
-	}
-
-	var endPoint meerdag.IBlock
-	endNum := uint(0)
-	if byID {
-		endNum = mainTip.GetID()
-	} else {
-		endNum = mainTip.GetOrder()
-	}
-
-	if len(end) > 0 {
-		ephash, err := hash.NewHashFromStr(end)
-		if err != nil {
-			return err
-		}
-		endPoint = bc.GetBlock(ephash)
-		if endPoint != nil {
-			if byID {
-				if endNum > endPoint.GetID() {
-					endNum = endPoint.GetID()
-				}
-			} else {
-				if endNum > endPoint.GetOrder() {
-					endNum = endPoint.GetOrder()
-				}
-			}
-
-			log.Info(fmt.Sprintf("End point:%s order:%d id:%d", ephash.String(), endPoint.GetOrder(), endPoint.GetID()))
-		} else {
-			return fmt.Errorf("End point is error")
-		}
-
-	}
-	logLvl := log.Glogger().GetVerbosity()
-	bar := progressbar.Default(int64(endNum-1), "Upgrade:")
-	log.Glogger().Verbosity(log.LvlCrit)
-
-	var i uint
-	var blockHash *hash.Hash
+func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan struct{}, inputPath string, end string, byID bool, aidMode bool) error {
 	blocks := []*types.SerializedBlock{}
-
-	for i = uint(1); i <= endNum; i++ {
-		bar.Add(1)
-		if byID {
-			ib := bc.BlockDAG().GetBlockById(i)
-			if ib != nil {
-				blockHash = ib.GetHash()
-			} else {
-				blockHash = nil
+	if aidMode {
+		endNum := uint(0)
+		err := db.Update(func(dbTx database.Tx) error {
+			meta := dbTx.Metadata()
+			serializedData := meta.Get(dbnamespace.ChainStateKeyName)
+			if serializedData == nil {
+				return nil
 			}
-		} else {
-			blockHash = bc.BlockDAG().GetBlockHashByOrder(i)
-		}
-
-		if blockHash == nil {
-			return fmt.Errorf(fmt.Sprintf("Can't find block (%d)!", i))
-		}
-
-		block, err := bc.FetchBlockByHash(blockHash)
+			log.Info("Serialized chain state: ", "serializedData", fmt.Sprintf("%x", serializedData))
+			state, err := blockchain.DeserializeBestChainState(serializedData)
+			if err != nil {
+				return err
+			}
+			log.Info(fmt.Sprintf("blocks:%d", state.GetTotal()))
+			if state.GetTotal() == 0 {
+				return fmt.Errorf("No blocks in database")
+			}
+			endNum = uint(state.GetTotal() - 1)
+			return nil
+		})
 		if err != nil {
 			return err
 		}
-		blocks = append(blocks, block)
-	}
 
-	if cons.DatabaseContext() != nil {
-		log.Info(fmt.Sprintf("Gracefully shutting down the last database:%s", cons.Config().DataDir))
-		cons.DatabaseContext().Close()
+		logLvl := log.Glogger().GetVerbosity()
+		bar := progressbar.Default(int64(endNum-1), "Export:")
+		log.Glogger().Verbosity(log.LvlCrit)
+
+		var i uint
+		var blockHash *hash.Hash
+
+		for i = uint(1); i <= endNum; i++ {
+			bar.Add(1)
+			blockHash = nil
+			isEmpty := false
+			err = db.View(func(dbTx database.Tx) error {
+
+				block := &meerdag.Block{}
+				block.SetID(i)
+				ib := &meerdag.PhantomBlock{Block: block}
+				err := meerdag.DBGetDAGBlock(dbTx, ib)
+				if err != nil {
+					if err.(*meerdag.DAGError).IsEmpty() {
+						isEmpty = true
+						return nil
+					}
+					return err
+				}
+				blockHash = ib.GetHash()
+
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			if isEmpty {
+				continue
+			}
+
+			if blockHash == nil {
+				return fmt.Errorf(fmt.Sprintf("Can't find block (%d)!", i))
+			}
+
+			var blockBytes []byte
+			err = db.View(func(dbTx database.Tx) error {
+				bb, er := dbTx.FetchBlock(blockHash)
+				if er != nil {
+					return er
+				}
+				blockBytes = bb
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+
+			block, err := types.NewBlockFromBytes(blockBytes)
+			if err != nil {
+				return err
+			}
+			blocks = append(blocks, block)
+		}
+		fmt.Println()
+		log.Glogger().Verbosity(logLvl)
+	} else {
+		cfg.InvalidTxIndex = false
+		cfg.VMBlockIndex = false
+		cfg.AddrIndex = false
+		cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
+		err := cons.Init()
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
+		err = cons.VMService().(*vm.Service).Start()
+		if err != nil {
+			return err
+		}
+		bc := cons.BlockChain().(*blockchain.BlockChain)
+		mainTip := bc.BlockDAG().GetMainChainTip()
+		if mainTip.GetOrder() <= 0 {
+			return fmt.Errorf("No blocks in database")
+		}
+
+		var endPoint meerdag.IBlock
+		endNum := uint(0)
+		if byID {
+			endNum = mainTip.GetID()
+		} else {
+			endNum = mainTip.GetOrder()
+		}
+
+		if len(end) > 0 {
+			ephash, err := hash.NewHashFromStr(end)
+			if err != nil {
+				return err
+			}
+			endPoint = bc.GetBlock(ephash)
+			if endPoint != nil {
+				if byID {
+					if endNum > endPoint.GetID() {
+						endNum = endPoint.GetID()
+					}
+				} else {
+					if endNum > endPoint.GetOrder() {
+						endNum = endPoint.GetOrder()
+					}
+				}
+
+				log.Info(fmt.Sprintf("End point:%s order:%d id:%d", ephash.String(), endPoint.GetOrder(), endPoint.GetID()))
+			} else {
+				return fmt.Errorf("End point is error")
+			}
+
+		}
+		logLvl := log.Glogger().GetVerbosity()
+		bar := progressbar.Default(int64(endNum-1), "Export:")
+		log.Glogger().Verbosity(log.LvlCrit)
+
+		var i uint
+		var blockHash *hash.Hash
+
+		for i = uint(1); i <= endNum; i++ {
+			bar.Add(1)
+			if byID {
+				ib := bc.BlockDAG().GetBlockById(i)
+				if ib != nil {
+					blockHash = ib.GetHash()
+				} else {
+					blockHash = nil
+				}
+			} else {
+				blockHash = bc.BlockDAG().GetBlockHashByOrder(i)
+			}
+
+			if blockHash == nil {
+				return fmt.Errorf(fmt.Sprintf("Can't find block (%d)!", i))
+			}
+
+			block, err := bc.FetchBlockByHash(blockHash)
+			if err != nil {
+				return err
+			}
+			blocks = append(blocks, block)
+		}
+		fmt.Println()
+		log.Glogger().Verbosity(logLvl)
+
+		err = cons.VMService().(*vm.Service).Stop()
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
 	}
-	err := cons.VMService().(*vm.Service).Stop()
-	if err != nil {
-		log.Error(err.Error())
-		return err
-	}
+	log.Info(fmt.Sprintf("Gracefully shutting down the last database:%s", cfg.DataDir))
+	db.Close()
 
 	time.Sleep(time.Second * 1)
 
-	common.CleanupBlockDB(cons.Config())
+	common.CleanupBlockDB(cfg)
 
 	time.Sleep(time.Second * 2)
 
-	db, err := common.LoadBlockDB(cons.Config())
+	db, err := common.LoadBlockDB(cfg)
 	if err != nil {
 		log.Error("load block database", "error", err)
 		return err
@@ -522,14 +609,11 @@ func upgradeBlockChain(cons model.Consensus, inputPath string, end string, byID 
 			log.Error(err.Error())
 		}
 	}()
-
-	cfg := cons.Config()
-	interrupt := cons.Interrupt()
 	//
 	cfg.InvalidTxIndex = false
 	cfg.VMBlockIndex = false
 	cfg.AddrIndex = false
-	cons = consensus.New(cfg, db, interrupt, make(chan struct{}))
+	cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
 	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
@@ -545,12 +629,13 @@ func upgradeBlockChain(cons model.Consensus, inputPath string, end string, byID 
 			log.Error(err.Error())
 		}
 	}()
+	bc := cons.BlockChain().(*blockchain.BlockChain)
 
 	log.Info(fmt.Sprintf("Load new data:%s", cfg.DataDir))
 
-	bar.Finish()
-	bar.ChangeMax(len(blocks))
-	bar.Set(0)
+	logLvl := log.Glogger().GetVerbosity()
+	bar := progressbar.Default(int64(len(blocks)), "Upgrade:")
+	log.Glogger().Verbosity(log.LvlCrit)
 
 	for _, block := range blocks {
 		err = bc.CheckBlockSanity(block, bc.TimeSource(), blockchain.BFFastAdd, params.ActiveNetParams.Params)
@@ -568,7 +653,7 @@ func upgradeBlockChain(cons model.Consensus, inputPath string, end string, byID 
 	fmt.Println()
 	log.Glogger().Verbosity(logLvl)
 
-	log.Info(fmt.Sprintf("Finish upgrade: blocks(%d)", endNum))
+	log.Info(fmt.Sprintf("Finish upgrade: blocks(%d)", len(blocks)))
 	return nil
 }
 
