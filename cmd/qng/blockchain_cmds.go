@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/system"
+	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/consensus/model"
@@ -12,7 +13,7 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/meerevm/chain"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/version"
 	"github.com/Qitmeer/qng/vm"
@@ -20,9 +21,9 @@ import (
 	"github.com/urfave/cli/v2"
 	"io"
 	"os"
-	"path"
 	"runtime"
 	"strings"
+	"time"
 )
 
 func blockchainCmd() *cli.Command {
@@ -30,6 +31,8 @@ func blockchainCmd() *cli.Command {
 		outputPath string
 		endPoint   string
 		byID       bool
+		inputPath  string
+		aidMode    bool
 	)
 	return &cli.Command{
 		Name:        "blockchain",
@@ -87,11 +90,6 @@ func blockchainCmd() *cli.Command {
 							log.Error(err.Error())
 						}
 					}()
-					edbPath := path.Join(cfg.DataDir, chain.ClientIdentifier)
-					err = os.RemoveAll(edbPath)
-					if err != nil {
-						log.Error(err.Error())
-					}
 					//
 					cfg.InvalidTxIndex = false
 					cfg.VMBlockIndex = false
@@ -115,14 +113,147 @@ func blockchainCmd() *cli.Command {
 					if len(outputPath) <= 0 {
 						outputPath = cfg.HomeDir
 					}
-					return export(cons, outputPath, endPoint, byID)
+					return exportBlockChain(cons, outputPath, endPoint, byID)
+				},
+			},
+			&cli.Command{
+				Name:        "import",
+				Aliases:     []string{"i"},
+				Usage:       "Import all blocks from database",
+				Description: "Import all blocks from database",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "path",
+						Aliases:     []string{"p"},
+						Usage:       "Path to input data",
+						Destination: &inputPath,
+					},
+				},
+				Action: func(ctx *cli.Context) error {
+					cfg := config.Cfg
+					defer func() {
+						if log.LogWrite() != nil {
+							log.LogWrite().Close()
+						}
+					}()
+					interrupt := system.InterruptListener()
+					log.Info("System info", "QNG Version", version.String(), "Go version", runtime.Version())
+					log.Info("System info", "Home dir", cfg.HomeDir)
+					if cfg.NoFileLogging {
+						log.Info("File logging disabled")
+					}
+					db, err := common.LoadBlockDB(cfg)
+					if err != nil {
+						log.Error("load block database", "error", err)
+						return err
+					}
+					defer func() {
+						err = db.Close()
+						if err != nil {
+							log.Error(err.Error())
+						}
+					}()
+					//
+					cfg.InvalidTxIndex = false
+					cfg.VMBlockIndex = false
+					cfg.AddrIndex = false
+					cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
+					err = cons.Init()
+					if err != nil {
+						log.Error(err.Error())
+						return err
+					}
+					err = cons.VMService().(*vm.Service).Start()
+					if err != nil {
+						return err
+					}
+					defer func() {
+						err = cons.VMService().(*vm.Service).Stop()
+						if err != nil {
+							log.Error(err.Error())
+						}
+					}()
+					if len(inputPath) <= 0 {
+						inputPath = cfg.HomeDir
+					}
+					return importBlockChain(cons, inputPath)
+				},
+			},
+			&cli.Command{
+				Name:        "upgrade",
+				Aliases:     []string{"u"},
+				Usage:       "Upgrade all blocks from database for Qitmeer",
+				Description: "Upgrade all blocks from database for Qitmeer",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "path",
+						Aliases:     []string{"p"},
+						Usage:       "Path to input data",
+						Destination: &inputPath,
+					},
+					&cli.BoolFlag{
+						Name:        "aidmode",
+						Aliases:     []string{"ai"},
+						Usage:       "Export by block id",
+						Value:       false,
+						Destination: &aidMode,
+					},
+					&cli.StringFlag{
+						Name:        "endpoint",
+						Aliases:     []string{"e"},
+						Usage:       "End point for output data",
+						Destination: &endPoint,
+					},
+					&cli.BoolFlag{
+						Name:        "byid",
+						Aliases:     []string{"i"},
+						Usage:       "Export by block id",
+						Destination: &byID,
+					},
+				},
+				Action: func(ctx *cli.Context) error {
+					cfg := config.Cfg
+					defer func() {
+						if log.LogWrite() != nil {
+							log.LogWrite().Close()
+						}
+					}()
+					interrupt := system.InterruptListener()
+					log.Info("System info", "QNG Version", version.String(), "Go version", runtime.Version())
+					log.Info("System info", "Home dir", cfg.HomeDir)
+					if cfg.NoFileLogging {
+						log.Info("File logging disabled")
+					}
+					db, err := common.LoadBlockDB(cfg)
+					if err != nil {
+						log.Error("load block database", "error", err)
+						return err
+					}
+					//
+					cfg.InvalidTxIndex = false
+					cfg.VMBlockIndex = false
+					cfg.AddrIndex = false
+					cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
+					err = cons.Init()
+					if err != nil {
+						log.Error(err.Error())
+						return err
+					}
+					err = cons.VMService().(*vm.Service).Start()
+					if err != nil {
+						return err
+					}
+					if len(inputPath) <= 0 {
+						inputPath = cfg.HomeDir
+					}
+					return upgradeBlockChain(cons, inputPath, endPoint, byID)
 				},
 			},
 		},
 	}
 }
 
-func export(consensus model.Consensus, outputPath string, end string, byID bool) error {
+func exportBlockChain(consensus model.Consensus, outputPath string, end string, byID bool) error {
 	bc := consensus.BlockChain().(*blockchain.BlockChain)
 	mainTip := bc.BlockDAG().GetMainChainTip()
 	if mainTip.GetOrder() <= 0 {
@@ -172,9 +303,14 @@ func export(consensus model.Consensus, outputPath string, end string, byID bool)
 		}
 
 	}
+	logLvl := log.Glogger().GetVerbosity()
+	bar := progressbar.Default(int64(endNum-1), "Export:")
+	log.Glogger().Verbosity(log.LvlCrit)
+
 	bhs := []*hash.Hash{}
 	var i uint
 	for i = uint(1); i <= endNum; i++ {
+		bar.Add(1)
 		var blockHash *hash.Hash
 		if byID {
 			ib := bc.BlockDAG().GetBlockById(i)
@@ -197,10 +333,9 @@ func export(consensus model.Consensus, outputPath string, end string, byID bool)
 		}
 		bhs = append(bhs, blockHash)
 	}
-	logLvl := log.Glogger().GetVerbosity()
-	bar := progressbar.Default(int64(endNum-1), "Export:")
-	log.Glogger().Verbosity(log.LvlCrit)
-
+	bar.Finish()
+	bar.ChangeMax(len(bhs))
+	bar.Set(0)
 	var maxNum [4]byte
 	dbnamespace.ByteOrder.PutUint32(maxNum[:], uint32(len(bhs)))
 	_, err = outFile.Write(maxNum[:])
@@ -208,6 +343,7 @@ func export(consensus model.Consensus, outputPath string, end string, byID bool)
 		return err
 	}
 	for _, blockHash := range bhs {
+		bar.Add(1)
 		block, err := bc.FetchBlockByHash(blockHash)
 		if err != nil {
 			return err
@@ -238,6 +374,204 @@ func export(consensus model.Consensus, outputPath string, end string, byID bool)
 	return nil
 }
 
+func importBlockChain(consensus model.Consensus, inputPath string) error {
+	bc := consensus.BlockChain().(*blockchain.BlockChain)
+	mainTip := bc.BlockDAG().GetMainChainTip()
+	if mainTip.GetOrder() > 0 {
+		return fmt.Errorf("Your database is not empty, please empty the database.")
+	}
+	inputFilePath, err := GetIBDFilePath(inputPath)
+	if err != nil {
+		return err
+	}
+	blocksBytes, err := util.ReadFile(inputFilePath)
+	if err != nil {
+		return err
+	}
+	offset := 0
+	maxOrder := dbnamespace.ByteOrder.Uint32(blocksBytes[offset : offset+4])
+	offset += 4
+
+	logLvl := log.Glogger().GetVerbosity()
+	bar := progressbar.Default(int64(maxOrder-1), "Import:")
+	log.Glogger().Verbosity(log.LvlCrit)
+
+	for i := uint32(1); i <= maxOrder; i++ {
+		ibdb := &IBDBlock{}
+		err := ibdb.Decode(blocksBytes[offset:])
+		if err != nil {
+			return err
+		}
+		offset += 4 + int(ibdb.length)
+
+		err = bc.CheckBlockSanity(ibdb.blk, bc.TimeSource(), blockchain.BFFastAdd, params.ActiveNetParams.Params)
+		if err != nil {
+			return err
+		}
+		err = bc.FastAcceptBlock(ibdb.blk, blockchain.BFFastAdd)
+		if err != nil {
+			return err
+		}
+		if bar != nil {
+			bar.Add(1)
+		}
+	}
+	fmt.Println()
+	log.Glogger().Verbosity(logLvl)
+
+	mainTip = bc.BlockDAG().GetMainChainTip()
+	log.Info(fmt.Sprintf("Finish import: blocks(%d)    ------>File:%s", mainTip.GetOrder(), inputFilePath))
+	log.Info(fmt.Sprintf("New Info:%s  mainOrder=%d tips=%d", mainTip.GetHash().String(), mainTip.GetOrder(), bc.BlockDAG().GetTips().Size()))
+	return nil
+}
+
+func upgradeBlockChain(cons model.Consensus, inputPath string, end string, byID bool) error {
+	bc := cons.BlockChain().(*blockchain.BlockChain)
+	mainTip := bc.BlockDAG().GetMainChainTip()
+	if mainTip.GetOrder() <= 0 {
+		return fmt.Errorf("No blocks in database")
+	}
+
+	var endPoint meerdag.IBlock
+	endNum := uint(0)
+	if byID {
+		endNum = mainTip.GetID()
+	} else {
+		endNum = mainTip.GetOrder()
+	}
+
+	if len(end) > 0 {
+		ephash, err := hash.NewHashFromStr(end)
+		if err != nil {
+			return err
+		}
+		endPoint = bc.GetBlock(ephash)
+		if endPoint != nil {
+			if byID {
+				if endNum > endPoint.GetID() {
+					endNum = endPoint.GetID()
+				}
+			} else {
+				if endNum > endPoint.GetOrder() {
+					endNum = endPoint.GetOrder()
+				}
+			}
+
+			log.Info(fmt.Sprintf("End point:%s order:%d id:%d", ephash.String(), endPoint.GetOrder(), endPoint.GetID()))
+		} else {
+			return fmt.Errorf("End point is error")
+		}
+
+	}
+	logLvl := log.Glogger().GetVerbosity()
+	bar := progressbar.Default(int64(endNum-1), "Upgrade:")
+	log.Glogger().Verbosity(log.LvlCrit)
+
+	var i uint
+	var blockHash *hash.Hash
+	blocks := []*types.SerializedBlock{}
+
+	for i = uint(1); i <= endNum; i++ {
+		bar.Add(1)
+		if byID {
+			ib := bc.BlockDAG().GetBlockById(i)
+			if ib != nil {
+				blockHash = ib.GetHash()
+			} else {
+				blockHash = nil
+			}
+		} else {
+			blockHash = bc.BlockDAG().GetBlockHashByOrder(i)
+		}
+
+		if blockHash == nil {
+			return fmt.Errorf(fmt.Sprintf("Can't find block (%d)!", i))
+		}
+
+		block, err := bc.FetchBlockByHash(blockHash)
+		if err != nil {
+			return err
+		}
+		blocks = append(blocks, block)
+	}
+
+	if cons.DatabaseContext() != nil {
+		log.Info(fmt.Sprintf("Gracefully shutting down the last database:%s", cons.Config().DataDir))
+		cons.DatabaseContext().Close()
+	}
+	err := cons.VMService().(*vm.Service).Stop()
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+
+	time.Sleep(time.Second * 1)
+
+	common.CleanupBlockDB(cons.Config())
+
+	time.Sleep(time.Second * 2)
+
+	db, err := common.LoadBlockDB(cons.Config())
+	if err != nil {
+		log.Error("load block database", "error", err)
+		return err
+	}
+	defer func() {
+		err = db.Close()
+		if err != nil {
+			log.Error(err.Error())
+		}
+	}()
+
+	cfg := cons.Config()
+	interrupt := cons.Interrupt()
+	//
+	cfg.InvalidTxIndex = false
+	cfg.VMBlockIndex = false
+	cfg.AddrIndex = false
+	cons = consensus.New(cfg, db, interrupt, make(chan struct{}))
+	err = cons.Init()
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	err = cons.VMService().(*vm.Service).Start()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = cons.VMService().(*vm.Service).Stop()
+		if err != nil {
+			log.Error(err.Error())
+		}
+	}()
+
+	log.Info(fmt.Sprintf("Load new data:%s", cfg.DataDir))
+
+	bar.Finish()
+	bar.ChangeMax(len(blocks))
+	bar.Set(0)
+
+	for _, block := range blocks {
+		err = bc.CheckBlockSanity(block, bc.TimeSource(), blockchain.BFFastAdd, params.ActiveNetParams.Params)
+		if err != nil {
+			return err
+		}
+		err := bc.FastAcceptBlock(block, blockchain.BFFastAdd)
+		if err != nil {
+			return err
+		}
+		if bar != nil {
+			bar.Add(1)
+		}
+	}
+	fmt.Println()
+	log.Glogger().Verbosity(logLvl)
+
+	log.Info(fmt.Sprintf("Finish upgrade: blocks(%d)", endNum))
+	return nil
+}
+
 func GetIBDFilePath(path string) (string, error) {
 	if len(path) <= 0 {
 		return "", fmt.Errorf("Path error")
@@ -251,6 +585,7 @@ func GetIBDFilePath(path string) (string, error) {
 	return strings.TrimRight(strings.TrimRight(path, "/"), "\\") + "/" + defaultFileName, nil
 }
 
+//
 type IBDBlock struct {
 	length uint32
 	bytes  []byte
