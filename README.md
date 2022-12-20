@@ -159,3 +159,29 @@ To exit, press ctrl-d or type exit
 ...
 
 ``` 
+
+### How to export the data of blocks from node
+```
+~ ./qng blockchain export
+or
+~ ./qng blockchain export --path=[Output directory]
+```
+
+### How to import the data of blocks to node
+```
+~ ./qng blockchain import
+or
+~ ./qng blockchain import --path=[Input directory]
+```
+
+### How to upgrade the data of blocks to node
+
+```
+~ ./qng --testnet blockchain upgrade
+```
+
+### First aid mode under consensus error
+
+```
+~ ./qng --testnet blockchain upgrade --aidmode
+```
