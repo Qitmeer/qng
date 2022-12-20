@@ -4,7 +4,6 @@ package blockchain
 
 import (
 	"container/list"
-	"encoding/binary"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
@@ -28,7 +27,6 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common/progresslog"
 	"github.com/schollz/progressbar/v3"
-	"os"
 	"sort"
 	"sync"
 	"time"
@@ -503,66 +501,6 @@ func (b *BlockChain) TipGeneration() ([]hash.Hash, error) {
 		tiphashs = append(tiphashs, *block.GetHash())
 	}
 	return tiphashs, nil
-}
-
-// dump BlockChain dumps a map of the blockchain blocks as serialized bytes.
-func (b *BlockChain) Dump(filePath string, order uint64) error {
-	log.Info("Writing the blockchain to disk as a flat file, " +
-		"please wait...")
-
-	progressLogger := progresslog.NewBlockProgressLogger("Written", log)
-	par := params.ActiveNetParams.Params
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	// Store the network ID in an array for later writing.
-	var net [4]byte
-	binary.LittleEndian.PutUint32(net[:], uint32(par.Net))
-
-	// Write the blocks sequentially, excluding the genesis block.
-	var sz [4]byte
-	for i := uint64(1); i <= order; i++ {
-		bl, err := b.BlockByOrder(i)
-		if err != nil {
-			return err
-		}
-
-		// Serialize the block for writing.
-		blB, err := bl.Bytes()
-		if err != nil {
-			return err
-		}
-
-		// Write the network ID first.
-		_, err = file.Write(net[:])
-		if err != nil {
-			return err
-		}
-
-		// Write the size of the block as a little endian uint32,
-		// then write the block itself serialized.
-		binary.LittleEndian.PutUint32(sz[:], uint32(len(blB)))
-		_, err = file.Write(sz[:])
-		if err != nil {
-			return err
-		}
-
-		_, err = file.Write(blB)
-		if err != nil {
-			return err
-		}
-
-		progressLogger.LogBlockHeight(bl)
-	}
-
-	log.Info(fmt.Sprintf("Successfully dumped the blockchain (%v blocks) to %v.",
-		order, filePath))
-
-	return nil
 }
 
 // BlockByHash returns the block from the main chain with the given hash.
@@ -1281,7 +1219,7 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		deploymentCaches:   newThresholdCaches(params.DefinedDeployments),
 		shutdownTracker:    shutdown.NewTracker(config.DataDir),
 		headerList:         list.New(),
-		progressLogger: progresslog.NewBlockProgressLogger("Processed", log),
+		progressLogger:     progresslog.NewBlockProgressLogger("Processed", log),
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 

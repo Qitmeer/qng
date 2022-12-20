@@ -153,66 +153,6 @@ func consensusCmd() *cli.Command {
 	}
 }
 
-func blockchainCmd() *cli.Command {
-	filePath := ""
-	order := uint64(0)
-	return &cli.Command{
-		Name:        "dumpblockchain",
-		Aliases:     []string{"d"},
-		Category:    "BlockChain",
-		Usage:       "BlockChain",
-		Description: "Write blockchain as a flat file of blocks for use with addblock, to the specified filename",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:        "path",
-				Aliases:     []string{"pa"},
-				Usage:       "Path to dump file",
-				Destination: &filePath,
-			},
-			&cli.Uint64Flag{
-				Name:        "order",
-				Aliases:     []string{"or"},
-				Usage:       "End order to dump file",
-				Value:       0,
-				Destination: &order,
-			},
-		},
-		Action: func(ctx *cli.Context) error {
-			cfg := config.Cfg
-			defer func() {
-				if log.LogWrite() != nil {
-					log.LogWrite().Close()
-				}
-			}()
-			interrupt := system.InterruptListener()
-			log.Info("System info", "QNG Version", version.String(), "Go version", runtime.Version())
-			log.Info("System info", "Home dir", cfg.HomeDir)
-			if cfg.NoFileLogging {
-				log.Info("File logging disabled")
-			}
-			db, err := common.LoadBlockDB(cfg)
-			if err != nil {
-				log.Error("load block database", "error", err)
-				return err
-			}
-			defer db.Close()
-			cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
-			err = cons.Init()
-			if err != nil {
-				log.Error(err.Error())
-				return err
-			}
-			if len(filePath) <= 0 {
-				filePath = path.Join(cfg.DataDir, "blocks.order")
-			}
-			if order == 0 {
-				order = uint64(cons.BlockChain().GetMainOrder())
-			}
-			return cons.BlockChain().Dump(filePath, order)
-		},
-	}
-}
-
 func loadConfig(ctx *cli.Context) error {
 	cfg, err := common.LoadConfig(ctx, false)
 	if err != nil {
