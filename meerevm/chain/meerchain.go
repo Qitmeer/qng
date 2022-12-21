@@ -42,17 +42,18 @@ func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
 }
 
 func (b *MeerChain) ConnectBlock(block qconsensus.Block) (uint64, error) {
-	mblock, receipts, statedb, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
+	var err error
+	mblock, _, _, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
 		return 0, err
 	}
-	logs := []*types.Log{}
-	for _, re := range receipts {
-		logs = append(logs, re.Logs...)
-	}
-	_, err = b.chain.Ether().BlockChain().WriteBlockAndSetHead(mblock, receipts, logs, statedb, true)
+	var st int
+	st, err = b.chain.Ether().BlockChain().InsertChain(types.Blocks{mblock})
 	if err != nil {
 		return 0, err
+	}
+	if st != 1 {
+		return 0, fmt.Errorf("BuildBlock error")
 	}
 	//
 	mbh := qcommon.ToEVMHash(block.ID())
