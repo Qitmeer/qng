@@ -732,6 +732,7 @@ function usage(){
   echo "  daginfo"
   echo "block  :"
   echo "  block <order|hash>"
+  echo "  blockbyhash <hash>"
   echo "  blockid <id>"
   echo "  blockhash <order>"
   echo "  block_count"
