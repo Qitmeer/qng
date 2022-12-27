@@ -731,7 +731,7 @@ function usage(){
   echo "  modules"
   echo "  daginfo"
   echo "block  :"
-  echo "  block <order>"
+  echo "  block <order|hash>"
   echo "  blockbyhash <hash>"
   echo "  blockid <id>"
   echo "  blockhash <order>"
