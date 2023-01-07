@@ -8,8 +8,8 @@ import (
 	"context"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/meerevm/evm"
-	"github.com/Qitmeer/qng/meerevm/evm/util"
 	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -34,7 +34,7 @@ func (ctx *MContext) GetNotify() consensus.Notify {
 func main() {
 	debugLevel := "trace"
 	debugPrintOrigins := true
-	util.InitLog(debugLevel, debugPrintOrigins)
+	eth.InitLog(debugLevel, debugPrintOrigins)
 
 	ctx := &MContext{
 		Context: context.Background(),

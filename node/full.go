@@ -9,9 +9,9 @@ import (
 	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerevm/qit"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
-	"github.com/Qitmeer/qng/qitsubnet"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/services/acct"
@@ -149,10 +149,10 @@ func (qm *QitmeerFull) RegisterVMService(vmService *vm.Service) error {
 }
 
 func (qm *QitmeerFull) RegisterQitSubnet() error {
-	if len(qm.node.Config.QitSubnetEnv) == 0 {
+	if len(qm.node.Config.QitEnv) == 0 {
 		return nil
 	}
-	ser, err := qitsubnet.New(qm.node.Config, qm.node.consensus)
+	ser, err := qit.New(qm.node.Config, qm.node.consensus)
 	if err != nil {
 		return err
 	}

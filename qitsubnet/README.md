@@ -1,2 +1,0 @@
-# Qit Subnet
-

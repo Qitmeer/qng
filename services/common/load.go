@@ -553,7 +553,7 @@ var (
 		&cli.StringFlag{
 			Name:        "qitenv",
 			Usage:       "Qit Subnet environment",
-			Destination: &cfg.QitSubnetEnv,
+			Destination: &cfg.QitEnv,
 		},
 	}
 )

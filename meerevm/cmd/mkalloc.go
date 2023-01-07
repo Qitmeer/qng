@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/meerevm/chain"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/release"
 	"github.com/ethereum/go-ethereum/common"
@@ -73,7 +73,7 @@ func makealloc(g *core.Genesis) string {
 
 func main() {
 	filePath := "./../chain/genesis.json"
-	gds := []chain.NetGenesisData{}
+	gds := []meer.NetGenesisData{}
 	file, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
@@ -104,8 +104,8 @@ func main() {
 			networkTag = "mainAllocData"
 		}
 
-		chain.ChainConfig.ChainID = big.NewInt(params.ActiveNetParams.MeerEVMCfg.ChainID)
-		genesis := chain.DefaultGenesisBlock(chain.ChainConfig)
+		meer.ChainConfig.ChainID = big.NewInt(params.ActiveNetParams.MeerEVMCfg.ChainID)
+		genesis := meer.DefaultGenesisBlock(meer.ChainConfig)
 		genesis.Alloc = ngd.Data.Genesis.Alloc
 		if _, ok := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]; ok {
 			releaseAccount := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]
@@ -117,7 +117,7 @@ func main() {
 			genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)] = releaseAccount
 		}
 		if len(ngd.Data.Contracts) > 0 {
-			err = chain.UpdateAlloc(genesis, ngd.Data.Contracts)
+			err = meer.UpdateAlloc(genesis, ngd.Data.Contracts)
 			if err != nil {
 				panic(err)
 			}

@@ -5,7 +5,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/meerevm/chain"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/olekukonko/tablewriter"
@@ -205,7 +205,7 @@ WARNING: please back-up the receipt files in your ancients before running this c
 )
 
 func removeDB(ctx *cli.Context) error {
-	stack, config := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, config := meer.MakeMeerethConfigNode(ctx, config.Cfg)
 
 	// Remove the full node state database
 	path := stack.ResolvePath("chaindata")
@@ -286,7 +286,7 @@ func inspect(ctx *cli.Context) error {
 			start = d
 		}
 	}
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	db := utils.MakeChainDatabase(ctx, stack, true)
@@ -309,7 +309,7 @@ func showLeveldbStats(db ethdb.Stater) {
 }
 
 func dbStats(ctx *cli.Context) error {
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	db := utils.MakeChainDatabase(ctx, stack, true)
@@ -320,7 +320,7 @@ func dbStats(ctx *cli.Context) error {
 }
 
 func dbCompact(ctx *cli.Context) error {
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	db := utils.MakeChainDatabase(ctx, stack, false)
@@ -344,7 +344,7 @@ func dbGet(ctx *cli.Context) error {
 	if ctx.NArg() != 1 {
 		return fmt.Errorf("required arguments: %v", ctx.Command.ArgsUsage)
 	}
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	db := utils.MakeChainDatabase(ctx, stack, true)
@@ -369,7 +369,7 @@ func dbDelete(ctx *cli.Context) error {
 	if ctx.NArg() != 1 {
 		return fmt.Errorf("required arguments: %v", ctx.Command.ArgsUsage)
 	}
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	db := utils.MakeChainDatabase(ctx, stack, false)
@@ -396,7 +396,7 @@ func dbPut(ctx *cli.Context) error {
 	if ctx.NArg() != 2 {
 		return fmt.Errorf("required arguments: %v", ctx.Command.ArgsUsage)
 	}
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	db := utils.MakeChainDatabase(ctx, stack, false)
@@ -430,7 +430,7 @@ func dbDumpTrie(ctx *cli.Context) error {
 	if ctx.NArg() < 1 {
 		return fmt.Errorf("required arguments: %v", ctx.Command.ArgsUsage)
 	}
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	db := utils.MakeChainDatabase(ctx, stack, true)
@@ -493,7 +493,7 @@ func freezerInspect(ctx *cli.Context) error {
 		log.Info("Could not read count param", "err", err)
 		return err
 	}
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	db := utils.MakeChainDatabase(ctx, stack, true)
@@ -509,7 +509,7 @@ func freezerInspect(ctx *cli.Context) error {
 
 
 func showMetaData(ctx *cli.Context) error {
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 	db := utils.MakeChainDatabase(ctx, stack, true)
 	ancients, err := db.Ancients()
@@ -559,7 +559,7 @@ func showMetaData(ctx *cli.Context) error {
 }
 
 func freezerMigrate(ctx *cli.Context) error {
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	db := utils.MakeChainDatabase(ctx, stack, false)
@@ -575,7 +575,7 @@ func freezerMigrate(ctx *cli.Context) error {
 		return nil
 	}
 
-	isFirstLegacy, firstIdx, err := chain.DBHasLegacyReceipts(db, 0)
+	isFirstLegacy, firstIdx, err := meer.DBHasLegacyReceipts(db, 0)
 	if err != nil {
 		return err
 	}

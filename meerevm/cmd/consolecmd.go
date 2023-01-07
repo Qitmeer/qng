@@ -5,7 +5,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/meerevm/chain"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
@@ -79,7 +79,7 @@ func remoteConsole(ctx *cli.Context) error {
 // for "geth attach" with no argument.
 func dialRPC(endpoint string) (*rpc.Client, error) {
 	if endpoint == "" {
-		endpoint = node.DefaultIPCEndpoint(chain.ClientIdentifier)
+		endpoint = node.DefaultIPCEndpoint(meer.ClientIdentifier)
 	} else if strings.HasPrefix(endpoint, "rpc:") || strings.HasPrefix(endpoint, "ipc:") {
 		// Backwards compatibility with geth < 1.5 which required
 		// these prefixes.
