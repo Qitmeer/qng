@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
+	"github.com/Qitmeer/qng/qitsubnet"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/services/acct"
@@ -147,6 +148,17 @@ func (qm *QitmeerFull) RegisterVMService(vmService *vm.Service) error {
 	return qm.Services().RegisterService(vmService)
 }
 
+func (qm *QitmeerFull) RegisterQitSubnet() error {
+	if len(qm.node.Config.QitSubnetEnv) == 0 {
+		return nil
+	}
+	ser, err := qitsubnet.New(qm.node.Config, qm.node.consensus)
+	if err != nil {
+		return err
+	}
+	return qm.Services().RegisterService(ser)
+}
+
 // return address api
 func (qm *QitmeerFull) GetAddressApi() *address.AddressApi {
 	return qm.addressApi
@@ -261,6 +273,11 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	if err := qm.RegisterRpcService(); err != nil {
 		return nil, err
 	}
+
+	if err := qm.RegisterQitSubnet(); err != nil {
+		return nil,err
+	}
+
 	if qm.GetRpcServer() != nil {
 		qm.GetRpcServer().BC = qm.GetBlockChain()
 		qm.GetRpcServer().ChainParams = qm.node.Params
