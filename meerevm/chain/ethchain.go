@@ -6,7 +6,6 @@ package chain
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/protocol"
@@ -209,9 +208,6 @@ type ETHChain struct {
 	node    *node.Node
 	ether   *eth.Ethereum
 	backend *eth.EthAPIBackend
-
-	genPrivateKey *ecdsa.PrivateKey
-	genAddress    common.Address
 }
 
 func (ec *ETHChain) Start() error {
