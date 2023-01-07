@@ -387,6 +387,7 @@ func NewETHChainByCfg(config *MeerethConfig) (*ETHChain, error) {
 
 	app.Action = func(ctx *cli.Context) error {
 		ec.ctx = ctx
+		prepare(ec.ctx,ec.config)
 		ec.node, ec.backend, ec.ether = makeFullNode(ec.ctx, ec.config)
 		return nil
 	}
@@ -461,6 +462,15 @@ func MakeMeerethConfig(datadir string) (*MeerethConfig, error) {
 		Node:    nodeConf,
 		Metrics: metrics.DefaultConfig,
 	}, nil
+}
+
+func prepare(ctx *cli.Context, cfg *MeerethConfig) {
+	log.Info(fmt.Sprintf("Prepare %s on NetWork(%d)...",cfg.Node.Name,cfg.Eth.NetworkId))
+	// Start metrics export if enabled
+	utils.SetupMetrics(ctx)
+
+	// Start system runtime metrics collection
+	go metrics.CollectProcessMetrics(3 * time.Second)
 }
 
 func makeFullNode(ctx *cli.Context, cfg *MeerethConfig) (*node.Node, *eth.EthAPIBackend, *eth.Ethereum) {
