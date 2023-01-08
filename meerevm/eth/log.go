@@ -12,12 +12,11 @@ import (
 var glogger *log.GlogHandler
 
 func InitLog(DebugLevel string, DebugPrintOrigins bool) {
-	if glogger != nil {
-		return
+	if glogger == nil {
+		glogger = log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
+		glogger.Verbosity(log.LvlTrace)
+		log.Root().SetHandler(glogger)
 	}
-	glogger = log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
-	glogger.Verbosity(log.LvlTrace)
-	log.Root().SetHandler(glogger)
 
 	lvl, err := log.LvlFromString(DebugLevel)
 	if err == nil {
