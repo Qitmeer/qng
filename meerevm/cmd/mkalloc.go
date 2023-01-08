@@ -73,7 +73,7 @@ func makealloc(g *core.Genesis) string {
 }
 
 func main() {
-	filePath := "./../chain/genesis.json"
+	filePath := "./../meer/genesis.json"
 	gds := []meer.NetGenesisData{}
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -128,7 +128,7 @@ func main() {
 		fileContent += fmt.Sprintf("\nconst %s = %s", networkTag, alloc)
 	}
 
-	fileName := "./../chain/genesis_alloc.go"
+	fileName := "./../meer/genesis_alloc.go"
 
 	f, err := os.Create(fileName)
 
@@ -162,7 +162,7 @@ type BurnDetail struct {
 // all amount 1215912000000000+922801274285398 = 2138713274285398
 
 func BuildBurnBalance() map[common.Hash]common.Hash {
-	filePath := "./../chain/burn_list.json"
+	filePath := "./../meer/burn_list.json"
 	storage := map[common.Hash]common.Hash{}
 	gds := map[string][]BurnDetail{}
 	file, err := os.Open(filePath)

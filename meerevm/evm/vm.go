@@ -110,10 +110,11 @@ func (vm *VM) Shutdown() error {
 		return nil
 	}
 
-	vm.chain.Stop()
+	err := vm.chain.Stop()
+	if err != nil {
+		log.Error(err.Error())
+	}
 	vm.mchain.Stop()
-
-	vm.chain.Wait()
 	return nil
 }
 

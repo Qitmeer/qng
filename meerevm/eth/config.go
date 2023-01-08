@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	ConfigFileFlag = cli.StringFlag{
+	ConfigFileFlag = &cli.StringFlag{
 		Name:  "config",
 		Usage: "TOML configuration file",
 	}

@@ -51,10 +51,10 @@ func (ec *ETHChain) Start() error {
 	if atomic.AddInt32(&ec.started, 1) != 1 {
 		return fmt.Errorf("Service is already in the process of started")
 	}
-	return startNode(ec.ctx,ec.node,ec.backend)
+	return startNode(ec.ctx, ec.node, ec.backend)
 }
 
-func (ec *ETHChain) Wait() {
+func (ec *ETHChain) wait() {
 	ec.node.Wait()
 }
 
@@ -65,7 +65,7 @@ func (ec *ETHChain) Stop() error {
 
 	ec.node.Close()
 
-	ec.Wait()
+	ec.wait()
 	return nil
 }
 
@@ -93,14 +93,14 @@ func (ec *ETHChain) Config() *Config {
 	return ec.config
 }
 
-func NewETHChain(config *Config,args []string,flags []cli.Flag) (*ETHChain, error) {
+func NewETHChain(config *Config, args []string, flags []cli.Flag) (*ETHChain, error) {
 	ec := &ETHChain{config: config}
 
 	//
 	app := cli.NewApp()
 	app.Name = config.Node.Name
 	app.Authors = []*cli.Author{
-		{Name: config.Node.Name , Email: config.Node.Name },
+		{Name: config.Node.Name, Email: config.Node.Name},
 	}
 	app.Version = params.VersionWithMeta
 	app.Usage = config.Node.Name
@@ -111,7 +111,7 @@ func NewETHChain(config *Config,args []string,flags []cli.Flag) (*ETHChain, erro
 
 	app.Action = func(ctx *cli.Context) error {
 		ec.ctx = ctx
-		prepare(ec.ctx,ec.config)
+		prepare(ec.ctx, ec.config)
 		ec.node, ec.backend, ec.ether = makeFullNode(ec.ctx, ec.config)
 		return nil
 	}
@@ -133,7 +133,7 @@ func prepare(ctx *cli.Context, cfg *Config) {
 		return
 	}
 
-	log.Info(fmt.Sprintf("Prepare %s on NetWork(%d)...",cfg.Node.Name,cfg.Eth.NetworkId))
+	log.Info(fmt.Sprintf("Prepare %s on NetWork(%d)...", cfg.Node.Name, cfg.Eth.NetworkId))
 	// Start metrics export if enabled
 	utils.SetupMetrics(ctx)
 
@@ -181,7 +181,7 @@ func makeFullNode(ctx *cli.Context, cfg *Config) (*node.Node, *eth.EthAPIBackend
 }
 
 func makeConfigNode(ctx *cli.Context, cfg *Config) *node.Node {
-	filterConfig(ctx,cfg)
+	filterConfig(ctx, cfg)
 	// Load config file.
 	if file := ctx.String(ConfigFileFlag.Name); file != "" {
 		if err := LoadConfig(file, cfg); err != nil {
@@ -302,13 +302,13 @@ func applyMetricConfig(ctx *cli.Context, cfg *Config) {
 	}
 }
 
-func startNode(ctx *cli.Context, stack *node.Node,backend *eth.EthAPIBackend) error {
+func startNode(ctx *cli.Context, stack *node.Node, backend *eth.EthAPIBackend) error {
 	err := stack.Start()
 	if err != nil {
 		return err
 	}
 
-	unlockAccounts(ctx,stack)
+	unlockAccounts(ctx, stack)
 
 	events := make(chan accounts.WalletEvent, 16)
 	stack.AccountManager().Subscribe(events)
@@ -466,7 +466,7 @@ func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrErr
 	return *match
 }
 
-func filterConfig(ctx *cli.Context,cfg *Config) {
+func filterConfig(ctx *cli.Context, cfg *Config) {
 	if cfg.Eth.Genesis.Config.ChainID.Int64() != qparams.ActiveNetParams.MeerEVMCfg.ChainID {
 		return
 	}
@@ -549,11 +549,11 @@ func DBHasLegacyReceipts(db ethdb.Database, firstIdx uint64) (bool, uint64, erro
 	return legacy, firstIdx, err
 }
 
-func MakeNakedNode(config *Config,args []string,flags []cli.Flag) (*node.Node, error) {
+func MakeNakedNode(config *Config, args []string, flags []cli.Flag) (*node.Node, error) {
 	app := cli.NewApp()
 	app.Name = config.Node.Name
 	app.Authors = []*cli.Author{
-		{Name: config.Node.Name , Email: config.Node.Name },
+		{Name: config.Node.Name, Email: config.Node.Name},
 	}
 	app.Version = params.VersionWithMeta
 	app.Usage = config.Node.Name
