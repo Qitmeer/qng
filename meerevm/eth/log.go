@@ -9,8 +9,13 @@ import (
 	"os"
 )
 
+var glogger *log.GlogHandler
+
 func InitLog(DebugLevel string, DebugPrintOrigins bool) {
-	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
+	if glogger != nil {
+		return
+	}
+	glogger = log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
 	glogger.Verbosity(log.LvlTrace)
 	log.Root().SetHandler(glogger)
 

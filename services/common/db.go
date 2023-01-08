@@ -7,9 +7,9 @@ import (
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerevm/meer"
+	"github.com/Qitmeer/qng/meerevm/qit"
 	"github.com/Qitmeer/qng/params"
 	"os"
-	"path"
 	"path/filepath"
 )
 
@@ -89,11 +89,8 @@ func CleanupBlockDB(cfg *config.Config) {
 	if err != nil {
 		log.Error(err.Error())
 	}
-	dbPath = path.Join(cfg.DataDir, meer.ClientIdentifier)
-	err = os.RemoveAll(dbPath)
-	if err != nil {
-		log.Error(err.Error())
-	}
+	meer.Cleanup(cfg)
+	qit.Cleanup(cfg)
 	err = shutdown.NewTracker(cfg.DataDir).Done()
 	if err != nil {
 		log.Error(err.Error())

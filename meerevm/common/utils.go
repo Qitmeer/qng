@@ -7,6 +7,7 @@ package common
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	qtypes "github.com/Qitmeer/qng/core/types"
@@ -16,9 +17,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
 	"math/big"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -76,7 +80,7 @@ func ToEVMHash(h *hash.Hash) common.Hash {
 func FromEVMHash(h common.Hash) *hash.Hash {
 	ehb := h.Bytes()
 	ReverseBytes(&ehb)
-	th,err:=hash.NewHash(ehb)
+	th, err := hash.NewHash(ehb)
 	if err != nil {
 		return nil
 	}
@@ -149,4 +153,22 @@ func Merge(groups ...[]cli.Flag) []cli.Flag {
 		ret = append(ret, group...)
 	}
 	return ret
+}
+
+func ProcessEnv(env string, identifier string) []string {
+	result := []string{identifier}
+	if len(env) <= 0 {
+		return result
+	}
+	if e, err := strconv.Unquote(env); err == nil {
+		env = e
+	}
+	args := strings.Split(env, " ")
+	if len(args) <= 0 {
+		return result
+	}
+	log.Debug(fmt.Sprintf("Initialize meerevm environment: %v %v ", len(args), args))
+	result = append(result, args...)
+
+	return result
 }

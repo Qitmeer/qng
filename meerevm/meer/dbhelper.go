@@ -7,8 +7,11 @@ package meer
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/Qitmeer/qng/config"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"os"
+	"path"
 )
 
 var blockNumberPrefix = []byte("M") // blockNumberPrefix + hash -> num (uint64 big endian)
@@ -41,4 +44,13 @@ func DeleteBlockNumber(db ethdb.KeyValueWriter, hash common.Hash) {
 	if err := db.Delete(blockNumberKey(hash)); err != nil {
 		log.Error(fmt.Sprintf("Failed to delete hash to number mapping:%v", err))
 	}
+}
+
+func Cleanup(cfg *config.Config) {
+	dbPath := path.Join(cfg.DataDir, ClientIdentifier)
+	err := os.RemoveAll(dbPath)
+	if err != nil {
+		log.Error(err.Error())
+	}
+	log.Info(fmt.Sprintf("Finished cleanup:%s", dbPath))
 }

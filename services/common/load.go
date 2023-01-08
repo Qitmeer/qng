@@ -555,6 +555,11 @@ var (
 			Usage:       "Qit Subnet environment",
 			Destination: &cfg.QitEnv,
 		},
+		&cli.BoolFlag{
+			Name:        "qit",
+			Usage:       "Enable Qit Subnet",
+			Destination: &cfg.Qit,
+		},
 	}
 )
 

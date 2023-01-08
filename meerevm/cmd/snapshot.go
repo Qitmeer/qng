@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/node"
@@ -170,7 +169,7 @@ block is used.
 )
 
 func pruneState(ctx *cli.Context) error {
-	stack, config := meer.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, config := makeConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	chaindb := utils.MakeChainDatabase(ctx, stack, false)
@@ -199,7 +198,7 @@ func pruneState(ctx *cli.Context) error {
 }
 
 func verifyState(ctx *cli.Context) error {
-	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := makeConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	chaindb := utils.MakeChainDatabase(ctx, stack, true)
@@ -237,7 +236,7 @@ func verifyState(ctx *cli.Context) error {
 // Basically it just iterates the trie, ensure all nodes and associated
 // contract codes are present.
 func traverseState(ctx *cli.Context) error {
-	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := makeConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	chaindb := utils.MakeChainDatabase(ctx, stack, true)
@@ -327,7 +326,7 @@ func traverseState(ctx *cli.Context) error {
 // contract codes are present. It's basically identical to traverseState
 // but it will check each trie node.
 func traverseRawState(ctx *cli.Context) error {
-	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := makeConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	chaindb := utils.MakeChainDatabase(ctx, stack, true)
@@ -453,7 +452,7 @@ func parseRoot(input string) (common.Hash, error) {
 }
 
 func dumpState(ctx *cli.Context) error {
-	stack, _ := meer.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := makeConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	conf, db, root, err := parseDumpConfig(ctx, stack)

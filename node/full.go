@@ -121,13 +121,13 @@ func (qm *QitmeerFull) RegisterMinerService() error {
 		}, //TODO, duplicated config item with mem-pool
 		CoinbaseGenerator: coinbase.NewCoinbaseGenerator(qm.node.Params, qm.GetPeerServer().PeerID().String()),
 	}
-	miner := miner.NewMiner(qm.node.consensus, &policy, txManager.MemPool().(*mempool.TxPool),qm.GetPeerServer())
+	miner := miner.NewMiner(qm.node.consensus, &policy, txManager.MemPool().(*mempool.TxPool), qm.GetPeerServer())
 	qm.Services().RegisterService(miner)
 	return nil
 }
 
 func (qm *QitmeerFull) RegisterNotifyMgr() error {
-	nfManager := notifymgr.New(qm.GetPeerServer(),qm.node.consensus)
+	nfManager := notifymgr.New(qm.GetPeerServer(), qm.node.consensus)
 	qm.Services().RegisterService(nfManager)
 	qm.nfManager = nfManager
 	return nil
@@ -149,7 +149,7 @@ func (qm *QitmeerFull) RegisterVMService(vmService *vm.Service) error {
 }
 
 func (qm *QitmeerFull) RegisterQitSubnet() error {
-	if len(qm.node.Config.QitEnv) == 0 {
+	if !qm.node.Config.Qit {
 		return nil
 	}
 	ser, err := qit.New(qm.node.Config, qm.node.consensus)
@@ -232,7 +232,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	if err := node.consensus.Init(); err != nil {
 		return nil, err
 	}
-	if err := qm.Services().RegisterService(node.consensus.BlockChain().(*blockchain.BlockChain));err != nil {
+	if err := qm.Services().RegisterService(node.consensus.BlockChain().(*blockchain.BlockChain)); err != nil {
 		return nil, err
 	}
 	if err := qm.RegisterP2PService(); err != nil {
@@ -275,7 +275,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	}
 
 	if err := qm.RegisterQitSubnet(); err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	if qm.GetRpcServer() != nil {

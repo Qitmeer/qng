@@ -36,7 +36,7 @@ const (
 type VM struct {
 	ctx consensus.Context
 
-	chain  *meer.ETHChain
+	chain  *eth.ETHChain
 	mchain *meer.MeerChain
 }
 
@@ -45,22 +45,14 @@ func (vm *VM) GetID() string {
 }
 
 func (vm *VM) Initialize(ctx consensus.Context) error {
-	eth.InitLog(ctx.GetConfig().DebugLevel, ctx.GetConfig().DebugPrintOrigins)
-
 	log.Info("System info", "ETH VM Version", meer.Version, "Go version", runtime.Version())
-
 	log.Debug(fmt.Sprintf("Initialize:%s", ctx.GetConfig().DataDir))
 
 	vm.ctx = ctx
 
 	//
-	ethchain, err := meer.NewETHChain(vm.ctx.GetConfig())
-	if err != nil {
-		return err
-	}
-	vm.chain = ethchain
-	vm.mchain = meer.NewMeerChain(ethchain, ctx)
-
+	vm.mchain = meer.NewMeerChain(ctx)
+	vm.chain = vm.mchain.ETHChain()
 	return nil
 }
 

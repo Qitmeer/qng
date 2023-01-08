@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
+	"github.com/Qitmeer/qng/meerevm/eth"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	qconsensus "github.com/Qitmeer/qng/vm/consensus"
@@ -29,7 +30,7 @@ import (
 const BLOCK_GASLIMIT = 0x10000000000000
 
 type MeerChain struct {
-	chain    *ETHChain
+	chain    *eth.ETHChain
 	meerpool *MeerPool
 }
 
@@ -135,7 +136,7 @@ func (b *MeerChain) fillBlock(qtxs []model.Tx, header *types.Header, statedb *st
 	txs := []*types.Transaction{}
 	receipts := []*types.Receipt{}
 
-	header.Coinbase = b.chain.config.Eth.Miner.Etherbase
+	header.Coinbase = b.chain.Config().Eth.Miner.Etherbase
 	for _, tx := range qtxs {
 		if tx.GetTxType() == qtypes.TxTypeCrossChainVM ||
 			tx.GetTxType() == qtypes.TxTypeCrossChainImport {
@@ -265,7 +266,7 @@ func (b *MeerChain) RegisterAPIs(apis []api.API) {
 }
 
 func (b *MeerChain) Start() {
-	b.meerpool.Start(b.chain.config.Eth.Miner.Etherbase)
+	b.meerpool.Start(b.chain.Config().Eth.Miner.Etherbase)
 }
 
 func (b *MeerChain) Stop() {
@@ -276,12 +277,30 @@ func (b *MeerChain) MeerPool() *MeerPool {
 	return b.meerpool
 }
 
-func NewMeerChain(chain *ETHChain, ctx qconsensus.Context) *MeerChain {
+func (b *MeerChain) ETHChain() *eth.ETHChain {
+	return b.chain
+}
+
+func NewMeerChain(ctx qconsensus.Context) *MeerChain {
+	cfg := ctx.GetConfig()
+	eth.InitLog(cfg.DebugLevel, cfg.DebugPrintOrigins)
+	//
+	ecfg, args, flags, err := MakeParams(cfg)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	chain, err := eth.NewETHChain(ecfg, args, flags)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+
 	mc := &MeerChain{
 		chain:    chain,
-		meerpool: chain.config.Eth.Miner.External.(*MeerPool),
+		meerpool: chain.Config().Eth.Miner.External.(*MeerPool),
 	}
-	mc.meerpool.init(&chain.config.Eth.Miner, chain.config.Eth.Genesis.Config, chain.ether.Engine(), chain.ether, chain.ether.EventMux(), ctx)
+	mc.meerpool.init(&chain.Config().Eth.Miner, chain.Config().Eth.Genesis.Config, chain.Ether().Engine(), chain.Ether(), chain.Ether().EventMux(), ctx)
 	return mc
 }
 
