@@ -6,7 +6,6 @@ package common
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
@@ -14,7 +13,6 @@ import (
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
@@ -116,34 +114,6 @@ func ToQNGTx(tx *types.Transaction, timestamp int64) *qtypes.Transaction {
 	})
 
 	return mtx
-}
-
-// bigValue turns *big.Int into a flag.Value
-type bigValue big.Int
-
-func (b *bigValue) String() string {
-	if b == nil {
-		return ""
-	}
-	return (*big.Int)(b).String()
-}
-
-func (b *bigValue) Set(s string) error {
-	intVal, ok := math.ParseBig256(s)
-	if !ok {
-		return errors.New("invalid integer syntax")
-	}
-	*b = (bigValue)(*intVal)
-	return nil
-}
-
-// GlobalBig returns the value of a BigFlag from the global flag set.
-func GlobalBig(ctx *cli.Context, name string) *big.Int {
-	val := ctx.Generic(name)
-	if val == nil {
-		return nil
-	}
-	return (*big.Int)(val.(*bigValue))
 }
 
 // Merge merges the given flag slices.

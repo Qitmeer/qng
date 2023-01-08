@@ -13,7 +13,7 @@ var glogger *log.GlogHandler
 
 func InitLog(DebugLevel string, DebugPrintOrigins bool) {
 	if glogger == nil {
-		glogger = log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
+		glogger = log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(true)))
 		glogger.Verbosity(log.LvlTrace)
 		log.Root().SetHandler(glogger)
 	}

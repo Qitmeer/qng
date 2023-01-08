@@ -5,9 +5,12 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/meerevm/eth"
+	mconsensus "github.com/Qitmeer/qng/meerevm/qit/consensus"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -22,8 +25,36 @@ func (q *QitService) Start() error {
 	if err := q.Service.Start(); err != nil {
 		return err
 	}
-	log.Debug("Start QitService")
-	err := q.chain.Start()
+	log.Info("Start QitService")
+
+	ecfg, args, flags, err := MakeParams(q.cfg)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	chain, err := eth.NewETHChain(ecfg, args, flags)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	q.chain = chain
+	//
+
+	if chain.Context().Bool(utils.MiningEnabledFlag.Name) || chain.Context().Bool(utils.DeveloperFlag.Name) {
+		eb, err := chain.Ether().Etherbase()
+		if err != nil {
+			return fmt.Errorf("etherbase missing: %v", err)
+		}
+		wallet, err := chain.Ether().AccountManager().Find(accounts.Account{Address: eb})
+		if wallet == nil || err != nil {
+			log.Error("Etherbase account unavailable locally", "err", err)
+			return fmt.Errorf("signer missing: %v", err)
+		}
+		chain.Ether().Engine().(*mconsensus.Qit).Authorize(eb, wallet.SignData)
+		log.Info(fmt.Sprintf("QitSubnet Authorize:%s", eb))
+	}
+	//
+	err = q.chain.Start()
 	if err != nil {
 		return err
 	}
@@ -76,21 +107,9 @@ func (q *QitService) APIs() []api.API {
 }
 
 func New(cfg *config.Config, cons model.Consensus) (*QitService, error) {
-	ecfg, args, flags, err := MakeParams(cfg)
-	if err != nil {
-		log.Error(err.Error())
-		return nil, nil
-	}
-	chain, err := eth.NewETHChain(ecfg, args, flags)
-	if err != nil {
-		log.Error(err.Error())
-		return nil, nil
-	}
-
 	a := QitService{
-		cfg:   cfg,
-		cons:  cons,
-		chain: chain,
+		cfg:  cfg,
+		cons: cons,
 	}
 	return &a, nil
 }

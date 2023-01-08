@@ -7,8 +7,8 @@ package eth
 import (
 	"bytes"
 	"fmt"
-	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	qparams "github.com/Qitmeer/qng/params"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/external"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -93,6 +93,10 @@ func (ec *ETHChain) Config() *Config {
 	return ec.config
 }
 
+func (ec *ETHChain) Context() *cli.Context {
+	return ec.ctx
+}
+
 func NewETHChain(config *Config, args []string, flags []cli.Flag) (*ETHChain, error) {
 	ec := &ETHChain{config: config}
 
@@ -144,7 +148,7 @@ func prepare(ctx *cli.Context, cfg *Config) {
 func makeFullNode(ctx *cli.Context, cfg *Config) (*node.Node, *eth.EthAPIBackend, *eth.Ethereum) {
 	stack := makeConfigNode(ctx, cfg)
 	if ctx.IsSet(utils.OverrideTerminalTotalDifficulty.Name) {
-		cfg.Eth.OverrideTerminalTotalDifficulty = qcommon.GlobalBig(ctx, utils.OverrideTerminalTotalDifficulty.Name)
+		cfg.Eth.OverrideTerminalTotalDifficulty = ethereum.GlobalBig(ctx, utils.OverrideTerminalTotalDifficulty.Name)
 	}
 	if ctx.IsSet(utils.OverrideTerminalTotalDifficultyPassed.Name) {
 		override := ctx.Bool(utils.OverrideTerminalTotalDifficultyPassed.Name)
@@ -377,7 +381,7 @@ func startNode(ctx *cli.Context, stack *node.Node, backend *eth.EthAPIBackend) e
 			utils.Fatalf("Light clients do not support mining")
 		}
 
-		gasprice := qcommon.GlobalBig(ctx, utils.MinerGasPriceFlag.Name)
+		gasprice := ethereum.GlobalBig(ctx, utils.MinerGasPriceFlag.Name)
 		backend.TxPool().SetGasPrice(gasprice)
 		threads := ctx.Int(utils.MinerThreadsFlag.Name)
 		if err := backend.StartMining(threads); err != nil {

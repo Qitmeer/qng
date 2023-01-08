@@ -6,7 +6,7 @@ import (
 	"github.com/Qitmeer/qng/core/protocol"
 	mcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
-	mconsensus "github.com/Qitmeer/qng/meerevm/meer/consensus"
+	mconsensus "github.com/Qitmeer/qng/meerevm/qit/consensus"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -228,7 +228,7 @@ func MakeParams(cfg *config.Config) (*eth.Config, []string, []cli.Flag, error) {
 	if err != nil {
 		return ecfg, nil, nil, err
 	}
-	return ecfg, mcommon.ProcessEnv(cfg.EVMEnv, ecfg.Node.Name), GetFlags(), nil
+	return ecfg, mcommon.ProcessEnv(cfg.QitEnv, ecfg.Node.Name), GetFlags(), nil
 }
 
 func GetFlags() []cli.Flag {
@@ -253,17 +253,6 @@ func getDefaultPort() (int, int, int, int) {
 }
 
 func createConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
-	engine := mconsensus.New(mconsensus.Config{
-		CacheDir:         stack.ResolvePath(config.CacheDir),
-		CachesInMem:      config.CachesInMem,
-		CachesOnDisk:     config.CachesOnDisk,
-		CachesLockMmap:   config.CachesLockMmap,
-		DatasetDir:       stack.ResolvePath(config.DatasetDir),
-		DatasetsInMem:    config.DatasetsInMem,
-		DatasetsOnDisk:   config.DatasetsOnDisk,
-		DatasetsLockMmap: config.DatasetsLockMmap,
-		NotifyFull:       config.NotifyFull,
-	}, notify, noverify)
-	engine.SetThreads(-1) // Disable CPU mining
+	engine := mconsensus.New(chainConfig.Clique, db)
 	return engine
 }
