@@ -143,8 +143,7 @@ func (api *PublicRelayAPI) GetNodeInfo() (interface{}, error) {
 	}
 	qitSer := api.node.GetQitService()
 	if qitSer != nil {
-		ret.Addresss = append(ret.Addresss, fmt.Sprintf("Qit: %s", qitSer.Node().Node().URLv4()))
-		ret.Addresss = append(ret.Addresss, fmt.Sprintf("Qit: %s", qitSer.Node().Node().String()))
+		ret.Addresss = append(ret.Addresss, fmt.Sprintf("Qit: %s", qitSer.Node().URLv4()))
 	}
 	return ret, nil
 }

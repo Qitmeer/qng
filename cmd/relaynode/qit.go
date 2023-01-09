@@ -24,7 +24,7 @@ type QitService struct {
 	service.Service
 	cfg       *Config
 	nodeKey   *ecdsa.PrivateKey
-	localNode *enode.LocalNode
+	localNode *enode.Node
 }
 
 func (s *QitService) Start() error {
@@ -70,22 +70,20 @@ func (s *QitService) Start() error {
 		}
 	}
 
+	s.setLocalNode(&s.nodeKey.PublicKey, *realaddr)
+
 	db, _ := enode.OpenDB("")
-	s.localNode = enode.NewLocalNode(db, s.nodeKey)
-
-	log.Info(fmt.Sprintf("QitSubnet bootnode:%s", s.localNode.Node().URLv4()))
-	log.Info(fmt.Sprintf("QitSubnet bootnode:%s", s.localNode.Node().String()))
-
+	ln := enode.NewLocalNode(db, s.nodeKey)
 	cfg := discover.Config{
 		PrivateKey:  s.nodeKey,
 		NetRestrict: restrictList,
 	}
 	if s.cfg.Qit.runv5 {
-		if _, err := discover.ListenV5(conn, s.localNode, cfg); err != nil {
+		if _, err := discover.ListenV5(conn, ln, cfg); err != nil {
 			return err
 		}
 	} else {
-		if _, err := discover.ListenUDP(conn, s.localNode, cfg); err != nil {
+		if _, err := discover.ListenUDP(conn, ln, cfg); err != nil {
 			return err
 		}
 	}
@@ -100,8 +98,16 @@ func (s *QitService) Stop() error {
 	return nil
 }
 
-func (s *QitService) Node() *enode.LocalNode {
+func (s *QitService) Node() *enode.Node {
 	return s.localNode
+}
+
+func (s *QitService) setLocalNode(nodeKey *ecdsa.PublicKey, addr net.UDPAddr) {
+	if addr.IP.IsUnspecified() {
+		addr.IP = net.IP{127, 0, 0, 1}
+	}
+	s.localNode = enode.NewV4(nodeKey, addr.IP, 0, addr.Port)
+	log.Info(fmt.Sprintf("QitSubnet:%s", s.localNode.URLv4()))
 }
 
 func NewQitService(cfg *Config, nodeKey *ecdsa.PrivateKey) (*QitService, error) {

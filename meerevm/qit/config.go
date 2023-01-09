@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
 	"math/big"
@@ -215,6 +216,8 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	var p2pPort int
 	nodeConf.HTTPPort, nodeConf.WSPort, nodeConf.AuthPort, p2pPort = getDefaultPort()
 	nodeConf.P2P.ListenAddr = fmt.Sprintf(":%d", p2pPort)
+	nodeConf.P2P.BootstrapNodes = getBootstrapNodes()
+
 	//
 	return &eth.Config{
 		Eth:     econfig,
@@ -255,4 +258,30 @@ func getDefaultPort() (int, int, int, int) {
 func createConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
 	engine := mconsensus.New(chainConfig.Clique, db)
 	return engine
+}
+
+func getBootstrapNodes() []*enode.Node {
+	urls := []string{}
+	switch qparams.ActiveNetParams.Net {
+	case protocol.MainNet:
+		urls = append(urls, "enode://4d3edb6af1f6bdf00bca2d60d63085fcdd68501178ab1fde8fbe19ea67c62fd0ab1766f4f9fdbc90c1ce3342bcdf1820ffda345c21ae016e585d94fdc7b16e00@127.0.0.1:0?discport=30301")
+	case protocol.TestNet:
+		urls = append(urls, "enode://4d3edb6af1f6bdf00bca2d60d63085fcdd68501178ab1fde8fbe19ea67c62fd0ab1766f4f9fdbc90c1ce3342bcdf1820ffda345c21ae016e585d94fdc7b16e00@127.0.0.1:0?discport=30301")
+	case protocol.MixNet:
+		urls = append(urls, "enode://4d3edb6af1f6bdf00bca2d60d63085fcdd68501178ab1fde8fbe19ea67c62fd0ab1766f4f9fdbc90c1ce3342bcdf1820ffda345c21ae016e585d94fdc7b16e00@127.0.0.1:0?discport=30301")
+	default:
+		urls = append(urls, "enode://4d3edb6af1f6bdf00bca2d60d63085fcdd68501178ab1fde8fbe19ea67c62fd0ab1766f4f9fdbc90c1ce3342bcdf1820ffda345c21ae016e585d94fdc7b16e00@127.0.0.1:0?discport=30301")
+	}
+	bootstrapNodes := []*enode.Node{}
+	for _, url := range urls {
+		if url != "" {
+			node, err := enode.Parse(enode.ValidSchemes, url)
+			if err != nil {
+				log.Crit("Bootstrap URL invalid", "enode", url, "err", err)
+				continue
+			}
+			bootstrapNodes = append(bootstrapNodes, node)
+		}
+	}
+	return bootstrapNodes
 }
