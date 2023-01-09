@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/system"
@@ -20,6 +21,7 @@ import (
 	"github.com/Qitmeer/qng/p2p/synch"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
+	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	ds "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-kad-dht"
@@ -72,6 +74,9 @@ func (node *Node) init(cfg *Config) error {
 	node.peerStatus = peers.NewStatus(nil)
 
 	if err := node.RegisterRpcService(); err != nil {
+		return err
+	}
+	if err := node.RegisterQitService(); err != nil {
 		return err
 	}
 
@@ -299,6 +304,25 @@ func (node *Node) RegisterRpcService() error {
 
 }
 
+func (node *Node) RegisterQitService() error {
+	if !node.cfg.Qit.Enable {
+		return nil
+	}
+	pkb, err := node.privateKey.Raw()
+	if err != nil {
+		return err
+	}
+	nk, err := ecrypto.HexToECDSA(hex.EncodeToString(pkb))
+	if err != nil {
+		return err
+	}
+	qitSer, err := NewQitService(node.cfg, nk)
+	if err != nil {
+		return err
+	}
+	return node.Services().RegisterService(qitSer)
+}
+
 func (node *Node) Encoding() encoder.NetworkEncoding {
 	return &encoder.SszNetworkEncoder{UseSnappyCompression: true}
 }
@@ -459,6 +483,15 @@ func (node *Node) InterceptUpgraded(n network.Conn) (allow bool, reason control.
 
 func (node *Node) GetRpcServer() *rpc.RpcServer {
 	var service *rpc.RpcServer
+	if err := node.Services().FetchService(&service); err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return service
+}
+
+func (node *Node) GetQitService() *QitService {
+	var service *QitService
 	if err := node.Services().FetchService(&service); err != nil {
 		log.Error(err.Error())
 		return nil

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/protocol"
@@ -140,7 +141,11 @@ func (api *PublicRelayAPI) GetNodeInfo() (interface{}, error) {
 	if len(hostaddrs) > 0 {
 		ret.Addresss = hostaddrs
 	}
-
+	qitSer := api.node.GetQitService()
+	if qitSer != nil {
+		ret.Addresss = append(ret.Addresss, fmt.Sprintf("Qit: %s", qitSer.Node().Node().URLv4()))
+		ret.Addresss = append(ret.Addresss, fmt.Sprintf("Qit: %s", qitSer.Node().Node().String()))
+	}
 	return ret, nil
 }
 
