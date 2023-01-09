@@ -264,13 +264,13 @@ func getBootstrapNodes() []*enode.Node {
 	urls := []string{}
 	switch qparams.ActiveNetParams.Net {
 	case protocol.MainNet:
-		urls = append(urls, "enode://4d3edb6af1f6bdf00bca2d60d63085fcdd68501178ab1fde8fbe19ea67c62fd0ab1766f4f9fdbc90c1ce3342bcdf1820ffda345c21ae016e585d94fdc7b16e00@127.0.0.1:0?discport=30301")
+		return nil
 	case protocol.TestNet:
-		urls = append(urls, "enode://4d3edb6af1f6bdf00bca2d60d63085fcdd68501178ab1fde8fbe19ea67c62fd0ab1766f4f9fdbc90c1ce3342bcdf1820ffda345c21ae016e585d94fdc7b16e00@127.0.0.1:0?discport=30301")
+		urls = append(urls, "enode://c4b270d339e420905255605f13c5e108abdeb5a9cc68bab9ef7e1f71cc198f19d188ad1101339f19ad02cee39eea693498dbd00dede87220b9938373941283f9@158.247.226.71:0?discport=30301")
 	case protocol.MixNet:
-		urls = append(urls, "enode://4d3edb6af1f6bdf00bca2d60d63085fcdd68501178ab1fde8fbe19ea67c62fd0ab1766f4f9fdbc90c1ce3342bcdf1820ffda345c21ae016e585d94fdc7b16e00@127.0.0.1:0?discport=30301")
+		return nil
 	default:
-		urls = append(urls, "enode://4d3edb6af1f6bdf00bca2d60d63085fcdd68501178ab1fde8fbe19ea67c62fd0ab1766f4f9fdbc90c1ce3342bcdf1820ffda345c21ae016e585d94fdc7b16e00@127.0.0.1:0?discport=30301")
+		return nil
 	}
 	bootstrapNodes := []*enode.Node{}
 	for _, url := range urls {
