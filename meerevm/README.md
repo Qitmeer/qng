@@ -2,3 +2,10 @@
 
 The MeerEVM is the Qtimeer's implementation of the Ethereum Virtual Machine (EVM), which supports Ethereum Smart Contract and most Ethereum client functionality. 
 
+## QitSubnet
+### How to open Qit subnet
+```
+~ ./qng -A=./ --qit
+or
+~ ./qng -A=./ --qit --qitenv="--http"
+```

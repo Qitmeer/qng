@@ -8,7 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/meerevm/chain"
+	"github.com/Qitmeer/qng/meerevm/eth"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/release"
 	"github.com/ethereum/go-ethereum/common"
@@ -72,8 +73,8 @@ func makealloc(g *core.Genesis) string {
 }
 
 func main() {
-	filePath := "./../chain/genesis.json"
-	gds := []chain.NetGenesisData{}
+	filePath := "./../meer/genesis.json"
+	gds := []meer.NetGenesisData{}
 	file, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
@@ -104,8 +105,8 @@ func main() {
 			networkTag = "mainAllocData"
 		}
 
-		chain.ChainConfig.ChainID = big.NewInt(params.ActiveNetParams.MeerEVMCfg.ChainID)
-		genesis := chain.DefaultGenesisBlock(chain.ChainConfig)
+		eth.ChainConfig.ChainID = big.NewInt(params.ActiveNetParams.MeerEVMCfg.ChainID)
+		genesis := meer.DefaultGenesisBlock(eth.ChainConfig)
 		genesis.Alloc = ngd.Data.Genesis.Alloc
 		if _, ok := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]; ok {
 			releaseAccount := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]
@@ -117,7 +118,7 @@ func main() {
 			genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)] = releaseAccount
 		}
 		if len(ngd.Data.Contracts) > 0 {
-			err = chain.UpdateAlloc(genesis, ngd.Data.Contracts)
+			err = meer.UpdateAlloc(genesis, ngd.Data.Contracts)
 			if err != nil {
 				panic(err)
 			}
@@ -127,7 +128,7 @@ func main() {
 		fileContent += fmt.Sprintf("\nconst %s = %s", networkTag, alloc)
 	}
 
-	fileName := "./../chain/genesis_alloc.go"
+	fileName := "./../meer/genesis_alloc.go"
 
 	f, err := os.Create(fileName)
 
@@ -161,7 +162,7 @@ type BurnDetail struct {
 // all amount 1215912000000000+922801274285398 = 2138713274285398
 
 func BuildBurnBalance() map[common.Hash]common.Hash {
-	filePath := "./../chain/burn_list.json"
+	filePath := "./../meer/burn_list.json"
 	storage := map[common.Hash]common.Hash{}
 	gds := map[string][]BurnDetail{}
 	file, err := os.Open(filePath)

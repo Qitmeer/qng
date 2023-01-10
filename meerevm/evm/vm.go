@@ -11,9 +11,9 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/address"
 	qtypes "github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/meerevm/chain"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
-	"github.com/Qitmeer/qng/meerevm/evm/util"
+	"github.com/Qitmeer/qng/meerevm/eth"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/vm/consensus"
@@ -36,8 +36,8 @@ const (
 type VM struct {
 	ctx consensus.Context
 
-	chain  *chain.ETHChain
-	mchain *chain.MeerChain
+	chain  *eth.ETHChain
+	mchain *meer.MeerChain
 }
 
 func (vm *VM) GetID() string {
@@ -45,22 +45,14 @@ func (vm *VM) GetID() string {
 }
 
 func (vm *VM) Initialize(ctx consensus.Context) error {
-	util.InitLog(ctx.GetConfig().DebugLevel, ctx.GetConfig().DebugPrintOrigins)
-
-	log.Info("System info", "ETH VM Version", util.Version, "Go version", runtime.Version())
-
+	log.Info("System info", "ETH VM Version", meer.Version, "Go version", runtime.Version())
 	log.Debug(fmt.Sprintf("Initialize:%s", ctx.GetConfig().DataDir))
 
 	vm.ctx = ctx
 
 	//
-	ethchain, err := chain.NewETHChain(vm.ctx.GetConfig())
-	if err != nil {
-		return err
-	}
-	vm.chain = ethchain
-	vm.mchain = chain.NewMeerChain(ethchain, ctx)
-
+	vm.mchain = meer.NewMeerChain(ctx)
+	vm.chain = vm.mchain.ETHChain()
 	return nil
 }
 
@@ -118,16 +110,17 @@ func (vm *VM) Shutdown() error {
 		return nil
 	}
 
-	vm.chain.Stop()
+	err := vm.chain.Stop()
+	if err != nil {
+		log.Error(err.Error())
+	}
 	vm.mchain.Stop()
-
-	vm.chain.Wait()
 	return nil
 }
 
 func (vm *VM) Version() string {
 	result := map[string]string{}
-	result["MeerVer"] = util.Version
+	result["MeerVer"] = meer.Version
 	result["EvmVer"] = vm.chain.Config().Node.Version
 	result["ChainID"] = vm.chain.Ether().BlockChain().Config().ChainID.String()
 	result["NetworkId"] = fmt.Sprintf("%d", vm.chain.Config().Eth.NetworkId)
@@ -306,7 +299,7 @@ func (vm *VM) RegisterAPIs(apis []api.API) {
 }
 
 func (vm *VM) SetLogLevel(level string) {
-	util.InitLog(level, vm.ctx.GetConfig().DebugPrintOrigins)
+	eth.InitLog(level, vm.ctx.GetConfig().DebugPrintOrigins)
 }
 
 func (vm *VM) ResetTemplate() error {
@@ -324,7 +317,7 @@ func (vm *VM) Genesis() *hash.Hash {
 }
 
 func (vm *VM) GetBlockID(bh *hash.Hash) uint64 {
-	bn := chain.ReadBlockNumber(vm.chain.Ether().ChainDb(), qcommon.ToEVMHash(bh))
+	bn := meer.ReadBlockNumber(vm.chain.Ether().ChainDb(), qcommon.ToEVMHash(bh))
 	if bn == nil {
 		return 0
 	}

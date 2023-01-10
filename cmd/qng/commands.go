@@ -5,14 +5,13 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/meerevm/chain"
 	"github.com/Qitmeer/qng/meerevm/cmd"
+	"github.com/Qitmeer/qng/meerevm/meer"
+	"github.com/Qitmeer/qng/meerevm/qit"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/version"
 	"github.com/urfave/cli/v2"
-	"os"
-	"path"
 	"runtime"
 )
 
@@ -131,11 +130,9 @@ func consensusCmd() *cli.Command {
 						return err
 					}
 					defer db.Close()
-					edbPath := path.Join(cfg.DataDir, chain.ClientIdentifier)
-					err = os.RemoveAll(edbPath)
-					if err != nil {
-						log.Error(err.Error())
-					}
+
+					meer.Cleanup(cfg)
+					qit.Cleanup(cfg)
 					//
 					cfg.InvalidTxIndex = false
 					cfg.VMBlockIndex = false

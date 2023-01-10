@@ -550,6 +550,16 @@ var (
 			Value:       meerdag.MinBlockDataCache,
 			Destination: &cfg.BlockDataCacheSize,
 		},
+		&cli.StringFlag{
+			Name:        "qitenv",
+			Usage:       "Qit Subnet environment",
+			Destination: &cfg.QitEnv,
+		},
+		&cli.BoolFlag{
+			Name:        "qit",
+			Usage:       "Enable Qit Subnet",
+			Destination: &cfg.Qit,
+		},
 	}
 )
 

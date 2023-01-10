@@ -5,7 +5,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/meerevm/chain"
+	"github.com/Qitmeer/qng/meerevm/eth"
 	"io/ioutil"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -178,7 +178,7 @@ nodes.
 )
 
 func accountList(ctx *cli.Context) error {
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := makeConfigNode(ctx, config.Cfg)
 	var index int
 	for _, wallet := range stack.AccountManager().Wallets() {
 		for _, account := range wallet.Accounts() {
@@ -191,13 +191,13 @@ func accountList(ctx *cli.Context) error {
 
 // accountCreate creates a new account into the keystore defined by the CLI flags.
 func accountCreate(ctx *cli.Context) error {
-	cfg, err := chain.MakeMeerethConfig(config.Cfg.DataDir)
+	cfg, err := makeConfig(config.Cfg)
 	if err != nil {
 		return err
 	}
 	// Load config file.
-	if file := ctx.String(chain.ConfigFileFlag.Name); file != "" {
-		if err := chain.LoadConfig(file, cfg); err != nil {
+	if file := ctx.String(eth.ConfigFileFlag.Name); file != "" {
+		if err := eth.LoadConfig(file, cfg); err != nil {
 			utils.Fatalf("%v", err)
 		}
 	}
@@ -236,11 +236,11 @@ func accountUpdate(ctx *cli.Context) error {
 	if ctx.Args().Len() == 0 {
 		utils.Fatalf("No accounts specified to update")
 	}
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := makeConfigNode(ctx, config.Cfg)
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 
 	for _, addr := range ctx.Args().Slice() {
-		account, oldPassword := chain.UnlockAccount(ks, addr, 0, nil)
+		account, oldPassword := eth.UnlockAccount(ks, addr, 0, nil)
 		newPassword := utils.GetPassPhraseWithList("Please give a new password. Do not forget this password.", true, 0, nil)
 		if err := ks.Update(account, oldPassword, newPassword); err != nil {
 			utils.Fatalf("Could not update the account: %v", err)
@@ -259,7 +259,7 @@ func importWallet(ctx *cli.Context) error {
 		utils.Fatalf("Could not read wallet file: %v", err)
 	}
 
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := makeConfigNode(ctx, config.Cfg)
 	passphrase := utils.GetPassPhraseWithList("", false, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
@@ -280,7 +280,7 @@ func accountImport(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("Failed to load the private key: %v", err)
 	}
-	stack, _ := chain.MakeMeerethConfigNode(ctx, config.Cfg)
+	stack, _ := makeConfigNode(ctx, config.Cfg)
 	passphrase := utils.GetPassPhraseWithList("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)

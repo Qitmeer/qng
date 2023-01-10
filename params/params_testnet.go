@@ -121,12 +121,12 @@ var TestNetParams = Params{
 		DeploymentToken: {
 			BitNumber:  0,
 			StartTime:  1,
-			ExpireTime: testWorkDiffWindowSize*2,
+			ExpireTime: testWorkDiffWindowSize * 2,
 		},
 		DeploymentMeerEVM: {
 			BitNumber:  1,
-			StartTime:  testWorkDiffWindowSize*2, //
-			ExpireTime: testWorkDiffWindowSize*4,
+			StartTime:  testWorkDiffWindowSize * 2, //
+			ExpireTime: testWorkDiffWindowSize * 4,
 		},
 	},
 
@@ -152,5 +152,5 @@ var TestNetParams = Params{
 
 	// TODO: The testnet EVM ChainID has to remain 223 for the old compatibility.
 	//       Change to 8131 when the testnet do the next fresh relaunch.
-	MeerEVMCfg: MeerEVMConfig{ChainID: 223},
+	MeerEVMCfg: MeerEVMConfig{ChainID: 223, QitChainID: 8141},
 }

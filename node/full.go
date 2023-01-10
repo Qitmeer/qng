@@ -9,6 +9,7 @@ import (
 	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerevm/qit"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/rpc"
@@ -120,13 +121,13 @@ func (qm *QitmeerFull) RegisterMinerService() error {
 		}, //TODO, duplicated config item with mem-pool
 		CoinbaseGenerator: coinbase.NewCoinbaseGenerator(qm.node.Params, qm.GetPeerServer().PeerID().String()),
 	}
-	miner := miner.NewMiner(qm.node.consensus, &policy, txManager.MemPool().(*mempool.TxPool),qm.GetPeerServer())
+	miner := miner.NewMiner(qm.node.consensus, &policy, txManager.MemPool().(*mempool.TxPool), qm.GetPeerServer())
 	qm.Services().RegisterService(miner)
 	return nil
 }
 
 func (qm *QitmeerFull) RegisterNotifyMgr() error {
-	nfManager := notifymgr.New(qm.GetPeerServer(),qm.node.consensus)
+	nfManager := notifymgr.New(qm.GetPeerServer(), qm.node.consensus)
 	qm.Services().RegisterService(nfManager)
 	qm.nfManager = nfManager
 	return nil
@@ -145,6 +146,17 @@ func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 
 func (qm *QitmeerFull) RegisterVMService(vmService *vm.Service) error {
 	return qm.Services().RegisterService(vmService)
+}
+
+func (qm *QitmeerFull) RegisterQitSubnet() error {
+	if !qm.node.Config.Qit {
+		return nil
+	}
+	ser, err := qit.New(qm.node.Config, qm.node.consensus)
+	if err != nil {
+		return err
+	}
+	return qm.Services().RegisterService(ser)
 }
 
 // return address api
@@ -220,7 +232,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	if err := node.consensus.Init(); err != nil {
 		return nil, err
 	}
-	if err := qm.Services().RegisterService(node.consensus.BlockChain().(*blockchain.BlockChain));err != nil {
+	if err := qm.Services().RegisterService(node.consensus.BlockChain().(*blockchain.BlockChain)); err != nil {
 		return nil, err
 	}
 	if err := qm.RegisterP2PService(); err != nil {
@@ -261,6 +273,11 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	if err := qm.RegisterRpcService(); err != nil {
 		return nil, err
 	}
+
+	if err := qm.RegisterQitSubnet(); err != nil {
+		return nil, err
+	}
+
 	if qm.GetRpcServer() != nil {
 		qm.GetRpcServer().BC = qm.GetBlockChain()
 		qm.GetRpcServer().ChainParams = qm.node.Params

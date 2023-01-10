@@ -6,8 +6,9 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/chain"
 	mcommon "github.com/Qitmeer/qng/meerevm/common"
+	"github.com/Qitmeer/qng/meerevm/eth"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
@@ -94,14 +95,14 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	edatadir := filepath.Join(datadir, chain.ClientIdentifier)
+	edatadir := filepath.Join(datadir, meer.ClientIdentifier)
 
 	ecethash := ethconfig.Defaults.Ethash
 	ecethash.DatasetDir = filepath.Join(edatadir, "dataset")
 	config.Ethash = ecethash
 
 	nodeConf := node.Config{
-		Name:                chain.ClientIdentifier,
+		Name:                meer.ClientIdentifier,
 		Version:             params.VersionWithMeta,
 		DataDir:             edatadir,
 		KeyStoreDir:         filepath.Join(edatadir, "keystore"),
@@ -123,11 +124,11 @@ func main() {
 		Logger: nil,
 	}
 
-	ethchain, err := chain.NewETHChainByCfg(&chain.MeerethConfig{
+	ethchain, err := eth.NewETHChain(&eth.Config{
 		Eth:     config,
 		Node:    nodeConf,
 		Metrics: metrics.DefaultConfig,
-	})
+	}, mcommon.ProcessEnv("", meer.ClientIdentifier), meer.GetFlags())
 
 	err = ethchain.Start()
 	if err != nil {

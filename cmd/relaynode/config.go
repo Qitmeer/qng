@@ -129,6 +129,13 @@ var (
 		Destination: &conf.DisableRPC,
 	}
 
+	DebugPrintOrigins = &cli.BoolFlag{
+		Name:        "printorigin",
+		Usage:       "Print log debug location (file:line)",
+		Value:       false,
+		Destination: &conf.DebugPrintOrigins,
+	}
+
 	RPCListeners = &cli.StringSliceFlag{
 		Name:        "rpclisten",
 		Aliases:     []string{"rl"},
@@ -200,6 +207,45 @@ var (
 		Destination: &conf.MaxPeers,
 	}
 
+	EnableQit = &cli.BoolFlag{
+		Name:        "qit",
+		Aliases:     []string{"q"},
+		Usage:       "Enable Qit Subnet support",
+		Value:       false,
+		Destination: &conf.Qit.Enable,
+	}
+
+	QitListenAddr = &cli.StringFlag{
+		Name:        "addr",
+		Aliases:     []string{"qa"},
+		Usage:       "QitSubnet listen address",
+		Value:       ":30301",
+		Destination: &conf.Qit.listenAddr,
+	}
+
+	QitNAT = &cli.StringFlag{
+		Name:        "nat",
+		Aliases:     []string{"na"},
+		Usage:       "Qit port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
+		Value:       "none",
+		Destination: &conf.Qit.natdesc,
+	}
+
+	QitNetrestrict = &cli.StringFlag{
+		Name:        "netrestrict",
+		Aliases:     []string{"ne"},
+		Usage:       "Qit restrict network communication to the given IP networks (CIDR masks)",
+		Value:       "",
+		Destination: &conf.Qit.netrestrict,
+	}
+
+	QitRunv5 = &cli.BoolFlag{
+		Name:        "v5",
+		Usage:       "run a v5 topic discovery QitSubnet",
+		Value:       false,
+		Destination: &conf.Qit.runv5,
+	}
+
 	AppFlags = []cli.Flag{
 		HomeDir,
 		DataDir,
@@ -212,6 +258,7 @@ var (
 		UsePeerStore,
 		NoFileLogging,
 		DebugLevel,
+		DebugPrintOrigins,
 		DisableRPC,
 		RPCListeners,
 		RPCUser,
@@ -222,21 +269,27 @@ var (
 		DisableTLS,
 		EnableRelay,
 		MaxPeers,
+		EnableQit,
+		QitListenAddr,
+		QitNAT,
+		QitNetrestrict,
+		QitRunv5,
 	}
 )
 
 type Config struct {
-	HomeDir       string
-	DataDir       string
-	PrivateKey    string
-	ExternalIP    string
-	Port          string
-	EnableNoise   bool
-	Network       string
-	HostDNS       string
-	UsePeerStore  bool
-	NoFileLogging bool
-	DebugLevel    string
+	HomeDir           string
+	DataDir           string
+	PrivateKey        string
+	ExternalIP        string
+	Port              string
+	EnableNoise       bool
+	Network           string
+	HostDNS           string
+	UsePeerStore      bool
+	NoFileLogging     bool
+	DebugLevel        string
+	DebugPrintOrigins bool
 
 	DisableRPC    bool
 	RPCListeners  cli.StringSlice
@@ -248,6 +301,8 @@ type Config struct {
 	DisableTLS    bool
 	EnableRelay   bool
 	MaxPeers      int
+
+	Qit QitConfig
 }
 
 func (c *Config) load() error {
@@ -310,6 +365,10 @@ func (c *Config) load() error {
 	err = common.ParseAndSetDebugLevels(c.DebugLevel)
 	if err != nil {
 		return err
+	}
+	// DebugPrintOrigins
+	if c.DebugPrintOrigins {
+		l.PrintOrigins(true)
 	}
 
 	if c.RPCCert == defaultRPCCertPath {

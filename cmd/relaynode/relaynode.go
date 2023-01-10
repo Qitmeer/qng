@@ -39,14 +39,17 @@ func relayNode() error {
 		Usage:                "Relay Node",
 		Flags:                AppFlags,
 		EnableBashCompletion: true,
-		Before: func(c *cli.Context) error {
-			return node.init(conf)
-		},
-		After: func(c *cli.Context) error {
-			return node.Stop()
-		},
+		Commands:             commands(),
 		Action: func(c *cli.Context) error {
-			return node.Start()
+			err := node.init(conf)
+			if err != nil {
+				return err
+			}
+			err = node.Start()
+			if err != nil {
+				return err
+			}
+			return node.Stop()
 		},
 	}
 

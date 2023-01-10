@@ -1,19 +1,19 @@
 package basetest
 
 import (
-	"github.com/Qitmeer/qng/meerevm/chain"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestEvmGenesis(t *testing.T) {
-	assert.Equal(t, chain.MainAllocHash, chain.BuildGenesisHash(params.MainNetParams.Name),
+	assert.Equal(t, meer.MainAllocHash, meer.BuildGenesisHash(params.MainNetParams.Name),
 		params.MainNetParams.Name+" genesis hash not equal latest")
-	assert.Equal(t, chain.MixAllocHash, chain.BuildGenesisHash(params.MixNetParams.Name),
+	assert.Equal(t, meer.MixAllocHash, meer.BuildGenesisHash(params.MixNetParams.Name),
 		params.MixNetParams.Name+" genesis hash not equal latest")
-	assert.Equal(t, chain.TestAllocHash, chain.BuildGenesisHash(params.TestNetParams.Name),
+	assert.Equal(t, meer.TestAllocHash, meer.BuildGenesisHash(params.TestNetParams.Name),
 		params.TestNetParams.Name+" genesis hash not equal latest")
-	assert.Equal(t, chain.PrivAllocHash, chain.BuildGenesisHash(params.PrivNetParams.Name),
+	assert.Equal(t, meer.PrivAllocHash, meer.BuildGenesisHash(params.PrivNetParams.Name),
 		params.PrivNetParam.Name+" genesis hash not equal latest")
 }

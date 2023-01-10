@@ -6,19 +6,21 @@ package common
 
 import (
 	"encoding/hex"
-	"errors"
+	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
 	"math/big"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -76,7 +78,7 @@ func ToEVMHash(h *hash.Hash) common.Hash {
 func FromEVMHash(h common.Hash) *hash.Hash {
 	ehb := h.Bytes()
 	ReverseBytes(&ehb)
-	th,err:=hash.NewHash(ehb)
+	th, err := hash.NewHash(ehb)
 	if err != nil {
 		return nil
 	}
@@ -114,34 +116,6 @@ func ToQNGTx(tx *types.Transaction, timestamp int64) *qtypes.Transaction {
 	return mtx
 }
 
-// bigValue turns *big.Int into a flag.Value
-type bigValue big.Int
-
-func (b *bigValue) String() string {
-	if b == nil {
-		return ""
-	}
-	return (*big.Int)(b).String()
-}
-
-func (b *bigValue) Set(s string) error {
-	intVal, ok := math.ParseBig256(s)
-	if !ok {
-		return errors.New("invalid integer syntax")
-	}
-	*b = (bigValue)(*intVal)
-	return nil
-}
-
-// GlobalBig returns the value of a BigFlag from the global flag set.
-func GlobalBig(ctx *cli.Context, name string) *big.Int {
-	val := ctx.Generic(name)
-	if val == nil {
-		return nil
-	}
-	return (*big.Int)(val.(*bigValue))
-}
-
 // Merge merges the given flag slices.
 func Merge(groups ...[]cli.Flag) []cli.Flag {
 	var ret []cli.Flag
@@ -149,4 +123,22 @@ func Merge(groups ...[]cli.Flag) []cli.Flag {
 		ret = append(ret, group...)
 	}
 	return ret
+}
+
+func ProcessEnv(env string, identifier string) []string {
+	result := []string{identifier}
+	if len(env) <= 0 {
+		return result
+	}
+	if e, err := strconv.Unquote(env); err == nil {
+		env = e
+	}
+	args := strings.Split(env, " ")
+	if len(args) <= 0 {
+		return result
+	}
+	log.Debug(fmt.Sprintf("Initialize meerevm environment: %v %v ", len(args), args))
+	result = append(result, args...)
+
+	return result
 }

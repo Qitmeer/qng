@@ -183,5 +183,5 @@ var PrivNetParams = Params{
 		},
 	},
 
-	MeerEVMCfg: MeerEVMConfig{ChainID: 8133},
+	MeerEVMCfg: MeerEVMConfig{ChainID: 8133, QitChainID: 8143},
 }
