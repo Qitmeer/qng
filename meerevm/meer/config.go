@@ -11,13 +11,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
 	"math/big"
+	"net"
 	"path/filepath"
 )
 
@@ -216,6 +219,12 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	nodeConf.P2P.ListenAddr = ""
 	nodeConf.P2P.NAT = nil
 
+	db, _ := enode.OpenDB("")
+	key, _ := crypto.GenerateKey()
+	ln := enode.NewLocalNode(db, key)
+	ln.SetFallbackIP(net.IP{127, 0, 0, 1})
+	ln.SetFallbackUDP(8538)
+	nodeConf.P2P.BootstrapNodes = []*enode.Node{ln.Node()}
 	//
 	return &eth.Config{
 		Eth:     econfig,

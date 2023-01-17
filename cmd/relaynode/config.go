@@ -26,6 +26,7 @@ const (
 	defaultMaxRPCClients = 10
 	defaultRPCListener   = "127.0.0.1:2002"
 	defaultMaxPeers      = 1000
+	defaultQitListenAddr = ":2003"
 )
 
 var (
@@ -219,7 +220,7 @@ var (
 		Name:        "addr",
 		Aliases:     []string{"qa"},
 		Usage:       "QitSubnet listen address",
-		Value:       ":30301",
+		Value:       defaultQitListenAddr,
 		Destination: &conf.Qit.listenAddr,
 	}
 
