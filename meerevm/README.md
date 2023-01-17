@@ -9,3 +9,5 @@ The MeerEVM is the Qtimeer's implementation of the Ethereum Virtual Machine (EVM
 or
 ~ ./qng -A=./ --qit --qitenv="--http"
 ```
+
+You can use RPC `./cli.sh qitinfo` to view the operation.
