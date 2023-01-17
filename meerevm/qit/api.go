@@ -48,6 +48,6 @@ type QitInfo struct {
 	ChainID    uint64 `json:"chainid"`
 	NetworkID  uint64 `json:"networkid"`
 	IPC        string `json:"ipc,omitempty"`
-	HTTP       string `json:"ws,omitempty"`
+	HTTP       string `json:"http,omitempty"`
 	WS         string `json:"ws,omitempty"`
 }
