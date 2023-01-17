@@ -249,9 +249,9 @@ func getDefaultPort() (int, int, int, int) {
 	case protocol.TestNet:
 		return 18525, 18526, 18527, 18528
 	case protocol.MixNet:
-		return 28525, 28526, 28527, 18528
+		return 28525, 28526, 28527, 28528
 	default:
-		return 38525, 38526, 38527, 18528
+		return 38525, 38526, 38527, 38528
 	}
 }
 
