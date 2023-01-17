@@ -483,6 +483,11 @@ function get_vms_info(){
   get_result "$data"
 }
 
+function get_qit_info(){
+  local data='{"jsonrpc":"2.0","method":"getQitInfo","params":[],"id":null}'
+  get_result "$data"
+}
+
 function get_addresses(){
   local pkAddress=$1
   local data='{"jsonrpc":"2.0","method":"test_getAddresses","params":["'$pkAddress'"],"id":null}'
@@ -723,6 +728,7 @@ function usage(){
   echo "  timeinfo"
   echo "  subsidy"
   echo "  vmsinfo"
+  echo "  qitinfo"
   echo "  acctinfo"
   echo "  getbalance <address> <coinID>"
   echo "  getbalanceinfo <address> <coinID>"
@@ -1236,6 +1242,10 @@ elif [ "$1" == "minerinfo" ]; then
 elif [ "$1" == "vmsinfo" ]; then
   shift
   get_vms_info $@
+elif [ "$1" == "qitinfo" ]; then
+    shift
+    get_qit_info $@
+
 
 elif [ "$1" == "txSign" ]; then
   shift

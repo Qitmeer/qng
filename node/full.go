@@ -270,11 +270,11 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		return nil, err
 	}
 
-	if err := qm.RegisterRpcService(); err != nil {
+	if err := qm.RegisterQitSubnet(); err != nil {
 		return nil, err
 	}
 
-	if err := qm.RegisterQitSubnet(); err != nil {
+	if err := qm.RegisterRpcService(); err != nil {
 		return nil, err
 	}
 
