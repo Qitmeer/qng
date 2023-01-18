@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/metrics"
@@ -19,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
 	"math/big"
+	"net"
 	"path/filepath"
 )
 
@@ -216,7 +218,7 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	var p2pPort int
 	nodeConf.HTTPPort, nodeConf.WSPort, nodeConf.AuthPort, p2pPort = getDefaultPort()
 	nodeConf.P2P.ListenAddr = fmt.Sprintf(":%d", p2pPort)
-	nodeConf.P2P.BootstrapNodes = getBootstrapNodes()
+	nodeConf.P2P.BootstrapNodes = getBootstrapNodes(p2pPort)
 
 	//
 	return &eth.Config{
@@ -260,17 +262,23 @@ func createConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 	return engine
 }
 
-func getBootstrapNodes() []*enode.Node {
+func getBootstrapNodes(port int) []*enode.Node {
+	db, _ := enode.OpenDB("")
+	key, _ := crypto.GenerateKey()
+	ln := enode.NewLocalNode(db, key)
+	ln.SetFallbackIP(net.IP{127, 0, 0, 1})
+	ln.SetFallbackUDP(port)
+
 	urls := []string{}
 	switch qparams.ActiveNetParams.Net {
 	case protocol.MainNet:
-		return nil
+		urls = append(urls, ln.Node().String())
 	case protocol.TestNet:
-		urls = append(urls, "enode://c4b270d339e420905255605f13c5e108abdeb5a9cc68bab9ef7e1f71cc198f19d188ad1101339f19ad02cee39eea693498dbd00dede87220b9938373941283f9@158.247.226.71:0?discport=30301")
+		urls = append(urls, "enode://c4b270d339e420905255605f13c5e108abdeb5a9cc68bab9ef7e1f71cc198f19d188ad1101339f19ad02cee39eea693498dbd00dede87220b9938373941283f9@158.247.226.71:0?discport=2003")
 	case protocol.MixNet:
-		return nil
+		urls = append(urls, ln.Node().String())
 	default:
-		return nil
+		urls = append(urls, ln.Node().String())
 	}
 	bootstrapNodes := []*enode.Node{}
 	for _, url := range urls {
