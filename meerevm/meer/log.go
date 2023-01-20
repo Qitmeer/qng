@@ -20,5 +20,5 @@ func UseLogger(logger l.Logger) {
 
 // The default amount of logging is none.
 func init() {
-	UseLogger(l.New(l.Ctx{"module": "EVMC"}))
+	UseLogger(l.New(l.Ctx{"module": "MEER"}))
 }
