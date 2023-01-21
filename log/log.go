@@ -75,6 +75,8 @@ func init() {
 	Root().SetHandler(glogger)
 
 	glogger.Verbosity(LvlInfo)
+
+	LocationTrims = append(LocationTrims, "github.com/Qitmeer/qng/")
 }
 
 // initLogRotator initializes the logging rotater to write logs to logFile and
