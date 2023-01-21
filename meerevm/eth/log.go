@@ -7,14 +7,13 @@ package eth
 import (
 	qlog "github.com/Qitmeer/qng/log"
 	"github.com/ethereum/go-ethereum/log"
-	"os"
 )
 
 var glogger *log.GlogHandler
 
 func InitLog(DebugLevel string, DebugPrintOrigins bool) {
 	if glogger == nil {
-		glogger = log.NewGlogHandler(log.StreamHandler(os.Stderr, TerminalFormat(true)))
+		glogger = log.NewGlogHandler(log.StreamHandler(qlog.LogWrite(), TerminalFormat(qlog.LogWrite().IsUseColor())))
 		glogger.Verbosity(log.LvlTrace)
 		log.Root().SetHandler(glogger)
 	}
