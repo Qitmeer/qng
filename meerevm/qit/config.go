@@ -274,7 +274,7 @@ func getBootstrapNodes(port int) []*enode.Node {
 	case protocol.MainNet:
 		urls = append(urls, ln.Node().String())
 	case protocol.TestNet:
-		urls = append(urls, "enode://c4b270d339e420905255605f13c5e108abdeb5a9cc68bab9ef7e1f71cc198f19d188ad1101339f19ad02cee39eea693498dbd00dede87220b9938373941283f9@158.247.226.71:0?discport=2003")
+		urls = append(urls, "enode://c4b270d339e420905255605f13c5e108abdeb5a9cc68bab9ef7e1f71cc198f19d188ad1101339f19ad02cee39eea693498dbd00dede87220b9938373941283f9@45.32.11.119:0?discport=2003")
 	case protocol.MixNet:
 		urls = append(urls, ln.Node().String())
 	default:
