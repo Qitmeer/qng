@@ -287,9 +287,7 @@ func (ps *PeerSync) startSync() {
 	// Start syncing from the best peer if one was selected.
 	if bestPeer != nil {
 		gs := bestPeer.GraphState()
-
-		log.Info(fmt.Sprintf("Syncing to state %s from peer %s cur graph state:%s", gs.String(), bestPeer.GetID().String(), best.GraphState.String()))
-
+		log.Info("Syncing graph state", "cur", best.GraphState.String(), "target", gs.String(), "peer", bestPeer.GetID().String())
 		// When the current height is less than a known checkpoint we
 		// can use block headers to learn about which blocks comprise
 		// the chain up to the checkpoint and perform less validation

@@ -18,5 +18,5 @@ func UseLogger(logger l.Logger) {
 
 // The default amount of logging is none.
 func init() {
-	UseLogger(l.New(l.Ctx{"module": "blockdag"}))
+	UseLogger(l.New(l.Ctx{"module": "DAG"}))
 }

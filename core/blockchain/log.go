@@ -13,7 +13,7 @@ var log l.Logger
 
 // The default amount of logging is none.
 func init() {
-	UseLogger(l.New(l.Ctx{"module": "blockchain"}))
+	UseLogger(l.New(l.Ctx{"module": "CHAIN"}))
 }
 
 // UseLogger uses a specified Logger to output package logging info.

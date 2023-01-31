@@ -12,7 +12,7 @@ import (
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/services/common/progresslog"
+	"github.com/Qitmeer/qng/services/progresslog"
 )
 
 // Manager defines an index manager that manages multiple optional indexes and
