@@ -168,6 +168,12 @@ func (gs *GraphState) IsExcellent(other *GraphState) bool {
 	} else if gs.layer > other.layer {
 		return true
 	}
+	if gs.GetMainChainTip() != nil &&
+		other.GetMainChainTip() != nil {
+		if gs.GetMainChainTip().String() < other.GetMainChainTip().String() {
+			return true
+		}
+	}
 	return false
 }
 
