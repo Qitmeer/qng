@@ -155,7 +155,7 @@ func makeFullNode(ctx *cli.Context, cfg *Config) (*node.Node, *eth.EthAPIBackend
 		cfg.Eth.OverrideTerminalTotalDifficultyPassed = &override
 	}
 	backend, ethe := utils.RegisterEthService(stack, &cfg.Eth)
-
+	ctx.Set(utils.IgnoreLegacyReceiptsFlag.Name, "true")
 	if ethe != nil && !ctx.IsSet(utils.IgnoreLegacyReceiptsFlag.Name) {
 		firstIdx := uint64(0)
 		// Hack to speed up check for mainnet because we know
