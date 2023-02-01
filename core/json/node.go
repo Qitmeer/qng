@@ -67,12 +67,8 @@ type GetBanlistResult struct {
 }
 
 type ConsensusDeploymentDesc struct {
-	Status    string `json:"status"`
-	Bit       uint8  `json:"bit"`
-	StartTime int64  `json:"startTime"`
-	Timeout   int64  `json:"timeout"`
-	Perform   int64  `json:"perform,omitempty"`
-	Since     string `json:"since,omitempty"`
+	Status      string `json:"status"`
+	StartHeight int64  `json:"startHeight,omitempty"`
 }
 
 type NetworkStat struct {

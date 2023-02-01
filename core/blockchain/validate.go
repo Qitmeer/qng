@@ -18,6 +18,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/merkle"
+	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
@@ -1436,22 +1437,18 @@ func IsFinalizedTransaction(tx *types.Tx, blockHeight uint64, blockTime time.Tim
 
 func (b *BlockChain) IsValidTxType(tt types.TxType) bool {
 	txTypesCfg := types.StdTxs
-	var ok bool
-	var err error
-	ok, err = b.IsDeploymentActive(params.DeploymentToken)
-	if err == nil && ok && len(types.TokenTxs) > 0 {
+	if len(types.TokenTxs) > 0 {
 		txTypesCfg = append(txTypesCfg, types.TokenTxs...)
 	}
-	if forks.IsMeerEVMForkHeight(int64(b.BestSnapshot().GraphState.GetMainHeight())) {
-		ok = true
-		err = nil
-	} else {
-		ok, err = b.IsDeploymentActive(params.DeploymentMeerEVM)
+	ok := true
+	if params.ActiveNetParams.Net == protocol.MainNet {
+		if !forks.IsMeerEVMForkHeight(int64(b.BestSnapshot().GraphState.GetMainHeight())) {
+			ok = false
+		}
 	}
-	if err == nil && ok && len(types.MeerEVMTxs) > 0 {
+	if ok && len(types.MeerEVMTxs) > 0 {
 		txTypesCfg = append(txTypesCfg, types.MeerEVMTxs...)
 	}
-
 	for _, txt := range txTypesCfg {
 		if txt == tt {
 			return true

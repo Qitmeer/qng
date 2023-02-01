@@ -11,7 +11,6 @@ import (
 	"github.com/Qitmeer/qng/common/math"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/consensus/forks"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types/pow"
@@ -89,52 +88,23 @@ func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 
 	// soft forks
 	ret.ConsensusDeployment = make(map[string]*json.ConsensusDeploymentDesc)
-	for deployment, deploymentDetails := range params.ActiveNetParams.Deployments {
-		// Map the integer deployment ID into a human readable
-		// fork-name.
-		var forkName string
-		switch deployment {
-		case params.DeploymentTestDummy:
-			forkName = "dummy"
-
-		case params.DeploymentToken:
-			forkName = "token"
-
-		case params.DeploymentMeerEVM:
-			forkName = "meerevm"
-
-		default:
-			return nil, fmt.Errorf("Unknown deployment %v detected\n", deployment)
+	ret.ConsensusDeployment["token"] = &json.ConsensusDeploymentDesc{Status: "active"}
+	if params.ActiveNetParams.Net == protocol.MainNet {
+		cdd := json.ConsensusDeploymentDesc{Status: "inactive", StartHeight: forks.MeerEVMForkMainHeight}
+		if forks.IsMeerEVMForkHeight(int64(best.GraphState.GetMainHeight())) {
+			cdd.Status = "active"
 		}
-
-		// Query the chain for the current status of the deployment as
-		// identified by its deployment ID.
-		deploymentStatus, err := api.node.GetBlockChain().ThresholdState(uint32(deployment))
-		if err != nil {
-			return nil, fmt.Errorf("Failed to obtain deployment status\n")
-		}
-
-		// Finally, populate the soft-fork description with all the
-		// information gathered above.
-		ret.ConsensusDeployment[forkName] = &json.ConsensusDeploymentDesc{
-			Status:    deploymentStatus.HumanString(),
-			Bit:       deploymentDetails.BitNumber,
-			StartTime: int64(deploymentDetails.StartTime),
-			Timeout:   int64(deploymentDetails.ExpireTime),
-		}
-
-		if deploymentDetails.PerformTime != 0 {
-			ret.ConsensusDeployment[forkName].Perform = int64(deploymentDetails.PerformTime)
-		}
-
-		if deploymentDetails.StartTime >= blockchain.CheckerTimeThreshold {
-			if time.Unix(int64(deploymentDetails.ExpireTime), 0).After(best.MedianTime) {
-				startTime := time.Unix(int64(deploymentDetails.StartTime), 0)
-				ret.ConsensusDeployment[forkName].Since = best.MedianTime.Sub(startTime).String()
-			}
-		}
-
+		ret.ConsensusDeployment["meerevm"] = &cdd
+	} else {
+		ret.ConsensusDeployment["meerevm"] = &json.ConsensusDeploymentDesc{Status: "active"}
 	}
+
+	if api.node.node.Config.Qit {
+		ret.ConsensusDeployment["qit"] = &json.ConsensusDeploymentDesc{Status: "active"}
+	} else {
+		ret.ConsensusDeployment["qit"] = &json.ConsensusDeploymentDesc{Status: "inactive"}
+	}
+
 	return ret, nil
 }
 

@@ -108,28 +108,6 @@ var TestNetParams = Params{
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: []Checkpoint{},
 
-	// Consensus rule change deployments.
-	//
-	// The miner confirmation window is defined as:
-	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 1,
-	MinerConfirmationWindow:       testWorkDiffWindowSize,
-	Deployments: []ConsensusDeployment{
-		DeploymentTestDummy: {
-			BitNumber: 28,
-		},
-		DeploymentToken: {
-			BitNumber:  0,
-			StartTime:  1,
-			ExpireTime: testWorkDiffWindowSize * 2,
-		},
-		DeploymentMeerEVM: {
-			BitNumber:  1,
-			StartTime:  testWorkDiffWindowSize * 2, //
-			ExpireTime: testWorkDiffWindowSize * 4,
-		},
-	},
-
 	// Address encoding magics
 	NetworkAddressPrefix: "T",
 	PubKeyAddrID:         [2]byte{0x28, 0xf5}, // starts with Tk
