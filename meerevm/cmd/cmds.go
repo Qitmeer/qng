@@ -6,6 +6,7 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/meerevm/meer"
+	"github.com/Qitmeer/qng/meerevm/qit"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
@@ -37,7 +38,11 @@ func makeConfigNode(ctx *cli.Context, cfg *config.Config) (*node.Node, *eth.Conf
 	var flags []cli.Flag
 	var err error
 	if cfg.Qit {
-
+		ecfg, args, flags, err = qit.MakeParams(cfg)
+		if err != nil {
+			log.Error(err.Error())
+			return nil, nil
+		}
 	} else {
 		ecfg, args, flags, err = meer.MakeParams(cfg)
 		if err != nil {
@@ -58,7 +63,11 @@ func makeConfig(cfg *config.Config) (*eth.Config, error) {
 	var ecfg *eth.Config
 	var err error
 	if cfg.Qit {
-
+		ecfg, err = qit.MakeConfig(cfg.DataDir)
+		if err != nil {
+			log.Error(err.Error())
+			return nil, nil
+		}
 	} else {
 		ecfg, err = meer.MakeConfig(cfg.DataDir)
 		if err != nil {
