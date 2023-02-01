@@ -25,7 +25,7 @@ import (
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/common/progresslog"
+	"github.com/Qitmeer/qng/services/progresslog"
 	"github.com/schollz/progressbar/v3"
 	"sort"
 	"sync"

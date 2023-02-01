@@ -71,19 +71,6 @@ func (ds *DAGSync) CalcSyncBlocks(gs *GraphState, locator []*hash.Hash, mode Syn
 	if point == nil {
 		point = ds.bd.getGenesis()
 	}
-	//
-	isSubDAG := false
-	for _, k := range gs.tips {
-		gst := ds.bd.getBlock(&k)
-		if gst == nil || !gst.IsOrdered() {
-			continue
-		}
-		isSubDAG = true
-		break
-	}
-	if isSubDAG {
-		return ds.bd.locateBlocksFuzzy(gs, maxHashes), point.GetHash()
-	}
 	return ds.getBlockChainFromMain(point, maxHashes), point.GetHash()
 }
 

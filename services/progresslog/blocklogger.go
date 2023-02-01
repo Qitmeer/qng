@@ -9,9 +9,9 @@ package progresslog
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/meerdag"
 	"sync"
 	"time"
 )
@@ -70,10 +70,8 @@ func (b *BlockProgressLogger) LogBlockHeightByParent(block, parent *types.Serial
 		txStr = "transaction"
 	}
 
-	b.subsystemLogger.Info("%s %d %s in the last %s (%d %s, height %d, %s)",
-		b.progressAction, b.receivedLogBlocks, blockStr, tDuration,
-		b.receivedLogTx, txStr, block.Height(),
-		block.Block().Header.Timestamp)
+	b.subsystemLogger.Info(fmt.Sprintf("%s %d %s in the last %s ",b.progressAction, b.receivedLogBlocks, blockStr, tDuration),
+		txStr,b.receivedLogTx,"order",meerdag.GetOrderLogStr(uint(block.Order())),"time",block.Block().Header.Timestamp)
 
 	b.receivedLogBlocks = 0
 	b.receivedLogTx = 0
@@ -108,10 +106,8 @@ func (b *BlockProgressLogger) LogBlockHeight(block *types.SerializedBlock) {
 		txStr = "transaction"
 	}
 
-	b.subsystemLogger.Info(fmt.Sprintf("%s %d %s in the last %s (%d %s, order %s, %s)",
-		b.progressAction, b.receivedLogBlocks, blockStr, tDuration,
-		b.receivedLogTx, txStr, meerdag.GetOrderLogStr(uint(block.Order())), block.Block().Header.Timestamp))
-
+	b.subsystemLogger.Info(fmt.Sprintf("%s %d %s in the last %s ",b.progressAction, b.receivedLogBlocks, blockStr, tDuration),
+		txStr,b.receivedLogTx,"order",meerdag.GetOrderLogStr(uint(block.Order())),"time",block.Block().Header.Timestamp)
 	b.receivedLogBlocks = 0
 	b.receivedLogTx = 0
 	b.lastBlockLogTime = now
