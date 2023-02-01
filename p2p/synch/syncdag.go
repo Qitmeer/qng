@@ -126,6 +126,7 @@ func (ps *PeerSync) processSyncDAGBlocks(pe *peers.Peer) error {
 	pe.UpdateGraphState(subd.GraphState)
 
 	if len(subd.Blocks) <= 0 {
+		pe.UpdateSyncPoint(ps.Chain().BlockDAG().GetGenesisHash())
 		go ps.TryAgainUpdateSyncPeer()
 		return fmt.Errorf("No sync dag blocks")
 	}

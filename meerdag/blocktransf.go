@@ -100,7 +100,7 @@ func (bd *MeerDAG) getBlockById(id uint) IBlock {
 	if !ok {
 		b, err := bd.loadBlock(id)
 		if err != nil {
-			log.Error(err.Error())
+			log.Warn("get block", "error", err.Error(), "blockID", id)
 		}
 		return b
 	}

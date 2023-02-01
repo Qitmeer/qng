@@ -172,18 +172,9 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 	blocksReady := []*hash.Hash{}
 	blockDatas := []*BlockData{}
 	blockDataM := map[hash.Hash]*BlockData{}
-	var point *hash.Hash
-	updateSyncPoint := func() {
-		if point != nil {
-			pe.UpdateSyncPoint(point)
-		}
-	}
-	isVerified := len(blocks) > 0
+
 	for _, b := range blocks {
 		if ps.sy.p2p.BlockChain().BlockDAG().HasBlock(b) {
-			if isVerified {
-				point = b
-			}
 			continue
 		}
 		blkd := &BlockData{Hash: b}
@@ -205,7 +196,6 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 		blocksReady = append(blocksReady, b)
 	}
 	if len(blockDatas) <= 0 {
-		updateSyncPoint()
 		ps.continueSync(false)
 		return nil
 	}
@@ -216,11 +206,10 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 		}
 	}
 	if len(blocksReady) > 0 {
-		log.Trace(fmt.Sprintf("processGetBlockDatas sendGetBlockDataRequest peer=%v, blocks=%v ", pe.GetID(), blocksReady))
+		log.Trace(fmt.Sprintf("processGetBlockDatas::sendGetBlockDataRequest peer=%v, blocks=%d [%s -> %s] ", pe.GetID(), len(blocksReady), blocksReady[0], blocksReady[len(blocksReady)-1]))
 		bd, err := ps.sy.sendGetBlockDataRequest(ps.sy.p2p.Context(), pe.GetID(), &pb.GetBlockDatas{Locator: changeHashsToPBHashs(blocksReady)})
 		if err != nil {
 			log.Warn(fmt.Sprintf("getBlocks send:%v", err))
-			updateSyncPoint()
 			go ps.TryAgainUpdateSyncPeer()
 			return err
 		}
@@ -244,17 +233,17 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 
 	lastSync := ps.lastSync
 
-	for _, b := range blockDatas {
+	for i, b := range blockDatas {
 		if atomic.LoadInt32(&ps.shutdown) != 0 {
 			break
 		}
 		block := b.Block
 		if block == nil {
-			log.Trace(fmt.Sprintf("No block bytes:%s", b.Hash.String()))
+			log.Trace(fmt.Sprintf("No block bytes:%d : %s", i, b.Hash.String()))
 			continue
 		}
 		//
-		IsOrphan,_,err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags)
+		IsOrphan, _, err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags)
 		if err != nil {
 			log.Error(fmt.Sprintf("Failed to process block:hash=%s err=%s", block.Hash(), err))
 			continue
@@ -267,10 +256,6 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 
 		add++
 		ps.lastSync = time.Now()
-
-		if isVerified {
-			point = b.Hash
-		}
 	}
 	log.Debug(fmt.Sprintf("getBlockDatas:%d/%d  spend:%s", add, len(blockDatas), time.Since(lastSync).Truncate(time.Second).String()))
 
@@ -289,10 +274,8 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 				ps.longSyncMod = false
 			}
 		}
-		updateSyncPoint()
 	} else {
 		err = fmt.Errorf("no get blocks")
-		pe.UpdateSyncPoint(ps.Chain().BlockDAG().GetGenesisHash())
 	}
 	ps.continueSync(hasOrphan)
 	return err
