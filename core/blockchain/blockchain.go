@@ -125,11 +125,6 @@ type BlockChain struct {
 	// The ID of token state tip for the chain.
 	TokenTipID uint32
 
-	warningCaches      []thresholdStateCache
-	deploymentCaches   []thresholdStateCache
-	unknownRulesWarned bool
-	deploymentMux      sync.RWMutex
-
 	Acct model.Acct
 
 	shutdownTracker *shutdown.Tracker
@@ -156,10 +151,6 @@ func (b *BlockChain) Init() error {
 	}
 	b.pruner = newChainPruner(b)
 
-	// Initialize rule change threshold state caches.
-	if err := b.initThresholdCaches(); err != nil {
-		return err
-	}
 	err := b.initCheckPoints()
 	if err != nil {
 		return err
@@ -1184,25 +1175,6 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		}
 	}
 
-	if len(par.Deployments) > 0 {
-		for _, v := range par.Deployments {
-			if v.StartTime < CheckerTimeThreshold &&
-				v.ExpireTime < CheckerTimeThreshold &&
-				(v.PerformTime < CheckerTimeThreshold || v.PerformTime == 0) {
-				continue
-			}
-			if v.StartTime >= CheckerTimeThreshold &&
-				v.ExpireTime >= CheckerTimeThreshold &&
-				(v.PerformTime >= CheckerTimeThreshold || v.PerformTime == 0) {
-				continue
-			}
-			if v.StartTime < v.ExpireTime &&
-				(v.ExpireTime < v.PerformTime || v.PerformTime == 0) {
-				continue
-			}
-			return nil, model.AssertError("blockchain.New chain parameters Deployments error")
-		}
-	}
 	config := consensus.Config()
 	b := BlockChain{
 		consensus:          consensus,
@@ -1215,8 +1187,6 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		indexManager:       consensus.IndexManager(),
 		orphans:            make(map[hash.Hash]*orphanBlock),
 		CacheNotifications: []*Notification{},
-		warningCaches:      newThresholdCaches(VBNumBits),
-		deploymentCaches:   newThresholdCaches(params.DefinedDeployments),
 		shutdownTracker:    shutdown.NewTracker(config.DataDir),
 		headerList:         list.New(),
 		progressLogger:     progresslog.NewBlockProgressLogger("Processed", log),

@@ -161,27 +161,5 @@ var PrivNetParams = Params{
 
 	CoinbaseMaturity: 16,
 
-	// Consensus rule change deployments.
-	//
-	// The miner confirmation window is defined as:
-	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 1,
-	MinerConfirmationWindow:       2,
-	Deployments: []ConsensusDeployment{
-		DeploymentTestDummy: {
-			BitNumber: 28,
-		},
-		DeploymentToken: {
-			BitNumber:  0,
-			StartTime:  5,
-			ExpireTime: 10,
-		},
-		DeploymentMeerEVM: {
-			BitNumber:  1,
-			StartTime:  10,
-			ExpireTime: 20,
-		},
-	},
-
 	MeerEVMCfg: MeerEVMConfig{ChainID: 8133, QitChainID: 8143},
 }

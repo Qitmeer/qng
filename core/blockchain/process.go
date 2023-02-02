@@ -35,15 +35,15 @@ import (
 //
 // This function is safe for concurrent access.
 // return IsOrphan,IsTipsExpired,error
-func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool,bool,error) {
+func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, bool, error) {
 	if flags.Has(BFRPCAdd) {
 		err := b.BlockDAG().CheckSubMainChainTip(block.Block().Parents)
 		if err != nil {
-			return false,true,fmt.Errorf("The tips of block is expired:%s (error:%s)\n", block.Hash().String(), err.Error())
+			return false, true, fmt.Errorf("The tips of block is expired:%s (error:%s)\n", block.Hash().String(), err.Error())
 		}
 	}
 	isOrphan, err := b.processBlock(block, flags)
-	return isOrphan,false,err
+	return isOrphan, false, err
 }
 
 func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
@@ -661,14 +661,6 @@ func (bc *BlockChain) disconnectTransactions(block *types.SerializedBlock, stxos
 }
 
 func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedBlock, attachNodes *list.List) error {
-	// No warnings about unknown rules until the chain is current.
-	if b.isCurrent() {
-		// Warn if any unknown new rules are either about to activate or
-		// have already been activated.
-		if err := b.warnUnknownRuleActivations(ib); err != nil {
-			return err
-		}
-	}
 	// Must be end node of sequence in dag
 	// Generate a new best state snapshot that will be used to update the
 	// database and later memory if all database updates are successful.

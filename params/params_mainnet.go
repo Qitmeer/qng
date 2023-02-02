@@ -99,28 +99,6 @@ var MainNetParams = Params{
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: []Checkpoint{},
 
-	// Consensus rule change deployments.
-	//
-	// The miner confirmation window is defined as:
-	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 57,
-	MinerConfirmationWindow:       mainWorkDiffWindowSize,
-	Deployments: []ConsensusDeployment{
-		DeploymentTestDummy: {
-			BitNumber: 28,
-		},
-		DeploymentToken: {
-			BitNumber:  0,
-			StartTime:  0,
-			ExpireTime: mainWorkDiffWindowSize * 2,
-		},
-		DeploymentMeerEVM: {
-			BitNumber:  1,
-			StartTime:  951100, //forks.MeerEVMForkMainHeight
-			ExpireTime: 951100 + mainWorkDiffWindowSize*2,
-		},
-	},
-
 	// Address encoding magics
 	NetworkAddressPrefix: "M",
 	PubKeyAddrID:         [2]byte{0x1f, 0xc5}, // starts with Mk

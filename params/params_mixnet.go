@@ -107,32 +107,6 @@ var MixNetParams = Params{
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: []Checkpoint{},
 
-	// Consensus rule change deployments.
-	//
-	// The miner confirmation window is defined as:
-	//   target proof of work timespan / target proof of work spacing
-	// Consensus rule change deployments.
-	//
-	// The miner confirmation window is defined as:
-	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 1,
-	MinerConfirmationWindow:       2,
-	Deployments: []ConsensusDeployment{
-		DeploymentTestDummy: {
-			BitNumber: 28,
-		},
-		DeploymentToken: {
-			BitNumber:  0,
-			StartTime:  1405,
-			ExpireTime: 1410,
-		},
-		DeploymentMeerEVM: {
-			BitNumber:  1,
-			StartTime:  1410,
-			ExpireTime: 1420,
-		},
-	},
-
 	// Address encoding magics
 	NetworkAddressPrefix: "X",
 	PubKeyAddrID:         [2]byte{0x2f, 0x16}, // starts with Xx
