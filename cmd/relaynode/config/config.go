@@ -2,7 +2,7 @@
  * Copyright (c) 2017-2020 The qitmeer developers
  */
 
-package main
+package config
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ import (
 const (
 	defaultDataDirname   = "relay"
 	defaultPort          = "2001"
-	defaultIP            = "0.0.0.0"
+	DefaultIP            = "0.0.0.0"
 	defaultLogDirname    = "logs"
 	defaultLogFilename   = "relaynode.log"
 	defaultRPCKeyFile    = "rpc.key"
@@ -35,35 +35,35 @@ var (
 	defaultRPCCertPath = filepath.Join(defaultDataDir, defaultRPCCertFile)
 	defaultRPCKeyPath  = filepath.Join(defaultDataDir, defaultRPCKeyFile)
 
-	conf = &Config{}
+	Conf = &Config{}
 
 	HomeDir = &cli.StringFlag{
 		Name:        "appdata",
 		Aliases:     []string{"A"},
 		Usage:       "Path to application home directory",
 		Value:       defaultHomeDir,
-		Destination: &conf.HomeDir,
+		Destination: &Conf.HomeDir,
 	}
 	DataDir = &cli.StringFlag{
 		Name:        "datadir",
 		Aliases:     []string{"b"},
 		Usage:       "Directory to store data",
 		Value:       defaultDataDir,
-		Destination: &conf.DataDir,
+		Destination: &Conf.DataDir,
 	}
 
 	PrivateKey = &cli.StringFlag{
 		Name:        "privatekey",
 		Aliases:     []string{"p"},
 		Usage:       "private key",
-		Destination: &conf.PrivateKey,
+		Destination: &Conf.PrivateKey,
 	}
 
 	ExternalIP = &cli.StringFlag{
 		Name:        "externalip",
 		Aliases:     []string{"i"},
 		Usage:       "listen external ip",
-		Destination: &conf.ExternalIP,
+		Destination: &Conf.ExternalIP,
 	}
 
 	Port = &cli.StringFlag{
@@ -71,7 +71,7 @@ var (
 		Aliases:     []string{"o"},
 		Usage:       "listen port",
 		Value:       defaultPort,
-		Destination: &conf.Port,
+		Destination: &Conf.Port,
 	}
 
 	EnableNoise = &cli.BoolFlag{
@@ -79,7 +79,7 @@ var (
 		Aliases:     []string{"n"},
 		Usage:       "noise",
 		Value:       false,
-		Destination: &conf.EnableNoise,
+		Destination: &Conf.EnableNoise,
 	}
 
 	Network = &cli.StringFlag{
@@ -87,7 +87,7 @@ var (
 		Aliases:     []string{"e"},
 		Usage:       "Network {mainnet,mixnet,privnet,testnet}",
 		Value:       params.MixNetParam.Name,
-		Destination: &conf.Network,
+		Destination: &Conf.Network,
 	}
 
 	HostDNS = &cli.StringFlag{
@@ -95,7 +95,7 @@ var (
 		Aliases:     []string{"s"},
 		Usage:       "The DNS address advertised by libp2p. This may be used to advertise an external DNS.",
 		Value:       "",
-		Destination: &conf.HostDNS,
+		Destination: &Conf.HostDNS,
 	}
 
 	UsePeerStore = &cli.BoolFlag{
@@ -103,7 +103,7 @@ var (
 		Aliases:     []string{"r"},
 		Usage:       "P2P Peer store",
 		Value:       true,
-		Destination: &conf.UsePeerStore,
+		Destination: &Conf.UsePeerStore,
 	}
 
 	NoFileLogging = &cli.BoolFlag{
@@ -111,7 +111,7 @@ var (
 		Aliases:     []string{"l"},
 		Usage:       "Disable file logging.",
 		Value:       false,
-		Destination: &conf.NoFileLogging,
+		Destination: &Conf.NoFileLogging,
 	}
 
 	DebugLevel = &cli.StringFlag{
@@ -119,7 +119,7 @@ var (
 		Aliases:     []string{"dl"},
 		Usage:       "Logging level {trace, debug, info, warn, error, critical} ",
 		Value:       "info",
-		Destination: &conf.DebugLevel,
+		Destination: &Conf.DebugLevel,
 	}
 
 	DisableRPC = &cli.BoolFlag{
@@ -127,21 +127,21 @@ var (
 		Aliases:     []string{"nr"},
 		Usage:       "Disable built-in RPC server -- NOTE: The RPC server is disabled by default if no rpcuser/rpcpass",
 		Value:       true,
-		Destination: &conf.DisableRPC,
+		Destination: &Conf.DisableRPC,
 	}
 
 	DebugPrintOrigins = &cli.BoolFlag{
 		Name:        "printorigin",
 		Usage:       "Print log debug location (file:line)",
 		Value:       false,
-		Destination: &conf.DebugPrintOrigins,
+		Destination: &Conf.DebugPrintOrigins,
 	}
 
 	RPCListeners = &cli.StringSliceFlag{
 		Name:        "rpclisten",
 		Aliases:     []string{"rl"},
 		Usage:       "Add an interface/port to listen for RPC connections",
-		Destination: &conf.RPCListeners,
+		Destination: &Conf.RPCListeners,
 	}
 
 	RPCUser = &cli.StringFlag{
@@ -149,7 +149,7 @@ var (
 		Aliases:     []string{"ru"},
 		Usage:       "Username for RPC connections",
 		Value:       "test",
-		Destination: &conf.RPCUser,
+		Destination: &Conf.RPCUser,
 	}
 
 	RPCPass = &cli.StringFlag{
@@ -157,7 +157,7 @@ var (
 		Aliases:     []string{"rp"},
 		Usage:       "Password for RPC connections",
 		Value:       "test",
-		Destination: &conf.RPCPass,
+		Destination: &Conf.RPCPass,
 	}
 
 	RPCCert = &cli.StringFlag{
@@ -165,7 +165,7 @@ var (
 		Aliases:     []string{"rc"},
 		Usage:       "File containing the certificate file",
 		Value:       defaultRPCCertPath,
-		Destination: &conf.RPCCert,
+		Destination: &Conf.RPCCert,
 	}
 
 	RPCKey = &cli.StringFlag{
@@ -173,7 +173,7 @@ var (
 		Aliases:     []string{"rk"},
 		Usage:       "File containing the certificate key",
 		Value:       defaultRPCKeyPath,
-		Destination: &conf.RPCKey,
+		Destination: &Conf.RPCKey,
 	}
 
 	RPCMaxClients = &cli.IntFlag{
@@ -181,7 +181,7 @@ var (
 		Aliases:     []string{"rmc"},
 		Usage:       "Max number of RPC clients for standard connections",
 		Value:       defaultMaxRPCClients,
-		Destination: &conf.RPCMaxClients,
+		Destination: &Conf.RPCMaxClients,
 	}
 
 	DisableTLS = &cli.BoolFlag{
@@ -189,7 +189,7 @@ var (
 		Aliases:     []string{"nt"},
 		Usage:       "Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost",
 		Value:       false,
-		Destination: &conf.DisableTLS,
+		Destination: &Conf.DisableTLS,
 	}
 
 	EnableRelay = &cli.BoolFlag{
@@ -197,7 +197,7 @@ var (
 		Aliases:     []string{"re"},
 		Usage:       "Enable relay service for node",
 		Value:       false,
-		Destination: &conf.EnableRelay,
+		Destination: &Conf.EnableRelay,
 	}
 
 	MaxPeers = &cli.IntFlag{
@@ -205,7 +205,7 @@ var (
 		Aliases:     []string{"mp"},
 		Usage:       "Max number of inbound and outbound peers",
 		Value:       defaultMaxPeers,
-		Destination: &conf.MaxPeers,
+		Destination: &Conf.MaxPeers,
 	}
 
 	EnableQit = &cli.BoolFlag{
@@ -213,7 +213,7 @@ var (
 		Aliases:     []string{"q"},
 		Usage:       "Enable Qit Subnet support",
 		Value:       false,
-		Destination: &conf.Qit.Enable,
+		Destination: &Conf.QitBoot.Enable,
 	}
 
 	QitListenAddr = &cli.StringFlag{
@@ -221,7 +221,7 @@ var (
 		Aliases:     []string{"qa"},
 		Usage:       "QitSubnet listen address",
 		Value:       defaultQitListenAddr,
-		Destination: &conf.Qit.listenAddr,
+		Destination: &Conf.QitBoot.ListenAddr,
 	}
 
 	QitNAT = &cli.StringFlag{
@@ -229,7 +229,7 @@ var (
 		Aliases:     []string{"na"},
 		Usage:       "Qit port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
 		Value:       "none",
-		Destination: &conf.Qit.natdesc,
+		Destination: &Conf.QitBoot.Natdesc,
 	}
 
 	QitNetrestrict = &cli.StringFlag{
@@ -237,14 +237,14 @@ var (
 		Aliases:     []string{"ne"},
 		Usage:       "Qit restrict network communication to the given IP networks (CIDR masks)",
 		Value:       "",
-		Destination: &conf.Qit.netrestrict,
+		Destination: &Conf.QitBoot.Netrestrict,
 	}
 
 	QitRunv5 = &cli.BoolFlag{
 		Name:        "v5",
 		Usage:       "run a v5 topic discovery QitSubnet",
 		Value:       false,
-		Destination: &conf.Qit.runv5,
+		Destination: &Conf.QitBoot.Runv5,
 	}
 
 	AppFlags = []cli.Flag{
@@ -303,10 +303,10 @@ type Config struct {
 	EnableRelay   bool
 	MaxPeers      int
 
-	Qit QitConfig
+	QitBoot QitBootConfig
 }
 
-func (c *Config) load() error {
+func (c *Config) Load() error {
 	var err error
 	if c.HomeDir != defaultHomeDir {
 		c.HomeDir, err = filepath.Abs(c.HomeDir)

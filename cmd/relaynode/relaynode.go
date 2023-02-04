@@ -5,6 +5,7 @@
 package main
 
 import (
+	"github.com/Qitmeer/qng/cmd/relaynode/config"
 	"github.com/Qitmeer/qng/common/roughtime"
 	_ "github.com/Qitmeer/qng/database/ffldb"
 	_ "github.com/Qitmeer/qng/services/common"
@@ -37,11 +38,11 @@ func relayNode() error {
 		},
 		Copyright:            "(c) 2020 QNG",
 		Usage:                "Relay Node",
-		Flags:                AppFlags,
+		Flags:                config.AppFlags,
 		EnableBashCompletion: true,
 		Commands:             commands(),
 		Action: func(c *cli.Context) error {
-			err := node.init(conf)
+			err := node.init(config.Conf)
 			if err != nil {
 				return err
 			}

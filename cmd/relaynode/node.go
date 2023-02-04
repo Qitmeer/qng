@@ -8,6 +8,8 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	rconfig "github.com/Qitmeer/qng/cmd/relaynode/config"
+	"github.com/Qitmeer/qng/cmd/relaynode/qitboot"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
@@ -42,7 +44,7 @@ import (
 
 type Node struct {
 	service.Service
-	cfg *Config
+	cfg *rconfig.Config
 
 	privateKey crypto.PrivKey
 
@@ -53,12 +55,12 @@ type Node struct {
 	hslock sync.RWMutex
 }
 
-func (node *Node) init(cfg *Config) error {
+func (node *Node) init(cfg *rconfig.Config) error {
 	log.Info(fmt.Sprintf("Start relay node..."))
 	node.InitContext()
 	node.InitServices()
 
-	err := cfg.load()
+	err := cfg.Load()
 	if err != nil {
 		return err
 	}
@@ -150,7 +152,7 @@ func (node *Node) startP2P() error {
 		return err
 	}
 
-	srcMAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%s", defaultIP, node.cfg.Port))
+	srcMAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%s", rconfig.DefaultIP, node.cfg.Port))
 	if err != nil {
 		log.Error("Unable to construct multiaddr %v", err)
 		return err
@@ -305,7 +307,7 @@ func (node *Node) RegisterRpcService() error {
 }
 
 func (node *Node) RegisterQitService() error {
-	if !node.cfg.Qit.Enable {
+	if !node.cfg.QitBoot.Enable {
 		return nil
 	}
 	pkb, err := node.privateKey.Raw()
@@ -316,7 +318,7 @@ func (node *Node) RegisterQitService() error {
 	if err != nil {
 		return err
 	}
-	qitSer, err := NewQitService(node.cfg, nk)
+	qitSer, err := qitboot.NewQitBootService(node.cfg, nk)
 	if err != nil {
 		return err
 	}
@@ -490,8 +492,8 @@ func (node *Node) GetRpcServer() *rpc.RpcServer {
 	return service
 }
 
-func (node *Node) GetQitService() *QitService {
-	var service *QitService
+func (node *Node) GetQitService() *qitboot.QitBootService {
+	var service *qitboot.QitBootService
 	if err := node.Services().FetchService(&service); err != nil {
 		log.Error(err.Error())
 		return nil
