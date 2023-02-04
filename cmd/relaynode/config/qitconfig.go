@@ -1,6 +1,6 @@
 package config
 
-type QitBoot struct {
+type QitBootConfig struct {
 	Enable      bool
 	ListenAddr  string
 	Natdesc     string

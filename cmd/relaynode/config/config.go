@@ -213,7 +213,7 @@ var (
 		Aliases:     []string{"q"},
 		Usage:       "Enable Qit Subnet support",
 		Value:       false,
-		Destination: &Conf.Qit.Enable,
+		Destination: &Conf.QitBoot.Enable,
 	}
 
 	QitListenAddr = &cli.StringFlag{
@@ -221,7 +221,7 @@ var (
 		Aliases:     []string{"qa"},
 		Usage:       "QitSubnet listen address",
 		Value:       defaultQitListenAddr,
-		Destination: &Conf.Qit.ListenAddr,
+		Destination: &Conf.QitBoot.ListenAddr,
 	}
 
 	QitNAT = &cli.StringFlag{
@@ -229,7 +229,7 @@ var (
 		Aliases:     []string{"na"},
 		Usage:       "Qit port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
 		Value:       "none",
-		Destination: &Conf.Qit.Natdesc,
+		Destination: &Conf.QitBoot.Natdesc,
 	}
 
 	QitNetrestrict = &cli.StringFlag{
@@ -237,14 +237,14 @@ var (
 		Aliases:     []string{"ne"},
 		Usage:       "Qit restrict network communication to the given IP networks (CIDR masks)",
 		Value:       "",
-		Destination: &Conf.Qit.Netrestrict,
+		Destination: &Conf.QitBoot.Netrestrict,
 	}
 
 	QitRunv5 = &cli.BoolFlag{
 		Name:        "v5",
 		Usage:       "run a v5 topic discovery QitSubnet",
 		Value:       false,
-		Destination: &Conf.Qit.Runv5,
+		Destination: &Conf.QitBoot.Runv5,
 	}
 
 	AppFlags = []cli.Flag{
@@ -303,7 +303,7 @@ type Config struct {
 	EnableRelay   bool
 	MaxPeers      int
 
-	Qit QitBoot
+	QitBoot QitBootConfig
 }
 
 func (c *Config) Load() error {

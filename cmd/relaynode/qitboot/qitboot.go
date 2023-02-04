@@ -1,4 +1,4 @@
-package main
+package qitboot
 
 import (
 	"crypto/ecdsa"
@@ -13,39 +13,39 @@ import (
 	"net"
 )
 
-type QitService struct {
+type QitBootService struct {
 	service.Service
 	cfg       *config.Config
 	nodeKey   *ecdsa.PrivateKey
 	localNode *enode.Node
 }
 
-func (s *QitService) Start() error {
+func (s *QitBootService) Start() error {
 	if err := s.Service.Start(); err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("Start Qit Service ..."))
+	log.Info(fmt.Sprintf("Start Qit Boot Service ..."))
 
 	eth.InitLog(s.cfg.DebugLevel, s.cfg.DebugPrintOrigins)
 
 	var err error
 	var natm nat.Interface
-	if len(s.cfg.Qit.Natdesc) > 0 {
-		natm, err = nat.Parse(s.cfg.Qit.Natdesc)
+	if len(s.cfg.QitBoot.Natdesc) > 0 {
+		natm, err = nat.Parse(s.cfg.QitBoot.Natdesc)
 		if err != nil {
 			return fmt.Errorf("--nat: %v", err)
 		}
 	}
 
 	var restrictList *netutil.Netlist
-	if len(s.cfg.Qit.Netrestrict) > 0 {
-		restrictList, err = netutil.ParseNetlist(s.cfg.Qit.Netrestrict)
+	if len(s.cfg.QitBoot.Netrestrict) > 0 {
+		restrictList, err = netutil.ParseNetlist(s.cfg.QitBoot.Netrestrict)
 		if err != nil {
 			return fmt.Errorf("--netrestrict: %v", err)
 		}
 	}
 
-	addr, err := net.ResolveUDPAddr("udp", s.cfg.Qit.ListenAddr)
+	addr, err := net.ResolveUDPAddr("udp", s.cfg.QitBoot.ListenAddr)
 	if err != nil {
 		return fmt.Errorf("ResolveUDPAddr: %v", err)
 	}
@@ -71,7 +71,7 @@ func (s *QitService) Start() error {
 		PrivateKey:  s.nodeKey,
 		NetRestrict: restrictList,
 	}
-	if s.cfg.Qit.Runv5 {
+	if s.cfg.QitBoot.Runv5 {
 		if _, err := discover.ListenV5(conn, ln, cfg); err != nil {
 			return err
 		}
@@ -83,19 +83,19 @@ func (s *QitService) Start() error {
 	return nil
 }
 
-func (s *QitService) Stop() error {
+func (s *QitBootService) Stop() error {
 	if err := s.Service.Stop(); err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("Stop Qit Service"))
+	log.Info(fmt.Sprintf("Stop Qit Boot Service"))
 	return nil
 }
 
-func (s *QitService) Node() *enode.Node {
+func (s *QitBootService) Node() *enode.Node {
 	return s.localNode
 }
 
-func (s *QitService) setLocalNode(nodeKey *ecdsa.PublicKey, addr net.UDPAddr) {
+func (s *QitBootService) setLocalNode(nodeKey *ecdsa.PublicKey, addr net.UDPAddr) {
 	if addr.IP.IsUnspecified() {
 		addr.IP = net.IP{127, 0, 0, 1}
 	}
@@ -103,8 +103,8 @@ func (s *QitService) setLocalNode(nodeKey *ecdsa.PublicKey, addr net.UDPAddr) {
 	log.Info(fmt.Sprintf("QitSubnet:%s", s.localNode.URLv4()))
 }
 
-func NewQitService(cfg *config.Config, nodeKey *ecdsa.PrivateKey) (*QitService, error) {
-	return &QitService{
+func NewQitBootService(cfg *config.Config, nodeKey *ecdsa.PrivateKey) (*QitBootService, error) {
+	return &QitBootService{
 		cfg:     cfg,
 		nodeKey: nodeKey,
 	}, nil
