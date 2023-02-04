@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/cmd/relaynode/config"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/urfave/cli/v2"
@@ -28,7 +29,7 @@ func qitCmd() *cli.Command {
 				Usage:       "QitSubnet writeaddress",
 				Description: "QitSubnet writeaddress",
 				Action: func(ctx *cli.Context) error {
-					cfg := conf
+					cfg := config.Conf
 					pk, err := p2p.PrivateKey(cfg.DataDir, cfg.PrivateKey, 0600)
 					if err != nil {
 						return err
@@ -47,7 +48,7 @@ func qitCmd() *cli.Command {
 			},
 		},
 		Before: func(context *cli.Context) error {
-			return conf.load()
+			return config.Conf.Load()
 		},
 	}
 }
