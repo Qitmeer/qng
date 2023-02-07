@@ -1,5 +1,14 @@
 package qit
 
+import (
+	"github.com/ethereum/go-ethereum/core/forkid"
+	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/ethereum/go-ethereum/rlp"
+	"strings"
+)
+
 type PublicQitServiceAPI struct {
 	q *QitService
 }
@@ -8,7 +17,7 @@ func NewPublicQitServiceAPI(q *QitService) *PublicQitServiceAPI {
 	return &PublicQitServiceAPI{q}
 }
 
-func (api *PublicQitServiceAPI) GetQitInfo() (interface{}, error) {
+func (api *PublicQitServiceAPI) GetQitNodeInfo() (interface{}, error) {
 	ni := api.q.chain.Node().Server().NodeInfo()
 
 	qi := QitInfo{
@@ -50,4 +59,47 @@ type QitInfo struct {
 	IPC        string `json:"ipc,omitempty"`
 	HTTP       string `json:"http,omitempty"`
 	WS         string `json:"ws,omitempty"`
+}
+
+func (api *PublicQitServiceAPI) GetQitPeerInfo() (interface{}, error) {
+	pis := api.q.chain.Node().Server().PeersInfo()
+	retM := map[string]struct{}{}
+	ret := []*p2p.PeerInfo{}
+	for _, pi := range pis {
+		_, ok := retM[pi.ID]
+		if ok {
+			continue
+		}
+		has := false
+		if strings.HasPrefix(pi.Name, "qit") {
+			has = true
+		} else if len(pi.ENR) > 0 {
+			node, err := enode.Parse(enode.ValidSchemes, pi.ENR)
+			if err != nil {
+				continue
+			}
+			filter := forkid.NewStaticFilter(api.q.chain.Config().Eth.Genesis.Config, api.q.chain.Config().Eth.Genesis.ToBlock().Hash())
+
+			var eth struct {
+				ForkID forkid.ID
+				Tail   []rlp.RawValue `rlp:"tail"`
+			}
+			err = node.Load(enr.WithEntry("eth", &eth))
+			if err != nil {
+				continue
+			}
+
+			err = filter(eth.ForkID)
+			if err == nil {
+				has = true
+			}
+		}
+
+		if has {
+			retM[pi.ID] = struct{}{}
+			ret = append(ret, pi)
+		}
+	}
+
+	return ret, nil
 }

@@ -303,6 +303,16 @@ web3._extend({
 			name: 'getVMsInfo',
 			getter: 'qng_getVMsInfo'
 		}),
+
+		new web3._extend.Property({
+			name: 'getQitNodeInfo',
+			getter: 'qng_getQitNodeInfo'
+		}),
+
+		new web3._extend.Property({
+			name: 'getQitPeerInfo',
+			getter: 'qng_getQitPeerInfo'
+		}),
 	]
 });
 `
