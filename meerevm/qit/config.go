@@ -220,7 +220,7 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	nodeConf.P2P.ListenAddr = fmt.Sprintf(":%d", p2pPort)
 	nodeConf.P2P.BootstrapNodes = getBootstrapNodes(p2pPort)
 
-	cfg:=&eth.Config{
+	cfg := &eth.Config{
 		Eth:     econfig,
 		Node:    nodeConf,
 		Metrics: metrics.DefaultConfig,
