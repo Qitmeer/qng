@@ -483,8 +483,13 @@ function get_vms_info(){
   get_result "$data"
 }
 
-function get_qit_info(){
-  local data='{"jsonrpc":"2.0","method":"getQitInfo","params":[],"id":null}'
+function get_qit_nodeinfo(){
+  local data='{"jsonrpc":"2.0","method":"getQitNodeInfo","params":[],"id":null}'
+  get_result "$data"
+}
+
+function get_qit_peerinfo(){
+  local data='{"jsonrpc":"2.0","method":"getQitPeerInfo","params":[],"id":null}'
   get_result "$data"
 }
 
@@ -729,6 +734,7 @@ function usage(){
   echo "  subsidy"
   echo "  vmsinfo"
   echo "  qitinfo"
+  echo "  qitpeerinfo"
   echo "  acctinfo"
   echo "  getbalance <address> <coinID>"
   echo "  getbalanceinfo <address> <coinID>"
@@ -1244,8 +1250,10 @@ elif [ "$1" == "vmsinfo" ]; then
   get_vms_info $@
 elif [ "$1" == "qitinfo" ]; then
     shift
-    get_qit_info $@
-
+    get_qit_nodeinfo $@
+elif [ "$1" == "qitpeerinfo" ]; then
+    shift
+    get_qit_peerinfo $@
 
 elif [ "$1" == "txSign" ]; then
   shift
