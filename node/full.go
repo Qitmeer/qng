@@ -152,7 +152,7 @@ func (qm *QitmeerFull) RegisterVMService(vmService *vm.Service) error {
 
 func (qm *QitmeerFull) RegisterQitSubnet() error {
 	if !qm.node.Config.Qit ||
-		params.ActiveNetParams.Net != protocol.TestNet {
+		params.ActiveNetParams.Net == protocol.MainNet {
 		return nil
 	}
 	ser, err := qit.New(qm.node.Config, qm.node.consensus)
