@@ -7,11 +7,13 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
+	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/qit"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/services/acct"
@@ -149,7 +151,8 @@ func (qm *QitmeerFull) RegisterVMService(vmService *vm.Service) error {
 }
 
 func (qm *QitmeerFull) RegisterQitSubnet() error {
-	if !qm.node.Config.Qit {
+	if !qm.node.Config.Qit ||
+		params.ActiveNetParams.Net != protocol.TestNet {
 		return nil
 	}
 	ser, err := qit.New(qm.node.Config, qm.node.consensus)
