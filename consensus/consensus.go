@@ -9,9 +9,12 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
+	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/meerevm/qit"
+	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/vm"
@@ -43,7 +46,8 @@ type consensus struct {
 	blockchain   model.BlockChain
 	indexManager model.IndexManager
 
-	vmService *vm.Service
+	vmService  *vm.Service
+	qitService *qit.QitService
 }
 
 // Init initializes consensus
@@ -84,6 +88,15 @@ func (s *consensus) Init() error {
 		return err
 	}
 	s.vmService = vmService
+	//
+	if s.cfg.Qit && params.ActiveNetParams.Net != protocol.MainNet {
+		ser, err := qit.New(s.cfg, s)
+		if err != nil {
+			return err
+		}
+		s.qitService = ser
+	}
+	//
 	s.subscribe()
 	return blockchain.Init()
 }
@@ -142,6 +155,10 @@ func (s *consensus) Params() *params.Params {
 
 func (s *consensus) VMService() model.VMI {
 	return s.vmService
+}
+
+func (s *consensus) QitService() service.IService {
+	return s.qitService
 }
 
 func (s *consensus) subscribe() {
