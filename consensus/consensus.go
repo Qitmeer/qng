@@ -158,6 +158,9 @@ func (s *consensus) VMService() model.VMI {
 }
 
 func (s *consensus) QitService() service.IService {
+	if s.qitService == nil {
+		return nil
+	}
 	return s.qitService
 }
 
