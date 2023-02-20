@@ -122,7 +122,6 @@ out:
 				ps.OnMemPool(msg.pe, msg.data)
 
 			case *UpdateGraphStateMsg:
-				log.Trace(fmt.Sprintf("UpdateGraphStateMsg recevied from %v, state=%v ", msg.pe.GetID(), msg.pe.GraphState()))
 				err := ps.processUpdateGraphState(msg.pe)
 				if err != nil {
 					log.Trace(err.Error())
@@ -246,12 +245,12 @@ func (ps *PeerSync) PeerUpdate(pe *peers.Peer, immediately bool) {
 	}
 
 	if immediately {
-		ps.msgChan <- &PeerUpdateMsg{pe: pe}
+		ps.OnPeerUpdate(pe)
 		return
 	}
 
 	pe.RunRate(PeerUpdate, DefaultRateTaskTime, func() {
-		ps.msgChan <- &PeerUpdateMsg{pe: pe}
+		ps.OnPeerUpdate(pe)
 	})
 
 }
@@ -306,8 +305,8 @@ func (ps *PeerSync) startSync() {
 		// not support the headers-first approach so do normal block
 		// downloads when in regression test mode.
 		ps.SetSyncPeer(bestPeer)
-		ps.IntellectSyncBlocks(true, bestPeer)
 		ps.dagSync.SetGraphState(gs)
+		ps.IntellectSyncBlocks(true, bestPeer)
 
 	} else {
 		log.Trace("You're already up to date, no synchronization is required.")
@@ -402,7 +401,6 @@ func (ps *PeerSync) IntellectSyncBlocks(refresh bool, pe *peers.Peer) {
 		log.Debug("P2P is pause.")
 		return
 	}
-
 	if ps.Chain().GetOrphansTotal() >= blockchain.MaxOrphanBlocks || refresh {
 		err := ps.Chain().RefreshOrphans()
 		if err != nil {

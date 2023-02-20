@@ -67,10 +67,10 @@ func (s *Sync) getBlocksHandler(ctx context.Context, msg interface{}, stream lib
 
 func (ps *PeerSync) processGetBlocks(pe *peers.Peer, blocks []*hash.Hash) error {
 	if len(blocks) <= 0 {
-		return fmt.Errorf("no blocks")
+		return fmt.Errorf("no blocks from:%s", pe.GetID())
 	}
 	if !ps.isSyncPeer(pe) || !pe.IsConnected() {
-		return fmt.Errorf("no sync peer")
+		return fmt.Errorf("no sync peer from:%s", pe.GetID())
 	}
 
 	db, err := ps.sy.sendGetBlocksRequest(ps.sy.p2p.Context(), pe.GetID(), &pb.GetBlocks{Locator: changeHashsToPBHashs(blocks)})
@@ -97,7 +97,10 @@ func (ps *PeerSync) GetBlocks(pe *peers.Peer, blocks []*hash.Hash) {
 		ps.GetBlockDatas(pe, blocks)
 		return
 	}
-	ps.msgChan <- &GetBlocksMsg{pe: pe, blocks: blocks}
+	err := ps.processGetBlocks(pe, blocks)
+	if err != nil {
+		log.Debug(err.Error())
+	}
 }
 
 func (s *Sync) GetDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {

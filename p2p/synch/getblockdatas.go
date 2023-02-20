@@ -165,7 +165,7 @@ func (s *Sync) getMerkleBlockDataHandler(ctx context.Context, msg interface{}, s
 
 func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) error {
 	if !ps.isSyncPeer(pe) || !pe.IsConnected() {
-		err := fmt.Errorf("no sync peer")
+		err := fmt.Errorf("no sync peer:%v", pe.GetID())
 		log.Trace(err.Error())
 		return err
 	}
@@ -327,8 +327,10 @@ func (ps *PeerSync) GetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) {
 	if atomic.LoadInt32(&ps.shutdown) != 0 {
 		return
 	}
-
-	ps.msgChan <- &GetBlockDatasMsg{pe: pe, blocks: blocks}
+	err := ps.processGetBlockDatas(pe, blocks)
+	if err != nil {
+		log.Debug(err.Error())
+	}
 }
 
 // handleGetData is invoked when a peer receives a getdata qitmeer message and

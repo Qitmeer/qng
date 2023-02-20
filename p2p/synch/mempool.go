@@ -61,8 +61,7 @@ func (s *Sync) HandlerMemPool(ctx context.Context, msg interface{}, stream libp2
 	if mpr.TxsNum == curCount || curCount == 0 {
 		return nil
 	}
-	s.peerSync.msgChan <- &OnMsgMemPool{pe: pe, data: &MsgMemPool{}}
-
+	go s.peerSync.OnMemPool(pe, &MsgMemPool{})
 	return nil
 }
 

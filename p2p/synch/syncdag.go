@@ -144,6 +144,8 @@ func (ps *PeerSync) syncDAGBlocks(pe *peers.Peer) {
 	if atomic.LoadInt32(&ps.shutdown) != 0 {
 		return
 	}
-
-	ps.msgChan <- &syncDAGBlocksMsg{pe: pe}
+	err := ps.processSyncDAGBlocks(pe)
+	if err != nil {
+		log.Debug(err.Error())
+	}
 }
