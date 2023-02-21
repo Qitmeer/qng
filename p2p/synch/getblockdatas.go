@@ -17,7 +17,6 @@ import (
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"sync/atomic"
 	"time"
 )
 
@@ -163,17 +162,20 @@ func (s *Sync) getMerkleBlockDataHandler(ctx context.Context, msg interface{}, s
 	return nil
 }
 
-func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) error {
+func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *ProcessResult {
 	if !ps.isSyncPeer(pe) || !pe.IsConnected() {
 		err := fmt.Errorf("no sync peer:%v", pe.GetID())
-		log.Trace(err.Error())
-		return err
+		log.Trace(err.Error(), "processID", ps.processID)
+		return nil
 	}
 	blocksReady := []*hash.Hash{}
 	blockDatas := []*BlockData{}
 	blockDataM := map[hash.Hash]*BlockData{}
 
 	for _, b := range blocks {
+		if ps.IsInterrupt() {
+			return nil
+		}
 		if ps.sy.p2p.BlockChain().BlockDAG().HasBlock(b) {
 			continue
 		}
@@ -196,28 +198,20 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 		blocksReady = append(blocksReady, b)
 	}
 	if len(blockDatas) <= 0 {
-		ps.continueSync(false)
-		return nil
-	}
-	if !ps.longSyncMod {
-		bs := ps.sy.p2p.BlockChain().BestSnapshot()
-		if pe.GraphState().GetTotal() >= bs.GraphState.GetTotal()+MaxBlockLocatorsPerMsg {
-			ps.longSyncMod = true
-		}
+		return &ProcessResult{act: ProcessResultActionContinue, orphan: false}
 	}
 	if len(blocksReady) > 0 {
-		log.Trace(fmt.Sprintf("processGetBlockDatas::sendGetBlockDataRequest peer=%v, blocks=%d [%s -> %s] ", pe.GetID(), len(blocksReady), blocksReady[0], blocksReady[len(blocksReady)-1]))
+		log.Trace(fmt.Sprintf("processGetBlockDatas::sendGetBlockDataRequest peer=%v, blocks=%d [%s -> %s] ", pe.GetID(), len(blocksReady), blocksReady[0], blocksReady[len(blocksReady)-1]), "processID", ps.processID)
 		bd, err := ps.sy.sendGetBlockDataRequest(ps.sy.p2p.Context(), pe.GetID(), &pb.GetBlockDatas{Locator: changeHashsToPBHashs(blocksReady)})
 		if err != nil {
-			log.Warn(fmt.Sprintf("getBlocks send:%v", err))
-			go ps.TryAgainUpdateSyncPeer()
-			return err
+			log.Warn(fmt.Sprintf("getBlocks send:%v", err), "processID", ps.processID)
+			return &ProcessResult{act: ProcessResultActionTryAgain}
 		}
-		log.Trace(fmt.Sprintf("Received:Locator=%d", len(bd.Locator)))
+		log.Trace(fmt.Sprintf("Received:Locator=%d", len(bd.Locator)), "processID", ps.processID)
 		for _, b := range bd.Locator {
 			block, err := types.NewBlockFromBytes(b.BlockBytes)
 			if err != nil {
-				log.Warn(fmt.Sprintf("getBlocks from:%v", err))
+				log.Warn(fmt.Sprintf("getBlocks from:%v", err), "processID", ps.processID)
 				break
 			}
 			bd, ok := blockDataM[*block.Hash()]
@@ -231,21 +225,19 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 	add := 0
 	hasOrphan := false
 
-	lastSync := ps.lastSync
-
 	for i, b := range blockDatas {
-		if atomic.LoadInt32(&ps.shutdown) != 0 {
-			break
+		if ps.IsInterrupt() {
+			return nil
 		}
 		block := b.Block
 		if block == nil {
-			log.Trace(fmt.Sprintf("No block bytes:%d : %s", i, b.Hash.String()))
+			log.Trace(fmt.Sprintf("No block bytes:%d : %s", i, b.Hash.String()), "processID", ps.processID)
 			continue
 		}
 		//
 		IsOrphan, _, err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags)
 		if err != nil {
-			log.Error(fmt.Sprintf("Failed to process block:hash=%s err=%s", block.Hash(), err))
+			log.Error(fmt.Sprintf("Failed to process block:hash=%s err=%s", block.Hash(), err), "processID", ps.processID)
 			continue
 		}
 		if IsOrphan {
@@ -257,28 +249,17 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) er
 		add++
 		ps.lastSync = time.Now()
 	}
-	log.Debug(fmt.Sprintf("getBlockDatas:%d/%d  spend:%s", add, len(blockDatas), time.Since(lastSync).Truncate(time.Second).String()))
+	log.Debug(fmt.Sprintf("getBlockDatas:%d/%d", add, len(blockDatas)), "processID", ps.processID)
 
 	var err error
 	if add > 0 {
 		ps.sy.p2p.TxMemPool().PruneExpiredTx()
-
-		if ps.longSyncMod {
-			if ps.IsCompleteForSyncPeer() {
-				log.Info("Your synchronization has been completed.")
-				ps.longSyncMod = false
-			}
-
-			if ps.IsCurrent() {
-				log.Info("You're up to date now.")
-				ps.longSyncMod = false
-			}
-		}
 	} else {
 		err = fmt.Errorf("no get blocks")
+		log.Debug(err.Error(), "processID", ps.processID)
+		return &ProcessResult{act: ProcessResultActionTryAgain}
 	}
-	ps.continueSync(hasOrphan)
-	return err
+	return &ProcessResult{act: ProcessResultActionContinue, orphan: hasOrphan, add: add}
 }
 
 func (ps *PeerSync) processGetMerkleBlockDatas(pe *peers.Peer, blocks []*hash.Hash) error {
@@ -306,12 +287,6 @@ func (ps *PeerSync) processGetMerkleBlockDatas(pe *peers.Peer, blocks []*hash.Ha
 	if len(blocksReady) <= 0 {
 		return nil
 	}
-	if !ps.longSyncMod {
-		bs := ps.sy.p2p.BlockChain().BestSnapshot()
-		if pe.GraphState().GetTotal() >= bs.GraphState.GetTotal()+MaxBlockLocatorsPerMsg {
-			ps.longSyncMod = true
-		}
-	}
 
 	bd, err := ps.sy.sendGetMerkleBlockDataRequest(ps.sy.p2p.Context(), pe.GetID(), &pb.MerkleBlockRequest{Hashes: changeHashsToPBHashs(blocksReady)})
 	if err != nil {
@@ -320,17 +295,6 @@ func (ps *PeerSync) processGetMerkleBlockDatas(pe *peers.Peer, blocks []*hash.Ha
 	}
 	log.Debug(fmt.Sprintf("sendGetMerkleBlockDataRequest:%d", len(bd.Data)))
 	return nil
-}
-
-func (ps *PeerSync) GetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) {
-	// Ignore if we are shutting down.
-	if atomic.LoadInt32(&ps.shutdown) != 0 {
-		return
-	}
-	err := ps.processGetBlockDatas(pe, blocks)
-	if err != nil {
-		log.Debug(err.Error())
-	}
 }
 
 // handleGetData is invoked when a peer receives a getdata qitmeer message and
@@ -362,11 +326,7 @@ func (ps *PeerSync) OnGetData(sp *peers.Peer, invList []*pb.InvVect) error {
 		}
 	}
 	if len(blocks) > 0 {
-		err := ps.processGetBlockDatas(sp, changePBHashsToHashs(blocks))
-		if err != nil {
-			log.Info("processGetBlockDatas Error", "err", err.Error())
-			return err
-		}
+		ps.processGetBlockDatas(sp, changePBHashsToHashs(blocks))
 	}
 	if len(merkleBlocks) > 0 {
 		err := ps.processGetMerkleBlockDatas(sp, changePBHashsToHashs(merkleBlocks))

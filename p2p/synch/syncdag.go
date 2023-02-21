@@ -15,7 +15,6 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"strings"
-	"sync/atomic"
 )
 
 // MaxBlockLocatorsPerMsg is the maximum number of block locator hashes allowed
@@ -103,49 +102,33 @@ func debugSyncDAG(m *pb.SyncDAG) string {
 	return sb.String()
 }
 
-func (ps *PeerSync) processSyncDAGBlocks(pe *peers.Peer) error {
-	log.Trace(fmt.Sprintf("processSyncDAGBlocks peer=%v ", pe.GetID()))
+func (ps *PeerSync) processSyncDAGBlocks(pe *peers.Peer) *ProcessResult {
+	log.Trace(fmt.Sprintf("processSyncDAGBlocks peer=%v ", pe.GetID()), "processID", ps.processID)
 	if !ps.isSyncPeer(pe) || !pe.IsConnected() {
-		return fmt.Errorf("no sync peer")
+		return nil
 	}
-
 	point := pe.SyncPoint()
 	mainLocator := ps.dagSync.GetMainLocator(point)
 	sd := &pb.SyncDAG{MainLocator: changeHashsToPBHashs(mainLocator), GraphState: ps.sy.getGraphState()}
-	log.Trace(fmt.Sprintf("processSyncDAGBlocks sendSyncDAG point=%v, sd=%v", point.String(), debugSyncDAG(sd)))
+	log.Trace(fmt.Sprintf("processSyncDAGBlocks sendSyncDAG point=%v, sd=%v", point.String(), debugSyncDAG(sd)), "processID", ps.processID)
 	subd, err := ps.sy.sendSyncDAGRequest(ps.sy.p2p.Context(), pe.GetID(), sd)
 	if err != nil {
-		log.Trace(fmt.Sprintf("processSyncDAGBlocks err=%v ", err.Error()))
-		go ps.TryAgainUpdateSyncPeer()
-		return err
+		log.Trace(fmt.Sprintf("processSyncDAGBlocks err=%v ", err.Error()), "processID", ps.processID)
+		return &ProcessResult{act: ProcessResultActionTryAgain}
+	}
+	if ps.IsInterrupt() {
+		return nil
 	}
 	log.Trace(fmt.Sprintf("processSyncDAGBlocks result graphstate=(%v,%v,%v), blocks=%v ",
 		subd.GraphState.MainOrder, subd.GraphState.MainHeight, subd.GraphState.Layer,
-		len(subd.Blocks)))
+		len(subd.Blocks)), "processID", ps.processID)
 	pe.UpdateSyncPoint(changePBHashToHash(subd.SyncPoint))
 	pe.UpdateGraphState(subd.GraphState)
 
 	if len(subd.Blocks) <= 0 {
 		pe.UpdateSyncPoint(ps.Chain().BlockDAG().GetGenesisHash())
-		go ps.TryAgainUpdateSyncPeer()
-		return fmt.Errorf("No sync dag blocks")
+		return &ProcessResult{act: ProcessResultActionTryAgain}
 	}
-	log.Trace(fmt.Sprintf("processSyncDAGBlocks do GetBlockDatas blocks=%v ", len(subd.Blocks)))
-	go ps.GetBlockDatas(pe, changePBHashsToHashs(subd.Blocks))
-
-	return nil
-}
-
-func (ps *PeerSync) syncDAGBlocks(pe *peers.Peer) {
-	if pe == nil {
-		return
-	}
-	// Ignore if we are shutting down.
-	if atomic.LoadInt32(&ps.shutdown) != 0 {
-		return
-	}
-	err := ps.processSyncDAGBlocks(pe)
-	if err != nil {
-		log.Debug(err.Error())
-	}
+	log.Trace(fmt.Sprintf("processSyncDAGBlocks do GetBlockDatas blocks=%v ", len(subd.Blocks)), "processID", ps.processID)
+	return ps.processGetBlockDatas(pe, changePBHashsToHashs(subd.Blocks))
 }
