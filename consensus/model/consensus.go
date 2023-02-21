@@ -6,6 +6,7 @@ import (
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 )
 
@@ -26,4 +27,5 @@ type Consensus interface {
 	Params() *params.Params
 	VMService() VMI
 	Rebuild() error
+	QitService() service.IService
 }

@@ -73,9 +73,11 @@ func (s *Sync) graphStateHandler(ctx context.Context, msg interface{}, stream li
 func (ps *PeerSync) processUpdateGraphState(pe *peers.Peer) error {
 	if !pe.IsConnected() {
 		err := fmt.Errorf("peer is not active")
-		log.Trace(err.Error())
+		log.Warn(err.Error())
 		return err
 	}
+	log.Trace(fmt.Sprintf("UpdateGraphState recevied from %v, state=%v ", pe.GetID(), pe.GraphState()))
+
 	gs, err := ps.sy.sendGraphStateRequest(ps.sy.p2p.Context(), pe, ps.sy.getGraphState())
 	if err != nil {
 		log.Warn(err.Error())
@@ -92,6 +94,6 @@ func (ps *PeerSync) UpdateGraphState(pe *peers.Peer) {
 		return
 	}
 	pe.RunRate(UpdateGraphState, UpdateGraphStateTime, func() {
-		ps.msgChan <- &UpdateGraphStateMsg{pe: pe}
+		ps.processUpdateGraphState(pe)
 	})
 }

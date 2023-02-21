@@ -15,7 +15,6 @@ import (
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"sync/atomic"
 )
 
 func (s *Sync) sendGetBlocksRequest(ctx context.Context, id peer.ID, blocks *pb.GetBlocks) (*pb.DagBlocks, error) {
@@ -65,39 +64,20 @@ func (s *Sync) getBlocksHandler(ctx context.Context, msg interface{}, stream lib
 	return nil
 }
 
-func (ps *PeerSync) processGetBlocks(pe *peers.Peer, blocks []*hash.Hash) error {
-	if len(blocks) <= 0 {
-		return fmt.Errorf("no blocks")
-	}
-	if !ps.isSyncPeer(pe) || !pe.IsConnected() {
-		return fmt.Errorf("no sync peer")
-	}
-
+func (ps *PeerSync) processGetBlocks(pe *peers.Peer, blocks []*hash.Hash) *ProcessResult {
 	db, err := ps.sy.sendGetBlocksRequest(ps.sy.p2p.Context(), pe.GetID(), &pb.GetBlocks{Locator: changeHashsToPBHashs(blocks)})
 	if err != nil {
-		return err
-	}
-	if len(db.Blocks) <= 0 {
-		log.Warn("no block need to get")
+		log.Warn(err.Error(), "processID", ps.processID)
 		return nil
 	}
-	go ps.GetBlockDatas(pe, changePBHashsToHashs(db.Blocks))
-	return err
-}
-
-func (ps *PeerSync) GetBlocks(pe *peers.Peer, blocks []*hash.Hash) {
-	if pe == nil {
-		return
+	if len(db.Blocks) <= 0 {
+		log.Warn("no block need to get", "processID", ps.processID)
+		return nil
 	}
-	// Ignore if we are shutting down.
-	if atomic.LoadInt32(&ps.shutdown) != 0 {
-		return
+	if ps.IsInterrupt() {
+		return nil
 	}
-	if len(blocks) == 1 {
-		ps.GetBlockDatas(pe, blocks)
-		return
-	}
-	ps.msgChan <- &GetBlocksMsg{pe: pe, blocks: blocks}
+	return ps.processGetBlockDatas(pe, changePBHashsToHashs(db.Blocks))
 }
 
 func (s *Sync) GetDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {

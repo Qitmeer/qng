@@ -146,10 +146,6 @@ func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterVMService(vmService *vm.Service) error {
-	return qm.Services().RegisterService(vmService)
-}
-
 func (qm *QitmeerFull) RegisterQitSubnet() error {
 	if !qm.node.Config.Qit ||
 		params.ActiveNetParams.Net == protocol.MainNet {
@@ -262,7 +258,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	// init address api
 	qm.addressApi = address.NewAddressApi(cfg, node.Params, qm.GetBlockChain())
 
-	if err := qm.RegisterVMService(node.consensus.VMService().(*vm.Service)); err != nil {
+	if err := qm.Services().RegisterService(node.consensus.VMService().(*vm.Service)); err != nil {
 		return nil, err
 	}
 	vms := qm.GetVMService()
@@ -273,8 +269,10 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		return nil, err
 	}
 
-	if err := qm.RegisterQitSubnet(); err != nil {
-		return nil, err
+	if qm.node.consensus.QitService() != nil {
+		if err := qm.Services().RegisterService(qm.node.consensus.QitService()); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := qm.RegisterRpcService(); err != nil {
