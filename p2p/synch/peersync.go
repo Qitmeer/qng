@@ -457,7 +457,6 @@ func (ps *PeerSync) IntellectSyncBlocks(refresh bool, pe *peers.Peer) *ProcessRe
 		log.Trace(fmt.Sprintf("IntellectSyncBlocks do ps.syncDAGBlocks, peer=%v ", pe.GetID()), "processID", ps.processID)
 		return ps.processSyncDAGBlocks(pe)
 	}
-	return nil
 }
 
 func (ps *PeerSync) updateSyncPeer(force bool) {
