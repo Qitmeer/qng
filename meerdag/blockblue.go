@@ -62,7 +62,7 @@ func (bd *MeerDAG) GetBlueInfo(ib IBlock) *BlueInfo {
 
 func (bd *MeerDAG) getBlueInfo(ib IBlock) *BlueInfo {
 	if ib == nil {
-		return NewBlueInfo(0, 0, 0, 0)
+		return nil
 	}
 	if ib.GetID() == 0 {
 		return NewBlueInfo(0, 0, 0, int64(ib.GetHeight()))
