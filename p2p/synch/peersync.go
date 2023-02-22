@@ -264,7 +264,9 @@ func (ps *PeerSync) Chain() *blockchain.BlockChain {
 func (ps *PeerSync) startSync() {
 	ps.processLock.Lock()
 	defer ps.processLock.Unlock()
-
+	if ps.IsInterrupt() {
+		return
+	}
 	// Return now if we're already syncing.
 	if ps.HasSyncPeer() {
 		return
@@ -278,6 +280,7 @@ func (ps *PeerSync) startSync() {
 	// Start syncing from the best peer if one was selected.
 	if bestPeer != nil {
 		ps.processID++
+		ps.wg.Add(1)
 		gs := bestPeer.GraphState()
 		log.Info("Syncing graph state", "cur", best.GraphState.String(), "target", gs.String(), "peer", bestPeer.GetID().String(), "processID", ps.processID)
 		// When the current height is less than a known checkpoint we
@@ -341,6 +344,7 @@ func (ps *PeerSync) startSync() {
 				}
 			}
 		}
+		ps.wg.Done()
 	} else {
 		log.Trace("You're already up to date, no synchronization is required.")
 	}
