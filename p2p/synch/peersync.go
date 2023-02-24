@@ -302,6 +302,15 @@ func (ps *PeerSync) startSync() {
 		// downloads when in regression test mode.
 		ps.SetSyncPeer(bestPeer)
 		ps.dagSync.SetGraphState(gs)
+
+	cleanup:
+		for {
+			select {
+			case <-ps.interrupt:
+			default:
+				break cleanup
+			}
+		}
 		ps.interrupt = make(chan struct{})
 		startTime := time.Now()
 		ps.lastSync = startTime
@@ -473,7 +482,9 @@ func (ps *PeerSync) updateSyncPeer(force bool) {
 	ps.processWorkNum++
 	log.Debug("Updating sync peer", "force", force)
 	if force {
-		ps.interrupt <- struct{}{}
+		go func() {
+			ps.interrupt <- struct{}{}
+		}()
 	}
 	ps.startSync()
 	ps.processWorkNum--
