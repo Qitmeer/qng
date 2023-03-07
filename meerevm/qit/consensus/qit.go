@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qng/meerevm/bridge"
 	"io"
 	"math/big"
 	"math/rand"
@@ -167,6 +168,8 @@ type Qit struct {
 
 	// The fields below are for testing only
 	fakeDiff bool // Skip difficulty verifications
+
+	GenesisContractsClient bridge.GenesisContract
 }
 
 // New creates a Qit proof-of-authority consensus engine with the initial
