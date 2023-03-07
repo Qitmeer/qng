@@ -12,7 +12,7 @@ type Checkpoint struct {
 	StartBlock   *big.Int       `json:"start_block"`
 	EndBlock     *big.Int       `json:"end_block"`
 	RootHash     common.Hash    `json:"root_hash"`
-	ChildChainID string         `json:"Child_chain_id"`
+	ChildChainID string         `json:"child_chain_id"`
 	Timestamp    uint64         `json:"timestamp"`
 }
 
