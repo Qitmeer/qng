@@ -37,7 +37,7 @@ type Config struct {
 	TrackHeapLimit     int      `long:"trackheaplimit" description:"track heap when limit in gigabytes (default:7G)"`
 	DebugLevel         string   `short:"d" long:"debuglevel" description:"Logging level {trace, debug, info, warn, error, critical} "`
 	DebugPrintOrigins  bool     `long:"printorigin" description:"Print log debug location (file:line) "`
-	HotWallet          bool     `long:"hotwallet" description:"Enable Wallet"`
+
 	// MemPool Config
 	NoRelayPriority  bool    `long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
 	FreeTxRelayLimit float64 `long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`

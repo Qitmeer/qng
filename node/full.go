@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerevm/evm"
 	"github.com/Qitmeer/qng/meerevm/qit"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
@@ -19,7 +20,6 @@ import (
 	"github.com/Qitmeer/qng/services/acct"
 	"github.com/Qitmeer/qng/services/address"
 	"github.com/Qitmeer/qng/services/common"
-	"github.com/Qitmeer/qng/services/hotwallet"
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/services/miner"
 	"github.com/Qitmeer/qng/services/mining"
@@ -27,6 +27,7 @@ import (
 	"github.com/Qitmeer/qng/services/tx"
 	"github.com/Qitmeer/qng/vm"
 	"github.com/Qitmeer/qng/vm/consensus"
+	"github.com/ethereum/go-ethereum/node"
 	"reflect"
 )
 
@@ -136,9 +137,9 @@ func (qm *QitmeerFull) RegisterNotifyMgr() error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
+func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config, conf node.Config) error {
 	// account manager
-	acctmgr, err := acct.New(qm.GetBlockChain(), cfg)
+	acctmgr, err := acct.New(qm.GetBlockChain(), cfg, conf)
 	if err != nil {
 		return err
 	}
@@ -265,8 +266,11 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	vms := qm.GetVMService()
 	vms.SetTxPool(txManager.MemPool())
 	vms.SetNotify(qm.nfManager)
-
-	if err := qm.RegisterAccountService(cfg); err != nil {
+	cvm, err := vms.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil, err
+	}
+	if err := qm.RegisterAccountService(cfg, cvm.(*evm.VM).GetConfig().Node); err != nil {
 		return nil, err
 	}
 
@@ -287,30 +291,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		qm.nfManager.(*notifymgr.NotifyMgr).RpcServer = qm.GetRpcServer()
 		qm.GetMiner().RpcSer = qm.GetRpcServer()
 	}
-	if err := qm.RegisterWalletService(); err != nil {
-		return nil, err
-	}
 	qm.Services().LowestPriority(qm.GetTxManager())
 	qm.Services().LowestPriority(qm.GetPeerServer())
 	return &qm, nil
-}
-
-func (qm *QitmeerFull) RegisterWalletService() error {
-	walletServer, err := hotwallet.New(qm.node.Config, qm.GetBlockChain())
-	if err != nil {
-		return err
-	}
-	qm.Services().RegisterService(walletServer)
-
-	// Gather all the possible APIs to surface
-	apis := qm.APIs()
-
-	// Generate the whitelist based on the allowed modules
-	retApis := []api.API{}
-	// Register all the APIs exposed by the services
-	for _, api := range apis {
-		retApis = append(retApis, api)
-	}
-	qm.GetVMService().RegisterAPIs(retApis)
-	return nil
 }

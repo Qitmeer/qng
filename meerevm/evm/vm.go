@@ -44,6 +44,10 @@ func (vm *VM) GetID() string {
 	return MeerEVMID
 }
 
+func (vm *VM) GetConfig() *eth.Config {
+	return vm.chain.Config()
+}
+
 func (vm *VM) Initialize(ctx consensus.Context) error {
 	log.Info("System info", "ETH VM Version", meer.Version, "Go version", runtime.Version())
 	log.Debug(fmt.Sprintf("Initialize:%s", ctx.GetConfig().DataDir))

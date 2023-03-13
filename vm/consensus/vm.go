@@ -4,7 +4,9 @@
 
 package consensus
 
-import "github.com/Qitmeer/qng/rpc/api"
+import (
+	"github.com/Qitmeer/qng/rpc/api"
+)
 
 type VM interface {
 	GetID() string
