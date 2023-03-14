@@ -83,7 +83,7 @@ func (b *MeerChain) DisconnectBlock(block qconsensus.Block) (uint64, error) {
 		DeleteBlockNumber(b.chain.Ether().ChainDb(), mbh)
 	}()
 
-	if *bn > curBlock.NumberU64() {
+	if *bn > curBlock.Number.Uint64() {
 		return *bn, nil
 	}
 	parentNumber := *bn - 1
@@ -97,14 +97,14 @@ func (b *MeerChain) DisconnectBlock(block qconsensus.Block) (uint64, error) {
 		log.Error("Can't find current block")
 		return *bn, nil
 	}
-	log.Debug(fmt.Sprintf("Reorganize:%s(%d) => %s(%d)", curBlock.Hash().String(), curBlock.NumberU64(), newParent.Hash().String(), newParent.NumberU64()))
+	log.Debug(fmt.Sprintf("Reorganize:%s(%d) => %s(%d)", curBlock.Hash().String(), curBlock.Number.Uint64(), newParent.Hash().String(), newParent.Number.Uint64()))
 	return *bn, nil
 }
 
 func (b *MeerChain) buildBlock(qtxs []model.Tx, timestamp int64) (*types.Block, types.Receipts, *state.StateDB, error) {
 	config := b.chain.Config().Eth.Genesis.Config
 	engine := b.chain.Ether().Engine()
-	parent := b.chain.Ether().BlockChain().CurrentBlock()
+	parent := types.NewBlockWithHeader(b.chain.Ether().BlockChain().CurrentBlock())
 
 	uncles := []*types.Header{}
 
@@ -125,7 +125,7 @@ func (b *MeerChain) buildBlock(qtxs []model.Tx, timestamp int64) (*types.Block, 
 		return nil, nil, nil, err
 	}
 
-	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts)
+	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts,nil)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -231,7 +231,7 @@ func (b *MeerChain) fillBlock(qtxs []model.Tx, header *types.Header, statedb *st
 
 func (b *MeerChain) addTx(tx *types.Transaction, header *types.Header, statedb *state.StateDB, txs *[]*types.Transaction, receipts *[]*types.Receipt, gasPool *core.GasPool) error {
 	config := b.chain.Config().Eth.Genesis.Config
-	statedb.Prepare(tx.Hash(), len(*txs))
+	statedb.SetTxContext(tx.Hash(), len(*txs))
 
 	bc := b.chain.Ether().BlockChain()
 	snap := statedb.Snapshot()
@@ -266,7 +266,7 @@ func (b *MeerChain) RegisterAPIs(apis []api.API) {
 }
 
 func (b *MeerChain) Start() {
-	b.meerpool.Start(b.chain.Config().Eth.Miner.Etherbase)
+	b.meerpool.Start()
 }
 
 func (b *MeerChain) Stop() {
@@ -324,7 +324,7 @@ func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB
 	if cfg.Genesis.Config.IsLondon(header.Number) {
 		header.BaseFee = misc.CalcBaseFee(cfg.Genesis.Config, parent.Header())
 		if !cfg.Genesis.Config.IsLondon(parent.Number()) {
-			parentGasLimit := parent.GasLimit() * params.ElasticityMultiplier
+			parentGasLimit := parent.GasLimit() * cfg.Genesis.Config.ElasticityMultiplier()
 			header.GasLimit = core.CalcGasLimit(parentGasLimit, parentGasLimit)
 		}
 	}

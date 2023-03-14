@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -71,6 +70,7 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 		gasUsed     = uint64(0)
 		receipts    = make(types.Receipts, 0)
 		txIndex     = 0
+		signer      = types.MakeSigner(chainConfig, new(big.Int).SetUint64(0))
 	)
 
 	gaspool.AddGas(genesis.GasLimit)
@@ -79,7 +79,7 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 		Transfer:    core.Transfer,
 		Coinbase:    genesis.Coinbase,
 		BlockNumber: new(big.Int).SetUint64(0),
-		Time:        new(big.Int).SetUint64(genesis.Timestamp),
+		Time:        genesis.Timestamp,
 		Difficulty:  genesis.Difficulty,
 		GasLimit:    genesis.GasLimit,
 		GetHash:     getHash,
@@ -100,12 +100,12 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 		Debug:  false,
 	}
 	for i, tx := range txs {
-		msg, err := AsMessage(tx, genesis.BaseFee)
+		msg, err := core.TransactionToMessage(tx.Transaction, signer, genesis.BaseFee)
 		if err != nil {
-			log.Error(fmt.Sprintf("rejected tx index:%d hash:%s error:%s", i, tx.Hash(), err))
+			log.Warn("rejected tx", "index", i, "hash", tx.Hash(), "error", err)
 			return nil, err
 		}
-		statedb.Prepare(tx.Hash(), txIndex)
+		statedb.SetTxContext(tx.Hash(), txIndex)
 		txContext := core.NewEVMTxContext(msg)
 		snapshot := statedb.Snapshot()
 		evm := vm.NewEVM(vmContext, txContext, statedb, chainConfig, vmConfig)
@@ -114,7 +114,7 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 		msgResult, err := core.ApplyMessage(evm, msg, gaspool)
 		if err != nil {
 			statedb.RevertToSnapshot(snapshot)
-			log.Error(fmt.Sprintf("rejected tx index:%d hash:%s from:%s error:%s", i, tx.Hash(), msg.From(), err))
+			log.Error(fmt.Sprintf("rejected tx index:%d hash:%s from:%s error:%s", i, tx.Hash(), msg.From, err))
 			return nil, err
 		}
 		includedTxs = append(includedTxs, tx.Transaction)
@@ -142,12 +142,12 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 			receipt.GasUsed = msgResult.UsedGas
 
 			// If the transaction created a contract, store the creation address in the receipt.
-			if msg.To() == nil {
+			if msg.To == nil {
 				receipt.ContractAddress = crypto.CreateAddress(evm.TxContext.Origin, tx.Nonce())
 			}
 
 			// Set the receipt logs and create the bloom filter.
-			receipt.Logs = statedb.GetLogs(tx.Hash(), blockHash)
+			receipt.Logs = statedb.GetLogs(tx.Hash(),vmContext.BlockNumber.Uint64(), blockHash)
 			receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 			// These three are non-consensus fields:
 			//receipt.BlockHash
@@ -168,19 +168,6 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 	collector := make(Alloc)
 	statedb.DumpToCollector(collector, nil)
 	return collector, nil
-}
-
-func AsMessage(tx *GenTransaction, baseFee *big.Int) (types.Message, error) {
-	gasPrice := new(big.Int).Set(tx.GasPrice())
-	gasFeeCap := new(big.Int).Set(tx.GasFeeCap())
-	gasTipCap := new(big.Int).Set(tx.GasTipCap())
-	// If baseFee provided, set gasPrice to effectiveGasPrice.
-	if baseFee != nil {
-		gasPrice = math.BigMin(gasPrice.Add(gasTipCap, baseFee), gasFeeCap)
-	}
-	msg := types.NewMessage(tx.From, tx.To(), tx.Nonce(), tx.Value(), tx.Gas(),
-		gasPrice, gasFeeCap, gasTipCap, tx.Data(), tx.AccessList(), false)
-	return msg, nil
 }
 
 func MakePreState(db ethdb.Database, accounts core.GenesisAlloc) *state.StateDB {
