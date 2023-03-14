@@ -271,7 +271,7 @@ func (vm *VM) validateTx(tx *types.Transaction, checkState bool) error {
 			return core.ErrInsufficientFunds
 		}
 	}
-	intrGas, err := core.IntrinsicGas(tx.Data(), tx.AccessList(), tx.To() == nil, true, true,false)
+	intrGas, err := core.IntrinsicGas(tx.Data(), tx.AccessList(), tx.To() == nil, true, true, false)
 	if err != nil {
 		return err
 	}

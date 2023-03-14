@@ -125,7 +125,7 @@ func (b *MeerChain) buildBlock(qtxs []model.Tx, timestamp int64) (*types.Block, 
 		return nil, nil, nil, err
 	}
 
-	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts,nil)
+	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts, nil)
 	if err != nil {
 		return nil, nil, nil, err
 	}

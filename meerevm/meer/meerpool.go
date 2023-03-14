@@ -431,7 +431,7 @@ func (m *MeerPool) updateTemplate(timestamp int64) {
 func (m *MeerPool) commit(update bool, start time.Time) error {
 	receipts := qcommon.CopyReceipts(m.current.receipts)
 	s := m.current.state.Copy()
-	block, err := m.engine.FinalizeAndAssemble(m.chain, m.current.header, s, m.current.txs, []*types.Header{}, receipts,nil)
+	block, err := m.engine.FinalizeAndAssemble(m.chain, m.current.header, s, m.current.txs, []*types.Header{}, receipts, nil)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -478,7 +478,7 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 	return cost.Int64(), nil
 }
 
-func (m *MeerPool) GetTxs() ([]*qtypes.Transaction,[]*hash.Hash, error) {
+func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, []*hash.Hash, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -486,7 +486,7 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction,[]*hash.Hash, error) {
 	defer m.snapshotMu.Unlock()
 
 	result := []*qtypes.Transaction{}
-	mtxhs :=[]*hash.Hash{}
+	mtxhs := []*hash.Hash{}
 
 	if m.snapshotBlock != nil && len(m.snapshotBlock.Transactions()) > 0 {
 		for _, tx := range m.snapshotBlock.Transactions() {
@@ -504,11 +504,11 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction,[]*hash.Hash, error) {
 			}
 
 			result = append(result, mtx)
-			mtxhs=append(mtxhs,qcommon.FromEVMHash(tx.Hash()))
+			mtxhs = append(mtxhs, qcommon.FromEVMHash(tx.Hash()))
 		}
 	}
 
-	return result,mtxhs, nil
+	return result, mtxhs, nil
 }
 
 func (m *MeerPool) GetSize() int64 {
@@ -666,7 +666,7 @@ func (m *MeerPool) GetSealingBlockSync(parent common.Hash, timestamp uint64, coi
 }
 
 func (m *MeerPool) BuildPayload(args *miner.BuildPayloadArgs) (*miner.Payload, error) {
-	return nil,nil
+	return nil, nil
 }
 
 func (m *MeerPool) ResetTemplate() error {

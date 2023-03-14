@@ -374,7 +374,7 @@ func dbDumpTrie(ctx *cli.Context) error {
 	if ctx.NArg() < 3 {
 		return fmt.Errorf("required arguments: %v", ctx.Command.ArgsUsage)
 	}
-	stack, _ := makeConfigNode(ctx,config.Cfg)
+	stack, _ := makeConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	db := utils.MakeChainDatabase(ctx, stack, true)

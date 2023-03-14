@@ -181,7 +181,7 @@ func (me *MeerEngine) Finalize(chain consensus.ChainHeaderReader, header *types.
 
 func (me *MeerEngine) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, withdrawals []*types.Withdrawal) (*types.Block, error) {
 	// Finalize block
-	me.Finalize(chain, header, state, txs, uncles,nil)
+	me.Finalize(chain, header, state, txs, uncles, nil)
 
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, uncles, receipts, trie.NewStackTrie(nil)), nil
