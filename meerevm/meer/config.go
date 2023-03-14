@@ -88,7 +88,6 @@ var (
 		utils.ListenPortFlag,
 		utils.MaxPeersFlag,
 		utils.MaxPendingPeersFlag,
-		utils.LegacyMinerGasTargetFlag,
 		utils.MinerGasLimitFlag,
 		utils.MinerGasPriceFlag,
 		utils.MinerExtraDataFlag,
@@ -97,7 +96,6 @@ var (
 		utils.NodeKeyFileFlag,
 		utils.NodeKeyHexFlag,
 		utils.MainnetFlag,
-		utils.RopstenFlag,
 		utils.RinkebyFlag,
 		utils.GoerliFlag,
 		utils.VMEnableDebugFlag,
@@ -262,17 +260,17 @@ func getDefaultRPCPort() (int, int, int) {
 	}
 }
 
-func createConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
+func createConsensusEngine(stack *node.Node, ethashConfig *ethash.Config, cliqueConfig *params.CliqueConfig, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
 	engine := mconsensus.New(mconsensus.Config{
-		CacheDir:         stack.ResolvePath(config.CacheDir),
-		CachesInMem:      config.CachesInMem,
-		CachesOnDisk:     config.CachesOnDisk,
-		CachesLockMmap:   config.CachesLockMmap,
-		DatasetDir:       stack.ResolvePath(config.DatasetDir),
-		DatasetsInMem:    config.DatasetsInMem,
-		DatasetsOnDisk:   config.DatasetsOnDisk,
-		DatasetsLockMmap: config.DatasetsLockMmap,
-		NotifyFull:       config.NotifyFull,
+		CacheDir:         stack.ResolvePath(ethashConfig.CacheDir),
+		CachesInMem:      ethashConfig.CachesInMem,
+		CachesOnDisk:     ethashConfig.CachesOnDisk,
+		CachesLockMmap:   ethashConfig.CachesLockMmap,
+		DatasetDir:       stack.ResolvePath(ethashConfig.DatasetDir),
+		DatasetsInMem:    ethashConfig.DatasetsInMem,
+		DatasetsOnDisk:   ethashConfig.DatasetsOnDisk,
+		DatasetsLockMmap: ethashConfig.DatasetsLockMmap,
+		NotifyFull:       ethashConfig.NotifyFull,
 	}, notify, noverify)
 	engine.SetThreads(-1) // Disable CPU mining
 	return engine

@@ -19,6 +19,7 @@ import (
 	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -76,7 +77,7 @@ func (vm *VM) Bootstrapping() error {
 		log.Debug(fmt.Sprintf("MeerETH block chain current block number:%d", blockNum))
 	}
 
-	cbh := vm.chain.Ether().BlockChain().CurrentBlock().Header()
+	cbh := vm.chain.Ether().BlockChain().CurrentBlock()
 	if cbh != nil {
 		log.Debug(fmt.Sprintf("MeerETH block chain current block:number=%d hash=%s", cbh.Number.Uint64(), cbh.Hash().String()))
 	}
@@ -140,7 +141,8 @@ func (vm *VM) Version() string {
 }
 
 func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
-	block := vm.chain.Ether().BlockChain().CurrentBlock()
+	blockh := vm.chain.Ether().BlockChain().CurrentBlock()
+	block := vm.chain.Ether().BlockChain().GetBlockByHash(blockh.Hash())
 	h := hash.MustBytesToHash(block.Hash().Bytes())
 	return &Block{id: &h, ethBlock: block, vm: vm, status: consensus.Accepted}, nil
 }
@@ -237,11 +239,12 @@ func (vm *VM) VerifyTxSanity(tx model.Tx) error {
 }
 
 func (vm *VM) validateTx(tx *types.Transaction, checkState bool) error {
-	if uint64(tx.Size()) > txMaxSize {
-		return core.ErrOversizedData
+	// Reject transactions over defined size to prevent DOS attacks
+	if tx.Size() > txMaxSize {
+		return txpool.ErrOversizedData
 	}
 	if tx.Value().Sign() < 0 {
-		return core.ErrNegativeValue
+		return txpool.ErrNegativeValue
 	}
 	if tx.GasFeeCap().BitLen() > 256 {
 		return core.ErrFeeCapVeryHigh
@@ -254,7 +257,7 @@ func (vm *VM) validateTx(tx *types.Transaction, checkState bool) error {
 	}
 	from, err := types.Sender(types.LatestSigner(vm.chain.Ether().BlockChain().Config()), tx)
 	if err != nil {
-		return core.ErrInvalidSender
+		return txpool.ErrInvalidSender
 	}
 	if checkState {
 		currentState, err := vm.chain.Ether().BlockChain().State()
@@ -268,7 +271,7 @@ func (vm *VM) validateTx(tx *types.Transaction, checkState bool) error {
 			return core.ErrInsufficientFunds
 		}
 	}
-	intrGas, err := core.IntrinsicGas(tx.Data(), tx.AccessList(), tx.To() == nil, true, true)
+	intrGas, err := core.IntrinsicGas(tx.Data(), tx.AccessList(), tx.To() == nil, true, true, false)
 	if err != nil {
 		return err
 	}

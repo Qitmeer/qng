@@ -72,7 +72,7 @@ func (q *QitService) Start() error {
 		log.Debug(fmt.Sprintf("QitSubnet block chain current block number:%d", blockNum))
 	}
 
-	cbh := q.chain.Ether().BlockChain().CurrentBlock().Header()
+	cbh := q.chain.Ether().BlockChain().CurrentBlock()
 	if cbh != nil {
 		log.Debug(fmt.Sprintf("QitSubnet block chain current block:number=%d hash=%s", cbh.Number.Uint64(), cbh.Hash().String()))
 	}

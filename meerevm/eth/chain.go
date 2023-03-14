@@ -5,7 +5,6 @@
 package eth
 
 import (
-	"bytes"
 	"fmt"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum"
@@ -16,11 +15,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/usbwallet"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
@@ -146,12 +143,9 @@ func prepare(ctx *cli.Context, cfg *Config) {
 
 func makeFullNode(ctx *cli.Context, cfg *Config) (*node.Node, *eth.EthAPIBackend, *eth.Ethereum) {
 	stack := makeConfigNode(ctx, cfg)
-	if ctx.IsSet(utils.OverrideTerminalTotalDifficulty.Name) {
-		cfg.Eth.OverrideTerminalTotalDifficulty = ethereum.GlobalBig(ctx, utils.OverrideTerminalTotalDifficulty.Name)
-	}
-	if ctx.IsSet(utils.OverrideTerminalTotalDifficultyPassed.Name) {
-		override := ctx.Bool(utils.OverrideTerminalTotalDifficultyPassed.Name)
-		cfg.Eth.OverrideTerminalTotalDifficultyPassed = &override
+	if ctx.IsSet(utils.OverrideShanghai.Name) {
+		v := ctx.Uint64(utils.OverrideShanghai.Name)
+		cfg.Eth.OverrideShanghai = &v
 	}
 	backend, ethe := utils.RegisterEthService(stack, &cfg.Eth)
 	// Configure log filter RPC API.
@@ -490,49 +484,6 @@ func filterConfig(ctx *cli.Context, cfg *Config) {
 		}
 		ctx.Set(utils.WSApiFlag.Name, nmodules)
 	}
-}
-
-func DBHasLegacyReceipts(db ethdb.Database, firstIdx uint64) (bool, uint64, error) {
-	// Check first block for legacy receipt format
-	numAncients, err := db.Ancients()
-	if err != nil {
-		return false, 0, err
-	}
-	if numAncients < 1 {
-		return false, 0, nil
-	}
-	if firstIdx >= numAncients {
-		return false, firstIdx, nil
-	}
-	var (
-		legacy       bool
-		blob         []byte
-		emptyRLPList = []byte{192}
-	)
-	// Find first block with non-empty receipt, only if
-	// the index is not already provided.
-	if firstIdx == 0 {
-		for i := uint64(0); i < numAncients; i++ {
-			blob, err = db.Ancient("receipts", i)
-			if err != nil {
-				return false, 0, err
-			}
-			if len(blob) == 0 {
-				continue
-			}
-			if !bytes.Equal(blob, emptyRLPList) {
-				firstIdx = i
-				break
-			}
-		}
-	}
-	// Is first non-empty receipt legacy?
-	first, err := db.Ancient("receipts", firstIdx)
-	if err != nil {
-		return false, 0, err
-	}
-	legacy, err = types.IsLegacyStoredReceipts(first)
-	return legacy, firstIdx, err
 }
 
 func MakeNakedNode(config *Config, args []string, flags []cli.Flag) (*node.Node, error) {
