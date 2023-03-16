@@ -654,6 +654,19 @@ function dag_info(){
   get_result "$data"
 }
 
+function get_stateroot(){
+  local order=$1
+  local verbose=$2
+    if [ "$order" == "" ]; then
+      order=-1
+    fi
+  if [ "$verbose" == "" ]; then
+    verbose="true"
+  fi
+  local data='{"jsonrpc":"2.0","method":"getStateRoot","params":['$order','$verbose'],"id":1}'
+  get_result "$data"
+}
+
 function get_result(){
   local proto="https"
   if [ $notls -eq 1 ]; then
@@ -760,6 +773,7 @@ function usage(){
   echo "  fees <hash>"
   echo "  estimatefee <numblocks>"
   echo "  tokeninfo"
+  echo "  stateroot"
   echo "tx     :"
   echo "  tx <id>"
   echo "  evmtxhash <id>"
@@ -1417,6 +1431,10 @@ elif [ "$1" == "remotegbt" ]; then
 elif [ "$1" == "daginfo" ]; then
   shift
   dag_info $@
+
+elif [ "$1" == "stateroot" ]; then
+  shift
+  get_stateroot $@
 
 elif [ "$1" == "list_command" ]; then
   usage
