@@ -191,3 +191,26 @@ func (b *BlockChain) GetMiningTips(expectPriority int) []*hash.Hash {
 func (b *BlockChain) HasTx(txid *hash.Hash) bool {
 	return b.indexManager.HasTx(txid)
 }
+
+func (b *BlockChain) GetMeerBlock(order uint) (interface{}, error) {
+	if b.VMService() == nil {
+		return nil, nil
+	}
+	number := uint64(0)
+	for i := uint(order); i > 0; i-- {
+		bh := b.bd.GetBlockHashByOrder(i)
+		if bh == nil {
+			return nil, fmt.Errorf("No meer block number:%d", i)
+		}
+		num := b.VMService().GetBlockID(bh)
+		if num != 0 {
+			number = num
+			break
+		}
+	}
+	eb, err := b.VMService().GetBlockByNumber(number)
+	if err != nil {
+		return nil, err
+	}
+	return eb, nil
+}

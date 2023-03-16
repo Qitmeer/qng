@@ -388,6 +388,14 @@ func (s *Service) GetBalance(addr string) (int64, error) {
 	return vm.GetBalance(addr)
 }
 
+func (s *Service) GetBlockByNumber(num uint64) (interface{}, error) {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil, err
+	}
+	return vm.GetBlockByNumber(num)
+}
+
 func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
 	ser := Service{
 		events: events,

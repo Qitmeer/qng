@@ -147,6 +147,15 @@ func (vm *VM) GetBlock(bh *hash.Hash) (consensus.Block, error) {
 	return &Block{id: &h, ethBlock: block, vm: vm, status: consensus.Accepted}, nil
 }
 
+func (vm *VM) GetBlockByNumber(num uint64) (consensus.Block, error) {
+	block := vm.chain.Ether().BlockChain().GetBlockByNumber(num)
+	if block == nil {
+		return nil, fmt.Errorf("No block number:%d", num)
+	}
+	h := hash.MustBytesToHash(block.Hash().Bytes())
+	return &Block{id: &h, ethBlock: block, vm: vm, status: consensus.Accepted}, nil
+}
+
 func (vm *VM) BuildBlock(txs []model.Tx) (consensus.Block, error) {
 	return nil, nil
 }

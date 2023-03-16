@@ -21,4 +21,5 @@ type VMI interface {
 	GetBlockIDByTxHash(txhash *hash.Hash) uint64
 	GetBalance(addr string) (int64, error)
 	SetLogLevel(level string)
+	GetBlockByNumber(num uint64) (interface{}, error)
 }

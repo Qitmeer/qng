@@ -9,6 +9,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/vm/consensus"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"time"
@@ -74,4 +75,16 @@ func (b *Block) String() string { return fmt.Sprintf("EVM block, ID = %s", b.ID(
 
 func (b *Block) Transactions() []model.Tx {
 	return nil
+}
+
+func (b *Block) Hash() common.Hash {
+	return b.ethBlock.Hash()
+}
+
+func (b *Block) StateRoot() common.Hash {
+	return b.ethBlock.Header().Root
+}
+
+func (b *Block) Number() uint64 {
+	return b.ethBlock.NumberU64()
 }

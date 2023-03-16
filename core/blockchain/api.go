@@ -9,21 +9,19 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/core/json"
+	qjson "github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng/meerevm/evm"
+	rapi "github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"strconv"
 )
 
-const (
-	LatestBlockOrder = int64(-1)
-)
-
-func (b *BlockChain) APIs() []api.API {
-	return []api.API{
-		api.API{
+func (b *BlockChain) APIs() []rapi.API {
+	return []rapi.API{
+		rapi.API{
 			NameSpace: cmds.DefaultServiceNameSpace,
 			Service:   NewPublicBlockAPI(b),
 			Public:    true,
@@ -40,7 +38,7 @@ func NewPublicBlockAPI(bc *BlockChain) *PublicBlockAPI {
 }
 
 func (api *PublicBlockAPI) GetBlockhash(order int64) (string, error) {
-	if order == LatestBlockOrder {
+	if order == rapi.LatestBlockOrder.Int64() {
 		order = int64(api.chain.BestSnapshot().GraphState.GetMainOrder())
 	}
 	blockHash, err := api.chain.BlockHashByOrder(uint64(order))
@@ -59,7 +57,7 @@ func (api *PublicBlockAPI) GetBlockhashByRange(start int64, end int64) ([]string
 		return nil, fmt.Errorf("startOrder(%d) is greater than or equal to the totalOrder(%d)", start, totalOrder)
 	}
 	result := []string{}
-	if start >= end && end != 0 && end != LatestBlockOrder {
+	if start >= end && end != 0 && end != rapi.LatestBlockOrder.Int64() {
 		block, err := api.chain.BlockByOrder(uint64(start))
 		if err != nil {
 			return nil, err
@@ -78,7 +76,7 @@ func (api *PublicBlockAPI) GetBlockhashByRange(start int64, end int64) ([]string
 		}
 	} else {
 		for i := start; i <= totalOrder; i++ {
-			if i > end && end != LatestBlockOrder {
+			if i > end && end != rapi.LatestBlockOrder.Int64() {
 				break
 			}
 			block, err := api.chain.BlockByOrder(uint64(i))
@@ -93,7 +91,7 @@ func (api *PublicBlockAPI) GetBlockhashByRange(start int64, end int64) ([]string
 
 func (api *PublicBlockAPI) GetBlockByOrder(order int64, verbose *bool, inclTx *bool, fullTx *bool) (interface{}, error) {
 	mainOrder := int64(api.chain.BestSnapshot().GraphState.GetMainOrder())
-	if order == LatestBlockOrder {
+	if order == rapi.LatestBlockOrder.Int64() {
 		order = mainOrder
 	} else {
 		if order > mainOrder {
@@ -470,4 +468,44 @@ func (api *PublicBlockAPI) GetTokenInfo() (interface{}, error) {
 
 func internalError(err, context string) error {
 	return fmt.Errorf("%s : %s", context, err)
+}
+
+func (api *PublicBlockAPI) GetStateRoot(order int64, verbose *bool) (interface{}, error) {
+	mainOrder := int64(api.chain.BestSnapshot().GraphState.GetMainOrder())
+	if rapi.BlockOrder(order) == rapi.LatestBlockOrder {
+		order = mainOrder
+	} else {
+		if order > mainOrder {
+			return nil, fmt.Errorf("Order is too big")
+		}
+	}
+	vb := false
+	if verbose != nil {
+		vb = *verbose
+	}
+	ib := api.chain.BlockDAG().GetBlockByOrder(uint(order))
+	if ib == nil {
+		return nil, internalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %d", order))
+	}
+	eb, err := api.chain.GetMeerBlock(ib.GetOrder())
+	if err != nil {
+		return nil, err
+	}
+	sr := ""
+	num := uint64(0)
+	if eblock, ok := eb.(*evm.Block); ok {
+		sr = eblock.StateRoot().String()
+		num = eblock.Number()
+	}
+	if vb {
+		return qjson.OrderedResult{
+			qjson.KV{Key: "Hash", Val: ib.GetHash().String()},
+			qjson.KV{Key: "Order", Val: order},
+			qjson.KV{Key: "Height", Val: ib.GetHeight()},
+			qjson.KV{Key: "Valid", Val: !ib.GetStatus().KnownInvalid()},
+			qjson.KV{Key: "StateRoot", Val: sr},
+			qjson.KV{Key: "Number", Val: num},
+		}, nil
+	}
+	return sr, nil
 }
