@@ -503,8 +503,8 @@ func (api *PublicBlockAPI) GetStateRoot(order int64, verbose *bool) (interface{}
 			qjson.KV{Key: "Order", Val: order},
 			qjson.KV{Key: "Height", Val: ib.GetHeight()},
 			qjson.KV{Key: "Valid", Val: !ib.GetStatus().KnownInvalid()},
-			qjson.KV{Key: "StateRoot", Val: sr},
-			qjson.KV{Key: "Number", Val: num},
+			qjson.KV{Key: "EVMStateRoot", Val: sr},
+			qjson.KV{Key: "EVMHeight", Val: num},
 		}, nil
 	}
 	return sr, nil
