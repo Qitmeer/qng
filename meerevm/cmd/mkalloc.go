@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/release"
@@ -87,7 +86,7 @@ func main() {
 		panic(fmt.Errorf("Error genesis data config"))
 	}
 	burnList := BuildBurnBalance()
-	fileContent := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go \npackage chain\n\n"
+	fileContent := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go \npackage meer\n\n"
 
 	for _, ngd := range gds {
 		networkTag := ""
@@ -105,8 +104,8 @@ func main() {
 			networkTag = "mainAllocData"
 		}
 
-		eth.ChainConfig.ChainID = big.NewInt(params.ActiveNetParams.MeerEVMCfg.ChainID)
-		genesis := meer.DefaultGenesisBlock(eth.ChainConfig)
+		meer.ChainConfig().ChainID = big.NewInt(params.ActiveNetParams.MeerEVMCfg.ChainID)
+		genesis := meer.DefaultGenesisBlock(meer.ChainConfig())
 		genesis.Alloc = ngd.Data.Genesis.Alloc
 		if _, ok := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]; ok {
 			releaseAccount := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]
