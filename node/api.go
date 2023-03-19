@@ -42,6 +42,11 @@ func (nf *QitmeerFull) apis() []api.API {
 			Service:   NewPrivateLogAPI(nf),
 			Public:    false,
 		},
+		{
+			NameSpace: cmds.WalletNameSpace,
+			Service:   NewPrivateLogAPI(nf),
+			Public:    false,
+		},
 	}
 }
 

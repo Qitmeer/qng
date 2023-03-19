@@ -25,6 +25,7 @@ import (
 	"github.com/Qitmeer/qng/services/mining"
 	"github.com/Qitmeer/qng/services/notifymgr"
 	"github.com/Qitmeer/qng/services/tx"
+	"github.com/Qitmeer/qng/services/wallet"
 	"github.com/Qitmeer/qng/vm"
 	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/node"
@@ -137,14 +138,24 @@ func (qm *QitmeerFull) RegisterNotifyMgr() error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config, conf node.Config) error {
+func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	// account manager
-	acctmgr, err := acct.New(qm.GetBlockChain(), cfg, conf)
+	acctmgr, err := acct.New(qm.GetBlockChain(), cfg)
 	if err != nil {
 		return err
 	}
 	qm.GetBlockChain().Acct = acctmgr
 	qm.Services().RegisterService(acctmgr)
+	return nil
+}
+
+func (qm *QitmeerFull) RegisterWalletService(cfg *config.Config, conf node.Config, _am *acct.AccountManager, _tm *tx.TxManager) error {
+	// account manager
+	walletmgr, err := wallet.New(cfg, conf, _am, _tm)
+	if err != nil {
+		return err
+	}
+	qm.Services().RegisterService(walletmgr)
 	return nil
 }
 
@@ -186,6 +197,15 @@ func (qm *QitmeerFull) GetRpcServer() *rpc.RpcServer {
 
 func (qm *QitmeerFull) GetTxManager() *tx.TxManager {
 	var service *tx.TxManager
+	if err := qm.Services().FetchService(&service); err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return service
+}
+
+func (qm *QitmeerFull) GetAccountManager() *acct.AccountManager {
+	var service *acct.AccountManager
 	if err := qm.Services().FetchService(&service); err != nil {
 		log.Error(err.Error())
 		return nil
@@ -270,7 +290,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := qm.RegisterAccountService(cfg, cvm.(*evm.VM).GetConfig().Node); err != nil {
+	if err := qm.RegisterAccountService(cfg); err != nil {
 		return nil, err
 	}
 
@@ -293,5 +313,9 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	}
 	qm.Services().LowestPriority(qm.GetTxManager())
 	qm.Services().LowestPriority(qm.GetPeerServer())
+
+	if err := qm.RegisterWalletService(cfg, cvm.(*evm.VM).GetConfig().Node, qm.GetAccountManager(), txManager); err != nil {
+		return nil, err
+	}
 	return &qm, nil
 }

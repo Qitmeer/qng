@@ -17,6 +17,7 @@ const (
 	LogNameSpace            = "log"
 	NotifyNameSpace         = ""
 	P2PNameSpace            = "p2p"
+	WalletNameSpace         = "wallet"
 )
 
 type RPCErrorCode int

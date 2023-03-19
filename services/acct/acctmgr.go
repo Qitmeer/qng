@@ -16,46 +16,17 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/node"
-	"strconv"
 )
 
 // account manager communicate with various backends for signing transactions.
 type AccountManager struct {
 	service.Service
-	acc        *accounts.Manager
-	addressMap map[types.Address]accounts.Account
-	qks        *QngKeyStore
-	chain      *blockchain.BlockChain
-	cfg        *config.Config
-	db         database.DB
-	info       *AcctInfo
-	utxoops    []*UTXOOP
-	watchers   map[string]*AcctBalanceWatcher
-}
-
-func (acc *AccountManager) MakeAddress(ks *QngKeyStore, account string) (accounts.Account, error) {
-	index, err := strconv.Atoi(account)
-	if err != nil || index < 0 {
-		return accounts.Account{}, fmt.Errorf("invalid account address or index %q", account)
-	}
-	log.Warn("-------------------------------------------------------------------")
-	log.Warn("Referring to accounts by order in the keystore folder is dangerous!")
-	log.Warn("This functionality is deprecated and will be removed in the future!")
-	log.Warn("Please use explicit addresses! (can search via `geth account list`)")
-	log.Warn("-------------------------------------------------------------------")
-
-	accs := ks.Accounts()
-	if len(accs) <= index {
-		return accounts.Account{}, fmt.Errorf("index %d higher than number of accounts %d", index, len(accs))
-	}
-	return accs[index], nil
-}
-
-func (a *AccountManager) ListAccounts() {
-
+	chain    *blockchain.BlockChain
+	cfg      *config.Config
+	db       database.DB
+	info     *AcctInfo
+	utxoops  []*UTXOOP
+	watchers map[string]*AcctBalanceWatcher
 }
 
 func (a *AccountManager) Start() error {
@@ -646,6 +617,10 @@ func (a *AccountManager) AddAddress(addr string) error {
 	return a.rebuild([]string{addr})
 }
 
+func (a *AccountManager) GetChain() *blockchain.BlockChain {
+	return a.chain
+}
+
 func (a *AccountManager) cleanBalanceDB(dbTx database.Tx, addr string) error {
 	er := DBDelACCTBalance(dbTx, addr)
 	if er != nil {
@@ -675,25 +650,13 @@ func (a *AccountManager) APIs() []api.API {
 	}
 }
 
-func New(chain *blockchain.BlockChain, cfg *config.Config, conf node.Config) (*AccountManager, error) {
-	keydir, err := conf.KeyDirConfig()
-	if err != nil {
-		return nil, err
-	}
-	n, p := keystore.StandardScryptN, keystore.StandardScryptP
-	if conf.UseLightweightKDF {
-		n, p = keystore.LightScryptN, keystore.LightScryptP
-	}
-	ks := keystore.NewKeyStore(keydir, n, p)
+func New(chain *blockchain.BlockChain, cfg *config.Config) (*AccountManager, error) {
 	a := AccountManager{
 		chain:    chain,
 		cfg:      cfg,
 		info:     NewAcctInfo(),
 		utxoops:  []*UTXOOP{},
 		watchers: map[string]*AcctBalanceWatcher{},
-		acc: accounts.NewManager(&accounts.Config{InsecureUnlockAllowed: conf.InsecureUnlockAllowed},
-			ks),
 	}
-	a.qks = NewQngKeyStore(ks)
 	return &a, nil
 }

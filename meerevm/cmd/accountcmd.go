@@ -3,9 +3,14 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/meerevm/eth"
+	"github.com/Qitmeer/qng/params"
 	"io/ioutil"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -288,6 +293,33 @@ func accountImport(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("Could not create the account: %v", err)
 	}
-	fmt.Printf("Address: {%x}\n", acct.Address)
+	fmt.Printf("PKAAddress: {%x}\n", acct.Address)
+	addrs, err := GetQngAddrsFromPrivateKey(hex.EncodeToString(key.D.Bytes()), params.ActiveNetParams.Params)
+	if err != nil {
+		utils.Fatalf("Could not create the account: %v", err)
+	}
+	for _, addr := range addrs {
+		if _, ok := addr.(*address.PubKeyHashAddress); ok {
+			fmt.Printf("PKHAddress: {%s}\n", addr.String())
+		} else {
+			fmt.Printf("PKAddress: {%s}\n", addr.String())
+		}
+	}
 	return nil
+}
+func GetQngAddrsFromPrivateKey(privateKeyStr string, param *params.Params) ([]types.Address, error) {
+	data, err := hex.DecodeString(privateKeyStr)
+	if err != nil {
+		return nil, err
+	}
+	_, pubKey := ecc.Secp256k1.PrivKeyFromBytes(data)
+	addrs := make([]types.Address, 0)
+	//pk addr
+	addr, err := address.NewSecpPubKeyAddress(pubKey.SerializeCompressed(), param)
+	if err != nil {
+		return nil, err
+	}
+	addrs = append(addrs, addr)
+	addrs = append(addrs, addr.PKHAddress())
+	return addrs, nil
 }

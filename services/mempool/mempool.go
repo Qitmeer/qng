@@ -96,6 +96,9 @@ func (mp *TxPool) TxDescs() []*TxDesc {
 
 	return descs
 }
+func (mp *TxPool) Cfg() Config {
+	return mp.cfg
+}
 
 // removeTransaction is the internal function which implements the public
 // RemoveTransaction.  See the comment for RemoveTransaction for more details.
@@ -368,7 +371,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		return nil, nil, fmt.Errorf("serialized transaction is too big for pool - got %d, max %d", serializedSize, mp.cfg.Policy.MaxTxSize)
 	}
 
-	minFee := calcMinRequiredTxRelayFee(serializedSize,
+	minFee := CalcMinRequiredTxRelayFee(serializedSize,
 		mp.cfg.Policy.MinRelayTxFee)
 
 	if types.IsTokenTx(tx.Tx) {
@@ -444,7 +447,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			return nil, nil, txRuleError(message.RejectInsufficientFee, str)
 		}
 		if !allowHighFees {
-			maxFee := calcMinRequiredTxRelayFee(serializedSize*maxRelayFeeMultiplier,
+			maxFee := CalcMinRequiredTxRelayFee(serializedSize*maxRelayFeeMultiplier,
 				mp.cfg.Policy.MinRelayTxFee)
 			if fee > maxFee {
 				err = fmt.Errorf("transaction %v has %v fee which is above the "+
@@ -654,7 +657,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	// sure the current fee is sensible.  If people would like to avoid this
 	// check then they can AllowHighFees = true
 	if !allowHighFees {
-		maxFee := calcMinRequiredTxRelayFee(serializedSize*maxRelayFeeMultiplier,
+		maxFee := CalcMinRequiredTxRelayFee(serializedSize*maxRelayFeeMultiplier,
 			mp.cfg.Policy.MinRelayTxFee)
 
 		mrtf := types.Amount{Id: txFee.Id, Value: mp.cfg.Policy.MinRelayTxFee.Value}

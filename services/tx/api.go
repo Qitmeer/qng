@@ -14,7 +14,6 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/core/message"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
@@ -24,7 +23,6 @@ import (
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
-	"github.com/Qitmeer/qng/services/mempool"
 	"strconv"
 	"strings"
 	"time"
@@ -62,94 +60,7 @@ func (api *PublicTxAPI) CreateRawTransaction(inputs []json.TransactionInput, amo
 			aa[k] = json.Amout{CoinId: uint16(types.MEERA), Amount: int64(v)}
 		}
 	}
-	return api.CreateRawTransactionV2(inputs, aa, lockTime)
-}
-
-func (api *PublicTxAPI) CreateRawTransactionV2(inputs []json.TransactionInput,
-	amounts json.AdreesAmount, lockTime *int64) (interface{}, error) {
-
-	// Validate the locktime, if given.
-	if lockTime != nil &&
-		(*lockTime < 0 || *lockTime > int64(types.MaxTxInSequenceNum)) {
-		return nil, rpc.RpcInvalidError("Locktime out of range")
-	}
-
-	// Add all transaction inputs to a new transaction after performing
-	// some validity checks.
-	mtx := types.NewTransaction()
-	for _, input := range inputs {
-		txHash, err := hash.NewHashFromStr(input.Txid)
-		if err != nil {
-			return nil, rpc.RpcDecodeHexError(input.Txid)
-		}
-		prevOut := types.NewOutPoint(txHash, input.Vout)
-		txIn := types.NewTxInput(prevOut, []byte{})
-		if lockTime != nil && *lockTime != 0 {
-			txIn.Sequence = types.MaxTxInSequenceNum - 1
-		}
-		mtx.AddTxIn(txIn)
-	}
-
-	// Add all transaction outputs to the transaction after performing
-	// some validity checks.
-	for encodedAddr, amount := range amounts {
-		// Ensure amount is in the valid range for monetary amounts.
-		if amount.Amount <= 0 || amount.Amount > types.MaxAmount {
-			return nil, rpc.RpcInvalidError("Invalid amount: 0 >= %v "+
-				"> %v", amount, types.MaxAmount)
-		}
-
-		err := types.CheckCoinID(types.CoinID(amount.CoinId))
-		if err != nil {
-			return nil, rpc.RpcInvalidError(err.Error())
-		}
-		// Decode the provided address.
-		addr, err := address.DecodeAddress(encodedAddr)
-		if err != nil {
-			return nil, rpc.RpcAddressKeyError("Could not decode "+
-				"address: %v", err)
-		}
-
-		// Ensure the address is one of the supported types and that
-		// the network encoded with the address matches the network the
-		// server is currently on.
-		switch addr.(type) {
-		case *address.PubKeyHashAddress:
-		case *address.ScriptHashAddress:
-		case *address.SecpPubKeyAddress:
-		default:
-			return nil, rpc.RpcAddressKeyError("Invalid type: %T", addr)
-		}
-		if !address.IsForNetwork(addr, api.txManager.consensus.Params()) {
-			return nil, rpc.RpcAddressKeyError("Wrong network: %v",
-				addr)
-		}
-
-		// Create a new script which pays to the provided address.
-		pkScript, err := txscript.PayToAddrScript(addr)
-		if err != nil {
-			return nil, rpc.RpcInternalError(err.Error(),
-				"Pay to address script")
-		}
-
-		txOut := types.NewTxOutput(types.Amount{Value: amount.Amount, Id: types.CoinID(amount.CoinId)}, pkScript)
-		mtx.AddTxOut(txOut)
-	}
-
-	// Set the Locktime, if given.
-	if lockTime != nil {
-		mtx.LockTime = uint32(*lockTime)
-	}
-
-	// Return the serialized and hex-encoded transaction.  Note that this
-	// is intentionally not directly returning because the first return
-	// value is a string and it would result in returning an empty string to
-	// the client instead of nothing (nil) in the case of an error.
-	mtxHex, err := marshal.MessageToHex(mtx)
-	if err != nil {
-		return nil, err
-	}
-	return mtxHex, nil
+	return api.txManager.CreateRawTransactionV2(inputs, aa, lockTime)
 }
 
 func (api *PublicTxAPI) DecodeRawTransaction(hexTx string) (interface{}, error) {
@@ -196,50 +107,9 @@ func (api *PublicTxAPI) SendRawTransaction(hexTx string, allowHighFees *bool) (i
 	}
 	serializedTx, err := hex.DecodeString(hexStr)
 	if err != nil {
-		return nil, rpc.RpcDecodeHexError(hexStr)
+		return "", rpc.RpcDecodeHexError(hexStr)
 	}
-	msgtx := types.NewTransaction()
-	err = msgtx.Deserialize(bytes.NewReader(serializedTx))
-	if err != nil {
-		return nil, rpc.RpcDeserializationError("Could not decode Tx: %v",
-			err)
-	}
-
-	tx := types.NewTx(msgtx)
-	acceptedTxs, err := api.txManager.txMemPool.ProcessTransaction(tx, false,
-		false, highFees)
-	if err != nil {
-		// When the error is a rule error, it means the transaction was
-		// simply rejected as opposed to something actually going
-		// wrong, so log it as such.  Otherwise, something really did
-		// go wrong, so log it as an actual error.  In both cases, a
-		// JSON-RPC error is returned to the client with the
-		// deserialization error code (to match bitcoind behavior).
-		if _, ok := err.(mempool.RuleError); ok {
-			err = fmt.Errorf("Rejected transaction %v: %v", tx.Hash(),
-				err)
-			log.Error("Failed to process transaction", "mempool.RuleError", err)
-			txRuleErr, ok := err.(mempool.TxRuleError)
-			if ok {
-				if txRuleErr.RejectCode == message.RejectDuplicate {
-					// return a dublicate tx error
-					return nil, rpc.RpcDuplicateTxError("%v", err)
-				}
-			}
-
-			// return a generic rule error
-			return nil, rpc.RpcRuleError("%v", err)
-		}
-
-		log.Error("Failed to process transaction", "err", err)
-		err = fmt.Errorf("failed to process transaction %v: %v",
-			tx.Hash(), err)
-		return nil, rpc.RpcDeserializationError("rejected: %v", err)
-	}
-	api.txManager.ntmgr.AnnounceNewTransactions(acceptedTxs, nil)
-	api.txManager.ntmgr.AddRebroadcastInventory(acceptedTxs)
-
-	return tx.Hash().String(), nil
+	return api.txManager.ProcessRawTx(serializedTx, highFees)
 }
 
 func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (interface{}, error) {
@@ -1422,7 +1292,7 @@ func (api *PublicTxAPI) CreateExportRawTransaction(txid string, vout uint32, pkA
 	inputs := []json.TransactionInput{
 		json.TransactionInput{Txid: txid, Vout: vout},
 	}
-	return api.CreateRawTransactionV2(inputs, aa, nil)
+	return api.txManager.CreateRawTransactionV2(inputs, aa, nil)
 }
 
 func (api *PublicTxAPI) CreateExportRawTransactionV2(inputs []json.TransactionInput, outputs []json.TransactionOutput, lockTime *int64) (interface{}, error) {
@@ -1455,5 +1325,5 @@ func (api *PublicTxAPI) CreateExportRawTransactionV2(inputs []json.TransactionIn
 			aa[v.Address] = json.Amout{CoinId: uint16(types.MEERA), Amount: v.Amount}
 		}
 	}
-	return api.CreateRawTransactionV2(inputs, aa, lockTime)
+	return api.txManager.CreateRawTransactionV2(inputs, aa, lockTime)
 }
