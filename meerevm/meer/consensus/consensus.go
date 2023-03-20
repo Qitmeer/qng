@@ -174,14 +174,14 @@ func (me *MeerEngine) Prepare(chain consensus.ChainHeaderReader, header *types.H
 	return nil
 }
 
-func (me *MeerEngine) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) {
+func (me *MeerEngine) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, withdrawals []*types.Withdrawal) {
 	me.OnExtraStateChange(chain, header, state)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 }
 
-func (me *MeerEngine) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+func (me *MeerEngine) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, withdrawals []*types.Withdrawal) (*types.Block, error) {
 	// Finalize block
-	me.Finalize(chain, header, state, txs, uncles)
+	me.Finalize(chain, header, state, txs, uncles, nil)
 
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, uncles, receipts, trie.NewStackTrie(nil)), nil

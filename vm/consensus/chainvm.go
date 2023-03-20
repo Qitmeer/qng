@@ -14,6 +14,7 @@ type ChainVM interface {
 	VM
 
 	GetBlock(*hash.Hash) (Block, error)
+	GetBlockByNumber(num uint64) (Block, error)
 
 	BuildBlock([]model.Tx) (Block, error)
 

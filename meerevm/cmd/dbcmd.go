@@ -5,9 +5,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/olekukonko/tablewriter"
 	"os"
 	"path/filepath"
@@ -54,21 +52,15 @@ Remove blockchain and state databases`,
 			dbGetSlotsCmd,
 			dbDumpFreezerIndex,
 			dbMetadataCmd,
-			dbMigrateFreezerCmd,
 		},
 	}
 	dbInspectCmd = &cli.Command{
 		Action:    inspect,
 		Name:      "inspect",
 		ArgsUsage: "<prefix> <start>",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
+		Flags: qcommon.Merge([]cli.Flag{
 			utils.SyncModeFlag,
-			utils.MainnetFlag,
-			utils.RopstenFlag,
-			utils.RinkebyFlag,
-			utils.GoerliFlag,
-		},
+		}, utils.NetworkFlags, utils.DatabasePathFlags),
 		Usage:       "Inspect the storage size for each type of data in the database",
 		Description: `This commands iterates the entire database. If the optional 'prefix' and 'start' arguments are provided, then the iteration is limited to the given subset of data.`,
 	}
@@ -76,29 +68,19 @@ Remove blockchain and state databases`,
 		Action: dbStats,
 		Name:   "stats",
 		Usage:  "Print leveldb statistics",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
+		Flags: qcommon.Merge([]cli.Flag{
 			utils.SyncModeFlag,
-			utils.MainnetFlag,
-			utils.RopstenFlag,
-			utils.RinkebyFlag,
-			utils.GoerliFlag,
-		},
+		}, utils.NetworkFlags, utils.DatabasePathFlags),
 	}
 	dbCompactCmd = &cli.Command{
 		Action: dbCompact,
 		Name:   "compact",
 		Usage:  "Compact leveldb database. WARNING: May take a very long time",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
+		Flags: qcommon.Merge([]cli.Flag{
 			utils.SyncModeFlag,
-			utils.MainnetFlag,
-			utils.RopstenFlag,
-			utils.RinkebyFlag,
-			utils.GoerliFlag,
 			utils.CacheFlag,
 			utils.CacheDatabaseFlag,
-		},
+		}, utils.NetworkFlags, utils.DatabasePathFlags),
 		Description: `This command performs a database compaction. 
 WARNING: This operation may take a very long time to finish, and may cause database
 corruption if it is aborted during execution'!`,
@@ -108,14 +90,9 @@ corruption if it is aborted during execution'!`,
 		Name:      "get",
 		Usage:     "Show the value of a database key",
 		ArgsUsage: "<hex-encoded key>",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
+		Flags: qcommon.Merge([]cli.Flag{
 			utils.SyncModeFlag,
-			utils.MainnetFlag,
-			utils.RopstenFlag,
-			utils.RinkebyFlag,
-			utils.GoerliFlag,
-		},
+		}, utils.NetworkFlags, utils.DatabasePathFlags),
 		Description: "This command looks up the specified database key from the database.",
 	}
 	dbDeleteCmd = &cli.Command{
@@ -123,14 +100,9 @@ corruption if it is aborted during execution'!`,
 		Name:      "delete",
 		Usage:     "Delete a database key (WARNING: may corrupt your database)",
 		ArgsUsage: "<hex-encoded key>",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
+		Flags: qcommon.Merge([]cli.Flag{
 			utils.SyncModeFlag,
-			utils.MainnetFlag,
-			utils.RopstenFlag,
-			utils.RinkebyFlag,
-			utils.GoerliFlag,
-		},
+		}, utils.NetworkFlags, utils.DatabasePathFlags),
 		Description: `This command deletes the specified database key from the database. 
 WARNING: This is a low-level operation which may cause database corruption!`,
 	}
@@ -139,14 +111,9 @@ WARNING: This is a low-level operation which may cause database corruption!`,
 		Name:      "put",
 		Usage:     "Set the value of a database key (WARNING: may corrupt your database)",
 		ArgsUsage: "<hex-encoded key> <hex-encoded value>",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
+		Flags: qcommon.Merge([]cli.Flag{
 			utils.SyncModeFlag,
-			utils.MainnetFlag,
-			utils.RopstenFlag,
-			utils.RinkebyFlag,
-			utils.GoerliFlag,
-		},
+		}, utils.NetworkFlags, utils.DatabasePathFlags),
 		Description: `This command sets a given database key to the given value. 
 WARNING: This is a low-level operation which may cause database corruption!`,
 	}
@@ -155,14 +122,9 @@ WARNING: This is a low-level operation which may cause database corruption!`,
 		Name:      "dumptrie",
 		Usage:     "Show the storage key/values of a given storage trie",
 		ArgsUsage: "<hex-encoded storage trie root> <hex-encoded start (optional)> <int max elements (optional)>",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
+		Flags: qcommon.Merge([]cli.Flag{
 			utils.SyncModeFlag,
-			utils.MainnetFlag,
-			utils.RopstenFlag,
-			utils.RinkebyFlag,
-			utils.GoerliFlag,
-		},
+		}, utils.NetworkFlags, utils.DatabasePathFlags),
 		Description: "This command looks up the specified database key from the database.",
 	}
 	dbDumpFreezerIndex = &cli.Command{
@@ -170,37 +132,19 @@ WARNING: This is a low-level operation which may cause database corruption!`,
 		Name:      "freezer-index",
 		Usage:     "Dump out the index of a given freezer type",
 		ArgsUsage: "<type> <start (int)> <end (int)>",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
+		Flags: qcommon.Merge([]cli.Flag{
 			utils.SyncModeFlag,
-			utils.MainnetFlag,
-			utils.RopstenFlag,
-			utils.RinkebyFlag,
-			utils.GoerliFlag,
-		},
+		}, utils.NetworkFlags, utils.DatabasePathFlags),
 		Description: "This command displays information about the freezer index.",
 	}
 	dbMetadataCmd = &cli.Command{
 		Action: showMetaData,
 		Name:   "metadata",
 		Usage:  "Shows metadata about the chain status.",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
-			utils.SyncModeFlag,
-			utils.MainnetFlag,
-		},
-		Description: "Shows metadata about the chain status.",
-	}
-	dbMigrateFreezerCmd = &cli.Command{
-		Action:    freezerMigrate,
-		Name:      "freezer-migrate",
-		Usage:     "Migrate legacy parts of the freezer. (WARNING: may take a long time)",
-		ArgsUsage: "",
 		Flags: qcommon.Merge([]cli.Flag{
 			utils.SyncModeFlag,
 		}, utils.NetworkFlags, utils.DatabasePathFlags),
-		Description: `The freezer-migrate command checks your database for receipts in a legacy format and updates those.
-WARNING: please back-up the receipt files in your ancients before running this command.`,
+		Description: "Shows metadata about the chain status.",
 	}
 )
 
@@ -427,7 +371,7 @@ func dbPut(ctx *cli.Context) error {
 
 // dbDumpTrie shows the key-value slots of a given storage trie
 func dbDumpTrie(ctx *cli.Context) error {
-	if ctx.NArg() < 1 {
+	if ctx.NArg() < 3 {
 		return fmt.Errorf("required arguments: %v", ctx.Command.ArgsUsage)
 	}
 	stack, _ := makeConfigNode(ctx, config.Cfg)
@@ -435,30 +379,41 @@ func dbDumpTrie(ctx *cli.Context) error {
 
 	db := utils.MakeChainDatabase(ctx, stack, true)
 	defer db.Close()
+
 	var (
-		root  []byte
-		start []byte
-		max   = int64(-1)
-		err   error
+		state   []byte
+		storage []byte
+		account []byte
+		start   []byte
+		max     = int64(-1)
+		err     error
 	)
-	if root, err = hexutil.Decode(ctx.Args().Get(0)); err != nil {
-		log.Info("Could not decode the root", "error", err)
+	if state, err = hexutil.Decode(ctx.Args().Get(0)); err != nil {
+		log.Info("Could not decode the state root", "error", err)
 		return err
 	}
-	stRoot := common.BytesToHash(root)
-	if ctx.NArg() >= 2 {
-		if start, err = hexutil.Decode(ctx.Args().Get(1)); err != nil {
+	if account, err = hexutil.Decode(ctx.Args().Get(1)); err != nil {
+		log.Info("Could not decode the account hash", "error", err)
+		return err
+	}
+	if storage, err = hexutil.Decode(ctx.Args().Get(2)); err != nil {
+		log.Info("Could not decode the storage trie root", "error", err)
+		return err
+	}
+	if ctx.NArg() > 3 {
+		if start, err = hexutil.Decode(ctx.Args().Get(3)); err != nil {
 			log.Info("Could not decode the seek position", "error", err)
 			return err
 		}
 	}
-	if ctx.NArg() >= 3 {
-		if max, err = strconv.ParseInt(ctx.Args().Get(2), 10, 64); err != nil {
+	if ctx.NArg() > 4 {
+		if max, err = strconv.ParseInt(ctx.Args().Get(4), 10, 64); err != nil {
 			log.Info("Could not decode the max count", "error", err)
 			return err
 		}
 	}
-	theTrie, err := trie.New(common.Hash{}, stRoot, trie.NewDatabase(db))
+	id := trie.StorageTrieID(common.BytesToHash(state), common.BytesToHash(account), common.BytesToHash(storage))
+	theTrie, err := trie.New(id, trie.NewDatabase(db))
 	if err != nil {
 		return err
 	}
@@ -554,44 +509,5 @@ func showMetaData(ctx *cli.Context) error {
 	table.SetHeader([]string{"Field", "Value"})
 	table.AppendBulk(data)
 	table.Render()
-	return nil
-}
-
-func freezerMigrate(ctx *cli.Context) error {
-	stack, _ := makeConfigNode(ctx, config.Cfg)
-	defer stack.Close()
-
-	db := utils.MakeChainDatabase(ctx, stack, false)
-	defer db.Close()
-
-	// Check first block for legacy receipt format
-	numAncients, err := db.Ancients()
-	if err != nil {
-		return err
-	}
-	if numAncients < 1 {
-		log.Info("No receipts in freezer to migrate")
-		return nil
-	}
-
-	isFirstLegacy, firstIdx, err := eth.DBHasLegacyReceipts(db, 0)
-	if err != nil {
-		return err
-	}
-	if !isFirstLegacy {
-		log.Info("No legacy receipts to migrate")
-		return nil
-	}
-
-	log.Info("Starting migration", "ancients", numAncients, "firstLegacy", firstIdx)
-	start := time.Now()
-	if err := db.MigrateTable("receipts", types.ConvertLegacyStoredReceipts); err != nil {
-		return err
-	}
-	if err := db.Close(); err != nil {
-		return err
-	}
-	log.Info("Migration finished", "duration", time.Since(start))
-
 	return nil
 }

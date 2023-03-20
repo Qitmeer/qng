@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
+	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/miner"
 	"math/big"
 	"sync"
@@ -38,7 +39,7 @@ const (
 
 type Backend interface {
 	BlockChain() *core.BlockChain
-	TxPool() *core.TxPool
+	TxPool() *txpool.TxPool
 }
 
 type environment struct {
@@ -115,7 +116,7 @@ func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, e
 	return nil
 }
 
-func (m *MeerPool) Start(coinbase common.Address) {
+func (m *MeerPool) Start() {
 	if m.isRunning() {
 		log.Info("Meer pool was started")
 		return
@@ -209,8 +210,8 @@ func (m *MeerPool) handler() {
 	}
 }
 
-func (m *MeerPool) makeCurrent(parent *types.Block, header *types.Header) error {
-	state, err := m.chain.StateAt(parent.Root())
+func (m *MeerPool) makeCurrent(parent *types.Header, header *types.Header) error {
+	state, err := m.chain.StateAt(parent.Root)
 	if err != nil {
 		return err
 	}
@@ -298,7 +299,7 @@ func (m *MeerPool) commitTransactions(txs *types.TransactionsByPriceAndNonce, co
 			txs.Pop()
 			continue
 		}
-		m.current.state.Prepare(tx.Hash(), m.current.tcount)
+		m.current.state.SetTxContext(tx.Hash(), m.current.tcount)
 
 		logs, err := m.commitTransaction(tx, coinbase)
 		switch {
@@ -346,10 +347,11 @@ func (m *MeerPool) updateTemplate(timestamp int64) {
 	tstart := time.Now()
 	parent := m.chain.CurrentBlock()
 
-	if parent.Time() >= uint64(timestamp) {
-		timestamp = int64(parent.Time() + 1)
+	if parent.Time >= uint64(timestamp) {
+		timestamp = int64(parent.Time + 1)
 	}
-	num := parent.Number()
+	num := big.NewInt(0)
+	num.Set(parent.Number)
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
@@ -361,9 +363,9 @@ func (m *MeerPool) updateTemplate(timestamp int64) {
 	}
 	// Set baseFee and GasLimit if we are on an EIP-1559 chain
 	if m.chainConfig.IsLondon(header.Number) {
-		header.BaseFee = misc.CalcBaseFee(m.chainConfig, parent.Header())
-		if !m.chainConfig.IsLondon(parent.Number()) {
-			parentGasLimit := parent.GasLimit() * params.ElasticityMultiplier
+		header.BaseFee = misc.CalcBaseFee(m.chainConfig, parent)
+		if !m.chainConfig.IsLondon(parent.Number) {
+			parentGasLimit := parent.GasLimit * m.chainConfig.ElasticityMultiplier()
 			header.GasLimit = core.CalcGasLimit(parentGasLimit, m.config.GasCeil)
 		}
 	}
@@ -429,7 +431,7 @@ func (m *MeerPool) updateTemplate(timestamp int64) {
 func (m *MeerPool) commit(update bool, start time.Time) error {
 	receipts := qcommon.CopyReceipts(m.current.receipts)
 	s := m.current.state.Copy()
-	block, err := m.engine.FinalizeAndAssemble(m.chain, m.current.header, s, m.current.txs, []*types.Header{}, receipts)
+	block, err := m.engine.FinalizeAndAssemble(m.chain, m.current.header, s, m.current.txs, []*types.Header{}, receipts, nil)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -476,7 +478,7 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 	return cost.Int64(), nil
 }
 
-func (m *MeerPool) GetTxs() ([]*qtypes.Transaction,[]*hash.Hash, error) {
+func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, []*hash.Hash, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -484,7 +486,7 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction,[]*hash.Hash, error) {
 	defer m.snapshotMu.Unlock()
 
 	result := []*qtypes.Transaction{}
-	mtxhs :=[]*hash.Hash{}
+	mtxhs := []*hash.Hash{}
 
 	if m.snapshotBlock != nil && len(m.snapshotBlock.Transactions()) > 0 {
 		for _, tx := range m.snapshotBlock.Transactions() {
@@ -502,11 +504,11 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction,[]*hash.Hash, error) {
 			}
 
 			result = append(result, mtx)
-			mtxhs=append(mtxhs,qcommon.FromEVMHash(tx.Hash()))
+			mtxhs = append(mtxhs, qcommon.FromEVMHash(tx.Hash()))
 		}
 	}
 
-	return result,mtxhs, nil
+	return result, mtxhs, nil
 }
 
 func (m *MeerPool) GetSize() int64 {
@@ -660,6 +662,10 @@ func (m *MeerPool) GetSealingBlockAsync(parent common.Hash, timestamp uint64, co
 }
 
 func (m *MeerPool) GetSealingBlockSync(parent common.Hash, timestamp uint64, coinbase common.Address, random common.Hash, noTxs bool) (*types.Block, error) {
+	return nil, nil
+}
+
+func (m *MeerPool) BuildPayload(args *miner.BuildPayloadArgs) (*miner.Payload, error) {
 	return nil, nil
 }
 
