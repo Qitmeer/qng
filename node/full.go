@@ -186,6 +186,16 @@ func (qm *QitmeerFull) GetPeerServer() *p2p.Service {
 	return service
 }
 
+// return wallet manager
+func (qm *QitmeerFull) GetWalletServer() *wallet.WalletManager {
+	var service *wallet.WalletManager
+	if err := qm.Services().FetchService(&service); err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return service
+}
+
 func (qm *QitmeerFull) GetRpcServer() *rpc.RpcServer {
 	var service *rpc.RpcServer
 	if err := qm.Services().FetchService(&service); err != nil {
@@ -299,6 +309,9 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 			return nil, err
 		}
 	}
+	if err := qm.RegisterWalletService(cfg, cvm.(*evm.VM).GetConfig().Node, qm.GetAccountManager(), txManager); err != nil {
+		return nil, err
+	}
 
 	if err := qm.RegisterRpcService(); err != nil {
 		return nil, err
@@ -314,8 +327,5 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	qm.Services().LowestPriority(qm.GetTxManager())
 	qm.Services().LowestPriority(qm.GetPeerServer())
 
-	if err := qm.RegisterWalletService(cfg, cvm.(*evm.VM).GetConfig().Node, qm.GetAccountManager(), txManager); err != nil {
-		return nil, err
-	}
 	return &qm, nil
 }

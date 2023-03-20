@@ -206,7 +206,6 @@ type Amout struct {
 	Amount int64  `json:"amount"`
 }
 type AmountV3 struct {
-	Address        string `json:"address"`
 	CoinId         uint16 `json:"coinid"`
 	Amount         int64  `json:"amount"`
 	TargetLockTime int64  `json:"targetLockTime"`

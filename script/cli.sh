@@ -462,6 +462,30 @@ function get_balance_info() {
   get_result "$data"
 }
 
+
+
+function unlock() {
+  local account=$1
+  local password=$2
+  local timeout=$3
+  local data='{"jsonrpc":"2.0","method":"unlock","params":["'$account'","'$password'",'$timeout'],"id":null}'
+  get_result "$data"
+}
+
+function lock() {
+  local address=$1
+  local data='{"jsonrpc":"2.0","method":"lock","params":["'$address'"],"id":null}'
+  get_result "$data"
+}
+
+function sendToAddress() {
+  local fromAddress=$1
+  local to=$2
+  local lockTime=$3
+  local data='{"jsonrpc":"2.0","method":"sendToAddress","params":["'$fromAddress'","'$to'",'$lockTime'],"id":null}'
+  get_result "$data"
+}
+
 function add_balance() {
   local address=$1
   local data='{"jsonrpc":"2.0","method":"addBalance","params":["'$address'"],"id":null}'
@@ -787,6 +811,10 @@ function usage(){
   echo "  submitblock"
   echo "  submitblockheader"
   echo "  remotegbt"
+  echo "wallet  :"
+  echo "  unlock (accountIndex) password timeout"
+  echo "  lock (address)"
+  echo "  sendtoaddress fromAddress addressAmounts({\"RmN6q2ZdNaCtgpq2BE5ZaUbfQxXwRU1yTYf\":{\"amount\":100000000,\"coinid\":0}}) locktime"
 }
 
 # -------------------
@@ -1417,6 +1445,17 @@ elif [ "$1" == "remotegbt" ]; then
 elif [ "$1" == "daginfo" ]; then
   shift
   dag_info $@
+
+  ## Wallet
+elif [ "$1" == "unlock" ]; then
+  shift
+  unlock "$@"
+elif [ "$1" == "lock" ]; then
+  shift
+  lock "$@"
+elif [ "$1" == "sendtoaddress" ]; then
+  shift
+  sendToAddress "$@"
 
 elif [ "$1" == "list_command" ]; then
   usage

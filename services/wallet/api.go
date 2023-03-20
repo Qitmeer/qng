@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/hex"
+	ejson "encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/json"
@@ -28,7 +29,7 @@ func (api *PublicWalletManagerAPI) Unlock(account, passphrase string, timeout ti
 	for _, addr := range addrs {
 		_ = api.a.am.AddAddress(addr.String())
 
-		u, found := api.a.qks.unlocked[addr]
+		u, found := api.a.qks.unlocked[addr.String()]
 		if found {
 			if u.abort == nil {
 				// The address was unlocked indefinitely, so unlocking
@@ -41,11 +42,11 @@ func (api *PublicWalletManagerAPI) Unlock(account, passphrase string, timeout ti
 		}
 		if timeout > 0 {
 			u = &unlocked{Key: key, abort: make(chan struct{})}
-			go api.a.qks.expire(addr, u, timeout)
+			go api.a.qks.expire(addr, u, timeout*time.Second)
 		} else {
 			u = &unlocked{Key: key}
 		}
-		api.a.qks.unlocked[addr] = u
+		api.a.qks.unlocked[addr.String()] = u
 	}
 	return nil
 }
@@ -57,7 +58,7 @@ func (api *PublicWalletManagerAPI) Lock(addres string) error {
 		return err
 	}
 	api.a.qks.mu.Lock()
-	if unl, found := api.a.qks.unlocked[addr]; found {
+	if unl, found := api.a.qks.unlocked[addr.String()]; found {
 		api.a.qks.mu.Unlock()
 		api.a.qks.expire(addr, unl, time.Duration(0)*time.Nanosecond)
 	} else {
@@ -72,8 +73,13 @@ func (api *PublicWalletManagerAPI) Lock(addres string) error {
 //payment address.  Leftover inputs not sent to the payment address or a fee
 //for the miner are sent back to a new address in the wallet.  Upon success,
 //the TxID for the created transaction is returned.
-func (api *PublicWalletManagerAPI) SendToAddress(fromAddress string, amounts json.AddressAmountV3, lockTime int64) (string, error) {
-
+func (api *PublicWalletManagerAPI) SendToAddress(fromAddress string, to string, lockTime int64) (string, error) {
+	b := []byte(to)
+	var amounts json.AddressAmountV3
+	err := ejson.Unmarshal(b, &amounts)
+	if err != nil {
+		return "", err
+	}
 	for _, a := range amounts {
 		// Check that signed integer parameters are positive.
 		if a.Amount <= 0 {

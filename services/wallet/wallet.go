@@ -3,7 +3,6 @@ package wallet
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/rpc/api"
@@ -18,12 +17,11 @@ import (
 
 type WalletManager struct {
 	service.Service
-	addressMap map[types.Address]accounts.Account
-	qks        *QngKeyStore
-	am         *acct.AccountManager
-	tm         *tx.TxManager
-	cfg        *config.Config
-	acc        *accounts.Manager
+	qks *QngKeyStore
+	am  *acct.AccountManager
+	tm  *tx.TxManager
+	cfg *config.Config
+	acc *accounts.Manager
 }
 
 // PublicWalletManagerAPI provides an API to access Qng wallet function
@@ -39,7 +37,7 @@ func NewPublicAccountManagerAPI(a *WalletManager) *PublicWalletManagerAPI {
 func (a *WalletManager) APIs() []api.API {
 	return []api.API{
 		{
-			NameSpace: cmds.WalletNameSpace,
+			NameSpace: cmds.DefaultServiceNameSpace,
 			Service:   NewPublicAccountManagerAPI(a),
 			Public:    true,
 		},
@@ -57,10 +55,9 @@ func New(cfg *config.Config, conf node.Config, _am *acct.AccountManager, _tm *tx
 	}
 	ks := keystore.NewKeyStore(keydir, n, p)
 	a := WalletManager{
-		cfg:        cfg,
-		addressMap: map[types.Address]accounts.Account{},
-		am:         _am,
-		tm:         _tm,
+		cfg: cfg,
+		am:  _am,
+		tm:  _tm,
 		acc: accounts.NewManager(&accounts.Config{InsecureUnlockAllowed: conf.InsecureUnlockAllowed},
 			ks),
 	}
@@ -87,6 +84,7 @@ func (acc *WalletManager) MakeAddress(ks *QngKeyStore, account string) (accounts
 }
 
 func (a *WalletManager) Start() error {
+	log.Info("WalletManager start")
 	if err := a.Service.Start(); err != nil {
 		return err
 	}
@@ -94,6 +92,7 @@ func (a *WalletManager) Start() error {
 }
 
 func (a *WalletManager) Stop() error {
+	log.Info("WalletManager stop")
 	if err := a.Service.Stop(); err != nil {
 		return err
 	}

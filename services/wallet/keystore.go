@@ -24,14 +24,14 @@ type unlocked struct {
 type QngKeyStore struct {
 	*keystore.KeyStore
 	mu       sync.RWMutex
-	unlocked map[types.Address]*unlocked
+	unlocked map[string]*unlocked
 }
 
 func NewQngKeyStore(ks *keystore.KeyStore) *QngKeyStore {
 	return &QngKeyStore{
 		ks,
 		sync.RWMutex{},
-		map[types.Address]*unlocked{},
+		map[string]*unlocked{},
 	}
 }
 
@@ -65,9 +65,9 @@ func (ks *QngKeyStore) expire(addr types.Address, u *unlocked, timeout time.Dura
 		// was launched with. we can check that using pointer equality
 		// because the map stores a new pointer every time the key is
 		// unlocked.
-		if ks.unlocked[addr] == u {
+		if ks.unlocked[addr.String()] == u {
 			zeroKey(u.PrivateKey)
-			delete(ks.unlocked, addr)
+			delete(ks.unlocked, addr.String())
 		}
 		ks.mu.Unlock()
 	}

@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/hex"
+	ejson "encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/json"
@@ -18,17 +19,18 @@ import (
 func (a *WalletManager) getAvailableUtxos(addr string, amount int64) ([]acct.UTXOResult, int64, error) {
 	otxoList := make([]acct.UTXOResult, 0)
 	utxos, err := a.am.GetUTXOs(addr)
-	sum := uint64(0)
 	if err != nil {
-		for _, utxo := range utxos {
-			if utxo.Status == "unlock" {
-				continue
-			}
-			sum += utxo.Amount
-			otxoList = append(otxoList, utxo)
-			if sum > uint64(amount) {
-				break
-			}
+		return nil, 0, err
+	}
+	sum := uint64(0)
+	for _, utxo := range utxos {
+		if utxo.Status != "unlocked" && utxo.Status != "valid" {
+			continue
+		}
+		sum += utxo.Amount
+		otxoList = append(otxoList, utxo)
+		if sum > uint64(amount) {
+			break
 		}
 	}
 	return otxoList, int64(sum), err
@@ -37,10 +39,10 @@ func (a *WalletManager) getAvailableUtxos(addr string, amount int64) ([]acct.UTX
 func (a *WalletManager) sendTx(fromAddress string, amounts json.AddressAmountV3, targetLockTime, lockTime int64) (string, error) {
 	amount := int64(0)
 	outputs := make([]qx.Output, 0)
-	for _, v := range amounts {
+	for addres, v := range amounts {
 		amount += v.Amount
 		typ := txscript.PubkeyHashAltTy
-		addr, err := address.DecodeAddress(v.Address)
+		addr, err := address.DecodeAddress(addres)
 		if err != nil {
 			return "", err
 		}
@@ -49,7 +51,7 @@ func (a *WalletManager) sendTx(fromAddress string, amounts json.AddressAmountV3,
 			typ = txscript.PubKeyTy
 		}
 		outputs = append(outputs, qx.Output{
-			TargetAddress:  v.Address,
+			TargetAddress:  addres,
 			Amount:         types.Amount{v.Amount, types.CoinID(v.CoinId)},
 			OutputType:     typ,
 			TargetLockTime: targetLockTime,
@@ -59,11 +61,17 @@ func (a *WalletManager) sendTx(fromAddress string, amounts json.AddressAmountV3,
 	if err != nil {
 		return "", err
 	}
+	if len(uxtoList) < 1 {
+		return "", fmt.Errorf("%s balance not enough", fromAddress)
+	}
+	if sum <= amount {
+		return "", fmt.Errorf("%s balance not enough , current:%d,need more than:%d", fromAddress, sum, amount)
+	}
 	//left := sum - amount.Value
 	inputs := make([]qx.Input, 0)
 	priKeyList := make([]string, 0)
 	addr, _ := address.DecodeAddress(fromAddress)
-	pri, ok := a.qks.unlocked[addr]
+	pri, ok := a.qks.unlocked[fromAddress]
 	if !ok {
 		return "", fmt.Errorf("please unlock %s first", fromAddress)
 	}
@@ -81,7 +89,6 @@ func (a *WalletManager) sendTx(fromAddress string, amounts json.AddressAmountV3,
 
 		priKeyList = append(priKeyList, hex.EncodeToString(pri.PrivateKey.D.Bytes()))
 	}
-
 	timeNow := time.Now()
 
 	raw, err := qx.TxEncode(1, uint32(lockTime), &timeNow, inputs, outputs)
@@ -96,17 +103,24 @@ func (a *WalletManager) sendTx(fromAddress string, amounts json.AddressAmountV3,
 	if err != nil {
 		return "", rpc.RpcDecodeHexError(signedRaw)
 	}
-
-	serializedSize := len(serializedTx)
+	leftOutput := qx.Output{
+		TargetAddress: fromAddress,
+		Amount:        types.Amount{0, types.MEERA},
+		OutputType:    typ,
+	}
+	b, _ := ejson.Marshal(leftOutput)
+	serializedSize := len(serializedTx) + len(b)
 	minFee := mempool.CalcMinRequiredTxRelayFee(int64(serializedSize),
 		types.Amount{a.cfg.MinTxFee, types.MEERA})
 	leftAmount := sum - amount - minFee
+	for _, v := range inputs {
+		fmt.Println(v.TxID)
+		fmt.Println(v.OutIndex)
+	}
+
 	if leftAmount > 0 {
-		outputs = append(outputs, qx.Output{
-			TargetAddress: fromAddress,
-			Amount:        types.Amount{leftAmount, types.MEERA},
-			OutputType:    typ,
-		})
+		leftOutput.Amount.Value = leftAmount
+		outputs = append(outputs, leftOutput)
 	}
 	raw, err = qx.TxEncode(1, uint32(lockTime), &timeNow, inputs, outputs)
 	if err != nil {

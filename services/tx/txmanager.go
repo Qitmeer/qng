@@ -262,6 +262,10 @@ func (tm *TxManager) ProcessRawTx(serializedTx []byte, highFees bool) (string, e
 	}
 
 	tx := types.NewTx(msgtx)
+	for _, v := range msgtx.TxIn {
+		fmt.Println(v.PreviousOut.Hash)
+		fmt.Println(v.PreviousOut.OutIndex)
+	}
 	acceptedTxs, err := tm.txMemPool.ProcessTransaction(tx, false,
 		false, highFees)
 	if err != nil {

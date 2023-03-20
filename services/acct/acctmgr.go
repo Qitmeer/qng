@@ -253,6 +253,7 @@ func (a *AccountManager) checkUtxoEntry(entry *utxo.UtxoEntry, tracks []string) 
 }
 
 func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *utxo.UtxoEntry) error {
+
 	addrStr, scriptClass, err := a.checkUtxoEntry(entry, a.info.addrs)
 	if err != nil {
 		return err
@@ -484,7 +485,11 @@ func (a *AccountManager) Apply(add bool, op *types.TxOutPoint, entry interface{}
 	if !a.cfg.AcctMode {
 		return nil
 	}
-	a.utxoops = append(a.utxoops, &UTXOOP{add: add, op: op, entry: entry.(*utxo.UtxoEntry)})
+	o := *op
+	a.utxoops = append(a.utxoops, &UTXOOP{add: add, op: &types.TxOutPoint{
+		Hash:     o.Hash,
+		OutIndex: o.OutIndex,
+	}, entry: entry.(*utxo.UtxoEntry)})
 	return nil
 }
 
