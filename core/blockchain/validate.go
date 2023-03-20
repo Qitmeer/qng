@@ -1307,7 +1307,6 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *utxo.UtxoVie
 	}
 
 	allFees := make(map[types.CoinID]int64)
-	fmt.Println(totalAtomIn, totalAtomOut)
 	for _, coinId := range types.CoinIDList {
 		atomin, okin := totalAtomIn[coinId]
 		atomout, okout := totalAtomOut[coinId]

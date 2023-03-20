@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func (api *PublicWalletManagerAPI) Unlock(account, passphrase string, timeout time.Duration) error {
+func (api *PrivateWalletManagerAPI) Unlock(account, passphrase string, timeout time.Duration) error {
 	a, err := utils.MakeAddress(api.a.qks.KeyStore, account)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func (api *PublicWalletManagerAPI) Unlock(account, passphrase string, timeout ti
 }
 
 // Lock removes the private key with the given address from memory.
-func (api *PublicWalletManagerAPI) Lock(addres string) error {
+func (api *PrivateWalletManagerAPI) Lock(addres string) error {
 	addr, err := address.DecodeAddress(addres)
 	if err != nil {
 		return err
@@ -68,12 +68,12 @@ func (api *PublicWalletManagerAPI) Lock(addres string) error {
 	return nil
 }
 
-//SendToAddress handles a sendtoaddress RPC request by creating a new
-//transaction spending unspent transaction outputs for a wallet to another
-//payment address.  Leftover inputs not sent to the payment address or a fee
-//for the miner are sent back to a new address in the wallet.  Upon success,
-//the TxID for the created transaction is returned.
-func (api *PublicWalletManagerAPI) SendToAddress(fromAddress string, to string, lockTime int64) (string, error) {
+// SendToAddress handles a sendtoaddress RPC request by creating a new
+// transaction spending unspent transaction outputs for a wallet to another
+// payment address.  Leftover inputs not sent to the payment address or a fee
+// for the miner are sent back to a new address in the wallet.  Upon success,
+// the TxID for the created transaction is returned.
+func (api *PrivateWalletManagerAPI) SendToAddress(fromAddress string, to string, lockTime int64) (string, error) {
 	b := []byte(to)
 	var amounts json.AddressAmountV3
 	err := ejson.Unmarshal(b, &amounts)

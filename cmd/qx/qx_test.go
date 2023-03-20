@@ -8,11 +8,9 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/encode/base58"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/bip32"
 	"github.com/Qitmeer/qng/crypto/bip39"
-	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/qx"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -158,11 +156,4 @@ func TestQitmeerHdMixnet(t *testing.T) {
 		"LsFCdDQq16vs5HYfwTDySCFs9Vz9pTsquKNMPuUfmswvwNCwYYKy8ySdVxfq6tSmmzyPLVDXRLFHF5n5kMDDfxiYxpNvrH6D3PzA76jwfwkWjxx")
 	assert.Equal(t, publicKey.String(),
 		"LsG9kiUcodkga8VXhWTgH2cpDofJRLhp7JxeawZGWYUXQaWzCZGVMbBx5U52JHxnFedAAtxav2AhcxCv85yNTtk9PnPkqaYsaEef4Y9HYFcuArb")
-}
-
-func TestAddr(t *testing.T) {
-	pk, _ := address.DecodeAddress("MkB82Mtp7sKhs26A8kiAhq9Toro4iJJrLxvyBQatYLAQcGA3rPmex")
-
-	addr, _ := common.NewMeerEVMAddress(hex.EncodeToString(pk.(*address.SecpPubKeyAddress).PubKey().SerializeUncompressed()))
-	fmt.Println(addr)
 }

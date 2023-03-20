@@ -15,7 +15,7 @@ or
 or 
 ~
 curl -k -u test:test -k -X POST   https://127.0.0.1:38131/   -H 'content-type: application/json'   -d '{
-  "method":"unlock",
+  "method":"wallet_unlock",
   "version":"2.0",
   "params":["0","123456",600],                                                                                                  "id":1
 }'
@@ -27,7 +27,7 @@ curl -k -u test:test -k -X POST   https://127.0.0.1:38131/   -H 'content-type: a
 ~ ./cli.sh lock Rk8Jwy4QbiK84iLDLFn81NzedVwFE7UWJqfWy9hf9GTWVGr3hmJk3
 or 
 curl -k -u test:test -k -X POST   https://127.0.0.1:38131/   -H 'content-type: application/json'   -d '{
-  "method":"lock",
+  "method":"wallet_lock",
   "version":"2.0",
   "params":["Rk8Jwy4QbiK84iLDLFn81NzedVwFE7UWJqfWy9hf9GTWVGr3hmJk3"],
   "id":1
@@ -40,7 +40,7 @@ curl -k -u test:test -k -X POST   https://127.0.0.1:38131/   -H 'content-type: a
 ~ ./cli.sh sendtoaddress Rk8Jwy4QbiK84iLDLFn81NzedVwFE7UWJqfWy9hf9GTWVGr3hmJk3 "{\\\"RmN6q2ZdNaCtgpq2BE5ZaUbfQxXwRU1yTYf\\\":{\\\"amount\\\":100000000,\\\"coinid\\\":0}}" 0
 or 
 curl -u test:test -k -X POST   https://127.0.0.1:38131/   -H 'cache-control: no-cache'   -H 'content-type: application/json'   -H 'postman-token: 439c084c-4898-c548-cc7e-3121cfaea8f8'   -d '{
-  "method":"sendToAddress",
+  "method":"wallet_sendToAddress",
   "version":"2.0",
   "params":["RmN6q2ZdNaCtgpq2BE5ZaUbfQxXwRU1yTYf","{\"RmN6q2ZdNaCtgpq2BE5ZaUbfQxXwRU1yTYf\":{\"amount\":100000000,\"coinid\":0}}",0],
   "id":1

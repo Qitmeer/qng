@@ -468,13 +468,13 @@ function unlock() {
   local account=$1
   local password=$2
   local timeout=$3
-  local data='{"jsonrpc":"2.0","method":"unlock","params":["'$account'","'$password'",'$timeout'],"id":null}'
+  local data='{"jsonrpc":"2.0","method":"wallet_unlock","params":["'$account'","'$password'",'$timeout'],"id":null}'
   get_result "$data"
 }
 
 function lock() {
   local address=$1
-  local data='{"jsonrpc":"2.0","method":"lock","params":["'$address'"],"id":null}'
+  local data='{"jsonrpc":"2.0","method":"wallet_lock","params":["'$address'"],"id":null}'
   get_result "$data"
 }
 
@@ -482,7 +482,7 @@ function sendToAddress() {
   local fromAddress=$1
   local to=$2
   local lockTime=$3
-  local data='{"jsonrpc":"2.0","method":"sendToAddress","params":["'$fromAddress'","'$to'",'$lockTime'],"id":null}'
+  local data='{"jsonrpc":"2.0","method":"wallet_sendToAddress","params":["'$fromAddress'","'$to'",'$lockTime'],"id":null}'
   get_result "$data"
 }
 

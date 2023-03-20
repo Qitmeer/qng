@@ -30,16 +30,22 @@ type PublicWalletManagerAPI struct {
 	a *WalletManager
 }
 
-// NewPublicEthereumAPI creates a new Ethereum protocol API for full nodes.
-func NewPublicAccountManagerAPI(a *WalletManager) *PublicWalletManagerAPI {
-	return &PublicWalletManagerAPI{a}
+// PrivateWalletManagerAPI provides an API to access Qng wallet function
+// information.
+type PrivateWalletManagerAPI struct {
+	a *WalletManager
+}
+
+func NewPrivateWalletAPI(m *WalletManager) *PrivateWalletManagerAPI {
+	pmAPI := &PrivateWalletManagerAPI{m}
+	return pmAPI
 }
 func (a *WalletManager) APIs() []api.API {
 	return []api.API{
 		{
-			NameSpace: cmds.DefaultServiceNameSpace,
-			Service:   NewPublicAccountManagerAPI(a),
-			Public:    true,
+			NameSpace: cmds.WalletNameSpace,
+			Service:   NewPrivateWalletAPI(a),
+			Public:    false,
 		},
 	}
 }
