@@ -1,6 +1,12 @@
 # Wallet
 
-### First Create Or Import a account
+### Add Relation Modules
+
+```
+~ ./qng --acctmode --modules=wallet --modules=account
+```
+
+### Create Or Import a account
 
 ```
 ~ ./qng --privnet -A=./ account import (privateKey path)
