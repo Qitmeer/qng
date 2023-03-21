@@ -52,7 +52,7 @@ func (a *WalletManager) sendTx(fromAddress string, amounts json.AddressAmountV3,
 		}
 		outputs = append(outputs, qx.Output{
 			TargetAddress:  addres,
-			Amount:         types.Amount{v.Amount, types.CoinID(v.CoinId)},
+			Amount:         types.Amount{Value: v.Amount, Id: types.CoinID(v.CoinId)},
 			OutputType:     typ,
 			TargetLockTime: targetLockTime,
 		})
@@ -105,13 +105,13 @@ func (a *WalletManager) sendTx(fromAddress string, amounts json.AddressAmountV3,
 	}
 	leftOutput := qx.Output{
 		TargetAddress: fromAddress,
-		Amount:        types.Amount{0, types.MEERA},
+		Amount:        types.Amount{Value: 0, Id: types.MEERA},
 		OutputType:    typ,
 	}
 	b, _ := ejson.Marshal(leftOutput)
 	serializedSize := len(serializedTx) + len(b)
 	minFee := mempool.CalcMinRequiredTxRelayFee(int64(serializedSize),
-		types.Amount{a.cfg.MinTxFee, types.MEERA})
+		types.Amount{Value: a.cfg.MinTxFee, Id: types.MEERA})
 	leftAmount := sum - amount - minFee
 	for _, v := range inputs {
 		fmt.Println(v.TxID)
