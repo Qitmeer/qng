@@ -30,19 +30,19 @@ func CLIFlagsWithFlagPrefix(envPrefix string, flagPrefix string) []cli.Flag {
 		return strings.Trim(fmt.Sprintf("%s.%s", flagPrefix, flagName), ".")
 	}
 	return []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:   prefixFunc(TLSCaCertFlagName),
 			Usage:  "tls ca cert path",
 			Value:  "tls/ca.crt",
 			EnvVars: opservice.PrefixEnvVar(envPrefix, "TLS_CA"),
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:   prefixFunc(TLSCertFlagName),
 			Usage:  "tls cert path",
 			Value:  "tls/tls.crt",
 			EnvVars: opservice.PrefixEnvVar(envPrefix, "TLS_CERT"),
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:   prefixFunc(TLSKeyFlagName),
 			Usage:  "tls key",
 			Value:  "tls/tls.key",

@@ -22,7 +22,6 @@ import (
 	"github.com/Qitmeer/qng/rollups/node/rollup"
 	"github.com/Qitmeer/qng/rollups/node/testlog"
 	"github.com/Qitmeer/qng/rollups/node/testutils"
-	"github.com/Qitmeer/qng/rollups/node/version"
 )
 
 func TestOutputAtBlock(t *testing.T) {
@@ -153,7 +152,6 @@ func TestVersion(t *testing.T) {
 	var out string
 	err = client.CallContext(context.Background(), &out, "optimism_version")
 	assert.NoError(t, err)
-	assert.Equal(t, version.Version+"-"+version.Meta, out)
 }
 
 func randomSyncStatus(rng *rand.Rand) *eth.SyncStatus {

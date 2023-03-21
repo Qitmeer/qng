@@ -15,13 +15,13 @@ const (
 
 func CLIFlags(envPrefix string) []cli.Flag {
 	return []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:   ListenAddrFlagName,
 			Usage:  "rpc listening address",
 			Value:  "0.0.0.0",
 			EnvVars: opservice.PrefixEnvVar(envPrefix, "RPC_ADDR"),
 		},
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:   PortFlagName,
 			Usage:  "rpc listening port",
 			Value:  8545,
