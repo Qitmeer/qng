@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/cmd/relaynode/config"
 	"github.com/Qitmeer/qng/cmd/relaynode/qitcrawl"
@@ -33,11 +32,7 @@ func qitWriteAddressCmd() *cli.Command {
 			if err != nil {
 				return err
 			}
-			pkb, err := pk.Raw()
-			if err != nil {
-				return err
-			}
-			nk, err := crypto.HexToECDSA(hex.EncodeToString(pkb))
+			nk, err := p2p.ToECDSAPrivKey(pk)
 			if err != nil {
 				return err
 			}

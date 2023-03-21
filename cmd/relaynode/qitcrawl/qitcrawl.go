@@ -14,7 +14,6 @@ import (
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/forkid"
-	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -47,11 +46,7 @@ func (s *QitCrawlService) Start() error {
 	if err != nil {
 		return err
 	}
-	pkb, err := pk.Raw()
-	if err != nil {
-		return err
-	}
-	nk, err := ecrypto.HexToECDSA(hex.EncodeToString(pkb))
+	nk, err := p2p.ToECDSAPrivKey(pk)
 	if err != nil {
 		return err
 	}

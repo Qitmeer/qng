@@ -13,6 +13,7 @@ import (
 	"github.com/Qitmeer/qng/p2p/qnr"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/version"
+	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"io/ioutil"
@@ -187,4 +188,16 @@ func filterBootStrapAddrs(hostID string, addrs []string) []string {
 
 func BuildUserAgent(name string) string {
 	return fmt.Sprintf("%s|%s|%s", name, version.String(), params.ActiveNetParams.Name)
+}
+
+func ToECDSAPrivKey(privKey crypto.PrivKey) (*ecdsa.PrivateKey, error) {
+	pkb, err := privKey.Raw()
+	if err != nil {
+		return nil, err
+	}
+	pk, err := ecrypto.HexToECDSA(hex.EncodeToString(pkb))
+	if err != nil {
+		return nil, err
+	}
+	return pk, nil
 }

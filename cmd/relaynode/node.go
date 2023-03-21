@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	rconfig "github.com/Qitmeer/qng/cmd/relaynode/config"
 	"github.com/Qitmeer/qng/cmd/relaynode/qitboot"
@@ -23,7 +22,6 @@ import (
 	"github.com/Qitmeer/qng/p2p/synch"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
-	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	ds "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-kad-dht"
@@ -310,11 +308,7 @@ func (node *Node) RegisterQitService() error {
 	if !node.cfg.QitBoot.Enable {
 		return nil
 	}
-	pkb, err := node.privateKey.Raw()
-	if err != nil {
-		return err
-	}
-	nk, err := ecrypto.HexToECDSA(hex.EncodeToString(pkb))
+	nk, err := p2p.ToECDSAPrivKey(node.privateKey)
 	if err != nil {
 		return err
 	}
