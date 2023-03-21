@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/meerevm/cmd"
 	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/meerevm/qit"
+	"github.com/Qitmeer/qng/rollups"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/version"
@@ -21,6 +22,7 @@ func commands() []*cli.Command {
 	cmds = append(cmds, consensusCmd())
 	cmds = append(cmds, blockchainCmd())
 	cmds = append(cmds, cmd.Commands...)
+	cmds = append(cmds, rollups.Cmds())
 
 	for _, cmd := range cmds {
 		cmd.Before = loadConfig
