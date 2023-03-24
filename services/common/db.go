@@ -7,7 +7,7 @@ import (
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerevm/meer"
-	"github.com/Qitmeer/qng/meerevm/qit"
+	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/params"
 	"os"
 	"path/filepath"
@@ -90,7 +90,7 @@ func CleanupBlockDB(cfg *config.Config) {
 		log.Error(err.Error())
 	}
 	meer.Cleanup(cfg)
-	qit.Cleanup(cfg)
+	amana.Cleanup(cfg)
 	err = shutdown.NewTracker(cfg.DataDir).Done()
 	if err != nil {
 		log.Error(err.Error())

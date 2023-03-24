@@ -5,8 +5,8 @@ package cmd
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/meerevm/meer"
-	"github.com/Qitmeer/qng/meerevm/qit"
 	"github.com/ethereum/go-ethereum/node"
 	"strings"
 
@@ -80,8 +80,8 @@ func remoteConsole(ctx *cli.Context) error {
 // for "geth attach" with no argument.
 func dialRPC(endpoint string) (*rpc.Client, error) {
 	if endpoint == "" {
-		if config.Cfg.Qit {
-			endpoint = node.DefaultIPCEndpoint(qit.ClientIdentifier)
+		if config.Cfg.Amana {
+			endpoint = node.DefaultIPCEndpoint(amana.ClientIdentifier)
 		} else {
 			endpoint = node.DefaultIPCEndpoint(meer.ClientIdentifier)
 		}

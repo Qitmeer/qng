@@ -1,4 +1,4 @@
-package qitcrawl
+package amanacrawl
 
 import (
 	"bytes"
@@ -7,8 +7,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/cmd/relaynode/config"
+	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/meerevm/eth"
-	"github.com/Qitmeer/qng/meerevm/qit"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
 	qparams "github.com/Qitmeer/qng/params"
@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-type QitCrawlService struct {
+type AmanaCrawlService struct {
 	service.Service
 	cfg       *config.Config
 	ctx       *cli.Context
@@ -34,11 +34,11 @@ type QitCrawlService struct {
 	localNode *enode.Node
 }
 
-func (s *QitCrawlService) Start() error {
+func (s *AmanaCrawlService) Start() error {
 	if err := s.Service.Start(); err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("Start Qit Crawl Service ..."))
+	log.Info(fmt.Sprintf("Start Amana Crawl Service ..."))
 
 	eth.InitLog(s.cfg.DebugLevel, s.cfg.DebugPrintOrigins)
 
@@ -54,7 +54,7 @@ func (s *QitCrawlService) Start() error {
 	return s.discv4Crawl()
 }
 
-func (s *QitCrawlService) discv4Crawl() error {
+func (s *AmanaCrawlService) discv4Crawl() error {
 	ctx := s.ctx
 	nodesFile := getNodesFilePath(s.cfg.DataDir)
 	var inputSet nodeSet
@@ -74,12 +74,12 @@ func (s *QitCrawlService) discv4Crawl() error {
 	c := newCrawler(inputSet, disc, disc.RandomNodes())
 	c.revalidateInterval = 10 * time.Minute
 	output := c.run(ctx.Duration(crawlTimeoutFlag.Name))
-	result, err := qitFilter(output)
+	result, err := amanaFilter(output)
 	return writeNodesJSON(nodesFile, result)
 }
 
 // startV4 starts an ephemeral discovery V4 node.
-func (s *QitCrawlService) startV4() (*discover.UDPv4, error) {
+func (s *AmanaCrawlService) startV4() (*discover.UDPv4, error) {
 	ctx := s.ctx
 	ln, config, err := s.makeDiscoveryConfig()
 	if err != nil {
@@ -97,7 +97,7 @@ func (s *QitCrawlService) startV4() (*discover.UDPv4, error) {
 	return disc, nil
 }
 
-func (s *QitCrawlService) makeDiscoveryConfig() (*enode.LocalNode, discover.Config, error) {
+func (s *AmanaCrawlService) makeDiscoveryConfig() (*enode.LocalNode, discover.Config, error) {
 	ctx := s.ctx
 	var cfg discover.Config
 	cfg.PrivateKey = s.nodeKey
@@ -119,20 +119,20 @@ func (s *QitCrawlService) makeDiscoveryConfig() (*enode.LocalNode, discover.Conf
 	return ln, cfg, nil
 }
 
-func (s *QitCrawlService) Stop() error {
+func (s *AmanaCrawlService) Stop() error {
 	if err := s.Service.Stop(); err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("Stop Qit DNS Service"))
+	log.Info(fmt.Sprintf("Stop Amana DNS Service"))
 	return nil
 }
 
-func (s *QitCrawlService) Node() *enode.Node {
+func (s *AmanaCrawlService) Node() *enode.Node {
 	return s.localNode
 }
 
-func NewQitCrawlService(cfg *config.Config, ctx *cli.Context) *QitCrawlService {
-	return &QitCrawlService{
+func NewAmanaCrawlService(cfg *config.Config, ctx *cli.Context) *AmanaCrawlService {
+	return &AmanaCrawlService{
 		cfg: cfg,
 		ctx: ctx,
 	}
@@ -225,8 +225,8 @@ func getNodesFilePath(dataDir string) string {
 	return path.Join(nfp, "nodes.json")
 }
 
-func qitFilter(ns nodeSet) (nodeSet, error) {
-	cfg, err := qit.MakeConfig(".")
+func amanaFilter(ns nodeSet) (nodeSet, error) {
+	cfg, err := amana.MakeConfig(".")
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +250,7 @@ func qitFilter(ns nodeSet) (nodeSet, error) {
 		}
 	}
 	if len(ns) != len(result) {
-		log.Debug("Filter qit nodes", "src", len(ns), "result", len(result))
+		log.Debug("Filter Amana nodes", "src", len(ns), "result", len(result))
 	}
 
 	return result, nil

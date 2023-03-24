@@ -1,4 +1,4 @@
-package qit
+package amana
 
 import (
 	qparams "github.com/Qitmeer/qng/params"

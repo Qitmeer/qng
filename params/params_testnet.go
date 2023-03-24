@@ -130,5 +130,5 @@ var TestNetParams = Params{
 
 	// TODO: The testnet EVM ChainID has to remain 223 for the old compatibility.
 	//       Change to 8131 when the testnet do the next fresh relaunch.
-	MeerEVMCfg: MeerEVMConfig{ChainID: 223, QitChainID: 8141},
+	MeerEVMCfg: MeerEVMConfig{ChainID: 223, AmanaChainID: 8141},
 }

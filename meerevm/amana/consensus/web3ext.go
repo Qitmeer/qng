@@ -3,50 +3,50 @@ package consensus
 import "github.com/ethereum/go-ethereum"
 
 
-const QitJs = `
+const AmanaJs = `
 web3._extend({
-	property: 'qit',
+	property: 'amana',
 	methods: [
 		new web3._extend.Method({
 			name: 'getSnapshot',
-			call: 'qit_getSnapshot',
+			call: 'amana_getSnapshot',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getSnapshotAtHash',
-			call: 'qit_getSnapshotAtHash',
+			call: 'amana_getSnapshotAtHash',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'getSigners',
-			call: 'qit_getSigners',
+			call: 'amana_getSigners',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getSignersAtHash',
-			call: 'qit_getSignersAtHash',
+			call: 'amana_getSignersAtHash',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'propose',
-			call: 'qit_propose',
+			call: 'amana_propose',
 			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'discard',
-			call: 'qit_discard',
+			call: 'amana_discard',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'status',
-			call: 'qit_status',
+			call: 'amana_status',
 			params: 0
 		}),
 		new web3._extend.Method({
 			name: 'getSigner',
-			call: 'qit_getSigner',
+			call: 'amana_getSigner',
 			params: 1,
 			inputFormatter: [null]
 		}),
@@ -54,12 +54,12 @@ web3._extend({
 	properties: [
 		new web3._extend.Property({
 			name: 'proposals',
-			getter: 'qit_proposals'
+			getter: 'amana_proposals'
 		}),
 	]
 });
 `
 
 func init() {
-	ethereum.Modules["qit"] = QitJs
+	ethereum.Modules["amana"] = AmanaJs
 }

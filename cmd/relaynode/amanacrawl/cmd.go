@@ -1,4 +1,4 @@
-package qitcrawl
+package amanacrawl
 
 import (
 	"github.com/Qitmeer/qng/cmd/relaynode/config"
@@ -21,19 +21,19 @@ var (
 	}
 	crawlTimeoutFlag = &cli.DurationFlag{
 		Name:  "timeout",
-		Usage: "Time limit for the qit crawl.",
+		Usage: "Time limit for the Amana crawl.",
 		Value: 30 * time.Minute,
 	}
 )
 
 func Cmd() *cli.Command {
-	var qd *QitCrawlService
+	var qd *AmanaCrawlService
 	return &cli.Command{
-		Name:        "qitcrawl",
+		Name:        "amanacrawl",
 		Aliases:     []string{"qc"},
-		Category:    "qit",
-		Usage:       "Updates a nodes.json file with random nodes found in the DHT for QitSubnet",
-		Description: "Updates a nodes.json file with random nodes found in the DHT for QitSubnet",
+		Category:    "amana",
+		Usage:       "Updates a nodes.json file with random nodes found in the DHT for Amana",
+		Description: "Updates a nodes.json file with random nodes found in the DHT for Amana",
 		Flags: []cli.Flag{
 			bootnodesFlag,
 			nodedbFlag,
@@ -44,7 +44,7 @@ func Cmd() *cli.Command {
 		},
 		Action: func(ctx *cli.Context) error {
 			cfg := config.Conf
-			qd = NewQitCrawlService(cfg, ctx)
+			qd = NewAmanaCrawlService(cfg, ctx)
 			return qd.Start()
 		},
 		After: func(ctx *cli.Context) error {

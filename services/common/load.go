@@ -551,14 +551,14 @@ var (
 			Destination: &cfg.BlockDataCacheSize,
 		},
 		&cli.StringFlag{
-			Name:        "qitenv",
-			Usage:       "Qit Subnet environment",
-			Destination: &cfg.QitEnv,
+			Name:        "amanaenv",
+			Usage:       "Amana environment",
+			Destination: &cfg.AmanaEnv,
 		},
 		&cli.BoolFlag{
-			Name:        "qit",
-			Usage:       "Enable Qit Subnet",
-			Destination: &cfg.Qit,
+			Name:        "amana",
+			Usage:       "Enable Amana",
+			Destination: &cfg.Amana,
 		},
 	}
 )

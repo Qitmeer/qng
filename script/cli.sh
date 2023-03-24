@@ -483,13 +483,13 @@ function get_vms_info(){
   get_result "$data"
 }
 
-function get_qit_nodeinfo(){
-  local data='{"jsonrpc":"2.0","method":"getQitNodeInfo","params":[],"id":null}'
+function get_amana_nodeinfo(){
+  local data='{"jsonrpc":"2.0","method":"getAmanaNodeInfo","params":[],"id":null}'
   get_result "$data"
 }
 
-function get_qit_peerinfo(){
-  local data='{"jsonrpc":"2.0","method":"getQitPeerInfo","params":[],"id":null}'
+function get_amana_peerinfo(){
+  local data='{"jsonrpc":"2.0","method":"getAmanaPeerInfo","params":[],"id":null}'
   get_result "$data"
 }
 
@@ -746,8 +746,8 @@ function usage(){
   echo "  timeinfo"
   echo "  subsidy"
   echo "  vmsinfo"
-  echo "  qitinfo"
-  echo "  qitpeerinfo"
+  echo "  amanainfo"
+  echo "  amanapeerinfo"
   echo "  acctinfo"
   echo "  getbalance <address> <coinID>"
   echo "  getbalanceinfo <address> <coinID>"
@@ -1262,12 +1262,12 @@ elif [ "$1" == "minerinfo" ]; then
 elif [ "$1" == "vmsinfo" ]; then
   shift
   get_vms_info $@
-elif [ "$1" == "qitinfo" ]; then
+elif [ "$1" == "amanainfo" ]; then
     shift
-    get_qit_nodeinfo $@
-elif [ "$1" == "qitpeerinfo" ]; then
+    get_amana_nodeinfo $@
+elif [ "$1" == "amanapeerinfo" ]; then
     shift
-    get_qit_peerinfo $@
+    get_amana_peerinfo $@
 
 elif [ "$1" == "txSign" ]; then
   shift

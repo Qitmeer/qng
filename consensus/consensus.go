@@ -13,7 +13,7 @@ import (
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/meerevm/qit"
+	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/index"
@@ -47,7 +47,7 @@ type consensus struct {
 	indexManager model.IndexManager
 
 	vmService  *vm.Service
-	qitService *qit.QitService
+	amanaService *amana.AmanaService
 }
 
 // Init initializes consensus
@@ -89,12 +89,12 @@ func (s *consensus) Init() error {
 	}
 	s.vmService = vmService
 	//
-	if s.cfg.Qit && params.ActiveNetParams.Net != protocol.MainNet {
-		ser, err := qit.New(s.cfg, s)
+	if s.cfg.Amana && params.ActiveNetParams.Net != protocol.MainNet {
+		ser, err := amana.New(s.cfg, s)
 		if err != nil {
 			return err
 		}
-		s.qitService = ser
+		s.amanaService = ser
 	}
 	//
 	s.subscribe()
@@ -157,11 +157,11 @@ func (s *consensus) VMService() model.VMI {
 	return s.vmService
 }
 
-func (s *consensus) QitService() service.IService {
-	if s.qitService == nil {
+func (s *consensus) AmanaService() service.IService {
+	if s.amanaService == nil {
 		return nil
 	}
-	return s.qitService
+	return s.amanaService
 }
 
 func (s *consensus) subscribe() {

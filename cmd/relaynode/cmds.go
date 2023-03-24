@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/cmd/relaynode/amanacrawl"
 	"github.com/Qitmeer/qng/cmd/relaynode/config"
-	"github.com/Qitmeer/qng/cmd/relaynode/qitcrawl"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/urfave/cli/v2"
@@ -11,18 +11,18 @@ import (
 
 func commands() []*cli.Command {
 	cmds := []*cli.Command{}
-	cmds = append(cmds, qitWriteAddressCmd())
-	cmds = append(cmds, qitcrawl.Cmd())
+	cmds = append(cmds, amanaWriteAddressCmd())
+	cmds = append(cmds, amanacrawl.Cmd())
 	return cmds
 }
 
-func qitWriteAddressCmd() *cli.Command {
+func amanaWriteAddressCmd() *cli.Command {
 	return &cli.Command{
-		Name:        "qitwriteaddress",
+		Name:        "amanawriteaddress",
 		Aliases:     []string{"qw"},
-		Category:    "qit",
-		Usage:       "QitSubnet writeaddress",
-		Description: "qit manager",
+		Category:    "Amana",
+		Usage:       "Amana writeaddress",
+		Description: "Amana manager",
 		Before: func(context *cli.Context) error {
 			return config.Conf.Load()
 		},

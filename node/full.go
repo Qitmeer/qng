@@ -10,7 +10,7 @@ import (
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/meerevm/qit"
+	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/params"
@@ -146,12 +146,12 @@ func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterQitSubnet() error {
-	if !qm.node.Config.Qit ||
+func (qm *QitmeerFull) RegisterAmana() error {
+	if !qm.node.Config.Amana ||
 		params.ActiveNetParams.Net == protocol.MainNet {
 		return nil
 	}
-	ser, err := qit.New(qm.node.Config, qm.node.consensus)
+	ser, err := amana.New(qm.node.Config, qm.node.consensus)
 	if err != nil {
 		return err
 	}
@@ -269,8 +269,8 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		return nil, err
 	}
 
-	if qm.node.consensus.QitService() != nil {
-		if err := qm.Services().RegisterService(qm.node.consensus.QitService()); err != nil {
+	if qm.node.consensus.AmanaService() != nil {
+		if err := qm.Services().RegisterService(qm.node.consensus.AmanaService()); err != nil {
 			return nil, err
 		}
 	}

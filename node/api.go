@@ -99,10 +99,10 @@ func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 		ret.ConsensusDeployment["meerevm"] = &json.ConsensusDeploymentDesc{Status: "active"}
 	}
 
-	if api.node.node.Config.Qit {
-		ret.ConsensusDeployment["qit"] = &json.ConsensusDeploymentDesc{Status: "active"}
+	if api.node.node.Config.Amana {
+		ret.ConsensusDeployment["amana"] = &json.ConsensusDeploymentDesc{Status: "active"}
 	} else {
-		ret.ConsensusDeployment["qit"] = &json.ConsensusDeploymentDesc{Status: "inactive"}
+		ret.ConsensusDeployment["amana"] = &json.ConsensusDeploymentDesc{Status: "inactive"}
 	}
 
 	return ret, nil
