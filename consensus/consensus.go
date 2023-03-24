@@ -46,7 +46,7 @@ type consensus struct {
 	blockchain   model.BlockChain
 	indexManager model.IndexManager
 
-	vmService  *vm.Service
+	vmService    *vm.Service
 	amanaService *amana.AmanaService
 }
 
@@ -91,6 +91,10 @@ func (s *consensus) Init() error {
 	//
 	if s.cfg.Amana && params.ActiveNetParams.Net != protocol.MainNet {
 		ser, err := amana.New(s.cfg, s)
+		if err != nil {
+			return err
+		}
+		err = ser.Upgrade()
 		if err != nil {
 			return err
 		}

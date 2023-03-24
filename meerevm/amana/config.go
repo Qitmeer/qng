@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	ClientIdentifier       = "amana"
+	ClientIdentifier       = mconsensus.Identifier
 	chainID          int64 = 223
 	nodeFlags              = mcommon.Merge([]cli.Flag{
 		utils.IdentityFlag,
@@ -213,7 +213,7 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	nodeConf.Version = params.VersionWithMeta
 	nodeConf.HTTPModules = append(nodeConf.HTTPModules, "eth")
 	nodeConf.WSModules = append(nodeConf.WSModules, "eth")
-	nodeConf.IPCPath = ClientIdentifier+".ipc"
+	nodeConf.IPCPath = ClientIdentifier + ".ipc"
 	nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
 	var p2pPort int
 	nodeConf.HTTPPort, nodeConf.WSPort, nodeConf.AuthPort, p2pPort = getDefaultPort()

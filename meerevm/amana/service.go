@@ -2,6 +2,7 @@ package amana
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	mconsensus "github.com/Qitmeer/qng/meerevm/amana/consensus"
@@ -12,6 +13,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"os"
+	"path"
 )
 
 type AmanaService struct {
@@ -104,6 +107,16 @@ func (q *AmanaService) APIs() []api.API {
 			Public:    true,
 		},
 	}
+}
+
+// TODO: Just compatible with old data, will be deleted in the future
+func (q *AmanaService) Upgrade() error {
+	oldDBPath := path.Join(q.cfg.DataDir, mconsensus.IdentifierDeprecated)
+	if !util.FileExists(oldDBPath) {
+		return nil
+	}
+	log.Info("Discover old data and prepare for compatible operations:", mconsensus.IdentifierDeprecated, ClientIdentifier)
+	return os.Rename(oldDBPath, path.Join(q.cfg.DataDir, ClientIdentifier))
 }
 
 func New(cfg *config.Config, cons model.Consensus) (*AmanaService, error) {

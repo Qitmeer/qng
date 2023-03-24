@@ -14,6 +14,11 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
+const (
+	IdentifierDeprecated = "qit" // TODO: Just compatible with old data, will be deleted in the future
+	Identifier           = "amana"
+)
+
 // Vote represents a single vote that an authorized signer made to modify the
 // list of authorizations.
 type Vote struct {
@@ -73,10 +78,23 @@ func newSnapshot(config *params.CliqueConfig, sigcache *sigLRU, number uint64, h
 
 // loadSnapshot loads an existing snapshot from the database.
 func loadSnapshot(config *params.CliqueConfig, sigcache *sigLRU, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
-	blob, err := db.Get(append([]byte("amana-"), hash[:]...))
-	if err != nil {
-		return nil, err
+	var err error
+	var blob []byte
+	var has bool
+	// TODO: Just compatible with old data, will be deleted in the future
+	if has, err = db.Has([]byte(IdentifierDeprecated + "-")); has && err == nil {
+		log.Info("Load old snapshot data")
+		blob, err = db.Get(append([]byte(IdentifierDeprecated+"-"), hash[:]...))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		blob, err = db.Get(append([]byte(Identifier+"-"), hash[:]...))
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	snap := new(Snapshot)
 	if err := json.Unmarshal(blob, snap); err != nil {
 		return nil, err
@@ -84,16 +102,32 @@ func loadSnapshot(config *params.CliqueConfig, sigcache *sigLRU, db ethdb.Databa
 	snap.config = config
 	snap.sigcache = sigcache
 
+	if has {
+		log.Info("Delete old snapshot data and create new date")
+		err = db.Delete([]byte(IdentifierDeprecated + "-"))
+		if err != nil {
+			log.Error(err.Error())
+		}
+		return snap, snap.store(db)
+	}
 	return snap, nil
 }
 
 // store inserts the snapshot into the database.
 func (s *Snapshot) store(db ethdb.Database) error {
+	// TODO: Just compatible with old data, will be deleted in the future
+	if has, err := db.Has([]byte(IdentifierDeprecated + "-")); has && err == nil {
+		log.Info("Delete old snapshot data")
+		err = db.Delete([]byte(IdentifierDeprecated + "-"))
+		if err != nil {
+			log.Error(err.Error())
+		}
+	}
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}
-	return db.Put(append([]byte("amana-"), s.Hash[:]...), blob)
+	return db.Put(append([]byte(Identifier+"-"), s.Hash[:]...), blob)
 }
 
 // copy creates a deep copy of the snapshot, though not the individual votes.
