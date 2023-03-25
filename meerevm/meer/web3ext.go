@@ -305,13 +305,13 @@ web3._extend({
 		}),
 
 		new web3._extend.Property({
-			name: 'getQitNodeInfo',
-			getter: 'qng_getQitNodeInfo'
+			name: 'getAmanaNodeInfo',
+			getter: 'qng_getAmanaNodeInfo'
 		}),
 
 		new web3._extend.Property({
-			name: 'getQitPeerInfo',
-			getter: 'qng_getQitPeerInfo'
+			name: 'getAmanaPeerInfo',
+			getter: 'qng_getAmanaPeerInfo'
 		}),
 	]
 });

@@ -1,6 +1,6 @@
 package config
 
-type QitBootConfig struct {
+type AmanaBootConfig struct {
 	Enable      bool
 	ListenAddr  string
 	Natdesc     string

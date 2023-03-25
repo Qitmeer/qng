@@ -27,5 +27,5 @@ type Consensus interface {
 	Params() *params.Params
 	VMService() VMI
 	Rebuild() error
-	QitService() service.IService
+	AmanaService() service.IService
 }

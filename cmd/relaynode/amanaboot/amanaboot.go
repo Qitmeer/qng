@@ -1,4 +1,4 @@
-package qitboot
+package amanaboot
 
 import (
 	"crypto/ecdsa"
@@ -13,39 +13,39 @@ import (
 	"net"
 )
 
-type QitBootService struct {
+type AmanaBootService struct {
 	service.Service
 	cfg       *config.Config
 	nodeKey   *ecdsa.PrivateKey
 	localNode *enode.Node
 }
 
-func (s *QitBootService) Start() error {
+func (s *AmanaBootService) Start() error {
 	if err := s.Service.Start(); err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("Start Qit Boot Service ..."))
+	log.Info(fmt.Sprintf("Start Amana Boot Service ..."))
 
 	eth.InitLog(s.cfg.DebugLevel, s.cfg.DebugPrintOrigins)
 
 	var err error
 	var natm nat.Interface
-	if len(s.cfg.QitBoot.Natdesc) > 0 {
-		natm, err = nat.Parse(s.cfg.QitBoot.Natdesc)
+	if len(s.cfg.AmanaBoot.Natdesc) > 0 {
+		natm, err = nat.Parse(s.cfg.AmanaBoot.Natdesc)
 		if err != nil {
 			return fmt.Errorf("--nat: %v", err)
 		}
 	}
 
 	var restrictList *netutil.Netlist
-	if len(s.cfg.QitBoot.Netrestrict) > 0 {
-		restrictList, err = netutil.ParseNetlist(s.cfg.QitBoot.Netrestrict)
+	if len(s.cfg.AmanaBoot.Netrestrict) > 0 {
+		restrictList, err = netutil.ParseNetlist(s.cfg.AmanaBoot.Netrestrict)
 		if err != nil {
 			return fmt.Errorf("--netrestrict: %v", err)
 		}
 	}
 
-	addr, err := net.ResolveUDPAddr("udp", s.cfg.QitBoot.ListenAddr)
+	addr, err := net.ResolveUDPAddr("udp", s.cfg.AmanaBoot.ListenAddr)
 	if err != nil {
 		return fmt.Errorf("ResolveUDPAddr: %v", err)
 	}
@@ -56,7 +56,7 @@ func (s *QitBootService) Start() error {
 	realaddr := conn.LocalAddr().(*net.UDPAddr)
 	if natm != nil {
 		if !realaddr.IP.IsLoopback() {
-			go nat.Map(natm, nil, "udp", realaddr.Port, realaddr.Port, "QitSubnet discovery")
+			go nat.Map(natm, nil, "udp", realaddr.Port, realaddr.Port, "Amana discovery")
 		}
 		if ext, err := natm.ExternalIP(); err == nil {
 			realaddr = &net.UDPAddr{IP: ext, Port: realaddr.Port}
@@ -71,7 +71,7 @@ func (s *QitBootService) Start() error {
 		PrivateKey:  s.nodeKey,
 		NetRestrict: restrictList,
 	}
-	if s.cfg.QitBoot.Runv5 {
+	if s.cfg.AmanaBoot.Runv5 {
 		if _, err := discover.ListenV5(conn, ln, cfg); err != nil {
 			return err
 		}
@@ -83,28 +83,28 @@ func (s *QitBootService) Start() error {
 	return nil
 }
 
-func (s *QitBootService) Stop() error {
+func (s *AmanaBootService) Stop() error {
 	if err := s.Service.Stop(); err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("Stop Qit Boot Service"))
+	log.Info(fmt.Sprintf("Stop Amana Boot Service"))
 	return nil
 }
 
-func (s *QitBootService) Node() *enode.Node {
+func (s *AmanaBootService) Node() *enode.Node {
 	return s.localNode
 }
 
-func (s *QitBootService) setLocalNode(nodeKey *ecdsa.PublicKey, addr net.UDPAddr) {
+func (s *AmanaBootService) setLocalNode(nodeKey *ecdsa.PublicKey, addr net.UDPAddr) {
 	if addr.IP.IsUnspecified() {
 		addr.IP = net.IP{127, 0, 0, 1}
 	}
 	s.localNode = enode.NewV4(nodeKey, addr.IP, 0, addr.Port)
-	log.Info(fmt.Sprintf("QitSubnet:%s", s.localNode.URLv4()))
+	log.Info(fmt.Sprintf("Amana:%s", s.localNode.URLv4()))
 }
 
-func NewQitBootService(cfg *config.Config, nodeKey *ecdsa.PrivateKey) (*QitBootService, error) {
-	return &QitBootService{
+func NewAmanaBootService(cfg *config.Config, nodeKey *ecdsa.PrivateKey) (*AmanaBootService, error) {
+	return &AmanaBootService{
 		cfg:     cfg,
 		nodeKey: nodeKey,
 	}, nil
