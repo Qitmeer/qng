@@ -477,6 +477,8 @@ func (api *PublicBlockAPI) GetStateRoot(order int64, verbose *bool) (interface{}
 	} else {
 		if order > mainOrder {
 			return nil, fmt.Errorf("Order is too big")
+		} else if order < 0 {
+			return nil, fmt.Errorf("Order is too small")
 		}
 	}
 	vb := false
