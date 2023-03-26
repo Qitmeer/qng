@@ -37,7 +37,7 @@ const (
 	wiggleTime = 500 * time.Millisecond // Random delay (per signer) to allow concurrent signers
 )
 
-// Qit proof-of-authority protocol constants.
+// Amana proof-of-authority protocol constants.
 var (
 	epochLength = uint64(30000) // Default number of blocks after which to checkpoint and reset the pending votes
 
@@ -151,9 +151,9 @@ func ecrecover(header *types.Header, sigcache *sigLRU) (common.Address, error) {
 	return signer, nil
 }
 
-// Qit is the proof-of-authority consensus engine proposed to support the
+// Amana is the proof-of-authority consensus engine proposed to support the
 // Ethereum testnet following the Ropsten attacks.
-type Qit struct {
+type Amana struct {
 	config *params.CliqueConfig // Consensus engine configuration parameters
 	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
 
@@ -172,9 +172,9 @@ type Qit struct {
 	GenesisContractsClient bridge.GenesisContract
 }
 
-// New creates a Qit proof-of-authority consensus engine with the initial
+// New creates a Amana proof-of-authority consensus engine with the initial
 // signers set to the ones provided by the user.
-func New(config *params.CliqueConfig, db ethdb.Database) *Qit {
+func New(config *params.CliqueConfig, db ethdb.Database) *Amana {
 	// Set any missing consensus parameters to their defaults
 	conf := *config
 	if conf.Epoch == 0 {
@@ -184,7 +184,7 @@ func New(config *params.CliqueConfig, db ethdb.Database) *Qit {
 	recents := lru.NewCache[common.Hash, *Snapshot](inmemorySnapshots)
 	signatures := lru.NewCache[common.Hash, common.Address](inmemorySignatures)
 
-	return &Qit{
+	return &Amana{
 		config:     &conf,
 		db:         db,
 		recents:    recents,
@@ -195,19 +195,19 @@ func New(config *params.CliqueConfig, db ethdb.Database) *Qit {
 
 // Author implements consensus.Engine, returning the Ethereum address recovered
 // from the signature in the header's extra-data section.
-func (c *Qit) Author(header *types.Header) (common.Address, error) {
+func (c *Amana) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header, c.signatures)
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules.
-func (c *Qit) VerifyHeader(chain econsensus.ChainHeaderReader, header *types.Header, seal bool) error {
+func (c *Amana) VerifyHeader(chain econsensus.ChainHeaderReader, header *types.Header, seal bool) error {
 	return c.verifyHeader(chain, header, nil)
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers. The
 // method returns a quit channel to abort the operations and a results channel to
 // retrieve the async verifications (the order is that of the input slice).
-func (c *Qit) VerifyHeaders(chain econsensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+func (c *Amana) VerifyHeaders(chain econsensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	results := make(chan error, len(headers))
 
@@ -229,7 +229,7 @@ func (c *Qit) VerifyHeaders(chain econsensus.ChainHeaderReader, headers []*types
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
-func (c *Qit) verifyHeader(chain econsensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (c *Amana) verifyHeader(chain econsensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
 	}
@@ -285,7 +285,7 @@ func (c *Qit) verifyHeader(chain econsensus.ChainHeaderReader, header *types.Hea
 		return fmt.Errorf("invalid gasLimit: have %v, max %v", header.GasLimit, params.MaxGasLimit)
 	}
 	if chain.Config().IsShanghai(header.Time) {
-		return fmt.Errorf("qit does not support shanghai fork")
+		return fmt.Errorf("Amana does not support shanghai fork")
 	}
 	// If all checks passed, validate any special fields for hard forks
 	if err := misc.VerifyForkHashes(chain.Config(), header, false); err != nil {
@@ -299,7 +299,7 @@ func (c *Qit) verifyHeader(chain econsensus.ChainHeaderReader, header *types.Hea
 // rather depend on a batch of previous headers. The caller may optionally pass
 // in a batch of parents (ascending order) to avoid looking those up from the
 // database. This is useful for concurrently verifying a batch of new headers.
-func (c *Qit) verifyCascadingFields(chain econsensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (c *Amana) verifyCascadingFields(chain econsensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -355,7 +355,7 @@ func (c *Qit) verifyCascadingFields(chain econsensus.ChainHeaderReader, header *
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
-func (c *Qit) snapshot(chain econsensus.ChainHeaderReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
+func (c *Amana) snapshot(chain econsensus.ChainHeaderReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
 		headers []*types.Header
@@ -437,7 +437,7 @@ func (c *Qit) snapshot(chain econsensus.ChainHeaderReader, number uint64, hash c
 
 // VerifyUncles implements consensus.Engine, always returning an error for any
 // uncles as this consensus mechanism doesn't permit uncles.
-func (c *Qit) VerifyUncles(chain econsensus.ChainReader, block *types.Block) error {
+func (c *Amana) VerifyUncles(chain econsensus.ChainReader, block *types.Block) error {
 	if len(block.Uncles()) > 0 {
 		return errors.New("uncles not allowed")
 	}
@@ -448,7 +448,7 @@ func (c *Qit) VerifyUncles(chain econsensus.ChainReader, block *types.Block) err
 // consensus protocol requirements. The method accepts an optional list of parent
 // headers that aren't yet part of the local blockchain to generate the snapshots
 // from.
-func (c *Qit) verifySeal(snap *Snapshot, header *types.Header, parents []*types.Header) error {
+func (c *Amana) verifySeal(snap *Snapshot, header *types.Header, parents []*types.Header) error {
 	// Verifying the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -485,7 +485,7 @@ func (c *Qit) verifySeal(snap *Snapshot, header *types.Header, parents []*types.
 
 // Prepare implements consensus.Engine, preparing all the consensus fields of the
 // header for running the transactions on top.
-func (c *Qit) Prepare(chain econsensus.ChainHeaderReader, header *types.Header) error {
+func (c *Amana) Prepare(chain econsensus.ChainHeaderReader, header *types.Header) error {
 	// If the block isn't a checkpoint, cast a random vote (good enough for now)
 	header.Coinbase = common.Address{}
 	header.Nonce = types.BlockNonce{}
@@ -553,7 +553,7 @@ func (c *Qit) Prepare(chain econsensus.ChainHeaderReader, header *types.Header) 
 
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given.
-func (c *Qit) Finalize(chain econsensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, withdrawals []*types.Withdrawal) {
+func (c *Amana) Finalize(chain econsensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, withdrawals []*types.Withdrawal) {
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
@@ -561,9 +561,9 @@ func (c *Qit) Finalize(chain econsensus.ChainHeaderReader, header *types.Header,
 
 // FinalizeAndAssemble implements consensus.Engine, ensuring no uncles are set,
 // nor block rewards given, and returns the final block.
-func (c *Qit) FinalizeAndAssemble(chain econsensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, withdrawals []*types.Withdrawal) (*types.Block, error) {
+func (c *Amana) FinalizeAndAssemble(chain econsensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, withdrawals []*types.Withdrawal) (*types.Block, error) {
 	if len(withdrawals) > 0 {
-		return nil, errors.New("qit does not support withdrawals")
+		return nil, errors.New("Amana does not support withdrawals")
 	}
 
 	// Finalize block
@@ -575,7 +575,7 @@ func (c *Qit) FinalizeAndAssemble(chain econsensus.ChainHeaderReader, header *ty
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
-func (c *Qit) Authorize(signer common.Address, signFn SignerFn) {
+func (c *Amana) Authorize(signer common.Address, signFn SignerFn) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -585,7 +585,7 @@ func (c *Qit) Authorize(signer common.Address, signFn SignerFn) {
 
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
-func (c *Qit) Seal(chain econsensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+func (c *Amana) Seal(chain econsensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 	header := block.Header()
 
 	// Sealing the genesis block is not supported
@@ -629,7 +629,7 @@ func (c *Qit) Seal(chain econsensus.ChainHeaderReader, block *types.Block, resul
 		log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
 	}
 	// Sign all the things!
-	sighash, err := signFn(accounts.Account{Address: signer}, accounts.MimetypeClique, QitRLP(header))
+	sighash, err := signFn(accounts.Account{Address: signer}, accounts.MimetypeClique, AmanaRLP(header))
 	if err != nil {
 		return err
 	}
@@ -657,7 +657,7 @@ func (c *Qit) Seal(chain econsensus.ChainHeaderReader, block *types.Block, resul
 // that a new block should have:
 // * DIFF_NOTURN(2) if BLOCK_NUMBER % SIGNER_COUNT != SIGNER_INDEX
 // * DIFF_INTURN(1) if BLOCK_NUMBER % SIGNER_COUNT == SIGNER_INDEX
-func (c *Qit) CalcDifficulty(chain econsensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
+func (c *Amana) CalcDifficulty(chain econsensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
 	snap, err := c.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
 	if err != nil {
 		return nil
@@ -676,21 +676,21 @@ func calcDifficulty(snap *Snapshot, signer common.Address) *big.Int {
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
-func (c *Qit) SealHash(header *types.Header) common.Hash {
+func (c *Amana) SealHash(header *types.Header) common.Hash {
 	return SealHash(header)
 }
 
-// Close implements consensus.Engine. It's a noop for Qit as there are no background threads.
-func (c *Qit) Close() error {
+// Close implements consensus.Engine. It's a noop for Amana as there are no background threads.
+func (c *Amana) Close() error {
 	return nil
 }
 
 // APIs implements consensus.Engine, returning the user facing RPC API to allow
 // controlling the signer voting.
-func (c *Qit) APIs(chain econsensus.ChainHeaderReader) []rpc.API {
+func (c *Amana) APIs(chain econsensus.ChainHeaderReader) []rpc.API {
 	return []rpc.API{{
-		Namespace: "qit",
-		Service:   &API{chain: chain, qit: c},
+		Namespace: "amana",
+		Service:   &API{chain: chain, amana: c},
 	}}
 }
 
@@ -702,14 +702,14 @@ func SealHash(header *types.Header) (hash common.Hash) {
 	return hash
 }
 
-// QitRLP returns the rlp bytes which needs to be signed for the proof-of-authority
+// AmanaRLP returns the rlp bytes which needs to be signed for the proof-of-authority
 // sealing. The RLP to sign consists of the entire header apart from the 65 byte signature
 // contained at the end of the extra data.
 //
 // Note, the method requires the extra data to be at least 65 bytes, otherwise it
 // panics. This is done to avoid accidentally using both forms (signature present
 // or not), which could be abused to produce different hashes for the same header.
-func QitRLP(header *types.Header) []byte {
+func AmanaRLP(header *types.Header) []byte {
 	b := new(bytes.Buffer)
 	encodeSigHeader(b, header)
 	return b.Bytes()
@@ -737,7 +737,7 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 		enc = append(enc, header.BaseFee)
 	}
 	if header.WithdrawalsHash != nil {
-		panic("unexpected withdrawal hash value in qit")
+		panic("unexpected withdrawal hash value in Amana")
 	}
 	if err := rlp.Encode(w, enc); err != nil {
 		panic("can't encode: " + err.Error())

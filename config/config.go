@@ -115,8 +115,8 @@ type Config struct {
 	DAGCacheSize       uint64 `long:"dagcachesize" description:"DAG block cache size"`
 	BlockDataCacheSize uint64 `long:"bdcachesize" description:"Block data cache size"`
 
-	Qit    bool   `long:"qit" description:"Enable Qit Subnet"`
-	QitEnv string `long:"qitenv" description:"Qit Subnet environment"`
+	Amana    bool   `long:"amana" description:"Enable Amana"`
+	AmanaEnv string `long:"amanaenv" description:"Amana environment"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {

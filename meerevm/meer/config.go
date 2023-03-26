@@ -178,6 +178,12 @@ var (
 
 func MakeConfig(datadir string) (*eth.Config, error) {
 	chainConfig.ChainID = big.NewInt(qparams.ActiveNetParams.MeerEVMCfg.ChainID)
+
+	// TODO:In the future, we should let all networks support
+	if qparams.ActiveNetParams.Net == protocol.PrivNet {
+		chainConfig.LondonBlock = big.NewInt(0)
+	}
+
 	genesis := DefaultGenesisBlock(chainConfig)
 
 	etherbase := common.Address{}
@@ -274,4 +280,8 @@ func createConsensusEngine(stack *node.Node, ethashConfig *ethash.Config, clique
 	}, notify, noverify)
 	engine.SetThreads(-1) // Disable CPU mining
 	return engine
+}
+
+func ChainConfig() *params.ChainConfig {
+	return chainConfig
 }

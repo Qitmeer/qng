@@ -141,9 +141,9 @@ func (api *PublicRelayAPI) GetNodeInfo() (interface{}, error) {
 	if len(hostaddrs) > 0 {
 		ret.Addresss = hostaddrs
 	}
-	qitSer := api.node.GetQitService()
-	if qitSer != nil {
-		ret.Addresss = append(ret.Addresss, fmt.Sprintf("Qit: %s", qitSer.Node().URLv4()))
+	amanaSer := api.node.GetAmanaService()
+	if amanaSer != nil {
+		ret.Addresss = append(ret.Addresss, fmt.Sprintf("Amana: %s", amanaSer.Node().URLv4()))
 	}
 	return ret, nil
 }

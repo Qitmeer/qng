@@ -1,4 +1,4 @@
-package qit
+package amana
 
 import (
 	"github.com/ethereum/go-ethereum/core/forkid"
@@ -9,18 +9,18 @@ import (
 	"strings"
 )
 
-type PublicQitServiceAPI struct {
-	q *QitService
+type PublicAmanaServiceAPI struct {
+	q *AmanaService
 }
 
-func NewPublicQitServiceAPI(q *QitService) *PublicQitServiceAPI {
-	return &PublicQitServiceAPI{q}
+func NewPublicAmanaServiceAPI(q *AmanaService) *PublicAmanaServiceAPI {
+	return &PublicAmanaServiceAPI{q}
 }
 
-func (api *PublicQitServiceAPI) GetQitNodeInfo() (interface{}, error) {
+func (api *PublicAmanaServiceAPI) GetAmanaNodeInfo() (interface{}, error) {
 	ni := api.q.chain.Node().Server().NodeInfo()
 
-	qi := QitInfo{
+	qi := AmanaInfo{
 		ID:         ni.ID,
 		Name:       ni.Name,
 		Enode:      ni.Enode,
@@ -43,7 +43,7 @@ func (api *PublicQitServiceAPI) GetQitNodeInfo() (interface{}, error) {
 	return qi, nil
 }
 
-type QitInfo struct {
+type AmanaInfo struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Enode string `json:"enode"`
@@ -61,7 +61,7 @@ type QitInfo struct {
 	WS         string `json:"ws,omitempty"`
 }
 
-func (api *PublicQitServiceAPI) GetQitPeerInfo() (interface{}, error) {
+func (api *PublicAmanaServiceAPI) GetAmanaPeerInfo() (interface{}, error) {
 	pis := api.q.chain.Node().Server().PeersInfo()
 	retM := map[string]struct{}{}
 	ret := []*p2p.PeerInfo{}
@@ -71,7 +71,7 @@ func (api *PublicQitServiceAPI) GetQitPeerInfo() (interface{}, error) {
 			continue
 		}
 		has := false
-		if strings.HasPrefix(pi.Name, "qit") {
+		if strings.HasPrefix(pi.Name, "amana") {
 			has = true
 		} else if len(pi.ENR) > 0 {
 			node, err := enode.Parse(enode.ValidSchemes, pi.ENR)

@@ -1,12 +1,12 @@
-package qit
+package amana
 
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/protocol"
+	mconsensus "github.com/Qitmeer/qng/meerevm/amana/consensus"
 	mcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
-	mconsensus "github.com/Qitmeer/qng/meerevm/qit/consensus"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	ClientIdentifier       = "qit"
+	ClientIdentifier       = mconsensus.Identifier
 	chainID          int64 = 223
 	nodeFlags              = mcommon.Merge([]cli.Flag{
 		utils.IdentityFlag,
@@ -198,12 +198,12 @@ var (
 )
 
 func MakeConfig(datadir string) (*eth.Config, error) {
-	chainConfig.ChainID = big.NewInt(qparams.ActiveNetParams.MeerEVMCfg.QitChainID)
+	chainConfig.ChainID = big.NewInt(qparams.ActiveNetParams.MeerEVMCfg.AmanaChainID)
 	genesis := DefaultGenesisBlock(chainConfig)
 
 	econfig := ethconfig.Defaults
 
-	econfig.NetworkId = uint64(qparams.ActiveNetParams.MeerEVMCfg.QitChainID)
+	econfig.NetworkId = uint64(qparams.ActiveNetParams.MeerEVMCfg.AmanaChainID)
 	econfig.Genesis = genesis
 	econfig.ConsensusEngine = createConsensusEngine
 
@@ -213,7 +213,7 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	nodeConf.Version = params.VersionWithMeta
 	nodeConf.HTTPModules = append(nodeConf.HTTPModules, "eth")
 	nodeConf.WSModules = append(nodeConf.WSModules, "eth")
-	nodeConf.IPCPath = "qit.ipc"
+	nodeConf.IPCPath = ClientIdentifier + ".ipc"
 	nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
 	var p2pPort int
 	nodeConf.HTTPPort, nodeConf.WSPort, nodeConf.AuthPort, p2pPort = getDefaultPort()
@@ -234,7 +234,7 @@ func MakeParams(cfg *config.Config) (*eth.Config, []string, []cli.Flag, error) {
 	if err != nil {
 		return ecfg, nil, nil, err
 	}
-	return ecfg, mcommon.ProcessEnv(cfg.QitEnv, ecfg.Node.Name), GetFlags(), nil
+	return ecfg, mcommon.ProcessEnv(cfg.AmanaEnv, ecfg.Node.Name), GetFlags(), nil
 }
 
 func GetFlags() []cli.Flag {

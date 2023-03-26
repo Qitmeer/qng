@@ -12,7 +12,7 @@ import (
 )
 
 // CommitStates commit states
-func (c *Qit) CommitStates(
+func (c *Amana) CommitStates(
 	ctx context.Context,
 	state *state.StateDB,
 	header *types.Header,

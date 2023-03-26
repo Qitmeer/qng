@@ -161,5 +161,5 @@ var PrivNetParams = Params{
 
 	CoinbaseMaturity: 16,
 
-	MeerEVMCfg: MeerEVMConfig{ChainID: 8133, QitChainID: 8143},
+	MeerEVMCfg: MeerEVMConfig{ChainID: 8133, AmanaChainID: 8143},
 }

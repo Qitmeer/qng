@@ -1,4 +1,4 @@
-package qitcrawl
+package amanacrawl
 
 import (
 	"bytes"

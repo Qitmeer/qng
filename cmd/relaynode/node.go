@@ -6,10 +6,9 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/cmd/relaynode/amanaboot"
 	rconfig "github.com/Qitmeer/qng/cmd/relaynode/config"
-	"github.com/Qitmeer/qng/cmd/relaynode/qitboot"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
@@ -23,7 +22,6 @@ import (
 	"github.com/Qitmeer/qng/p2p/synch"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
-	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	ds "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-kad-dht"
@@ -78,7 +76,7 @@ func (node *Node) init(cfg *rconfig.Config) error {
 	if err := node.RegisterRpcService(); err != nil {
 		return err
 	}
-	if err := node.RegisterQitService(); err != nil {
+	if err := node.RegisterAmanaService(); err != nil {
 		return err
 	}
 
@@ -306,23 +304,19 @@ func (node *Node) RegisterRpcService() error {
 
 }
 
-func (node *Node) RegisterQitService() error {
-	if !node.cfg.QitBoot.Enable {
+func (node *Node) RegisterAmanaService() error {
+	if !node.cfg.AmanaBoot.Enable {
 		return nil
 	}
-	pkb, err := node.privateKey.Raw()
+	nk, err := p2p.ToECDSAPrivKey(node.privateKey)
 	if err != nil {
 		return err
 	}
-	nk, err := ecrypto.HexToECDSA(hex.EncodeToString(pkb))
+	aSer, err := amanaboot.NewAmanaBootService(node.cfg, nk)
 	if err != nil {
 		return err
 	}
-	qitSer, err := qitboot.NewQitBootService(node.cfg, nk)
-	if err != nil {
-		return err
-	}
-	return node.Services().RegisterService(qitSer)
+	return node.Services().RegisterService(aSer)
 }
 
 func (node *Node) Encoding() encoder.NetworkEncoding {
@@ -492,8 +486,8 @@ func (node *Node) GetRpcServer() *rpc.RpcServer {
 	return service
 }
 
-func (node *Node) GetQitService() *qitboot.QitBootService {
-	var service *qitboot.QitBootService
+func (node *Node) GetAmanaService() *amanaboot.AmanaBootService {
+	var service *amanaboot.AmanaBootService
 	if err := node.Services().FetchService(&service); err != nil {
 		log.Error(err.Error())
 		return nil

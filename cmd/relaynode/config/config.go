@@ -26,7 +26,7 @@ const (
 	defaultMaxRPCClients = 10
 	defaultRPCListener   = "127.0.0.1:2002"
 	defaultMaxPeers      = 1000
-	defaultQitListenAddr = ":2003"
+	defaultAmanaListenAddr = ":2003"
 )
 
 var (
@@ -208,43 +208,43 @@ var (
 		Destination: &Conf.MaxPeers,
 	}
 
-	EnableQit = &cli.BoolFlag{
-		Name:        "qit",
-		Aliases:     []string{"q"},
-		Usage:       "Enable Qit Subnet support",
+	EnableAmana = &cli.BoolFlag{
+		Name:        "amana",
+		Aliases:     []string{"am"},
+		Usage:       "Enable Amana support",
 		Value:       false,
-		Destination: &Conf.QitBoot.Enable,
+		Destination: &Conf.AmanaBoot.Enable,
 	}
 
-	QitListenAddr = &cli.StringFlag{
+	AmanaListenAddr = &cli.StringFlag{
 		Name:        "addr",
 		Aliases:     []string{"qa"},
-		Usage:       "QitSubnet listen address",
-		Value:       defaultQitListenAddr,
-		Destination: &Conf.QitBoot.ListenAddr,
+		Usage:       "Amana listen address",
+		Value:       defaultAmanaListenAddr,
+		Destination: &Conf.AmanaBoot.ListenAddr,
 	}
 
-	QitNAT = &cli.StringFlag{
+	AmanaNAT = &cli.StringFlag{
 		Name:        "nat",
 		Aliases:     []string{"na"},
-		Usage:       "Qit port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
+		Usage:       "Amana port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
 		Value:       "none",
-		Destination: &Conf.QitBoot.Natdesc,
+		Destination: &Conf.AmanaBoot.Natdesc,
 	}
 
-	QitNetrestrict = &cli.StringFlag{
+	AmanaNetrestrict = &cli.StringFlag{
 		Name:        "netrestrict",
 		Aliases:     []string{"ne"},
-		Usage:       "Qit restrict network communication to the given IP networks (CIDR masks)",
+		Usage:       "Amana restrict network communication to the given IP networks (CIDR masks)",
 		Value:       "",
-		Destination: &Conf.QitBoot.Netrestrict,
+		Destination: &Conf.AmanaBoot.Netrestrict,
 	}
 
-	QitRunv5 = &cli.BoolFlag{
+	AmanaRunv5 = &cli.BoolFlag{
 		Name:        "v5",
-		Usage:       "run a v5 topic discovery QitSubnet",
+		Usage:       "run a v5 topic discovery Amana",
 		Value:       false,
-		Destination: &Conf.QitBoot.Runv5,
+		Destination: &Conf.AmanaBoot.Runv5,
 	}
 
 	AppFlags = []cli.Flag{
@@ -270,11 +270,11 @@ var (
 		DisableTLS,
 		EnableRelay,
 		MaxPeers,
-		EnableQit,
-		QitListenAddr,
-		QitNAT,
-		QitNetrestrict,
-		QitRunv5,
+		EnableAmana,
+		AmanaListenAddr,
+		AmanaNAT,
+		AmanaNetrestrict,
+		AmanaRunv5,
 	}
 )
 
@@ -303,7 +303,7 @@ type Config struct {
 	EnableRelay   bool
 	MaxPeers      int
 
-	QitBoot QitBootConfig
+	AmanaBoot AmanaBootConfig
 }
 
 func (c *Config) Load() error {

@@ -16,7 +16,7 @@ import (
 // mechanisms of the proof-of-authority scheme.
 type API struct {
 	chain econsensus.ChainHeaderReader
-	qit   *Qit
+	amana   *Amana
 }
 
 // GetSnapshot retrieves the state snapshot at a given block.
@@ -32,7 +32,7 @@ func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	return api.qit.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return api.amana.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
 // GetSnapshotAtHash retrieves the state snapshot at a given block.
@@ -41,7 +41,7 @@ func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	return api.qit.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return api.amana.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
 // GetSigners retrieves the list of authorized signers at the specified block.
@@ -57,7 +57,7 @@ func (api *API) GetSigners(number *rpc.BlockNumber) ([]common.Address, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	snap, err := api.qit.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	snap, err := api.amana.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (api *API) GetSignersAtHash(hash common.Hash) ([]common.Address, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	snap, err := api.qit.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	snap, err := api.amana.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -79,11 +79,11 @@ func (api *API) GetSignersAtHash(hash common.Hash) ([]common.Address, error) {
 
 // Proposals returns the current proposals the node tries to uphold and vote on.
 func (api *API) Proposals() map[common.Address]bool {
-	api.qit.lock.RLock()
-	defer api.qit.lock.RUnlock()
+	api.amana.lock.RLock()
+	defer api.amana.lock.RUnlock()
 
 	proposals := make(map[common.Address]bool)
-	for address, auth := range api.qit.proposals {
+	for address, auth := range api.amana.proposals {
 		proposals[address] = auth
 	}
 	return proposals
@@ -92,19 +92,19 @@ func (api *API) Proposals() map[common.Address]bool {
 // Propose injects a new authorization proposal that the signer will attempt to
 // push through.
 func (api *API) Propose(address common.Address, auth bool) {
-	api.qit.lock.Lock()
-	defer api.qit.lock.Unlock()
+	api.amana.lock.Lock()
+	defer api.amana.lock.Unlock()
 
-	api.qit.proposals[address] = auth
+	api.amana.proposals[address] = auth
 }
 
 // Discard drops a currently running proposal, stopping the signer from casting
 // further votes (either for or against).
 func (api *API) Discard(address common.Address) {
-	api.qit.lock.Lock()
-	defer api.qit.lock.Unlock()
+	api.amana.lock.Lock()
+	defer api.amana.lock.Unlock()
 
-	delete(api.qit.proposals, address)
+	delete(api.amana.proposals, address)
 }
 
 type status struct {
@@ -124,7 +124,7 @@ func (api *API) Status() (*status, error) {
 		diff      = uint64(0)
 		optimals  = 0
 	)
-	snap, err := api.qit.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	snap, err := api.amana.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ func (api *API) Status() (*status, error) {
 			optimals++
 		}
 		diff += h.Difficulty.Uint64()
-		sealer, err := api.qit.Author(h)
+		sealer, err := api.amana.Author(h)
 		if err != nil {
 			return nil, err
 		}
@@ -205,15 +205,15 @@ func (api *API) GetSigner(rlpOrBlockNr *blockNumberOrHashOrRLP) (common.Address,
 		if header == nil {
 			return common.Address{}, fmt.Errorf("missing block %v", blockNrOrHash.String())
 		}
-		return api.qit.Author(header)
+		return api.amana.Author(header)
 	}
 	block := new(types.Block)
 	if err := rlp.DecodeBytes(rlpOrBlockNr.RLP, block); err == nil {
-		return api.qit.Author(block.Header())
+		return api.amana.Author(block.Header())
 	}
 	header := new(types.Header)
 	if err := rlp.DecodeBytes(rlpOrBlockNr.RLP, header); err != nil {
 		return common.Address{}, err
 	}
-	return api.qit.Author(header)
+	return api.amana.Author(header)
 }
