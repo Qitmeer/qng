@@ -29,7 +29,6 @@ import (
 	"github.com/Qitmeer/qng/services/wallet"
 	"github.com/Qitmeer/qng/vm"
 	"github.com/Qitmeer/qng/vm/consensus"
-	"github.com/ethereum/go-ethereum/node"
 	"reflect"
 )
 
@@ -150,9 +149,9 @@ func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config, autoCollectOp 
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterWalletService(cfg *config.Config, conf node.Config, _am *acct.AccountManager, _tm *tx.TxManager, autoCollectOp chan types.AutoCollectUtxo) error {
+func (qm *QitmeerFull) RegisterWalletService(cfg *config.Config, evm *evm.VM, _am *acct.AccountManager, _tm *tx.TxManager, autoCollectOp chan types.AutoCollectUtxo) error {
 	// account manager
-	walletmgr, err := wallet.New(cfg, conf, _am, _tm, autoCollectOp)
+	walletmgr, err := wallet.New(cfg, evm, _am, _tm, autoCollectOp)
 	if err != nil {
 		return err
 	}
@@ -311,7 +310,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 			return nil, err
 		}
 	}
-	if err := qm.RegisterWalletService(cfg, cvm.(*evm.VM).GetConfig().Node, qm.GetAccountManager(), txManager, autoCollectOp); err != nil {
+	if err := qm.RegisterWalletService(cfg, cvm.(*evm.VM), qm.GetAccountManager(), txManager, autoCollectOp); err != nil {
 		return nil, err
 	}
 

@@ -315,11 +315,19 @@ func TestSwap(t *testing.T) {
 	}
 	log.Println("expected balance", bas[0].String(), bas[1].String())
 	deadline = time.Now().Add(15 * time.Minute).Unix()
-	_, err = routerCall.SwapExactETHForTokens(authCaller1, big.NewInt(0), path, to, big.NewInt(deadline))
+	stx, err := routerCall.SwapExactETHForTokens(authCaller1, big.NewInt(0), path, to, big.NewInt(deadline))
 	if err != nil {
 		t.Fatal("SwapExactETHForTokens error", err)
 	}
 	GenerateBlock(t, h, 1)
+	stxd, err := h.Wallet.evmClient.TransactionReceipt(context.Background(), stx.Hash())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stxd == nil {
+		t.Fatal("create router failed")
+	}
+	assert.Equal(t, txROUTERD.Status, uint64(0x1))
 	ba1, err := tokenCall.BalanceOf(&bind.CallOpts{}, to)
 	if err != nil {
 		t.Fatal("BalanceOf Call error", err)

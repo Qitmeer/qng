@@ -6,6 +6,7 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/meerevm/evm"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -14,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/node"
 	"strconv"
 )
 
@@ -55,7 +55,8 @@ func (a *WalletManager) APIs() []api.API {
 	}
 }
 
-func New(cfg *config.Config, conf node.Config, _am *acct.AccountManager, _tm *tx.TxManager, _autoCollectOp chan types.AutoCollectUtxo) (*WalletManager, error) {
+func New(cfg *config.Config, evm *evm.VM, _am *acct.AccountManager, _tm *tx.TxManager, _autoCollectOp chan types.AutoCollectUtxo) (*WalletManager, error) {
+	conf := evm.GetConfig().Node
 	keydir, err := conf.KeyDirConfig()
 	if err != nil {
 		return nil, err
