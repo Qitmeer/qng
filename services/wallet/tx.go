@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/qx"
 	"github.com/Qitmeer/qng/rpc"
@@ -15,6 +16,53 @@ import (
 	"github.com/Qitmeer/qng/services/mempool"
 	"time"
 )
+
+func (a *WalletManager) CollectUtxoToEvm() {
+	if !a.cfg.AutoCollectEvm {
+		return
+	}
+	log.Debug("Wallet CollectUtxoToEvm Start")
+	for {
+		select {
+		case <-a.autoClose:
+			log.Info("CollectUtxoToEvm Stop")
+			return
+		case autoCollectOp := <-a.autoCollectOp:
+			addr, err := address.DecodeAddress(autoCollectOp.Address)
+			if err != nil {
+				log.Error("DecodeAddress Error", "err", err)
+				continue
+			}
+			switch addr.(type) {
+			case *address.SecpPubKeyAddress:
+			default:
+				log.Error("CollectUtxoToEvm Not Support address type Error", "addr", addr)
+				continue
+			}
+			sum := int64(autoCollectOp.Amount)
+			fee := int64(1e5)
+			amount := sum - fee
+			outputs := make([]qx.Output, 0)
+			outputs = append(outputs, qx.Output{
+				TargetAddress: autoCollectOp.Address,
+				Amount:        types.Amount{Value: amount, Id: types.MEERB},
+				OutputType:    txscript.PubKeyTy,
+			})
+			txid, err := a.sendTxWithUtxos(autoCollectOp.Address, amount, outputs, 0, []acct.UTXOResult{
+				{
+					Amount:    autoCollectOp.Amount,
+					PreOutIdx: autoCollectOp.Op.OutIndex,
+					PreTxHash: autoCollectOp.Op.Hash.String(),
+				},
+			}, sum)
+			if err != nil {
+				log.Error("sendTxWithUtxos Error", "err", err)
+				continue
+			}
+			log.Info("CollectUtxoToEvm Succ", "txid", txid)
+		}
+	}
+}
 
 func (a *WalletManager) getAvailableUtxos(addr string, amount int64) ([]acct.UTXOResult, int64, error) {
 	otxoList := make([]acct.UTXOResult, 0)
@@ -67,6 +115,11 @@ func (a *WalletManager) sendTx(fromAddress string, amounts json.AddressAmountV3,
 	if sum <= amount {
 		return "", fmt.Errorf("%s balance not enough , current:%d,need more than:%d", fromAddress, sum, amount)
 	}
+
+	return a.sendTxWithUtxos(fromAddress, amount, outputs, lockTime, uxtoList, sum)
+}
+
+func (a *WalletManager) sendTxWithUtxos(fromAddress string, amount int64, outputs []qx.Output, lockTime int64, uxtoList []acct.UTXOResult, sum int64) (string, error) {
 	//left := sum - amount.Value
 	inputs := make([]qx.Input, 0)
 	priKeyList := make([]string, 0)
@@ -113,10 +166,6 @@ func (a *WalletManager) sendTx(fromAddress string, amounts json.AddressAmountV3,
 	minFee := mempool.CalcMinRequiredTxRelayFee(int64(serializedSize),
 		types.Amount{Value: a.cfg.MinTxFee, Id: types.MEERA})
 	leftAmount := sum - amount - minFee
-	for _, v := range inputs {
-		fmt.Println(v.TxID)
-		fmt.Println(v.OutIndex)
-	}
 
 	if leftAmount > 0 {
 		leftOutput.Amount.Value = leftAmount

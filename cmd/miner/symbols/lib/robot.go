@@ -257,9 +257,9 @@ func (this *QitmeerRobot) SubmitWork() {
 							this.InvalidShares++
 						}
 					}
-					this.SubmitLock.Unlock()
+					//this.SubmitLock.Unlock()
 					time.AfterFunc(1*time.Second, func() {
-						this.SubmitLock.Lock()
+						//this.SubmitLock.Lock()
 						r := this.Work.Get()
 						this.SubmitLock.Unlock()
 						if this.Work.Block != nil {

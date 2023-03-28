@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/amana"
@@ -138,9 +139,9 @@ func (qm *QitmeerFull) RegisterNotifyMgr() error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
+func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config, autoCollectOp chan types.AutoCollectUtxo) error {
 	// account manager
-	acctmgr, err := acct.New(qm.GetBlockChain(), cfg)
+	acctmgr, err := acct.New(qm.GetBlockChain(), cfg, autoCollectOp)
 	if err != nil {
 		return err
 	}
@@ -149,9 +150,9 @@ func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterWalletService(cfg *config.Config, conf node.Config, _am *acct.AccountManager, _tm *tx.TxManager) error {
+func (qm *QitmeerFull) RegisterWalletService(cfg *config.Config, conf node.Config, _am *acct.AccountManager, _tm *tx.TxManager, autoCollectOp chan types.AutoCollectUtxo) error {
 	// account manager
-	walletmgr, err := wallet.New(cfg, conf, _am, _tm)
+	walletmgr, err := wallet.New(cfg, conf, _am, _tm, autoCollectOp)
 	if err != nil {
 		return err
 	}
@@ -297,10 +298,11 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	vms.SetTxPool(txManager.MemPool())
 	vms.SetNotify(qm.nfManager)
 	cvm, err := vms.GetVM(evm.MeerEVMID)
+	autoCollectOp := make(chan types.AutoCollectUtxo, 1)
 	if err != nil {
 		return nil, err
 	}
-	if err := qm.RegisterAccountService(cfg); err != nil {
+	if err := qm.RegisterAccountService(cfg, autoCollectOp); err != nil {
 		return nil, err
 	}
 
@@ -309,7 +311,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 			return nil, err
 		}
 	}
-	if err := qm.RegisterWalletService(cfg, cvm.(*evm.VM).GetConfig().Node, qm.GetAccountManager(), txManager); err != nil {
+	if err := qm.RegisterWalletService(cfg, cvm.(*evm.VM).GetConfig().Node, qm.GetAccountManager(), txManager, autoCollectOp); err != nil {
 		return nil, err
 	}
 

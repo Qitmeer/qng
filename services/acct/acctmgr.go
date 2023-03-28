@@ -21,12 +21,13 @@ import (
 // account manager communicate with various backends for signing transactions.
 type AccountManager struct {
 	service.Service
-	chain    *blockchain.BlockChain
-	cfg      *config.Config
-	db       database.DB
-	info     *AcctInfo
-	utxoops  []*UTXOOP
-	watchers map[string]*AcctBalanceWatcher
+	chain           *blockchain.BlockChain
+	cfg             *config.Config
+	db              database.DB
+	info            *AcctInfo
+	utxoops         []*UTXOOP
+	watchers        map[string]*AcctBalanceWatcher
+	autoCollectUtxo chan types.AutoCollectUtxo
 }
 
 func (a *AccountManager) Start() error {
@@ -655,13 +656,14 @@ func (a *AccountManager) APIs() []api.API {
 	}
 }
 
-func New(chain *blockchain.BlockChain, cfg *config.Config) (*AccountManager, error) {
+func New(chain *blockchain.BlockChain, cfg *config.Config, _autoCollectUtxo chan types.AutoCollectUtxo) (*AccountManager, error) {
 	a := AccountManager{
-		chain:    chain,
-		cfg:      cfg,
-		info:     NewAcctInfo(),
-		utxoops:  []*UTXOOP{},
-		watchers: map[string]*AcctBalanceWatcher{},
+		chain:           chain,
+		cfg:             cfg,
+		info:            NewAcctInfo(),
+		utxoops:         []*UTXOOP{},
+		watchers:        map[string]*AcctBalanceWatcher{},
+		autoCollectUtxo: _autoCollectUtxo,
 	}
 	return &a, nil
 }

@@ -1,8 +1,10 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/rpc/api"
@@ -11,17 +13,20 @@ import (
 	"github.com/Qitmeer/qng/services/tx"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/node"
 	"strconv"
 )
 
 type WalletManager struct {
 	service.Service
-	qks *QngKeyStore
-	am  *acct.AccountManager
-	tm  *tx.TxManager
-	cfg *config.Config
-	acc *accounts.Manager
+	qks           *QngKeyStore
+	am            *acct.AccountManager
+	tm            *tx.TxManager
+	cfg           *config.Config
+	acc           *accounts.Manager
+	autoCollectOp chan types.AutoCollectUtxo
+	autoClose     chan struct{}
 }
 
 // PublicWalletManagerAPI provides an API to access Qng wallet function
@@ -50,7 +55,7 @@ func (a *WalletManager) APIs() []api.API {
 	}
 }
 
-func New(cfg *config.Config, conf node.Config, _am *acct.AccountManager, _tm *tx.TxManager) (*WalletManager, error) {
+func New(cfg *config.Config, conf node.Config, _am *acct.AccountManager, _tm *tx.TxManager, _autoCollectOp chan types.AutoCollectUtxo) (*WalletManager, error) {
 	keydir, err := conf.KeyDirConfig()
 	if err != nil {
 		return nil, err
@@ -66,8 +71,10 @@ func New(cfg *config.Config, conf node.Config, _am *acct.AccountManager, _tm *tx
 		tm:  _tm,
 		acc: accounts.NewManager(&accounts.Config{InsecureUnlockAllowed: conf.InsecureUnlockAllowed},
 			ks),
+		autoClose: make(chan struct{}),
 	}
 	a.qks = NewQngKeyStore(ks)
+	a.autoCollectOp = _autoCollectOp
 	return &a, nil
 }
 
@@ -89,8 +96,60 @@ func (acc *WalletManager) MakeAddress(ks *QngKeyStore, account string) (accounts
 	return accs[index], nil
 }
 
+func (acc *WalletManager) Load() error {
+	log.Info("Wallet Load Address Start")
+	if len(acc.qks.Accounts()) < 1 {
+		return fmt.Errorf("not have any wallet,please create one\n ./qng --testnet -A=./ account import")
+	}
+	a, err := utils.MakeAddress(acc.qks.KeyStore, "0")
+	if err != nil {
+		return err
+	}
+	_, key, err := acc.qks.getDecryptedKey(a, acc.cfg.WalletPass)
+	if err != nil {
+		return err
+	}
+
+	acc.qks.mu.Lock()
+	defer acc.qks.mu.Unlock()
+	addrs, err := GetQngAddrsFromPrivateKey(hex.EncodeToString(key.PrivateKey.D.Bytes()), acc.am.GetChain().ChainParams())
+	if err != nil {
+		return err
+	}
+	for _, addr := range addrs {
+		log.Info("Wallet Load Address", "addr", addr.String())
+		_ = acc.am.AddAddress(addr.String())
+
+		u, found := acc.qks.unlocked[addr.String()]
+		if found {
+			if u.abort == nil {
+				// The address was unlocked indefinitely, so unlocking
+				// it with a timeout would be confusing.
+				zeroKey(key.PrivateKey)
+				return nil
+			}
+			// Terminate the expire goroutine and replace it below.
+			close(u.abort)
+		}
+		u = &unlocked{Key: key}
+		acc.qks.unlocked[addr.String()] = u
+		log.Info("Wallet Load Address End", "addr", addr.String())
+	}
+	log.Info("Wallet Load Address End")
+	return nil
+}
+
 func (a *WalletManager) Start() error {
 	log.Info("WalletManager start")
+	if a.cfg.AutoCollectEvm {
+		err := a.Load()
+		if err != nil {
+			return err
+		}
+	}
+	if a.cfg.AutoCollectEvm {
+		go a.CollectUtxoToEvm()
+	}
 	if err := a.Service.Start(); err != nil {
 		return err
 	}
@@ -99,8 +158,12 @@ func (a *WalletManager) Start() error {
 
 func (a *WalletManager) Stop() error {
 	log.Info("WalletManager stop")
+	if a.cfg.AutoCollectEvm {
+		a.autoClose <- struct{}{}
+	}
 	if err := a.Service.Stop(); err != nil {
 		return err
 	}
+
 	return nil
 }

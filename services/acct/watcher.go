@@ -6,6 +6,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 )
@@ -56,7 +57,7 @@ func (aw *AcctBalanceWatcher) GetBalance() uint64 {
 func (aw *AcctBalanceWatcher) Update(am *AccountManager) error {
 	aw.unlocked = 0
 	aw.unlocUTXONum = 0
-	for _, w := range aw.watchers {
+	for k, w := range aw.watchers {
 		err := w.Update(am)
 		if err != nil {
 			return err
@@ -64,6 +65,22 @@ func (aw *AcctBalanceWatcher) Update(am *AccountManager) error {
 		aw.unlocked += w.GetBalance()
 		if w.IsUnlocked() {
 			aw.unlocUTXONum++
+		}
+		if am.cfg.AutoCollectEvm && w.IsUnlocked() {
+			opk, err := hex.DecodeString(k)
+			if err != nil {
+				return err
+			}
+			op, err := parseOutpoint(opk)
+			if err != nil {
+				return err
+			}
+			fmt.Println("=====================xxxxxxxxx")
+			am.autoCollectUtxo <- types.AutoCollectUtxo{
+				Op:      *op,
+				Address: aw.address,
+				Amount:  w.GetBalance(),
+			}
 		}
 	}
 	return nil

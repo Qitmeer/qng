@@ -1158,3 +1158,9 @@ var scriptPool scriptFreeList = make(chan []byte, freeListMaxItems)
 func IsSequenceLockTimeDisabled(sequence uint32) bool {
 	return sequence&SequenceLockTimeDisabled != 0 || sequence <= TxTypeInSequence
 }
+
+type AutoCollectUtxo struct {
+	Op      TxOutPoint
+	Address string
+	Amount  uint64
+}

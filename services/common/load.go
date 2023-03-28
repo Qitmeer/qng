@@ -560,6 +560,16 @@ var (
 			Usage:       "Enable Amana",
 			Destination: &cfg.Amana,
 		},
+		&cli.BoolFlag{
+			Name:        "autocollectevm",
+			Usage:       "auto collect miner coinbase utxo to evm",
+			Destination: &cfg.AutoCollectEvm,
+		},
+		&cli.StringFlag{
+			Name:        "walletpass",
+			Usage:       "wallet password",
+			Destination: &cfg.WalletPass,
+		},
 	}
 )
 
