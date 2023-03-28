@@ -75,7 +75,6 @@ func (aw *AcctBalanceWatcher) Update(am *AccountManager) error {
 			if err != nil {
 				return err
 			}
-			fmt.Println("=====================xxxxxxxxx")
 			am.autoCollectUtxo <- types.AutoCollectUtxo{
 				Op:      *op,
 				Address: aw.address,
