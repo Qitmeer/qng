@@ -126,6 +126,4 @@ var MainNetParams = Params{
 	GuardAddrPkScript: hexMustDecode("76a9143846e53e5e952b5cd6023e3ad3cfc75cb93fce0388ac"),
 	// MmQitmeerMainNetHonorAddressXY9JH2y
 	HonorAddrPkScript: hexMustDecode("76a9143846e53e5e952b5cd60240ad9c4cf6164dd5090988ac"),
-
-	MeerEVMCfg: MeerEVMConfig{ChainID: 813, AmanaChainID: 814},
 }

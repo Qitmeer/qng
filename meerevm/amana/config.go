@@ -7,6 +7,7 @@ import (
 	mconsensus "github.com/Qitmeer/qng/meerevm/amana/consensus"
 	mcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
+	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -19,15 +20,13 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
-	"math/big"
 	"net"
 	"path/filepath"
 )
 
 var (
-	ClientIdentifier       = mconsensus.Identifier
-	chainID          int64 = 223
-	nodeFlags              = mcommon.Merge([]cli.Flag{
+	ClientIdentifier = mconsensus.Identifier
+	nodeFlags        = mcommon.Merge([]cli.Flag{
 		utils.IdentityFlag,
 		utils.UnlockedAccountFlag,
 		utils.PasswordFileFlag,
@@ -172,38 +171,14 @@ var (
 		utils.MetricsInfluxDBBucketFlag,
 		utils.MetricsInfluxDBOrganizationFlag,
 	}
-
-	chainConfig = &params.ChainConfig{
-		ChainID:             big.NewInt(chainID),
-		HomesteadBlock:      big.NewInt(0),
-		DAOForkBlock:        big.NewInt(0),
-		DAOForkSupport:      false,
-		EIP150Block:         big.NewInt(0),
-		EIP155Block:         big.NewInt(0),
-		EIP158Block:         big.NewInt(0),
-		ByzantiumBlock:      big.NewInt(0),
-		ConstantinopleBlock: big.NewInt(0),
-		PetersburgBlock:     big.NewInt(0),
-		IstanbulBlock:       big.NewInt(0),
-		MuirGlacierBlock:    big.NewInt(0),
-		BerlinBlock:         big.NewInt(0),
-		LondonBlock:         big.NewInt(0),
-		ArrowGlacierBlock:   big.NewInt(0),
-		GrayGlacierBlock:    big.NewInt(0),
-		Clique: &params.CliqueConfig{
-			Period: 3,
-			Epoch:  100,
-		},
-	}
 )
 
 func MakeConfig(datadir string) (*eth.Config, error) {
-	chainConfig.ChainID = big.NewInt(qparams.ActiveNetParams.MeerEVMCfg.AmanaChainID)
-	genesis := DefaultGenesisBlock(chainConfig)
+	genesis := DefaultGenesisBlock(ChainConfig())
 
 	econfig := ethconfig.Defaults
 
-	econfig.NetworkId = uint64(qparams.ActiveNetParams.MeerEVMCfg.AmanaChainID)
+	econfig.NetworkId = genesis.Config.ChainID.Uint64()
 	econfig.Genesis = genesis
 	econfig.ConsensusEngine = createConsensusEngine
 
@@ -259,7 +234,7 @@ func getDefaultPort() (int, int, int, int) {
 }
 
 func createConsensusEngine(stack *node.Node, ethashConfig *ethash.Config, cliqueConfig *params.CliqueConfig, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
-	engine := mconsensus.New(chainConfig.Clique, db)
+	engine := mconsensus.New(ChainConfig().Clique, db)
 	return engine
 }
 
@@ -293,4 +268,18 @@ func getBootstrapNodes(port int) []*enode.Node {
 		}
 	}
 	return bootstrapNodes
+}
+
+func ChainConfig() *params.ChainConfig {
+	switch qparams.ActiveNetParams.Net {
+	case protocol.MainNet:
+		return mparams.AmanaChainConfig
+	case protocol.TestNet:
+		return mparams.AmanaTestnetChainConfig
+	case protocol.MixNet:
+		return mparams.AmanaMixnetChainConfig
+	case protocol.PrivNet:
+		return mparams.AmanaPrivnetChainConfig
+	}
+	return nil
 }
