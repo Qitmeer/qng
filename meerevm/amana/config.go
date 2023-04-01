@@ -271,5 +271,15 @@ func getBootstrapNodes(port int) []*enode.Node {
 }
 
 func ChainConfig() *params.ChainConfig {
-	return mparams.ChainConfig(mparams.Amana)
+	switch qparams.ActiveNetParams.Net {
+	case protocol.MainNet:
+		return mparams.AmanaChainConfig
+	case protocol.TestNet:
+		return mparams.AmanaTestnetChainConfig
+	case protocol.MixNet:
+		return mparams.AmanaMixnetChainConfig
+	case protocol.PrivNet:
+		return mparams.AmanaPrivnetChainConfig
+	}
+	return nil
 }

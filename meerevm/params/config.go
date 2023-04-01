@@ -1,8 +1,6 @@
 package params
 
 import (
-	"github.com/Qitmeer/qng/core/protocol"
-	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/common"
 	eparams "github.com/ethereum/go-ethereum/params"
 	"math/big"
@@ -30,7 +28,7 @@ var (
 	}
 
 	QngTestnetChainConfig = &eparams.ChainConfig{
-		ChainID:             eparams.QngTestnetChainConfig.ChainID,
+		ChainID:             big.NewInt(223), // TODO: The testnet EVM ChainID has to remain 223 for the old compatibility. Change to eparams.QngTestnetChainConfig.ChainID, when the testnet do the next fresh relaunch.
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      false,
@@ -111,7 +109,7 @@ var (
 	}
 
 	AmanaTestnetChainConfig = &eparams.ChainConfig{
-		ChainID:             eparams.AmanaTestnetChainConfig.ChainID,
+		ChainID:             big.NewInt(8141), // TODO: The Amana testnet ChainID has to remain 8141 for the old compatibility. Change to eparams.AmanaTestnetChainConfig.ChainID, when the testnet do the next fresh relaunch.
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      false,
@@ -179,38 +177,3 @@ var (
 		},
 	}
 )
-
-func ChainConfig(ct ChainType) *eparams.ChainConfig {
-	switch qparams.ActiveNetParams.Net {
-	case protocol.MainNet:
-		switch ct {
-		case Qng:
-			return QngMainnetChainConfig
-		case Amana:
-			return AmanaChainConfig
-		}
-	case protocol.TestNet:
-		switch ct {
-		case Qng:
-			return QngTestnetChainConfig
-		case Amana:
-			return AmanaTestnetChainConfig
-		}
-	case protocol.MixNet:
-		switch ct {
-		case Qng:
-			return QngMixnetChainConfig
-		case Amana:
-			return AmanaMixnetChainConfig
-		}
-	case protocol.PrivNet:
-		switch ct {
-		case Qng:
-			return QngPrivnetChainConfig
-		case Amana:
-			return AmanaPrivnetChainConfig
-		}
-	}
-
-	return nil
-}

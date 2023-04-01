@@ -255,5 +255,15 @@ func createConsensusEngine(stack *node.Node, ethashConfig *ethash.Config, clique
 }
 
 func ChainConfig() *params.ChainConfig {
-	return mparams.ChainConfig(mparams.Qng)
+	switch qparams.ActiveNetParams.Net {
+	case protocol.MainNet:
+		return mparams.QngMainnetChainConfig
+	case protocol.TestNet:
+		return mparams.QngTestnetChainConfig
+	case protocol.MixNet:
+		return mparams.QngMixnetChainConfig
+	case protocol.PrivNet:
+		return mparams.QngPrivnetChainConfig
+	}
+	return nil
 }
