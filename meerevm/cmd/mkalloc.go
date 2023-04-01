@@ -103,8 +103,6 @@ func main() {
 			params.ActiveNetParams = &params.MainNetParam
 			networkTag = "mainAllocData"
 		}
-
-		meer.ChainConfig().ChainID = big.NewInt(params.ActiveNetParams.MeerEVMCfg.ChainID)
 		genesis := meer.DefaultGenesisBlock(meer.ChainConfig())
 		genesis.Alloc = ngd.Data.Genesis.Alloc
 		if _, ok := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]; ok {

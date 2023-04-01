@@ -6,7 +6,6 @@ package eth
 
 import (
 	"fmt"
-	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/external"
@@ -129,10 +128,6 @@ func NewETHChain(config *Config, args []string, flags []cli.Flag) (*ETHChain, er
 }
 
 func prepare(ctx *cli.Context, cfg *Config) {
-	if cfg.Eth.Genesis.Config.ChainID.Int64() != qparams.ActiveNetParams.MeerEVMCfg.ChainID {
-		return
-	}
-
 	log.Info(fmt.Sprintf("Prepare %s on NetWork(%d)...", cfg.Node.Name, cfg.Eth.NetworkId))
 	// Start metrics export if enabled
 	utils.SetupMetrics(ctx)
@@ -447,10 +442,6 @@ func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrErr
 }
 
 func filterConfig(ctx *cli.Context, cfg *Config) {
-	if cfg.Eth.Genesis.Config.ChainID.Int64() != qparams.ActiveNetParams.MeerEVMCfg.ChainID {
-		return
-	}
-
 	hms := ctx.String(utils.HTTPApiFlag.Name)
 	if len(hms) > 0 {
 		modules := utils.SplitAndTrim(hms)
