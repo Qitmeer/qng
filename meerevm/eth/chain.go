@@ -460,7 +460,7 @@ func filterConfig(ctx *cli.Context, cfg *Config) {
 	}
 
 	wms := ctx.String(utils.WSApiFlag.Name)
-	if len(hms) > 0 {
+	if len(wms) > 0 {
 		modules := utils.SplitAndTrim(wms)
 		nmodules := ""
 		for _, mod := range modules {
