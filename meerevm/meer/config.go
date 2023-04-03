@@ -6,6 +6,7 @@ import (
 	mcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
 	mconsensus "github.com/Qitmeer/qng/meerevm/meer/consensus"
+	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
@@ -19,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
-	"math/big"
 	"net"
 	"path/filepath"
 )
@@ -27,8 +27,6 @@ import (
 var (
 	// ClientIdentifier is a hard coded identifier to report into the network.
 	ClientIdentifier = "meereth"
-
-	chainID int64 = 223
 
 	nodeFlags = []cli.Flag{
 		utils.IdentityFlag,
@@ -155,41 +153,15 @@ var (
 		utils.MetricsInfluxDBBucketFlag,
 		utils.MetricsInfluxDBOrganizationFlag,
 	}
-
-	chainConfig = &params.ChainConfig{
-		ChainID:             big.NewInt(chainID),
-		HomesteadBlock:      big.NewInt(0),
-		DAOForkBlock:        big.NewInt(0),
-		DAOForkSupport:      false,
-		EIP150Block:         big.NewInt(0),
-		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:         big.NewInt(0),
-		EIP158Block:         big.NewInt(0),
-		ByzantiumBlock:      big.NewInt(0),
-		ConstantinopleBlock: big.NewInt(0),
-		PetersburgBlock:     big.NewInt(0),
-		IstanbulBlock:       big.NewInt(0),
-		MuirGlacierBlock:    big.NewInt(0),
-		BerlinBlock:         big.NewInt(0),
-		LondonBlock:         nil,
-		Ethash:              new(params.EthashConfig),
-	}
 )
 
 func MakeConfig(datadir string) (*eth.Config, error) {
-	chainConfig.ChainID = big.NewInt(qparams.ActiveNetParams.MeerEVMCfg.ChainID)
-
-	// TODO:In the future, we should let all networks support
-	if qparams.ActiveNetParams.Net == protocol.PrivNet {
-		chainConfig.LondonBlock = big.NewInt(0)
-	}
-
-	genesis := DefaultGenesisBlock(chainConfig)
+	genesis := DefaultGenesisBlock(ChainConfig())
 
 	etherbase := common.Address{}
 	econfig := ethconfig.Defaults
 
-	econfig.NetworkId = uint64(qparams.ActiveNetParams.MeerEVMCfg.ChainID)
+	econfig.NetworkId = genesis.Config.ChainID.Uint64()
 	econfig.Genesis = genesis
 	econfig.NoPruning = false
 	econfig.SkipBcVersionCheck = false
@@ -283,5 +255,15 @@ func createConsensusEngine(stack *node.Node, ethashConfig *ethash.Config, clique
 }
 
 func ChainConfig() *params.ChainConfig {
-	return chainConfig
+	switch qparams.ActiveNetParams.Net {
+	case protocol.MainNet:
+		return mparams.QngMainnetChainConfig
+	case protocol.TestNet:
+		return mparams.QngTestnetChainConfig
+	case protocol.MixNet:
+		return mparams.QngMixnetChainConfig
+	case protocol.PrivNet:
+		return mparams.QngPrivnetChainConfig
+	}
+	return nil
 }

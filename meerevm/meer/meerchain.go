@@ -11,7 +11,6 @@ import (
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
-	qparams "github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	qconsensus "github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/common"
@@ -115,7 +114,7 @@ func (b *MeerChain) buildBlock(qtxs []model.Tx, timestamp int64) (*types.Block, 
 		return nil, nil, nil, err
 	}
 
-	header := makeHeader(&b.chain.Config().Eth, parent, statedb, timestamp, qparams.ActiveNetParams.MeerEVMCfg.GasLimit)
+	header := makeHeader(&b.chain.Config().Eth, parent, statedb, timestamp, 0)
 
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(statedb)

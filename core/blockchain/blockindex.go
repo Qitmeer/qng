@@ -198,11 +198,14 @@ func (b *BlockChain) GetMeerBlock(order uint) (interface{}, error) {
 	}
 	number := uint64(0)
 	for i := uint(order); i > 0; i-- {
-		bh := b.bd.GetBlockHashByOrder(i)
-		if bh == nil {
+		ib := b.bd.GetBlockByOrder(i)
+		if ib == nil {
 			return nil, fmt.Errorf("No meer block number:%d", i)
 		}
-		num := b.VMService().GetBlockID(bh)
+		if forks.IsBeforeMeerEVMForkHeight(int64(ib.GetHeight())) {
+			break
+		}
+		num := b.VMService().GetBlockID(ib.GetHash())
 		if num != 0 {
 			number = num
 			break

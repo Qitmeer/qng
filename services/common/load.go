@@ -570,6 +570,11 @@ var (
 			Usage:       "wallet password",
 			Destination: &cfg.WalletPass,
 		},
+		&cli.Int64Flag{
+			Name:        "mincolletamount",
+			Usage:       "the min amount of auto collect",
+			Destination: &cfg.MinCollectAmount,
+		},
 	}
 )
 

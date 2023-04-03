@@ -239,8 +239,6 @@ type Params struct {
 	LedgerParams ledger.LedgerParams
 
 	CoinbaseConfig CoinbaseConfigs
-
-	MeerEVMCfg MeerEVMConfig
 }
 
 type CoinbaseConfig struct {

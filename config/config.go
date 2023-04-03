@@ -119,8 +119,9 @@ type Config struct {
 	AmanaEnv string `long:"amanaenv" description:"Amana environment"`
 
 	// wallet
-	WalletPass     string `long:"walletpass" description:"wallet password"`
-	AutoCollectEvm bool   `long:"autocollectevm" description:"auto collect utxo to evm"`
+	WalletPass       string `long:"walletpass" description:"wallet password"`
+	AutoCollectEvm   bool   `long:"autocollectevm" description:"auto collect utxo to evm"`
+	MinCollectAmount int64  `long:"mincolletamount" description:"the min amount of auto collect"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {

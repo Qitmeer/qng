@@ -28,6 +28,14 @@ func (a *WalletManager) CollectUtxoToEvm() {
 			log.Info("CollectUtxoToEvm Stop")
 			return
 		case autoCollectOp := <-a.autoCollectOp:
+			uxtoList, sum, err := a.getAvailableUtxos(autoCollectOp.Address, a.cfg.MinCollectAmount)
+			if err != nil {
+				log.Error("getAvailableUtxos Error", "err", err)
+				continue
+			}
+			if len(uxtoList) < 1 {
+				continue
+			}
 			addr, err := address.DecodeAddress(autoCollectOp.Address)
 			if err != nil {
 				log.Error("DecodeAddress Error", "err", err)
@@ -39,16 +47,13 @@ func (a *WalletManager) CollectUtxoToEvm() {
 				log.Error("CollectUtxoToEvm Not Support address type Error", "addr", addr)
 				continue
 			}
-			sum := int64(autoCollectOp.Amount)
-			fee := int64(1e5)
-			amount := sum - fee
 			outputs := make([]qx.Output, 0)
 			outputs = append(outputs, qx.Output{
 				TargetAddress: autoCollectOp.Address,
-				Amount:        types.Amount{Value: amount, Id: types.MEERB},
+				Amount:        types.Amount{Value: a.cfg.MinCollectAmount, Id: types.MEERB},
 				OutputType:    txscript.PubKeyTy,
 			})
-			txid, err := a.sendTxWithUtxos(autoCollectOp.Address, amount, outputs, 0, []acct.UTXOResult{
+			txid, err := a.sendTxWithUtxos(autoCollectOp.Address, a.cfg.MinCollectAmount, outputs, 0, []acct.UTXOResult{
 				{
 					Amount:    autoCollectOp.Amount,
 					PreOutIdx: autoCollectOp.Op.OutIndex,
@@ -59,7 +64,7 @@ func (a *WalletManager) CollectUtxoToEvm() {
 				log.Error("sendTxWithUtxos Error", "err", err)
 				continue
 			}
-			log.Info("CollectUtxoToEvm Succ", "txid", txid)
+			log.Trace("CollectUtxoToEvm Succ", "txid", txid)
 		}
 	}
 }

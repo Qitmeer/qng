@@ -82,3 +82,10 @@ func IsMeerEVMUTXOHeight(mainHeight int64) bool {
 	}
 	return mainHeight >= MeerEVMUTXOUnlockMainHeight
 }
+
+func IsBeforeMeerEVMForkHeight(mainHeight int64) bool {
+	if params.ActiveNetParams.Net != protocol.MainNet {
+		return false
+	}
+	return mainHeight < MeerEVMForkMainHeight
+}
