@@ -106,7 +106,7 @@ func (s *Service) Start() error {
 			return err
 		}
 	}
-	peersToWatch := []string{}
+	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
 		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
 		if err := dialRelayNode(s.Context(), s.host, s.cfg.RelayNodeAddr); err != nil {
@@ -138,6 +138,7 @@ func (s *Service) Start() error {
 			s.ensurePeerConnections(peersToWatch)
 		})
 	}
+
 	runutil.RunEvery(s.Context(), time.Hour, s.Peers().Decay)
 	runutil.RunEvery(s.Context(), refreshRate, func() {
 		s.RefreshQNR()
@@ -252,6 +253,7 @@ func (s *Service) connectFromPeerStore() {
 		}(info)
 	}
 }
+
 func (s *Service) connectWithPeer(info peer.AddrInfo, force bool) error {
 	if info.ID == s.host.ID() {
 		return nil
@@ -693,6 +695,7 @@ func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*
 		return nil, err
 	}
 	s.pubsub = gs
+
 	s.sy = synch.NewSync(s)
 	s.rebroadcast = NewRebroadcast(s)
 	return s, nil
