@@ -30,12 +30,12 @@ func (q *AmanaService) Start() error {
 	}
 	log.Info("Start AmanaService")
 
-	ecfg, args, flags, err := MakeParams(q.cfg)
+	ecfg, args, err := MakeParams(q.cfg)
 	if err != nil {
 		log.Error(err.Error())
 		return err
 	}
-	chain, err := eth.NewETHChain(ecfg, args, flags)
+	chain, err := eth.NewETHChain(ecfg, args)
 	if err != nil {
 		log.Error(err.Error())
 		return err

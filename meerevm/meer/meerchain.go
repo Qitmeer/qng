@@ -284,12 +284,12 @@ func NewMeerChain(ctx qconsensus.Context) *MeerChain {
 	cfg := ctx.GetConfig()
 	eth.InitLog(cfg.DebugLevel, cfg.DebugPrintOrigins)
 	//
-	ecfg, args, flags, err := MakeParams(cfg)
+	ecfg, args, err := MakeParams(cfg)
 	if err != nil {
 		log.Error(err.Error())
 		return nil
 	}
-	chain, err := eth.NewETHChain(ecfg, args, flags)
+	chain, err := eth.NewETHChain(ecfg, args)
 	if err != nil {
 		log.Error(err.Error())
 		return nil

@@ -8,7 +8,6 @@ import (
 	mconsensus "github.com/Qitmeer/qng/meerevm/meer/consensus"
 	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
-	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
@@ -19,7 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/urfave/cli/v2"
 	"net"
 	"path/filepath"
 )
@@ -27,132 +25,6 @@ import (
 var (
 	// ClientIdentifier is a hard coded identifier to report into the network.
 	ClientIdentifier = "meereth"
-
-	nodeFlags = []cli.Flag{
-		utils.IdentityFlag,
-		utils.UnlockedAccountFlag,
-		utils.PasswordFileFlag,
-		utils.BootnodesFlag,
-		utils.DataDirFlag,
-		utils.AncientFlag,
-		utils.MinFreeDiskSpaceFlag,
-		utils.KeyStoreDirFlag,
-		utils.ExternalSignerFlag,
-		utils.NoUSBFlag,
-		utils.USBFlag,
-		utils.SmartCardDaemonPathFlag,
-		utils.EthashCacheDirFlag,
-		utils.EthashCachesInMemoryFlag,
-		utils.EthashCachesOnDiskFlag,
-		utils.EthashCachesLockMmapFlag,
-		utils.EthashDatasetDirFlag,
-		utils.EthashDatasetsInMemoryFlag,
-		utils.EthashDatasetsOnDiskFlag,
-		utils.EthashDatasetsLockMmapFlag,
-		utils.TxPoolJournalFlag,
-		utils.TxPoolRejournalFlag,
-		utils.TxPoolPriceLimitFlag,
-		utils.TxPoolPriceBumpFlag,
-		utils.TxPoolAccountSlotsFlag,
-		utils.TxPoolGlobalSlotsFlag,
-		utils.TxPoolAccountQueueFlag,
-		utils.TxPoolGlobalQueueFlag,
-		utils.TxPoolLifetimeFlag,
-		utils.SyncModeFlag,
-		utils.ExitWhenSyncedFlag,
-		utils.GCModeFlag,
-		utils.SnapshotFlag,
-		utils.TxLookupLimitFlag,
-		utils.LightServeFlag,
-		utils.LightIngressFlag,
-		utils.LightEgressFlag,
-		utils.LightMaxPeersFlag,
-		utils.LightNoPruneFlag,
-		utils.LightKDFFlag,
-		utils.UltraLightServersFlag,
-		utils.UltraLightFractionFlag,
-		utils.UltraLightOnlyAnnounceFlag,
-		utils.LightNoSyncServeFlag,
-		utils.BloomFilterSizeFlag,
-		utils.CacheFlag,
-		utils.CacheDatabaseFlag,
-		utils.CacheTrieFlag,
-		utils.CacheTrieJournalFlag,
-		utils.CacheTrieRejournalFlag,
-		utils.CacheGCFlag,
-		utils.CacheSnapshotFlag,
-		utils.CacheNoPrefetchFlag,
-		utils.CachePreimagesFlag,
-		utils.ListenPortFlag,
-		utils.MaxPeersFlag,
-		utils.MaxPendingPeersFlag,
-		utils.MinerGasLimitFlag,
-		utils.MinerGasPriceFlag,
-		utils.MinerExtraDataFlag,
-		utils.MinerRecommitIntervalFlag,
-		utils.MinerNoVerifyFlag,
-		utils.NodeKeyFileFlag,
-		utils.NodeKeyHexFlag,
-		utils.MainnetFlag,
-		utils.RinkebyFlag,
-		utils.GoerliFlag,
-		utils.VMEnableDebugFlag,
-		utils.NetworkIdFlag,
-		utils.EthStatsURLFlag,
-		utils.FakePoWFlag,
-		utils.NoCompactionFlag,
-		utils.GpoBlocksFlag,
-		utils.GpoPercentileFlag,
-		utils.GpoMaxGasPriceFlag,
-		utils.GpoIgnoreGasPriceFlag,
-		utils.MinerNotifyFullFlag,
-	}
-
-	rpcFlags = []cli.Flag{
-		utils.HTTPEnabledFlag,
-		utils.HTTPListenAddrFlag,
-		utils.HTTPPortFlag,
-		utils.HTTPCORSDomainFlag,
-		utils.AuthListenFlag,
-		utils.AuthPortFlag,
-		utils.AuthVirtualHostsFlag,
-		utils.JWTSecretFlag,
-		utils.HTTPVirtualHostsFlag,
-		utils.GraphQLEnabledFlag,
-		utils.GraphQLCORSDomainFlag,
-		utils.GraphQLVirtualHostsFlag,
-		utils.HTTPApiFlag,
-		utils.HTTPPathPrefixFlag,
-		utils.WSEnabledFlag,
-		utils.WSListenAddrFlag,
-		utils.WSPortFlag,
-		utils.WSApiFlag,
-		utils.WSAllowedOriginsFlag,
-		utils.WSPathPrefixFlag,
-		utils.IPCDisabledFlag,
-		utils.IPCPathFlag,
-		utils.InsecureUnlockAllowedFlag,
-		utils.RPCGlobalGasCapFlag,
-		utils.RPCGlobalTxFeeCapFlag,
-		utils.AllowUnprotectedTxs,
-	}
-
-	metricsFlags = []cli.Flag{
-		utils.MetricsEnabledFlag,
-		utils.MetricsEnabledExpensiveFlag,
-		utils.MetricsHTTPFlag,
-		utils.MetricsPortFlag,
-		utils.MetricsEnableInfluxDBFlag,
-		utils.MetricsInfluxDBEndpointFlag,
-		utils.MetricsInfluxDBDatabaseFlag,
-		utils.MetricsInfluxDBUsernameFlag,
-		utils.MetricsInfluxDBPasswordFlag,
-		utils.MetricsInfluxDBTagsFlag,
-		utils.MetricsEnableInfluxDBV2Flag,
-		utils.MetricsInfluxDBTokenFlag,
-		utils.MetricsInfluxDBBucketFlag,
-		utils.MetricsInfluxDBOrganizationFlag,
-	}
 )
 
 func MakeConfig(datadir string) (*eth.Config, error) {
@@ -209,20 +81,12 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	}, nil
 }
 
-func MakeParams(cfg *config.Config) (*eth.Config, []string, []cli.Flag, error) {
+func MakeParams(cfg *config.Config) (*eth.Config, []string, error) {
 	ecfg, err := MakeConfig(cfg.DataDir)
 	if err != nil {
-		return ecfg, nil, nil, err
+		return ecfg, nil, err
 	}
-	return ecfg, mcommon.ProcessEnv(cfg.EVMEnv, ecfg.Node.Name), GetFlags(), nil
-}
-
-func GetFlags() []cli.Flag {
-	flags := []cli.Flag{}
-	flags = append(flags, nodeFlags...)
-	flags = append(flags, rpcFlags...)
-	flags = append(flags, metricsFlags...)
-	return flags
+	return ecfg, mcommon.ProcessEnv(cfg.EVMEnv, ecfg.Node.Name), nil
 }
 
 func getDefaultRPCPort() (int, int, int) {
