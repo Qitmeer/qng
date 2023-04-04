@@ -404,6 +404,11 @@ function get_peer_info(){
   get_result "$data"
 }
 
+function p2p_reload_peers(){
+  local data='{"jsonrpc":"2.0","method":"p2p_reloadPeers","params":[],"id":null}'
+  get_result "$data"
+}
+
 function add_peer(){
   local address=$1
 
@@ -1115,6 +1120,10 @@ elif [ "$1" == "nodeinfo" ]; then
 elif [ "$1" == "peerinfo" ]; then
   shift
   get_peer_info $@
+
+elif [ "$1" == "reloadpeers" ]; then
+  shift
+  p2p_reload_peers $@
 elif [ "$1" == "addpeer" ]; then
   shift
   add_peer $@
