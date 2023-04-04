@@ -106,6 +106,7 @@ func (s *Service) Start() error {
 			return err
 		}
 	}
+
 	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
 		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
