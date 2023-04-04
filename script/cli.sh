@@ -735,6 +735,7 @@ function usage(){
   echo "chain  :"
   echo "  nodeinfo"
   echo "  peerinfo"
+  echo "  reloadpeers"
   echo "  addpeer <p2p address>"
   echo "  delpeer <p2p id>"
   echo "  ping"
