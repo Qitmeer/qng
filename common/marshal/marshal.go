@@ -126,6 +126,7 @@ func MarshJsonVin(tx *types.Transaction) []json.Vin {
 			// Asm: disbuf,
 			Hex: hex.EncodeToString(sig),
 		}
+		vinList[0].Txid = "0x" + tx.TxIn[0].PreviousOut.Hash.String()
 		return vinList
 	}
 
