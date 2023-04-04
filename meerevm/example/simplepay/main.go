@@ -129,7 +129,7 @@ func main() {
 		Eth:     config,
 		Node:    nodeConf,
 		Metrics: metrics.DefaultConfig,
-	}, mcommon.ProcessEnv("", meer.ClientIdentifier), meer.GetFlags())
+	}, mcommon.ProcessEnv("", meer.ClientIdentifier))
 
 	err = ethchain.Start()
 	if err != nil {

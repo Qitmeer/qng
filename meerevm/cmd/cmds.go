@@ -35,23 +35,22 @@ func makeConfigNode(ctx *cli.Context, cfg *config.Config) (*node.Node, *eth.Conf
 	//
 	var ecfg *eth.Config
 	var args []string
-	var flags []cli.Flag
 	var err error
 	if cfg.Amana {
-		ecfg, args, flags, err = amana.MakeParams(cfg)
+		ecfg, args, err = amana.MakeParams(cfg)
 		if err != nil {
 			log.Error(err.Error())
 			return nil, nil
 		}
 	} else {
-		ecfg, args, flags, err = meer.MakeParams(cfg)
+		ecfg, args, err = meer.MakeParams(cfg)
 		if err != nil {
 			log.Error(err.Error())
 			return nil, nil
 		}
 	}
 	var n *node.Node
-	n, err = eth.MakeNakedNode(ecfg, args, flags)
+	n, err = eth.MakeNakedNode(ecfg, args)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, nil
