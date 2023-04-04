@@ -79,11 +79,12 @@ type Service struct {
 	events *event.Feed
 	sy     *synch.Sync
 
-	blockChain  *blockchain.BlockChain
-	timeSource  model.MedianTimeSource
-	txMemPool   *mempool.TxPool
-	notify      consensus.Notify
-	rebroadcast *Rebroadcast
+	blockChain   *blockchain.BlockChain
+	timeSource   model.MedianTimeSource
+	txMemPool    *mempool.TxPool
+	notify       consensus.Notify
+	rebroadcast  *Rebroadcast
+	peersToWatch []string
 }
 
 func (s *Service) Start() error {
@@ -107,20 +108,19 @@ func (s *Service) Start() error {
 		}
 	}
 
-	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
-		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
+		s.peersToWatch = append(s.peersToWatch, s.cfg.RelayNodeAddr)
 		if err := dialRelayNode(s.Context(), s.host, s.cfg.RelayNodeAddr); err != nil {
 			log.Warn(fmt.Sprintf("Could not dial relay node:%v", err))
 		}
 	}
 	_, bootstrapAddrs := parseGenericAddrs(s.cfg.BootstrapNodeAddr)
 	if len(bootstrapAddrs) > 0 {
-		peersToWatch = append(peersToWatch, bootstrapAddrs...)
+		s.peersToWatch = append(s.peersToWatch, bootstrapAddrs...)
 	}
 	if len(s.cfg.StaticPeers) > 0 {
 		bootstrapAddrs = append(bootstrapAddrs, s.cfg.StaticPeers...)
-		peersToWatch = append(peersToWatch, s.cfg.StaticPeers...)
+		s.peersToWatch = append(s.peersToWatch, s.cfg.StaticPeers...)
 	}
 
 	if len(bootstrapAddrs) > 0 {
@@ -134,12 +134,11 @@ func (s *Service) Start() error {
 	s.connectFromPeerStore()
 
 	// Periodic functions.
-	if len(peersToWatch) > 0 {
+	if len(s.peersToWatch) > 0 {
 		runutil.RunEvery(s.Context(), s.sy.PeerInterval, func() {
-			s.ensurePeerConnections(peersToWatch)
+			s.ensurePeerConnections(s.peersToWatch)
 		})
 	}
-
 	runutil.RunEvery(s.Context(), time.Hour, s.Peers().Decay)
 	runutil.RunEvery(s.Context(), refreshRate, func() {
 		s.RefreshQNR()
@@ -254,8 +253,16 @@ func (s *Service) connectFromPeerStore() {
 		}(info)
 	}
 }
-
+func (s *Service) addWatch(p string) {
+	for _, v := range s.peersToWatch {
+		if v == p { // repeat
+			return
+		}
+	}
+	s.peersToWatch = append(s.peersToWatch, p)
+}
 func (s *Service) connectWithPeer(info peer.AddrInfo, force bool) error {
+	s.addWatch(info.String())
 	if info.ID == s.host.ID() {
 		return nil
 	}
@@ -696,7 +703,7 @@ func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*
 		return nil, err
 	}
 	s.pubsub = gs
-
+	s.peersToWatch = []string{}
 	s.sy = synch.NewSync(s)
 	s.rebroadcast = NewRebroadcast(s)
 	return s, nil
