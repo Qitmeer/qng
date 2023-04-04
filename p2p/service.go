@@ -259,10 +259,13 @@ func (s *Service) addWatch(p string) {
 			return
 		}
 	}
+	log.Trace("add watch peer", "peer", p)
 	s.peersToWatch = append(s.peersToWatch, p)
 }
 func (s *Service) connectWithPeer(info peer.AddrInfo, force bool) error {
-	s.addWatch(info.String())
+	for _, v := range info.Addrs {
+		s.addWatch(v.String())
+	}
 	if info.ID == s.host.ID() {
 		return nil
 	}
