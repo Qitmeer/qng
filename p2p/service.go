@@ -79,12 +79,11 @@ type Service struct {
 	events *event.Feed
 	sy     *synch.Sync
 
-	blockChain   *blockchain.BlockChain
-	timeSource   model.MedianTimeSource
-	txMemPool    *mempool.TxPool
-	notify       consensus.Notify
-	rebroadcast  *Rebroadcast
-	peersToWatch []string
+	blockChain  *blockchain.BlockChain
+	timeSource  model.MedianTimeSource
+	txMemPool   *mempool.TxPool
+	notify      consensus.Notify
+	rebroadcast *Rebroadcast
 }
 
 func (s *Service) Start() error {
@@ -107,20 +106,20 @@ func (s *Service) Start() error {
 			return err
 		}
 	}
-
+	peersToWatch := []string{}
 	if s.cfg.RelayNodeAddr != "" {
-		s.peersToWatch = append(s.peersToWatch, s.cfg.RelayNodeAddr)
+		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
 		if err := dialRelayNode(s.Context(), s.host, s.cfg.RelayNodeAddr); err != nil {
 			log.Warn(fmt.Sprintf("Could not dial relay node:%v", err))
 		}
 	}
 	_, bootstrapAddrs := parseGenericAddrs(s.cfg.BootstrapNodeAddr)
 	if len(bootstrapAddrs) > 0 {
-		s.peersToWatch = append(s.peersToWatch, bootstrapAddrs...)
+		peersToWatch = append(peersToWatch, bootstrapAddrs...)
 	}
 	if len(s.cfg.StaticPeers) > 0 {
 		bootstrapAddrs = append(bootstrapAddrs, s.cfg.StaticPeers...)
-		s.peersToWatch = append(s.peersToWatch, s.cfg.StaticPeers...)
+		peersToWatch = append(peersToWatch, s.cfg.StaticPeers...)
 	}
 
 	if len(bootstrapAddrs) > 0 {
@@ -134,9 +133,9 @@ func (s *Service) Start() error {
 	s.connectFromPeerStore()
 
 	// Periodic functions.
-	if len(s.peersToWatch) > 0 {
+	if len(peersToWatch) > 0 {
 		runutil.RunEvery(s.Context(), s.sy.PeerInterval, func() {
-			s.ensurePeerConnections(s.peersToWatch)
+			s.ensurePeerConnections(peersToWatch)
 		})
 	}
 	runutil.RunEvery(s.Context(), time.Hour, s.Peers().Decay)
@@ -253,19 +252,7 @@ func (s *Service) connectFromPeerStore() {
 		}(info)
 	}
 }
-func (s *Service) addWatch(p string) {
-	for _, v := range s.peersToWatch {
-		if v == p { // repeat
-			return
-		}
-	}
-	log.Trace("add watch peer", "peer", p)
-	s.peersToWatch = append(s.peersToWatch, p)
-}
 func (s *Service) connectWithPeer(info peer.AddrInfo, force bool) error {
-	for _, v := range info.Addrs {
-		s.addWatch(v.String())
-	}
 	if info.ID == s.host.ID() {
 		return nil
 	}
@@ -706,7 +693,6 @@ func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*
 		return nil, err
 	}
 	s.pubsub = gs
-	s.peersToWatch = []string{}
 	s.sy = synch.NewSync(s)
 	s.rebroadcast = NewRebroadcast(s)
 	return s, nil
