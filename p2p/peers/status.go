@@ -268,6 +268,15 @@ func (p *Status) Decay() {
 	}
 }
 
+func (p *Status) ResetBad() {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	for _, status := range p.peers {
+		status.ResetBad()
+	}
+}
+
 func (p *Status) ForPeers(state PeerConnectionState, closure func(pe *Peer)) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
