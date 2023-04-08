@@ -212,7 +212,7 @@ func (b *MeerChain) fillBlock(qtxs []model.Tx, header *types.Header, statedb *st
 			}
 			header.Extra = txmb
 		} else if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
-			txb := common.FromHex(string(tx.GetData()))
+			txb := tx.GetData()
 			var txmb = &types.Transaction{}
 			if err := txmb.UnmarshalBinary(txb); err != nil {
 				return nil, nil, err

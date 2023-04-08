@@ -12,7 +12,6 @@ import (
 	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
@@ -90,8 +89,6 @@ func ToQNGTx(tx *types.Transaction, timestamp int64) *qtypes.Transaction {
 	if err != nil {
 		return nil
 	}
-	txmbHex := hexutil.Encode(txmb)
-
 	qtxhb := tx.Hash().Bytes()
 	ReverseBytes(&qtxhb)
 	qtxh := hash.MustBytesToHash(qtxhb)
@@ -106,7 +103,7 @@ func ToQNGTx(tx *types.Transaction, timestamp int64) *qtypes.Transaction {
 		PreviousOut: *qtypes.NewOutPoint(&qtxh, qtypes.SupperPrevOutIndex),
 		Sequence:    uint32(qtypes.TxTypeCrossChainVM),
 		AmountIn:    qtypes.Amount{Id: qtypes.MEERB, Value: 0},
-		SignScript:  []byte(txmbHex),
+		SignScript:  txmb,
 	})
 	mtx.AddTxOut(&qtypes.TxOutput{
 		Amount:   qtypes.Amount{Value: 0, Id: qtypes.MEERB},
