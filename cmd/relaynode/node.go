@@ -190,7 +190,7 @@ func (node *Node) startP2P() error {
 	var kademliaDHT *dht.IpfsDHT
 	newDHT := func(h host.Host) (routing.PeerRouting, error) {
 		var err error
-		kademliaDHT, err = dht.New(node.Context(), h, dht.V1ProtocolOverride(p2p.ProtocolDHT), dht.Mode(dht.ModeServer))
+		kademliaDHT, err = dht.New(node.Context(), h, dht.V1ProtocolOverride(p2p.ProtocolDHT()), dht.Mode(dht.ModeServer))
 		return kademliaDHT, err
 	}
 	opts = append(opts, libp2p.Routing(newDHT))
