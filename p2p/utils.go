@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	qprotocol "github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/iputils"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
@@ -15,6 +16,7 @@ import (
 	"github.com/Qitmeer/qng/version"
 	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/prysmaticlabs/go-bitfield"
 	"io/ioutil"
 	"net"
@@ -200,4 +202,17 @@ func ToECDSAPrivKey(privKey crypto.PrivKey) (*ecdsa.PrivateKey, error) {
 		return nil, err
 	}
 	return pk, nil
+}
+
+func ProtocolDHT() protocol.ID {
+	switch params.ActiveNetParams.Net {
+	case qprotocol.MainNet:
+		return "/qitmeer/kad/1.0.0"
+	case qprotocol.TestNet:
+		return "/qitmeer/kad/1.0.0/testnet"
+	case qprotocol.MixNet:
+		return "/qitmeer/kad/1.0.0/mixnet"
+	default:
+		return "/qitmeer/kad/1.0.0/privnet"
+	}
 }

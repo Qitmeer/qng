@@ -173,7 +173,7 @@ func (node *Node) Run() error {
 		return err
 	}
 
-	kademliaDHT, err := dht.New(node.ctx, node.host, dht.V1ProtocolOverride(p2p.ProtocolDHT))
+	kademliaDHT, err := dht.New(node.ctx, node.host, dht.V1ProtocolOverride(p2p.ProtocolDHT()))
 	if err != nil {
 		return err
 	}

@@ -11,16 +11,11 @@ import (
 	"github.com/Qitmeer/qng/p2p/qnode"
 	"github.com/Qitmeer/qng/p2p/qnr"
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/core/routing"
-	"github.com/libp2p/go-libp2p-kad-dht"
 	"net"
-)
-
-const (
-	ProtocolDHT protocol.ID = "/qitmeer/kad/1.0.0"
 )
 
 // Listener defines the discovery V5 network interface that is used
@@ -194,7 +189,7 @@ func (s *Service) startKademliaDHT() error {
 func (s *Service) KademliaDHTOption() libp2p.Option {
 	newDHT := func(h host.Host) (routing.PeerRouting, error) {
 		var err error
-		s.kademliaDHT, err = dht.New(s.Context(), h,dht.V1ProtocolOverride(ProtocolDHT),dht.Mode(dht.ModeServer))
+		s.kademliaDHT, err = dht.New(s.Context(), h, dht.V1ProtocolOverride(ProtocolDHT()), dht.Mode(dht.ModeServer))
 		return s.kademliaDHT, err
 	}
 	return libp2p.Routing(newDHT)
