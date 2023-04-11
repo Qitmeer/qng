@@ -65,7 +65,7 @@ qng-build:
 		@echo "Enalbe ZMQ"
 		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) -tags=zmq "github.com/Qitmeer/qng/cmd/qng"
     else
-		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qng"
+		@go build -o $(GOBIN)/qng $(GOFLAGS_RELEASE) "github.com/Qitmeer/qng/cmd/qng"
     endif
 qx:
 	@go build -o $(GOBIN)/qx $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qx"
