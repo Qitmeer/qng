@@ -124,12 +124,16 @@ func main() {
 		},
 		Logger: nil,
 	}
-
+	args,err:=mcommon.ProcessEnv("", meer.ClientIdentifier,nil)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	ethchain, err := eth.NewETHChain(&eth.Config{
 		Eth:     config,
 		Node:    nodeConf,
 		Metrics: metrics.DefaultConfig,
-	}, mcommon.ProcessEnv("", meer.ClientIdentifier))
+	}, args)
 
 	err = ethchain.Start()
 	if err != nil {

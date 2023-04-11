@@ -8,6 +8,7 @@ import (
 	mconsensus "github.com/Qitmeer/qng/meerevm/meer/consensus"
 	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
+	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
@@ -18,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/urfave/cli/v2"
 	"net"
 	"path/filepath"
 )
@@ -25,6 +27,23 @@ import (
 var (
 	// ClientIdentifier is a hard coded identifier to report into the network.
 	ClientIdentifier = "meereth"
+
+	exclusionFlags = append([]cli.Flag{
+		utils.TxPoolLocalsFlag,
+		utils.TxPoolNoLocalsFlag,
+		utils.SyncTargetFlag,
+		utils.DiscoveryPortFlag,
+		utils.MiningEnabledFlag,
+		utils.MinerThreadsFlag,
+		utils.MinerNotifyFlag,
+		utils.MinerEtherbaseFlag,
+		utils.MinerNewPayloadTimeout,
+		utils.NATFlag,
+		utils.NoDiscoverFlag,
+		utils.DiscoveryV5Flag,
+		utils.NetrestrictFlag,
+		utils.DNSDiscoveryFlag,
+	}, utils.NetworkFlags...)
 )
 
 func MakeConfig(datadir string) (*eth.Config, error) {
@@ -86,7 +105,8 @@ func MakeParams(cfg *config.Config) (*eth.Config, []string, error) {
 	if err != nil {
 		return ecfg, nil, err
 	}
-	return ecfg, mcommon.ProcessEnv(cfg.EVMEnv, ecfg.Node.Name), nil
+	args, err := mcommon.ProcessEnv(cfg.EVMEnv, ecfg.Node.Name, exclusionFlags)
+	return ecfg, args, err
 }
 
 func getDefaultRPCPort() (int, int, int) {

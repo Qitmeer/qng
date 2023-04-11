@@ -280,19 +280,19 @@ func (b *MeerChain) ETHChain() *eth.ETHChain {
 	return b.chain
 }
 
-func NewMeerChain(ctx qconsensus.Context) *MeerChain {
+func NewMeerChain(ctx qconsensus.Context) (*MeerChain, error) {
 	cfg := ctx.GetConfig()
 	eth.InitLog(cfg.DebugLevel, cfg.DebugPrintOrigins)
 	//
 	ecfg, args, err := MakeParams(cfg)
 	if err != nil {
 		log.Error(err.Error())
-		return nil
+		return nil, err
 	}
 	chain, err := eth.NewETHChain(ecfg, args)
 	if err != nil {
 		log.Error(err.Error())
-		return nil
+		return nil, err
 	}
 
 	mc := &MeerChain{
@@ -300,7 +300,7 @@ func NewMeerChain(ctx qconsensus.Context) *MeerChain {
 		meerpool: chain.Config().Eth.Miner.External.(*MeerPool),
 	}
 	mc.meerpool.init(&chain.Config().Eth.Miner, chain.Config().Eth.Genesis.Config, chain.Ether().Engine(), chain.Ether(), chain.Ether().EventMux(), ctx)
-	return mc
+	return mc, nil
 }
 
 func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB, timestamp int64, gaslimit uint64) *types.Header {
