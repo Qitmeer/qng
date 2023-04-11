@@ -2,9 +2,7 @@
 The next generation of the Qitmeer network implementation with the plug-able VMs under the MeerDAG consensus.
 
 ### Installation
-***make sure you have go-lang version `1.17.x` or above (`1.19.x` is recommended) installed on the system to build.***
-
-***`go1.20` is not supported yet, Please use go `1.19.x` instead.***
+***make sure you have go-lang version `1.19.x` or above (`1.20.x` is recommended) installed on the system to build.***
 
 * Build from source  
 ```bash
