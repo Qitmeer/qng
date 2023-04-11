@@ -517,6 +517,7 @@ var (
 			Name:        "circuit",
 			Usage:       "All peers will ignore dual channel mode detection",
 			Destination: &cfg.Circuit,
+			Value:       true,
 		},
 		&cli.StringFlag{
 			Name:        "evmenv",
