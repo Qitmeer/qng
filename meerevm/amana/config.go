@@ -62,7 +62,7 @@ func MakeParams(cfg *config.Config) (*eth.Config, []string, error) {
 	if err != nil {
 		return ecfg, nil, err
 	}
-	args, err := mcommon.ProcessEnv(cfg.EVMEnv, ecfg.Node.Name, nil)
+	args, err := mcommon.ProcessEnv(cfg.AmanaEnv, ecfg.Node.Name, nil)
 	return ecfg, args, err
 }
 
