@@ -41,7 +41,10 @@ func (ps *PeerSync) Connected(pid peer.ID, conn network.Conn) {
 
 func (ps *PeerSync) processConnected(msg *ConnectedMsg) {
 	remotePe := ps.sy.peers.Fetch(msg.ID)
-
+	// Filter out unnecessary peers
+	if !ps.preCheckPeerValidity(remotePe) {
+		return
+	}
 	remotePe.HSlock.Lock()
 	defer remotePe.HSlock.Unlock()
 
@@ -86,6 +89,14 @@ func (ps *PeerSync) processConnected(msg *ConnectedMsg) {
 		return
 	}
 	ps.Connection(remotePe)
+}
+
+func (ps *PeerSync) preCheckPeerValidity(peer *peers.Peer) bool {
+	delay := time.Since(peer.ChainStateLastUpdated())
+	if delay > time.Hour*24 {
+		return true
+	}
+	return peer.CanConnectWithNetwork()
 }
 
 func (ps *PeerSync) immediatelyConnected(pe *peers.Peer) {
