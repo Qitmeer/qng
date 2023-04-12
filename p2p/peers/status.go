@@ -73,7 +73,9 @@ func (p *Status) DisConnectPeers() []peer.ID {
 		if !status.IsConsensus() {
 			continue
 		}
-		peers = append(peers, pid)
+		if status.ConnectionState().IsDisconnected() {
+			peers = append(peers, pid)
+		}
 	}
 	return peers
 }
