@@ -45,7 +45,7 @@ const (
 var bnStrings = map[Network]string{
 	MainNet: "MainNet",
 	TestNet: "TestNet",
-	PrivNet: "PirvNet",
+	PrivNet: "PrivNet",
 	MixNet:  "MixNet",
 }
 
