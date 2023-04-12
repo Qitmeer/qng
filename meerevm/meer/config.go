@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -46,9 +47,7 @@ var (
 	}, utils.NetworkFlags...)
 )
 
-func MakeConfig(datadir string) (*eth.Config, error) {
-	genesis := DefaultGenesisBlock(ChainConfig())
-
+func MakeConfig(datadir string, genesis *core.Genesis) (*eth.Config, error) {
 	etherbase := common.Address{}
 	econfig := ethconfig.Defaults
 
@@ -101,7 +100,7 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 }
 
 func MakeParams(cfg *config.Config) (*eth.Config, []string, error) {
-	ecfg, err := MakeConfig(cfg.DataDir)
+	ecfg, err := MakeConfig(cfg.DataDir, DefaultGenesisBlock(ChainConfig()))
 	if err != nil {
 		return ecfg, nil, err
 	}

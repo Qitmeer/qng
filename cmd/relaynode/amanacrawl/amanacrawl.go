@@ -226,7 +226,7 @@ func getNodesFilePath(dataDir string) string {
 }
 
 func amanaFilter(ns nodeSet) (nodeSet, error) {
-	cfg, err := amana.MakeConfig(".")
+	cfg, err := amana.MakeConfig(".", amana.DefaultGenesisBlock(amana.ChainConfig()))
 	if err != nil {
 		return nil, err
 	}

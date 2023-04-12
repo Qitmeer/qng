@@ -62,13 +62,13 @@ func makeConfig(cfg *config.Config) (*eth.Config, error) {
 	var ecfg *eth.Config
 	var err error
 	if cfg.Amana {
-		ecfg, err = amana.MakeConfig(cfg.DataDir)
+		ecfg, err = amana.MakeConfig(cfg.DataDir, amana.DefaultGenesisBlock(amana.ChainConfig()))
 		if err != nil {
 			log.Error(err.Error())
 			return nil, nil
 		}
 	} else {
-		ecfg, err = meer.MakeConfig(cfg.DataDir)
+		ecfg, err = meer.MakeConfig(cfg.DataDir, meer.DefaultGenesisBlock(meer.ChainConfig()))
 		if err != nil {
 			log.Error(err.Error())
 			return nil, nil
