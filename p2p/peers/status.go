@@ -64,6 +64,20 @@ func (p *Status) Connected() []peer.ID {
 	return peers
 }
 
+// DisConnectPeers returns the peers that are DisConnected.
+func (p *Status) DisConnectPeers() []peer.ID {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, status := range p.peers {
+		if !status.IsConsensus() {
+			continue
+		}
+		peers = append(peers, pid)
+	}
+	return peers
+}
+
 func (p *Status) ConnectedPeers() []*Peer {
 	p.lock.RLock()
 	defer p.lock.RUnlock()

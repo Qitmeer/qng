@@ -141,7 +141,7 @@ func (s *Service) Start() error {
 	}
 
 	runutil.RunEvery(s.Context(), pollingPeriod, s.Peers().Decay)
-	runutil.RunEvery(s.Context(), s.sy.PeerInterval, s.Peers().ResetBad)
+	//runutil.RunEvery(s.Context(), s.sy.PeerInterval, s.Peers().ResetBad)
 	runutil.RunEvery(s.Context(), refreshRate, func() {
 		s.RefreshQNR()
 	})

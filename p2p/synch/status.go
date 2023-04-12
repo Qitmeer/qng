@@ -24,7 +24,7 @@ const (
 // maintainPeerStatuses by infrequently polling peers for their latest status.
 func (s *Sync) maintainPeerStatuses() {
 	runutil.RunEvery(s.p2p.Context(), s.PeerInterval, func() {
-		for _, pid := range s.Peers().Connected() {
+		for _, pid := range s.Peers().DisConnectPeers() {
 			pe := s.peers.Get(pid)
 			if pe == nil {
 				continue
