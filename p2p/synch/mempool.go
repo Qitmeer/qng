@@ -23,12 +23,12 @@ func (s *Sync) SendMempoolRequest(ctx context.Context, pe *peers.Peer, count uin
 	if err != nil {
 		return err
 	}
-	defer resetSteam(stream, s.p2p)
 
 	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
 		return err
 	}
+	defer closeSteam(stream)
 
 	if !code.IsSuccess() {
 		return errors.New(errMsg)
