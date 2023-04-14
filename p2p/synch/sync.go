@@ -319,6 +319,12 @@ func RegisterRPC(rpc common.P2PRPC, basetopic string, base interface{}, handle r
 		}
 		if processError(e, stream, rpc) {
 			closeWriteSteam(stream)
+
+			select {
+			case <-time.After(TtfbTimeout):
+			case <-ctx.Done():
+			}
+			closeSteam(stream)
 		} else {
 			resetSteam(stream)
 		}
