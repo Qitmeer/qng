@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -47,7 +48,7 @@ var (
 )
 
 func MakeConfig(datadir string) (*eth.Config, error) {
-	genesis := DefaultGenesisBlock(ChainConfig())
+	genesis := Genesis()
 
 	etherbase := common.Address{}
 	econfig := ethconfig.Defaults
@@ -148,6 +149,20 @@ func ChainConfig() *params.ChainConfig {
 		return mparams.QngMixnetChainConfig
 	case protocol.PrivNet:
 		return mparams.QngPrivnetChainConfig
+	}
+	return nil
+}
+
+func Genesis() *core.Genesis {
+	switch qparams.ActiveNetParams.Net {
+	case protocol.MainNet:
+		return QngGenesis()
+	case protocol.TestNet:
+		return QngTestnetGenesis()
+	case protocol.MixNet:
+		return QngMixnetGenesis()
+	case protocol.PrivNet:
+		return QngPrivnetGenesis()
 	}
 	return nil
 }
