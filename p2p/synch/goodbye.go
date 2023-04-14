@@ -61,6 +61,6 @@ func sendGoodByeMessage(ctx context.Context, code common.ErrorCode, id peer.ID, 
 	// There is still a chance that the peer won't receive the message.
 	time.Sleep(50 * time.Millisecond)
 
-	closeSteam(stream)
+	closeStream(stream)
 	return nil
 }

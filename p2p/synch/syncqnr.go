@@ -32,7 +32,7 @@ func (s *Sync) sendQNRRequest(ctx context.Context, pe *peers.Peer, qnr *pb.SyncQ
 
 	if !code.IsSuccess() {
 		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "QNR request rsp")
-		closeSteam(stream)
+		closeStream(stream)
 		return nil, errors.New(errMsg)
 	}
 
@@ -40,7 +40,7 @@ func (s *Sync) sendQNRRequest(ctx context.Context, pe *peers.Peer, qnr *pb.SyncQ
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
-	closeSteam(stream)
+	closeStream(stream)
 	return msg, err
 }
 
