@@ -11,6 +11,7 @@ import (
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -27,7 +28,7 @@ var (
 )
 
 func MakeConfig(datadir string) (*eth.Config, error) {
-	genesis := DefaultGenesisBlock(ChainConfig())
+	genesis := Genesis()
 
 	econfig := ethconfig.Defaults
 
@@ -126,6 +127,20 @@ func ChainConfig() *params.ChainConfig {
 		return mparams.AmanaMixnetChainConfig
 	case protocol.PrivNet:
 		return mparams.AmanaPrivnetChainConfig
+	}
+	return nil
+}
+
+func Genesis() *core.Genesis {
+	switch qparams.ActiveNetParams.Net {
+	case protocol.MainNet:
+		return AmanaGenesis()
+	case protocol.TestNet:
+		return AmanaTestnetGenesis()
+	case protocol.MixNet:
+		return AmanaMixnetGenesis()
+	case protocol.PrivNet:
+		return AmanaPrivnetGenesis()
 	}
 	return nil
 }
