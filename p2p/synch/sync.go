@@ -318,9 +318,15 @@ func RegisterRPC(rpc common.P2PRPC, basetopic string, base interface{}, handle r
 			e = handle(ctx, msg, stream)
 		}
 		if processError(e, stream, rpc) {
-			closeWriteSteam(stream)
+			closeWriteStream(stream)
+
+			select {
+			case <-time.After(TtfbTimeout):
+			case <-ctx.Done():
+			}
+			closeStream(stream)
 		} else {
-			resetSteam(stream)
+			resetStream(stream)
 		}
 	})
 }
@@ -382,12 +388,12 @@ func Send(pctx context.Context, rpc common.P2PRPC, message interface{}, baseTopi
 	size, err := EncodeMessage(stream, rpc, message)
 	if err != nil {
 		log.Debug(fmt.Sprintf("encocde rpc message %v to stream failed:%v", getMessageString(message), err))
-		resetSteam(stream)
+		resetStream(stream)
 		return nil, err
 	}
 	rpc.IncreaseBytesSent(pid, size)
 	// Close stream for writing.
-	err = closeWriteSteam(stream)
+	err = closeWriteStream(stream)
 	if err != nil {
 		return nil, err
 	}

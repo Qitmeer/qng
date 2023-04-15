@@ -36,7 +36,7 @@ func (s *Sync) sendTxRequest(ctx context.Context, id peer.ID, gtxs *pb.GetTxs) (
 
 	if !code.IsSuccess() {
 		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "tx request rsp")
-		closeSteam(stream)
+		closeStream(stream)
 		return nil, errors.New(errMsg)
 	}
 
@@ -44,7 +44,7 @@ func (s *Sync) sendTxRequest(ctx context.Context, id peer.ID, gtxs *pb.GetTxs) (
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
-	closeSteam(stream)
+	closeStream(stream)
 	return msg, err
 }
 

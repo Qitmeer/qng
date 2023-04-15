@@ -51,7 +51,7 @@ func (s *Sync) sendInventoryRequest(ctx context.Context, pe *peers.Peer, inv *pb
 	if err != nil {
 		return err
 	}
-	defer closeSteam(stream)
+	defer closeStream(stream)
 
 	if !code.IsSuccess() {
 		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "inventory request rsp")

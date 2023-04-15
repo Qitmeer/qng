@@ -31,7 +31,7 @@ func (s *Sync) sendGraphStateRequest(ctx context.Context, pe *peers.Peer, gs *pb
 
 	if !code.IsSuccess() {
 		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "graph state request rsp")
-		closeSteam(stream)
+		closeStream(stream)
 		return nil, errors.New(errMsg)
 	}
 
@@ -39,7 +39,7 @@ func (s *Sync) sendGraphStateRequest(ctx context.Context, pe *peers.Peer, gs *pb
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
-	closeSteam(stream)
+	closeStream(stream)
 	return msg, err
 }
 
