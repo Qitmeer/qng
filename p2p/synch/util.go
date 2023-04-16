@@ -12,32 +12,34 @@ var (
 	ErrPeerUnknown = common.NewError(common.ErrPeerUnknown, peers.ErrPeerUnknown)
 )
 
-func closeWriteStream(stream libp2pcore.Stream) error {
+func closeWriteStream(stream libp2pcore.Stream, rpc common.P2PRPC) error {
 	err := stream.CloseWrite()
 	if err != nil {
 		log.Debug(fmt.Sprintf("Failed to close write stream(%s %s %s):%v", stream.Conn().RemotePeer(), stream.Protocol(), stream.Stat().Direction, err))
-		resetStream(stream)
+		resetStream(stream, rpc)
 		return err
 	}
 	return err
 }
 
-func closeStream(stream libp2pcore.Stream) error {
+func closeStream(stream libp2pcore.Stream, rpc common.P2PRPC) error {
 	err := stream.Close()
 	if err != nil {
 		log.Debug(fmt.Sprintf("Failed to close stream(%s %s %s):%v", stream.Conn().RemotePeer(), stream.Protocol(), stream.Stat().Direction, err))
+		processUnderlyingError(rpc, stream.Conn().RemotePeer(), err)
 		return err
 	}
 	return err
 }
 
-func resetStream(stream libp2pcore.Stream) error {
+func resetStream(stream libp2pcore.Stream, rpc common.P2PRPC) error {
 	if stream == nil {
 		return nil
 	}
 	err := stream.Reset()
 	if err != nil {
 		log.Debug(fmt.Sprintf("Failed to reset stream(%s %s %s):%v", stream.Conn().RemotePeer(), stream.Protocol(), stream.Stat().Direction, err))
+		processUnderlyingError(rpc, stream.Conn().RemotePeer(), err)
 		return err
 	}
 	return err
@@ -46,7 +48,7 @@ func resetStream(stream libp2pcore.Stream) error {
 func DecodeMessage(stream libp2pcore.Stream, rpc common.P2PRPC, msg interface{}) error {
 	err := rpc.Encoding().DecodeWithMaxLength(stream, msg)
 	if err != nil {
-		resetStream(stream)
+		resetStream(stream, rpc)
 		return err
 	}
 	return nil

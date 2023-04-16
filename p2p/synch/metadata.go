@@ -37,13 +37,13 @@ func (s *Sync) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.MetaDat
 	}
 	if code != 0 {
 		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "meta date request rsp")
-		closeStream(stream)
+		closeStream(stream, s.p2p)
 		return nil, fmt.Errorf(errMsg)
 	}
 	msg := new(pb.MetaData)
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
-	closeStream(stream)
+	closeStream(stream, s.p2p)
 	return msg, nil
 }

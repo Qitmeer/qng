@@ -28,7 +28,7 @@ func (s *Sync) SendMempoolRequest(ctx context.Context, pe *peers.Peer, count uin
 	if err != nil {
 		return err
 	}
-	defer closeStream(stream)
+	defer closeStream(stream, s.p2p)
 
 	if !code.IsSuccess() {
 		return errors.New(errMsg)

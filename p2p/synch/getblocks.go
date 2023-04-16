@@ -33,7 +33,7 @@ func (s *Sync) sendGetBlocksRequest(ctx context.Context, id peer.ID, blocks *pb.
 
 	if !code.IsSuccess() {
 		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "get blocks request rsp")
-		closeStream(stream)
+		closeStream(stream, s.p2p)
 		return nil, errors.New(errMsg)
 	}
 
@@ -41,7 +41,7 @@ func (s *Sync) sendGetBlocksRequest(ctx context.Context, id peer.ID, blocks *pb.
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
-	closeStream(stream)
+	closeStream(stream, s.p2p)
 	return msg, err
 }
 
