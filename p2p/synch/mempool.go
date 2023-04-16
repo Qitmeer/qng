@@ -57,12 +57,12 @@ func (s *Sync) HandlerMemPool(ctx context.Context, msg interface{}, stream libp2
 		err = fmt.Errorf("message is not type *MsgFilterLoad")
 		return ErrMessage(err)
 	}
+
 	curCount := uint64(s.p2p.TxMemPool().Count())
-	if mpr.TxsNum == curCount || curCount == 0 {
-		return nil
+	if mpr.TxsNum != curCount && curCount != 0 {
+		go s.peerSync.OnMemPool(pe, &MsgMemPool{})
 	}
-	go s.peerSync.OnMemPool(pe, &MsgMemPool{})
-	return nil
+	return s.EncodeResponseMsg(stream, nil)
 }
 
 // OnMemPool is invoked when a peer receives a mempool qitmeer message.
