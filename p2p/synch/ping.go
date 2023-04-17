@@ -85,14 +85,14 @@ func (s *Sync) SendPingRequest(ctx context.Context, id peer.ID) error {
 
 	if code != 0 {
 		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "ping request rsp")
-		closeStream(stream)
+		closeStream(stream, s.p2p)
 		return errors.New(errMsg)
 	}
 	msg := new(uint64)
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return err
 	}
-	defer closeStream(stream)
+	defer closeStream(stream, s.p2p)
 
 	valid, err := s.validateSequenceNum(*msg, pe)
 	if err != nil {

@@ -29,7 +29,7 @@ func ReadRspCode(stream network.Stream, rpc common.P2PRPC) (common.ErrorCode, st
 	b := make([]byte, 1)
 	_, err := stream.Read(b)
 	if err != nil {
-		resetStream(stream)
+		resetStream(stream, rpc)
 		return common.ErrNone, "", err
 	}
 

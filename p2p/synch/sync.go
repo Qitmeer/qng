@@ -318,15 +318,15 @@ func RegisterRPC(rpc common.P2PRPC, basetopic string, base interface{}, handle r
 			e = handle(ctx, msg, stream)
 		}
 		if processError(e, stream, rpc) {
-			closeWriteStream(stream)
+			closeWriteStream(stream, rpc)
 
 			select {
 			case <-time.After(TtfbTimeout):
 			case <-ctx.Done():
 			}
-			closeStream(stream)
+			closeStream(stream, rpc)
 		} else {
-			resetStream(stream)
+			resetStream(stream, rpc)
 		}
 	})
 }
@@ -378,6 +378,7 @@ func Send(pctx context.Context, rpc common.P2PRPC, message interface{}, baseTopi
 	stream, err := rpc.Host().NewStream(ctx, pid, protocol.ID(topic))
 	if err != nil {
 		log.Debug(fmt.Sprintf("open stream on topic %v failed", topic), "peer", pid.String())
+		processUnderlyingError(rpc, pid, err)
 		return nil, err
 	}
 	SetRPCStreamDeadlines(stream)
@@ -388,12 +389,12 @@ func Send(pctx context.Context, rpc common.P2PRPC, message interface{}, baseTopi
 	size, err := EncodeMessage(stream, rpc, message)
 	if err != nil {
 		log.Debug(fmt.Sprintf("encocde rpc message %v to stream failed:%v", getMessageString(message), err))
-		resetStream(stream)
+		resetStream(stream, rpc)
 		return nil, err
 	}
 	rpc.IncreaseBytesSent(pid, size)
 	// Close stream for writing.
-	err = closeWriteStream(stream)
+	err = closeWriteStream(stream, rpc)
 	if err != nil {
 		return nil, err
 	}
