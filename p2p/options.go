@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/version"
 	"github.com/libp2p/go-libp2p/core/crypto"
-	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
+	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoreds"
 	"net"
 	"path"
 	"time"
@@ -53,7 +53,7 @@ func (s *Service) buildOptions(ip net.IP, priKey crypto.PrivKey) []libp2p.Option
 		libp2p.ConnectionGater(s),
 	}
 	if !s.cfg.NoDiscovery {
-		options = append(options,s.KademliaDHTOption())
+		options = append(options, s.KademliaDHTOption())
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP

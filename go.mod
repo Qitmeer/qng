@@ -23,9 +23,8 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
 	github.com/libp2p/go-libp2p v0.27.1
-	github.com/libp2p/go-libp2p-kad-dht v0.21.0
-	github.com/libp2p/go-libp2p-peerstore v0.8.0
-	github.com/libp2p/go-libp2p-pubsub v0.9.0
+	github.com/libp2p/go-libp2p-kad-dht v0.23.0
+	github.com/libp2p/go-libp2p-pubsub v0.9.3
 	github.com/magiconair/properties v1.8.5
 	github.com/mattn/go-colorable v0.1.13
 	github.com/minio/highwayhash v1.0.0
@@ -47,7 +46,7 @@ require (
 	golang.org/x/net v0.8.0
 	golang.org/x/sys v0.7.0
 	golang.org/x/tools v0.7.0
-	gonum.org/v1/gonum v0.6.0
+	gonum.org/v1/gonum v0.11.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -77,7 +76,6 @@ require (
 	github.com/dop251/goja v0.0.0-20230122112309-96b1610dd4f7 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
-	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
@@ -85,13 +83,15 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff // indirect
 	github.com/getsentry/sentry-go v0.18.0 // indirect
+	github.com/go-logr/logr v1.2.3 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/golang-jwt/jwt/v4 v4.3.0 // indirect
-	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20230405160723-4a4c7d95572b // indirect
@@ -108,13 +108,13 @@ require (
 	github.com/influxdata/influxdb v1.8.3 // indirect
 	github.com/influxdata/influxdb-client-go/v2 v2.4.0 // indirect
 	github.com/influxdata/line-protocol v0.0.0-20210311194329-9aa0e372d097 // indirect
+	github.com/ipfs/boxo v0.8.0 // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect
 	github.com/ipfs/go-datastore v0.6.0 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
-	github.com/ipfs/go-ipns v0.2.0 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
-	github.com/ipld/go-ipld-prime v0.19.0 // indirect
+	github.com/ipld/go-ipld-prime v0.20.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
@@ -162,7 +162,7 @@ require (
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/peterh/liner v1.1.1-0.20190123174540-a2c9a5303de7 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e // indirect
+	github.com/polydawn/refmt v0.89.0 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
@@ -186,6 +186,8 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+	go.opentelemetry.io/otel v1.14.0 // indirect
+	go.opentelemetry.io/otel/trace v1.14.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/dig v1.16.1 // indirect
 	go.uber.org/fx v1.19.2 // indirect
