@@ -284,11 +284,8 @@ func RegisterRPC(rpc common.P2PRPC, basetopic string, base interface{}, handle r
 	rpc.Host().SetStreamHandler(protocol.ID(topic), func(stream network.Stream) {
 		var e *common.Error
 		ctx, cancel := context.WithTimeout(rpc.Context(), TtfbTimeout)
-		defer func() {
-			processError(e, stream, rpc)
-			closeWriteSteam(stream, rpc)
-			cancel()
-		}()
+		defer cancel()
+
 		SetRPCStreamDeadlines(stream)
 		// Given we have an input argument that can be pointer or [][32]byte, this gives us
 		// a way to check for its reflect.Kind and based on the result, we can decode
@@ -308,23 +305,37 @@ func RegisterRPC(rpc common.P2PRPC, basetopic string, base interface{}, handle r
 				e = common.NewError(common.ErrStreamRead, err)
 				// Debug logs for goodbye errors
 				if strings.Contains(topic, RPCGoodByeTopic) {
-					log.Debug(fmt.Sprintf("Failed to decode goodbye stream message:%v", err))
-					return
+					e.Error = fmt.Errorf("Failed to decode goodbye stream message:%v\n", err)
+				} else {
+					e.Error = fmt.Errorf("Failed to decode stream message:%v\n", err)
 				}
-				log.Warn(fmt.Sprintf("Failed to decode stream message:%v", err))
-				return
+			} else {
+				size := rpc.Encoding().GetSize(msg)
+				rpc.IncreaseBytesRecv(stream.Conn().RemotePeer(), size)
 			}
-			size := rpc.Encoding().GetSize(msg)
-			rpc.IncreaseBytesRecv(stream.Conn().RemotePeer(), size)
 		}
-		e = handle(ctx, msg, stream)
+		if e == nil {
+			e = handle(ctx, msg, stream)
+		}
+		if processError(e, stream, rpc) {
+			closeWriteStream(stream, rpc)
+
+			select {
+			case <-time.After(TtfbTimeout):
+			case <-ctx.Done():
+			}
+			closeStream(stream, rpc)
+		} else {
+			resetStream(stream, rpc)
+		}
 	})
 }
 
-func processError(e *common.Error, stream network.Stream, rpc common.P2PRPC) {
+func processError(e *common.Error, stream network.Stream, rpc common.P2PRPC) bool {
 	if e == nil {
-		return
+		return true
 	}
+
 	peInfo := ""
 	if stream != nil {
 		peInfo = stream.ID()
@@ -333,18 +344,21 @@ func processError(e *common.Error, stream network.Stream, rpc common.P2PRPC) {
 			peInfo += stream.Conn().RemotePeer().String()
 		}
 	}
+	log.Trace(fmt.Sprintf("Process error (%s):%s %s", e.Code.String(), e.Error.Error(), peInfo))
+	if e.Code.IsStream() {
+		return false
+	}
 	resp, err := generateErrorResponse(e, rpc.Encoding())
 	if err != nil {
-		log.Warn(fmt.Sprintf("Failed to generate a response error:%v %s", err, peInfo))
+		log.Warn(fmt.Sprintf("%s,Failed to generate a response error:%v %s", e.Error, err, peInfo))
+		return false
 	} else {
 		if _, err := stream.Write(resp); err != nil {
-			log.Debug(fmt.Sprintf("Failed to write to stream:%v", err))
-			processUnderlyingError(rpc, stream.Conn().RemotePeer(), err)
+			log.Debug(fmt.Sprintf("%s,Failed to write to stream:%v", e.Error, err))
+			return false
 		}
 	}
-	if e.Code != common.ErrDAGConsensus {
-		log.Debug(fmt.Sprintf("Process error (%s):%s %s", e.Code.String(), e.Error.Error(), peInfo))
-	}
+	return true
 }
 
 // Send a message to a specific peer. The returned stream may be used for reading, but has been
@@ -363,7 +377,7 @@ func Send(pctx context.Context, rpc common.P2PRPC, message interface{}, baseTopi
 
 	stream, err := rpc.Host().NewStream(ctx, pid, protocol.ID(topic))
 	if err != nil {
-		log.Warn(fmt.Sprintf("open stream on topic %v failed", topic))
+		log.Debug(fmt.Sprintf("open stream on topic %v failed", topic), "peer", pid.String())
 		processUnderlyingError(rpc, pid, err)
 		return nil, err
 	}
@@ -374,14 +388,14 @@ func Send(pctx context.Context, rpc common.P2PRPC, message interface{}, baseTopi
 	}
 	size, err := EncodeMessage(stream, rpc, message)
 	if err != nil {
-		log.Warn(fmt.Sprintf("encocde rpc message %v to stream failed:%v", getMessageString(message), err))
+		log.Debug(fmt.Sprintf("encocde rpc message %v to stream failed:%v", getMessageString(message), err))
+		resetStream(stream, rpc)
 		return nil, err
 	}
 	rpc.IncreaseBytesSent(pid, size)
 	// Close stream for writing.
-	err = closeWriteSteam(stream, rpc)
+	err = closeWriteStream(stream, rpc)
 	if err != nil {
-		processUnderlyingError(rpc, pid, err)
 		return nil, err
 	}
 	return stream, nil

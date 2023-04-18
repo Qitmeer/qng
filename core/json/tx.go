@@ -73,6 +73,17 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 			Value: v.Value,
 		}
 		return json.Marshal(cciStruct)
+	} else if v.TxType == "TxTypeCrossChainVM" {
+		nstdStruct := struct {
+			Type      string     `json:"type"`
+			ScriptSig *ScriptSig `json:"scriptSig"`
+			Hash      string     `json:"evmhash"`
+		}{
+			Type:      v.TxType,
+			ScriptSig: v.ScriptSig,
+			Hash:      v.Txid,
+		}
+		return json.Marshal(nstdStruct)
 	} else if v.IsNonStd() {
 		nstdStruct := struct {
 			Type      string     `json:"type"`

@@ -118,6 +118,12 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, network *string) (interface{
 	return infos, nil
 }
 
+// Reload All Peers
+func (api *PrivateP2PAPI) ReloadPeers() error {
+	api.s.connectFromPeerStore()
+	return nil
+}
+
 // Return IsCurrent
 func (api *PublicP2PAPI) IsCurrent() (interface{}, error) {
 	return api.s.IsCurrent(), nil

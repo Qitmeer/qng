@@ -59,6 +59,10 @@ func (e ErrorCode) IsSuccess() bool {
 	return e == ErrNone
 }
 
+func (e ErrorCode) IsStream() bool {
+	return e == ErrStreamRead || e == ErrStreamWrite || e == ErrStreamBase
+}
+
 type Error struct {
 	Code  ErrorCode
 	Error error

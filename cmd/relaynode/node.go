@@ -25,7 +25,6 @@ import (
 	ds "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/control"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -33,6 +32,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"
+	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoreds"
 	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"path"
@@ -190,7 +190,7 @@ func (node *Node) startP2P() error {
 	var kademliaDHT *dht.IpfsDHT
 	newDHT := func(h host.Host) (routing.PeerRouting, error) {
 		var err error
-		kademliaDHT, err = dht.New(node.Context(), h, dht.V1ProtocolOverride(p2p.ProtocolDHT), dht.Mode(dht.ModeServer))
+		kademliaDHT, err = dht.New(node.Context(), h, dht.V1ProtocolOverride(p2p.ProtocolDHT()), dht.Mode(dht.ModeServer))
 		return kademliaDHT, err
 	}
 	opts = append(opts, libp2p.Routing(newDHT))

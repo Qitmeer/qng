@@ -29,7 +29,6 @@ func (s *Sync) sendSyncDAGRequest(ctx context.Context, id peer.ID, sd *pb.SyncDA
 	if err != nil {
 		return nil, err
 	}
-	defer resetSteam(stream, s.p2p)
 
 	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
@@ -38,6 +37,7 @@ func (s *Sync) sendSyncDAGRequest(ctx context.Context, id peer.ID, sd *pb.SyncDA
 
 	if !code.IsSuccess() {
 		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "sync DAG request rsp")
+		closeStream(stream, s.p2p)
 		return nil, errors.New(errMsg)
 	}
 	msg := &pb.SubDAG{}
@@ -45,7 +45,7 @@ func (s *Sync) sendSyncDAGRequest(ctx context.Context, id peer.ID, sd *pb.SyncDA
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return nil, err
 	}
-
+	closeStream(stream, s.p2p)
 	return msg, err
 }
 

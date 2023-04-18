@@ -28,7 +28,7 @@ var (
 	}
 
 	QngTestnetChainConfig = &eparams.ChainConfig{
-		ChainID:             big.NewInt(223), // TODO: The testnet EVM ChainID has to remain 223 for the old compatibility. Change to eparams.QngTestnetChainConfig.ChainID, when the testnet do the next fresh relaunch.
+		ChainID:             eparams.QngTestnetChainConfig.ChainID,
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      false,
@@ -109,7 +109,7 @@ var (
 	}
 
 	AmanaTestnetChainConfig = &eparams.ChainConfig{
-		ChainID:             big.NewInt(8141), // TODO: The Amana testnet ChainID has to remain 8141 for the old compatibility. Change to eparams.AmanaTestnetChainConfig.ChainID, when the testnet do the next fresh relaunch.
+		ChainID:             eparams.AmanaTestnetChainConfig.ChainID,
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      false,

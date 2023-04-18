@@ -2,26 +2,65 @@ package meer
 
 import (
 	"fmt"
+	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	qcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"math/big"
 	"strings"
 )
 
-func DefaultGenesisBlock(cfg *params.ChainConfig) *core.Genesis {
+func QngGenesis() *core.Genesis {
 	return &core.Genesis{
-		Config:     cfg,
+		Config:     mparams.QngMainnetChainConfig,
 		Nonce:      0,
 		Number:     0,
 		ExtraData:  hexutil.MustDecode("0x00"),
 		GasLimit:   100000000,
 		Difficulty: big.NewInt(0),
-		Alloc:      DecodePrealloc(getAllocData(qparams.ActiveNetParams.Name)),
-		Timestamp:  uint64(qparams.ActiveNetParams.GenesisBlock.Header.Timestamp.Unix()),
+		Alloc:      DecodePrealloc(getAllocData(qparams.MainNetParams.Name)),
+		Timestamp:  uint64(qparams.MainNetParams.GenesisBlock.Header.Timestamp.Unix()),
+	}
+}
+
+func QngTestnetGenesis() *core.Genesis {
+	return &core.Genesis{
+		Config:     mparams.QngTestnetChainConfig,
+		Nonce:      0,
+		Number:     0,
+		ExtraData:  hexutil.MustDecode("0x00"),
+		GasLimit:   100000000,
+		Difficulty: big.NewInt(0),
+		Alloc:      DecodePrealloc(getAllocData(qparams.TestNetParams.Name)),
+		Timestamp:  uint64(qparams.TestNetParams.GenesisBlock.Header.Timestamp.Unix()),
+	}
+}
+
+func QngMixnetGenesis() *core.Genesis {
+	return &core.Genesis{
+		Config:     mparams.QngMixnetChainConfig,
+		Nonce:      0,
+		Number:     0,
+		ExtraData:  hexutil.MustDecode("0x00"),
+		GasLimit:   100000000,
+		Difficulty: big.NewInt(0),
+		Alloc:      DecodePrealloc(getAllocData(qparams.MixNetParams.Name)),
+		Timestamp:  uint64(qparams.MixNetParams.GenesisBlock.Header.Timestamp.Unix()),
+	}
+}
+
+func QngPrivnetGenesis() *core.Genesis {
+	return &core.Genesis{
+		Config:     mparams.QngPrivnetChainConfig,
+		Nonce:      0,
+		Number:     0,
+		ExtraData:  hexutil.MustDecode("0x00"),
+		GasLimit:   100000000,
+		Difficulty: big.NewInt(0),
+		Alloc:      DecodePrealloc(getAllocData(qparams.PrivNetParams.Name)),
+		Timestamp:  uint64(qparams.PrivNetParams.GenesisBlock.Header.Timestamp.Unix()),
 	}
 }
 

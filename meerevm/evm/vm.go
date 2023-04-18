@@ -56,7 +56,11 @@ func (vm *VM) Initialize(ctx consensus.Context) error {
 	vm.ctx = ctx
 
 	//
-	vm.mchain = meer.NewMeerChain(ctx)
+	mchain, err := meer.NewMeerChain(ctx)
+	if err != nil {
+		return err
+	}
+	vm.mchain = mchain
 	vm.chain = vm.mchain.ETHChain()
 	return nil
 }

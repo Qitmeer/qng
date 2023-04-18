@@ -125,20 +125,30 @@ func Merge(groups ...[]cli.Flag) []cli.Flag {
 	return ret
 }
 
-func ProcessEnv(env string, identifier string) []string {
+func ProcessEnv(env string, identifier string, exclusionFlags []cli.Flag) ([]string, error) {
 	result := []string{identifier}
 	if len(env) <= 0 {
-		return result
+		return result, nil
+	}
+	// Detect unsupported flags
+	if len(exclusionFlags) > 0 {
+		for _, flag := range exclusionFlags {
+			for _, name := range flag.Names() {
+				if strings.Contains(env, name) {
+					return nil, fmt.Errorf("%s does not support %s flag", identifier, name)
+				}
+			}
+		}
 	}
 	if e, err := strconv.Unquote(env); err == nil {
 		env = e
 	}
 	args := strings.Split(env, " ")
 	if len(args) <= 0 {
-		return result
+		return result, nil
 	}
 	log.Debug(fmt.Sprintf("Initialize meerevm environment: %v %v ", len(args), args))
 	result = append(result, args...)
 
-	return result
+	return result, nil
 }

@@ -55,11 +55,12 @@ func sendGoodByeMessage(ctx context.Context, code common.ErrorCode, id peer.ID, 
 	if err != nil {
 		return fmt.Errorf("failed send code %v to peer %v : %v ", code, id, err)
 	}
-	defer resetSteam(stream, rpc)
 	logReason := fmt.Sprintf("Reason:%s", code.String())
 	log.Debug(fmt.Sprintf("Sending Goodbye message to peer:%s (%s)", stream.Conn().RemotePeer(), logReason))
 	// Add a short delay to allow the stream to flush before resetting it.
 	// There is still a chance that the peer won't receive the message.
 	time.Sleep(50 * time.Millisecond)
+
+	closeStream(stream, rpc)
 	return nil
 }

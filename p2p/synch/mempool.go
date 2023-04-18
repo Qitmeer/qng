@@ -23,12 +23,12 @@ func (s *Sync) SendMempoolRequest(ctx context.Context, pe *peers.Peer, count uin
 	if err != nil {
 		return err
 	}
-	defer resetSteam(stream, s.p2p)
 
 	code, errMsg, err := ReadRspCode(stream, s.p2p)
 	if err != nil {
 		return err
 	}
+	defer closeStream(stream, s.p2p)
 
 	if !code.IsSuccess() {
 		return errors.New(errMsg)
@@ -57,12 +57,12 @@ func (s *Sync) HandlerMemPool(ctx context.Context, msg interface{}, stream libp2
 		err = fmt.Errorf("message is not type *MsgFilterLoad")
 		return ErrMessage(err)
 	}
+
 	curCount := uint64(s.p2p.TxMemPool().Count())
-	if mpr.TxsNum == curCount || curCount == 0 {
-		return nil
+	if mpr.TxsNum != curCount && curCount != 0 {
+		go s.peerSync.OnMemPool(pe, &MsgMemPool{})
 	}
-	go s.peerSync.OnMemPool(pe, &MsgMemPool{})
-	return nil
+	return s.EncodeResponseMsg(stream, nil)
 }
 
 // OnMemPool is invoked when a peer receives a mempool qitmeer message.

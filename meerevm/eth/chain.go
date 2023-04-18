@@ -92,7 +92,7 @@ func (ec *ETHChain) Context() *cli.Context {
 	return ec.ctx
 }
 
-func NewETHChain(config *Config, args []string, flags []cli.Flag) (*ETHChain, error) {
+func NewETHChain(config *Config, args []string) (*ETHChain, error) {
 	ec := &ETHChain{config: config}
 
 	//
@@ -117,7 +117,7 @@ func NewETHChain(config *Config, args []string, flags []cli.Flag) (*ETHChain, er
 	app.HideVersion = true
 	app.Copyright = config.Node.Name
 
-	app.Flags = flags
+	app.Flags = GetFlags()
 
 	err := app.Run(args)
 	if err != nil {
@@ -477,7 +477,7 @@ func filterConfig(ctx *cli.Context, cfg *Config) {
 	}
 }
 
-func MakeNakedNode(config *Config, args []string, flags []cli.Flag) (*node.Node, error) {
+func MakeNakedNode(config *Config, args []string) (*node.Node, error) {
 	app := cli.NewApp()
 	app.Name = config.Node.Name
 	app.Authors = []*cli.Author{
@@ -498,7 +498,7 @@ func MakeNakedNode(config *Config, args []string, flags []cli.Flag) (*node.Node,
 	app.HideVersion = true
 	app.Copyright = config.Node.Name
 
-	app.Flags = flags
+	app.Flags = GetFlags()
 
 	err := app.Run(args)
 	if err != nil {
