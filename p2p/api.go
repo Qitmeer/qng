@@ -7,6 +7,7 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
+	golog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"time"
 )
@@ -206,4 +207,14 @@ func (api *PrivateP2PAPI) ResetPeers() (interface{}, error) {
 		}
 	}
 	return trynum, nil
+}
+
+func (api *PrivateP2PAPI) SetLibp2pLogLevel(level string) (interface{}, error) {
+	l, err := golog.LevelFromString(level)
+	if err != nil {
+		log.Error(err.Error())
+		return level, err
+	}
+	golog.SetAllLoggers(l)
+	return fmt.Sprintf("cur:%s (DEBUG, INFO, WARN, ERROR, DPANIC, PANIC, FATAL)", level), nil
 }

@@ -445,6 +445,12 @@ function reset_peers() {
   get_result "$data"
 }
 
+function set_libp2p_log_level(){
+  local level=$1
+  local data='{"jsonrpc":"2.0","method":"p2p_setLibp2pLogLevel","params":["'$level'"],"id":1}'
+  get_result "$data"
+}
+
 function get_balance() {
   local address=$1
   local coinID=$2
@@ -1036,6 +1042,9 @@ elif [ "$1" == "blockid" ]; then
 elif [ "$1" == "loglevel" ]; then
   shift
   set_log_level $@
+elif [ "$1" == "libp2ploglevel" ]; then
+  shift
+  set_libp2p_log_level $@
 elif [ "$1" == "blockv2" ]; then
   shift
   get_block_v2 $@
