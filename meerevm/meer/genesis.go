@@ -31,7 +31,7 @@ func QngTestnetGenesis() *core.Genesis {
 		Nonce:      0,
 		Number:     0,
 		ExtraData:  hexutil.MustDecode("0x00"),
-		GasLimit:   100000000,
+		GasLimit:   8000000,
 		Difficulty: big.NewInt(0),
 		Alloc:      DecodePrealloc(getAllocData(qparams.TestNetParams.Name)),
 		Timestamp:  uint64(qparams.TestNetParams.GenesisBlock.Header.Timestamp.Unix()),

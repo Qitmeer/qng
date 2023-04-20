@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
+	mparams "github.com/Qitmeer/qng/meerevm/params"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/miner"
 	"math/big"
@@ -350,12 +351,20 @@ func (m *MeerPool) updateTemplate(timestamp int64) {
 	if parent.Time >= uint64(timestamp) {
 		timestamp = int64(parent.Time + 1)
 	}
+	gaslimit := core.CalcGasLimit(parent.GasLimit, m.config.GasCeil)
+
+	// --------Will be discard in the future --------------------
+	if m.chainConfig.ChainID.Int64() == mparams.QngMainnetChainConfig.ChainID.Int64() {
+		gaslimit = params.MaxGasLimit
+	}
+	// ----------------------------------------------------------
+
 	num := big.NewInt(0)
 	num.Set(parent.Number)
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
-		GasLimit:   0x7fffffffffffffff,
+		GasLimit:   gaslimit,
 		Extra:      m.config.ExtraData,
 		Time:       uint64(timestamp),
 		Coinbase:   m.config.Etherbase,
