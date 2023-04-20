@@ -31,7 +31,7 @@ func (s *Sync) sendQNRRequest(ctx context.Context, pe *peers.Peer, qnr *pb.SyncQ
 	}
 
 	if !code.IsSuccess() {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "QNR request rsp")
+		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), common.NewErrorStr(code, "QNR request rsp"))
 		closeStream(stream, s.p2p)
 		return nil, errors.New(errMsg)
 	}

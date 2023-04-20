@@ -9,6 +9,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
+	"github.com/Qitmeer/qng/core/json"
 	pv "github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p/common"
@@ -140,8 +141,6 @@ func (s *Service) Start() error {
 		})
 	}
 
-	runutil.RunEvery(s.Context(), pollingPeriod, s.Peers().Decay)
-	runutil.RunEvery(s.Context(), s.sy.PeerInterval, s.Peers().ResetBad)
 	runutil.RunEvery(s.Context(), refreshRate, func() {
 		s.RefreshQNR()
 	})
@@ -476,15 +475,24 @@ func (s *Service) BroadcastMessage(data interface{}) {
 
 }
 
-func (s *Service) GetBanlist() map[string]int {
-	result := map[string]int{}
+func (s *Service) GetBanlist() map[peer.ID][]*json.BadResponse {
+	result := map[peer.ID][]*json.BadResponse{}
 	bads := s.Peers().Bad()
 	for _, bad := range bads {
 		pe := s.Peers().Get(bad)
 		if pe == nil {
 			continue
 		}
-		result[pe.GetID().String()] = pe.BadResponses()
+		brs := []*json.BadResponse{}
+		for _, br := range pe.BadResponses() {
+			brj := &json.BadResponse{
+				ID:    br.ID,
+				Time:  br.Time.String(),
+				Error: br.Err.String(),
+			}
+			brs = append(brs, brj)
+		}
+		result[pe.GetID()] = brs
 	}
 	return result
 }

@@ -208,15 +208,12 @@ func (p *Status) Add(record *qnr.Record, pid peer.ID, address ma.Multiaddr, dire
 }
 
 // IncrementBadResponses increments the number of bad responses we have received from the given remote peer.
-func (p *Status) IncrementBadResponses(pid peer.ID, reason string) {
-	if !p.p2p.Config().Banning {
-		return
-	}
+func (p *Status) IncrementBadResponses(pid peer.ID, err *common.Error) {
 	pe := p.Get(pid)
 	if pe == nil {
 		return
 	}
-	pe.IncrementBadResponses(reason)
+	pe.IncrementBadResponses(err)
 }
 
 // SubscribedToSubnet retrieves the peers subscribed to the given
@@ -254,27 +251,6 @@ func (p *Status) StatsSnapshots() []*StatsSnap {
 		pes = append(pes, ss)
 	}
 	return pes
-}
-
-// Decay reduces the bad responses of all peers, giving reformed peers a chance to join the network.
-// This can be run periodically, although note that each time it runs it does give all bad peers another chance as well to clog up
-// the network with bad responses, so should not be run too frequently; once an hour would be reasonable.
-func (p *Status) Decay() {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	for _, status := range p.peers {
-		status.Decay()
-	}
-}
-
-func (p *Status) ResetBad() {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	for _, status := range p.peers {
-		status.ResetBad()
-	}
 }
 
 func (p *Status) ForPeers(state PeerConnectionState, closure func(pe *Peer)) {

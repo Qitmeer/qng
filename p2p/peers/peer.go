@@ -29,6 +29,7 @@ var (
 const (
 	MinBroadcastRecord  = 10
 	BroadcastRecordLife = 30 * time.Minute
+	BadResponseLife     = 30 * time.Second
 )
 
 // Peer represents a connected p2p network remote node.
@@ -76,11 +77,19 @@ func (p *Peer) IDWithAddress() string {
 
 // BadResponses obtains the number of bad responses we have received from the given remote peer.
 // This will error if the peer does not exist.
-func (p *Peer) BadResponses() int {
+func (p *Peer) BadResponses() []*BadResponse {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	return p.badResponses
+}
+
+func (p *Peer) badResponseStrs() []string {
+	brs := []string{}
+	for _, v := range p.badResponses {
+		brs = append(brs, v.String())
+	}
+	return brs
 }
 
 // IsBad states if the peer is to be considered bad.
@@ -92,29 +101,33 @@ func (p *Peer) IsBad() bool {
 }
 
 func (p *Peer) isBad() bool {
-	return p.badResponses >= MaxBadResponses
+	l := len(p.badResponses)
+	if l <= 0 {
+		return false
+	}
+	return time.Since(p.badResponses[l-1].Time) <= BadResponseLife
 }
 
 // IncrementBadResponses increments the number of bad responses we have received from the given remote peer.
-func (p *Peer) IncrementBadResponses(reason string) {
+func (p *Peer) IncrementBadResponses(err *common.Error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	p.badResponses++
-
-	if p.isBad() {
-		log.Info(fmt.Sprintf("I am bad peer:%s reason:%s", p.pid.String(), reason))
-	} else {
-		log.Debug(fmt.Sprintf("Bad responses:%s reason:%s", p.pid.String(), reason))
+	if p.badResponses == nil {
+		p.badResponses = []*BadResponse{}
 	}
-}
-
-func (p *Peer) Decay() {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	if p.badResponses > 0 {
-		p.badResponses--
+	l := len(p.badResponses)
+	br := &BadResponse{Time: time.Now(), Err: err}
+	if l <= 0 {
+		br.ID = 1
+	} else {
+		br.ID += p.badResponses[l-1].ID
+	}
+	p.badResponses = append(p.badResponses, br)
+	log.Debug(fmt.Sprintf("Bad responses:%s error:%s", p.pid.String(), err.String()))
+	//
+	if l+1 > MaxBadResponses {
+		p.badResponses = p.badResponses[1:]
 	}
 }
 
@@ -122,7 +135,7 @@ func (p *Peer) ResetBad() {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	p.badResponses = 0
+	p.badResponses = []*BadResponse{}
 }
 
 func (p *Peer) UpdateAddrDir(record *qnr.Record, address ma.Multiaddr, direction network.Direction) {
@@ -321,7 +334,7 @@ func (p *Peer) StatsSnapshot() (*StatsSnap, error) {
 		BytesSent:  p.bytesSent,
 		BytesRecv:  p.bytesRecv,
 		IsCircuit:  p.isCircuit(),
-		Bads:       p.badResponses,
+		Bads:       p.badResponseStrs(),
 	}
 	n := p.node()
 	if n != nil {

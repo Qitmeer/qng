@@ -50,7 +50,7 @@ type GetPeerInfoResult struct {
 	Version    string               `json:"version,omitempty"`
 	Network    string               `json:"network,omitempty"`
 	Circuit    bool                 `json:"circuit,omitempty"`
-	Bads       int                  `json:"bads,omitempty"`
+	Bads       []string             `json:"bads,omitempty"`
 }
 
 // GetGraphStateResult data
@@ -62,8 +62,14 @@ type GetGraphStateResult struct {
 }
 
 type GetBanlistResult struct {
-	ID   string `json:"id"`
-	Bads int    `json:"bads"`
+	PeerID string         `json:"peerid"`
+	Bads   []*BadResponse `json:"bads"`
+}
+
+type BadResponse struct {
+	ID    uint64 `json:"id"`
+	Time  string `json:"time"`
+	Error string `json:"error"`
 }
 
 type ConsensusDeploymentDesc struct {

@@ -56,7 +56,7 @@ func (s *Sync) maintainPeerStatuses() {
 				if roughtime.Now().After(pe.ChainStateLastUpdated().Add(s.PeerInterval)) {
 					if err := s.reValidatePeer(s.p2p.Context(), id); err != nil && err != io.EOF {
 						log.Debug(fmt.Sprintf("Failed to revalidate peer (%v), peer:%s", err, id))
-						s.Peers().IncrementBadResponses(id, "maintain peer to reValidatePeer")
+						s.Peers().IncrementBadResponses(id, common.NewErrorStr(common.ErrRevalidate, "maintain peer to reValidatePeer"))
 					}
 				}
 

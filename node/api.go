@@ -312,7 +312,7 @@ func (api *PrivateBlockChainAPI) Banlist() (interface{}, error) {
 	bl := api.node.GetPeerServer().GetBanlist()
 	bls := []*json.GetBanlistResult{}
 	for k, v := range bl {
-		bls = append(bls, &json.GetBanlistResult{ID: k, Bads: v})
+		bls = append(bls, &json.GetBanlistResult{PeerID: k.String(), Bads: v})
 	}
 	return bls, nil
 }

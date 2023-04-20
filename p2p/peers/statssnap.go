@@ -32,7 +32,7 @@ type StatsSnap struct {
 	BytesSent     uint64
 	BytesRecv     uint64
 	IsCircuit     bool
-	Bads          int
+	Bads          []string
 }
 
 func (p *StatsSnap) IsRelay() bool {

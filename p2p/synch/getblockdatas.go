@@ -37,7 +37,7 @@ func (s *Sync) sendGetBlockDataRequest(ctx context.Context, id peer.ID, locator 
 	}
 
 	if !code.IsSuccess() {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "get block date request rsp")
+		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), common.NewErrorStr(code, "get block date request rsp"))
 		closeStream(stream, s.p2p)
 		return nil, errors.New(errMsg)
 	}
@@ -65,7 +65,7 @@ func (s *Sync) sendGetMerkleBlockDataRequest(ctx context.Context, id peer.ID, re
 	}
 
 	if !code.IsSuccess() {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "get merkle bock date request rsp")
+		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), common.NewErrorStr(code, "get merkle bock date request rsp"))
 		closeStream(stream, s.p2p)
 		return nil, errors.New(errMsg)
 	}

@@ -30,7 +30,7 @@ func (s *Sync) sendGraphStateRequest(ctx context.Context, pe *peers.Peer, gs *pb
 	}
 
 	if !code.IsSuccess() {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "graph state request rsp")
+		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), common.NewErrorStr(code, "graph state request rsp"))
 		closeStream(stream, s.p2p)
 		return nil, errors.New(errMsg)
 	}

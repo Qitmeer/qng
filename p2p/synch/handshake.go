@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/peers"
 	"github.com/multiformats/go-multistream"
 	"io"
@@ -64,7 +65,7 @@ func (ps *PeerSync) processConnected(msg *ConnectedMsg) {
 		return
 	}
 	if time.Since(remotePe.ConnectionTime()) <= time.Second {
-		ps.sy.Peers().IncrementBadResponses(remotePeer, "Connection is too frequent")
+		ps.sy.Peers().IncrementBadResponses(remotePeer, common.NewErrorStr(common.ErrConnectFrequent, "Connection is too frequent"))
 		log.Debug(fmt.Sprintf("%s is too frequent, so I'll deduct you points", remotePeer))
 	}
 	remotePe.SetConnectionState(peers.PeerConnecting)

@@ -35,17 +35,33 @@ const (
 
 	// p2p message error
 	ErrMessage
+
+	// Generic rule error
+	ErrGeneric
+
+	// peer connect frequent
+	ErrConnectFrequent
+
+	// Sequence error
+	ErrSequence
+
+	// revalidate error
+	ErrRevalidate
 )
 
 var p2pErrorCodeStrings = map[ErrorCode]string{
-	ErrNone:         "No error and success",
-	ErrStreamWrite:  "ErrStreamWrite",
-	ErrStreamRead:   "ErrStreamRead",
-	ErrStreamBase:   "ErrStreamBase",
-	ErrPeerUnknown:  "ErrPeerUnknown",
-	ErrBadPeer:      "ErrBadPeer",
-	ErrDAGConsensus: "ErrDAGConsensus",
-	ErrMessage:      "ErrMessage",
+	ErrNone:            "No error and success",
+	ErrStreamWrite:     "ErrStreamWrite",
+	ErrStreamRead:      "ErrStreamRead",
+	ErrStreamBase:      "ErrStreamBase",
+	ErrPeerUnknown:     "ErrPeerUnknown",
+	ErrBadPeer:         "ErrBadPeer",
+	ErrDAGConsensus:    "ErrDAGConsensus",
+	ErrMessage:         "ErrMessage",
+	ErrGeneric:         "ErrGeneric",
+	ErrConnectFrequent: "ErrConnectFrequent",
+	ErrSequence:        "ErrSequence",
+	ErrRevalidate:      "ErrRevalidate",
 }
 
 func (e ErrorCode) String() string {
@@ -68,6 +84,18 @@ type Error struct {
 	Error error
 }
 
+func (e *Error) String() string {
+	return fmt.Sprintf("%s, %s", e.Code.String(), e.Error.Error())
+}
+
+func (e *Error) Add(err string) {
+	e.Error = fmt.Errorf("%s, %s", e.Error.Error(), err)
+}
+
 func NewError(code ErrorCode, e error) *Error {
 	return &Error{code, e}
+}
+
+func NewErrorStr(code ErrorCode, e string) *Error {
+	return &Error{code, fmt.Errorf(e)}
 }
