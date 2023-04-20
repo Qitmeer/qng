@@ -11,6 +11,7 @@ import (
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
+	mparams "github.com/Qitmeer/qng/meerevm/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	qconsensus "github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/common"
@@ -25,8 +26,6 @@ import (
 	"math/big"
 	"reflect"
 )
-
-const BLOCK_GASLIMIT = 0x10000000000000
 
 type MeerChain struct {
 	chain    *eth.ETHChain
@@ -113,8 +112,15 @@ func (b *MeerChain) buildBlock(qtxs []model.Tx, timestamp int64) (*types.Block, 
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	gaslimit := core.CalcGasLimit(parent.GasLimit(), b.meerpool.config.GasCeil)
 
-	header := makeHeader(&b.chain.Config().Eth, parent, statedb, timestamp, 0)
+	// --------Will be discard in the future --------------------
+	if config.ChainID.Int64() == mparams.QngMainnetChainConfig.ChainID.Int64() {
+		gaslimit = 0x10000000000000
+	}
+	// ----------------------------------------------------------
+
+	header := makeHeader(&b.chain.Config().Eth, parent, statedb, timestamp, gaslimit)
 
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(statedb)
@@ -308,9 +314,7 @@ func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB
 	if timestamp <= ptt {
 		timestamp = ptt + 1
 	}
-	if gaslimit <= 0 {
-		gaslimit = BLOCK_GASLIMIT
-	}
+
 	header := &types.Header{
 		Root:       state.IntermediateRoot(cfg.Genesis.Config.IsEIP158(parent.Number())),
 		ParentHash: parent.Hash(),
