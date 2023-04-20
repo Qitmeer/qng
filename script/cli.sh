@@ -451,6 +451,17 @@ function set_libp2p_log_level(){
   get_result "$data"
 }
 
+function ban_list(){
+  local data='{"jsonrpc":"2.0","method":"p2p_banlist","params":[],"id":null}'
+  get_result "$data"
+}
+
+function remove_ban(){
+  local bhost=$1
+  local data='{"jsonrpc":"2.0","method":"p2p_removeBan","params":["'$bhost'"],"id":1}'
+  get_result "$data"
+}
+
 function get_balance() {
   local address=$1
   local coinID=$2
@@ -547,17 +558,6 @@ function get_coinbase(){
     verbose="false"
   fi
   local data='{"jsonrpc":"2.0","method":"getCoinbase","params":["'$block_hash'",'$verbose'],"id":1}'
-  get_result "$data"
-}
-
-function ban_list(){
-  local data='{"jsonrpc":"2.0","method":"test_banlist","params":[],"id":null}'
-  get_result "$data"
-}
-
-function remove_ban(){
-  local bhost=$1
-  local data='{"jsonrpc":"2.0","method":"test_removeBan","params":["'$bhost'"],"id":1}'
   get_result "$data"
 }
 
@@ -752,8 +752,6 @@ function usage(){
   echo "  rpcmax <max>"
   echo "  main  <hash>"
   echo "  stop"
-  echo "  banlist"
-  echo "  removeban"
   echo "  loglevel [trace, debug, info, warn, error, critical]"
   echo "  timeinfo"
   echo "  subsidy"
@@ -813,6 +811,9 @@ function usage(){
   echo "  submitblock"
   echo "  submitblockheader"
   echo "  remotegbt"
+  echo "p2p  :"
+  echo "  banlist"
+  echo "  removeban"
 }
 
 # -------------------

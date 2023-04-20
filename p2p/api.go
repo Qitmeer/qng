@@ -218,3 +218,23 @@ func (api *PrivateP2PAPI) SetLibp2pLogLevel(level string) (interface{}, error) {
 	golog.SetAllLoggers(l)
 	return fmt.Sprintf("cur:%s (DEBUG, INFO, WARN, ERROR, DPANIC, PANIC, FATAL)", level), nil
 }
+
+// Banlist
+func (api *PrivateP2PAPI) Banlist() (interface{}, error) {
+	bl := api.s.GetBanlist()
+	bls := []*json.GetBanlistResult{}
+	for k, v := range bl {
+		bls = append(bls, &json.GetBanlistResult{PeerID: k.String(), Bads: v})
+	}
+	return bls, nil
+}
+
+// RemoveBan
+func (api *PrivateP2PAPI) RemoveBan(id *string) (interface{}, error) {
+	ho := ""
+	if id != nil {
+		ho = *id
+	}
+	api.s.RemoveBan(ho)
+	return true, nil
+}
