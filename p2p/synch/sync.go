@@ -333,7 +333,7 @@ func RegisterRPC(rpc peers.P2PRPC, basetopic string, base interface{}, handle rp
 			log.Error("PeerSync is not running")
 			return
 		}
-		ctx, cancel := context.WithTimeout(rpc.Context(), TtfbTimeout)
+		ctx, cancel := context.WithTimeout(rpc.Context(), RespTimeout)
 		defer cancel()
 
 		SetRPCStreamDeadlines(stream)
@@ -410,7 +410,7 @@ func processRspError(ctx context.Context, e *common.Error, stream network.Stream
 			pe.IncrementBadResponses(e)
 		}
 		select {
-		case <-time.After(TtfbTimeout):
+		case <-time.After(RespTimeout):
 		case <-ctx.Done():
 		}
 		err = closeStream(stream)
@@ -461,7 +461,7 @@ func Send(ctx context.Context, rpc peers.P2PRPC, message interface{}, baseTopic 
 
 	topic := getTopic(baseTopic) + rpc.Encoding().ProtocolSuffix()
 
-	var deadline = TtfbTimeout + RespTimeout
+	var deadline = ReqTimeout + RespTimeout
 	ctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
 
