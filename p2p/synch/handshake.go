@@ -49,7 +49,7 @@ func (ps *PeerSync) processConnected(msg *ConnectedMsg) {
 	pe.IncreaseReConnect()
 	// Handle the various pre-existing conditions that will result in us not handshaking.
 	if pe.IsConnected() {
-		log.Trace(fmt.Sprintf("%s currentState:%d reason:already connected, Ignoring connection request", pe.IDWithAddress(), pe.ConnectionState()))
+		log.Trace(fmt.Sprintf("%s currentState:%s reason:already connected, Ignoring connection request", pe.IDWithAddress(), pe.ConnectionState().String()))
 		return
 	}
 

@@ -238,7 +238,7 @@ func (s *Sync) Send(pe *peers.Peer, protocol string, message interface{}) (inter
 	defer cancel()
 
 	var e *common.Error
-	stream, e := Send(ctx, s.p2p, message, RPCChainState, pe)
+	stream, e := Send(ctx, s.p2p, message, protocol, pe)
 	if e != nil && !e.Code.IsSuccess() {
 		processReqError(e, stream, pe)
 		return nil, e.ToError()
