@@ -274,10 +274,11 @@ func (s *Sync) Send(pe *peers.Peer, protocol string, message interface{}) (inter
 		return nil, fmt.Errorf("Can't support:%s", protocol)
 	}
 	processReqError(e, stream, pe)
-	if e.Code.IsSuccess() {
-		return ret, nil
+
+	if e != nil && !e.Code.IsSuccess() {
+		return nil, e.ToError()
 	}
-	return nil, e.ToError()
+	return ret, nil
 }
 
 func (s *Sync) PeerSync() *PeerSync {
@@ -384,11 +385,11 @@ func RegisterRPC(rpc peers.P2PRPC, basetopic string, base interface{}, handle rp
 func processRspError(ctx context.Context, e *common.Error, stream network.Stream, rpc peers.P2PRPC, pe *peers.Peer) bool {
 	streamOK := true
 	if e == nil {
-		return streamOK
+		e = common.NewSuccess()
 	}
 	if e.Code.IsStream() {
 		streamOK = false
-	} else {
+	} else if !e.Code.IsDAGConsensus() && !e.Code.IsSuccess() {
 		resp, err := generateErrorResponse(e, rpc.Encoding())
 		if err != nil {
 			e.Add(fmt.Sprintf("Failed to generate a response error:%v", err))
@@ -430,6 +431,9 @@ func processRspError(ctx context.Context, e *common.Error, stream network.Stream
 
 func processReqError(e *common.Error, stream network.Stream, pe *peers.Peer) bool {
 	streamOK := true
+	if e == nil {
+		e = common.NewSuccess()
+	}
 	if e.Code.IsStream() {
 		streamOK = false
 	}

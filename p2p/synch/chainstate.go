@@ -27,14 +27,11 @@ func (s *Sync) sendChainStateRequest(stream network.Stream, pe *peers.Peer) *com
 		e.Add("chain state request")
 		return e
 	}
-
 	msg := &pb.ChainState{}
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
 		return common.NewError(common.ErrStreamRead, err)
 	}
-
-	s.UpdateChainState(pe, msg, e.Code.IsDAGConsensus())
-
+	s.UpdateChainState(pe, msg, !e.Code.IsDAGConsensus())
 	if !e.Code.IsSuccess() {
 		return e
 	}
@@ -69,7 +66,7 @@ func (s *Sync) chainStateHandler(ctx context.Context, msg interface{}, stream li
 		if err := s.EncodeResponseMsgPro(stream, s.getChainState(), common.ErrDAGConsensus); err != nil {
 			return err
 		}
-		return nil
+		return ErrMessage(fmt.Errorf("bidirectional channel capacity"))
 	}
 	s.UpdateChainState(pe, m, true)
 	return s.EncodeResponseMsg(stream, s.getChainState())
