@@ -58,14 +58,14 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, network *string) (interface{
 				continue
 			}
 		}
-
+		active:=ps.Peers().IsActiveID(p.PeerID)
 		if !vb {
-			if !p.State.IsConnected() {
+			if !active {
 				continue
 			}
 		}
 		info := &json.GetPeerInfoResult{
-			ID:        p.PeerID,
+			ID:        p.PeerID.String(),
 			Name:      p.Name,
 			Address:   p.Address,
 			BytesSent: p.BytesSent,
@@ -73,6 +73,7 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, network *string) (interface{
 			Circuit:   p.IsCircuit,
 			Bads:      p.Bads,
 			ReConnect: p.ReConnect,
+			Active: active,
 		}
 		info.Protocol = p.Protocol
 		info.Services = p.Services.String()
@@ -80,7 +81,7 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, network *string) (interface{
 			info.Genesis = p.Genesis.String()
 		}
 		if p.IsTheSameNetwork() {
-			info.State = p.State.String()
+			info.State = p.State
 		}
 		if len(p.Version) > 0 {
 			info.Version = p.Version
@@ -89,7 +90,7 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, network *string) (interface{
 			info.Network = p.Network
 		}
 
-		if p.State.IsConnected() {
+		if p.State {
 			info.TimeOffset = p.TimeOffset
 			if p.Genesis != nil {
 				info.Genesis = p.Genesis.String()
@@ -99,7 +100,7 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, network *string) (interface{
 				info.GraphState = marshal.GetGraphStateResult(p.GraphState)
 			}
 			if ps.PeerSync().SyncPeer() != nil {
-				info.SyncNode = p.PeerID == ps.PeerSync().SyncPeer().GetID().String()
+				info.SyncNode = p.PeerID == ps.PeerSync().SyncPeer().GetID()
 			} else {
 				info.SyncNode = false
 			}

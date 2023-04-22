@@ -293,6 +293,14 @@ func (p *Status) IsActive(pe *Peer) bool {
 	return pe.IsActive() && p.CanConnect(pe.GetID())
 }
 
+func (p *Status) IsActiveID(pid peer.ID) bool {
+	pe:=p.Get(pid)
+	if pe == nil {
+		return false
+	}
+	return p.IsActive(pe)
+}
+
 // NewStatus creates a new status entity.
 func NewStatus(p2p P2PRPC) *Status {
 	return &Status{

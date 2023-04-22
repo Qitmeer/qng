@@ -246,7 +246,7 @@ func (p *Peer) IsActive() bool {
 	if !p.canConnectWithNetwork() {
 		return false
 	}
-	return p.peerState.IsConnected() || p.peerState.IsConnecting()
+	return p.peerState.IsConnected()
 }
 
 func (p *Peer) IsConnected() bool {
@@ -332,14 +332,14 @@ func (p *Peer) StatsSnapshot() (*StatsSnap, error) {
 	defer p.lock.RUnlock()
 
 	ss := &StatsSnap{
-		PeerID:     p.pid.String(),
+		PeerID:     p.pid,
 		Protocol:   p.protocolVersion(),
 		Genesis:    p.genesis(),
 		Services:   p.services(),
 		Name:       p.getName(),
 		Version:    p.getVersion(),
 		Network:    p.getNetwork(),
-		State:      p.peerState,
+		State:      p.peerState.IsConnected(),
 		Direction:  p.direction,
 		TimeOffset: p.timeOffset,
 		ConnTime:   time.Since(p.conTime),

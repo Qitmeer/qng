@@ -182,7 +182,7 @@ func (api *PublicBlockChainAPI) GetNetworkInfo() (interface{}, error) {
 			gsups[p.Network] = []time.Duration{0, 0, math.MaxInt64}
 		}
 		info.Peers++
-		if p.State.IsConnected() {
+		if ps.Peers().IsActiveID(p.PeerID) {
 			info.Connecteds++
 			nstat.TotalConnected++
 

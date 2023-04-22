@@ -57,22 +57,6 @@ func (s *Sync) maintainPeerStatuses() {
 				}
 			}(pid)
 		}
-		for _, pid := range s.Peers().Connecting() {
-			pe := s.peers.Get(pid)
-			if pe == nil {
-				continue
-			}
-			go func(id peer.ID) {
-				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
-					s.peerSync.ReConnect(pe)
-					return
-				}
-				if roughtime.Now().After(pe.ChainStateLastUpdated().Add(s.PeerInterval)) {
-					s.peerSync.ReConnect(pe)
-					return
-				}
-			}(pid)
-		}
 		for _, pid := range s.Peers().Disconnected() {
 			pe := s.peers.Get(pid)
 			if pe == nil {

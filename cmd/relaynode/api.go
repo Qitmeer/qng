@@ -72,7 +72,7 @@ func (api *PublicRelayAPI) GetPeerInfo(verbose *bool, network *string) (interfac
 			}
 		}
 		info := &json.GetPeerInfoResult{
-			ID:        p.PeerID,
+			ID:        p.PeerID.String(),
 			Name:      p.Name,
 			Address:   p.Address,
 			BytesSent: p.BytesSent,

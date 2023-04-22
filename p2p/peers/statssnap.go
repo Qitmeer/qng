@@ -6,13 +6,14 @@ import (
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"time"
 )
 
 // StatsSnap is a snapshot of peer stats at a point in time.
 type StatsSnap struct {
 	NodeID        string
-	PeerID        string
+	PeerID        peer.ID
 	QNR           string
 	Address       string
 	Protocol      uint32
@@ -21,7 +22,7 @@ type StatsSnap struct {
 	Name          string
 	Version       string
 	Network       string
-	State         PeerConnectionState
+	State         bool
 	Direction     network.Direction
 	GraphState    *meerdag.GraphState
 	GraphStateDur time.Duration
