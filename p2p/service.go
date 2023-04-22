@@ -235,7 +235,7 @@ func (s *Service) ConnectToPeer(qmaddr string, force bool) error {
 	}
 	err = s.connectWithPeer(*addrInfo, false)
 	if err != nil {
-		log.Error(fmt.Sprintf("Could not connect with peer %s :%v", addrInfo.String(), err))
+		log.Info(fmt.Sprintf("Could not connect with peer %s :%v", addrInfo.String(), err))
 	}
 	return err
 }

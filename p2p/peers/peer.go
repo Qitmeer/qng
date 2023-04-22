@@ -58,8 +58,7 @@ type Peer struct {
 
 	broadcast map[string]interface{}
 
-	connect    uint64
-	disconnect uint64
+	reconnect uint64
 }
 
 func (p *Peer) GetID() peer.ID {
@@ -350,8 +349,7 @@ func (p *Peer) StatsSnapshot() (*StatsSnap, error) {
 		BytesRecv:  p.bytesRecv,
 		IsCircuit:  p.isCircuit(),
 		Bads:       p.badResponseStrs(),
-		Connect:    p.connect,
-		Disconnect: p.disconnect,
+		ReConnect:  p.reconnect,
 	}
 	n := p.node()
 	if n != nil {
@@ -695,18 +693,11 @@ func (p *Peer) UpdateBroadcast() {
 	}
 }
 
-func (p *Peer) IncreaseConnect() {
+func (p *Peer) IncreaseReConnect() {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	p.connect++
-}
-
-func (p *Peer) IncreaseDisconnect() {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	p.disconnect++
+	p.reconnect++
 }
 
 func NewPeer(pid peer.ID, point *hash.Hash) *Peer {

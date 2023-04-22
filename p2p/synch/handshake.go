@@ -46,7 +46,7 @@ func (ps *PeerSync) processConnected(msg *ConnectedMsg) {
 	conn := msg.Conn
 
 	pe.UpdateAddrDir(nil, conn.RemoteMultiaddr(), conn.Stat().Direction)
-	pe.IncreaseConnect()
+	pe.IncreaseReConnect()
 	// Handle the various pre-existing conditions that will result in us not handshaking.
 	if pe.IsConnected() {
 		log.Trace(fmt.Sprintf("%s currentState:%d reason:already connected, Ignoring connection request", pe.IDWithAddress(), pe.ConnectionState()))
@@ -155,7 +155,7 @@ func (ps *PeerSync) Disconnected(pid peer.ID, conn network.Conn) {
 	}
 
 	//ps.msgChan <- &DisconnectedMsg{ID: pid, Conn: conn}
-	go ps.processDisconnected(&DisconnectedMsg{ID: pid, Conn: conn})
+	//go ps.processDisconnected(&DisconnectedMsg{ID: pid, Conn: conn})
 }
 
 func (ps *PeerSync) processDisconnected(msg *DisconnectedMsg) {
@@ -164,8 +164,6 @@ func (ps *PeerSync) processDisconnected(msg *DisconnectedMsg) {
 	if pe == nil {
 		return
 	}
-	pe.IncreaseDisconnect()
-	return
 
 	pe.HSlock.Lock()
 	defer pe.HSlock.Unlock()

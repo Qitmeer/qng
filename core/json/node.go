@@ -50,8 +50,7 @@ type GetPeerInfoResult struct {
 	Version    string               `json:"version,omitempty"`
 	Network    string               `json:"network,omitempty"`
 	Circuit    bool                 `json:"circuit,omitempty"`
-	Connect    uint64               `json:"connect,omitempty"`
-	Disconnect uint64               `json:"disconnect,omitempty"`
+	ReConnect  uint64               `json:"reconnect,omitempty"`
 	Bads       []string             `json:"bads,omitempty"`
 }
 
