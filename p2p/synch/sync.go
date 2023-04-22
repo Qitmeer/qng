@@ -232,7 +232,7 @@ func (s *Sync) Send(pe *peers.Peer, protocol string, message interface{}) (inter
 		return nil, fmt.Errorf("No run PeerSync\n")
 	}
 
-	log.Trace("Send message", "protocol", protocol, "peer", pe.IDWithAddress())
+	log.Trace("Send message", "protocol", getProtocol(s.p2p, protocol), "peer", pe.IDWithAddress())
 
 	ctx, cancel := context.WithTimeout(s.p2p.Context(), ReqTimeout)
 	defer cancel()
@@ -327,7 +327,7 @@ func NewSync(p2p peers.P2P) *Sync {
 
 // registerRPC for a given topic with an expected protobuf message type.
 func RegisterRPC(rpc peers.P2PRPC, basetopic string, base interface{}, handle rpcHandler) {
-	topic := getTopic(basetopic) + rpc.Encoding().ProtocolSuffix()
+	topic := getProtocol(rpc, basetopic)
 
 	rpc.Host().SetStreamHandler(protocol.ID(topic), func(stream network.Stream) {
 		if !rpc.IsRunning() {
@@ -339,11 +339,8 @@ func RegisterRPC(rpc peers.P2PRPC, basetopic string, base interface{}, handle rp
 
 		SetRPCStreamDeadlines(stream)
 
-		pe := rpc.Peers().Get(stream.Conn().RemotePeer())
-		if pe == nil {
-			log.Warn("Unknown peer", "id", stream.Conn().RemotePeer(), "protocol", topic, "addr", stream.Conn().RemoteMultiaddr().String())
-			return
-		}
+		pe := rpc.Peers().Fetch(stream.Conn().RemotePeer())
+		pe.UpdateAddrDir(nil, stream.Conn().RemoteMultiaddr(), stream.Conn().Stat().Direction)
 
 		log.Trace("Stream handler", "protocol", topic, "peer", pe.IDWithAddress())
 
@@ -463,7 +460,7 @@ func Send(ctx context.Context, rpc peers.P2PRPC, message interface{}, baseTopic 
 		return nil, common.NewErrorStr(common.ErrLibp2pConnect, curState.String())
 	}
 
-	topic := getTopic(baseTopic) + rpc.Encoding().ProtocolSuffix()
+	topic := getProtocol(rpc, baseTopic)
 
 	var deadline = ReqTimeout + RespTimeout
 	ctx, cancel := context.WithTimeout(ctx, deadline)
@@ -516,6 +513,10 @@ func getTopic(baseTopic string) string {
 		return baseTopic
 	}
 	return baseTopic + "/" + params.ActiveNetParams.Name
+}
+
+func getProtocol(rpc peers.P2PRPC, base string) string {
+	return getTopic(base) + rpc.Encoding().ProtocolSuffix()
 }
 
 func processUnderlyingError(rpc peers.P2PRPC, pid peer.ID, err error) {

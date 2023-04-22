@@ -286,7 +286,8 @@ func (p *Status) UpdateBroadcasts() {
 }
 
 func (p *Status) CanConnect(pid peer.ID) bool {
-	return p.p2p.Host().Network().Connectedness(pid) != network.CannotConnect
+	cs := p.p2p.Host().Network().Connectedness(pid)
+	return cs == network.CanConnect || cs == network.Connected
 }
 
 func (p *Status) IsActive(pe *Peer) bool {
@@ -294,7 +295,7 @@ func (p *Status) IsActive(pe *Peer) bool {
 }
 
 func (p *Status) IsActiveID(pid peer.ID) bool {
-	pe:=p.Get(pid)
+	pe := p.Get(pid)
 	if pe == nil {
 		return false
 	}

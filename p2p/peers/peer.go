@@ -129,10 +129,15 @@ func (p *Peer) IncrementBadResponses(err *common.Error) {
 	} else {
 		br.ID = p.badResponses[l-1].ID + 1
 	}
-	p.badResponses = append(p.badResponses, br)
+	if l > 0 && p.badResponses[l-1].Err.String() == err.String() {
+		p.badResponses[l-1] = br
+	} else {
+		p.badResponses = append(p.badResponses, br)
+	}
+
 	log.Debug("Bad responses", "peer", p.idWithAddress(), "err", err.String())
 	//
-	if l+1 > MaxBadResponses {
+	if len(p.badResponses) > MaxBadResponses {
 		p.badResponses = p.badResponses[1:]
 	}
 }

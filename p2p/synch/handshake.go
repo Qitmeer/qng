@@ -77,6 +77,7 @@ func (ps *PeerSync) Connection(pe *peers.Peer) {
 		return
 	}
 	pe.SetConnectionState(peers.PeerConnected)
+
 	// Go through the handshake process.
 	multiAddr := fmt.Sprintf("%s/p2p/%s", pe.Address().String(), pe.GetID().String())
 
