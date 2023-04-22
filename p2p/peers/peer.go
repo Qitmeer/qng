@@ -57,6 +57,9 @@ type Peer struct {
 	rateTasks map[string]*time.Timer
 
 	broadcast map[string]interface{}
+
+	connect    uint64
+	disconnect uint64
 }
 
 func (p *Peer) GetID() peer.ID {
@@ -347,6 +350,8 @@ func (p *Peer) StatsSnapshot() (*StatsSnap, error) {
 		BytesRecv:  p.bytesRecv,
 		IsCircuit:  p.isCircuit(),
 		Bads:       p.badResponseStrs(),
+		Connect:    p.connect,
+		Disconnect: p.disconnect,
 	}
 	n := p.node()
 	if n != nil {
@@ -688,6 +693,20 @@ func (p *Peer) UpdateBroadcast() {
 			}
 		}
 	}
+}
+
+func (p *Peer) IncreaseConnect() {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.connect++
+}
+
+func (p *Peer) IncreaseDisconnect() {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.disconnect++
 }
 
 func NewPeer(pid peer.ID, point *hash.Hash) *Peer {
