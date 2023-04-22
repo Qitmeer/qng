@@ -78,6 +78,12 @@ func (s *Sync) maintainPeerStatuses() {
 			if pe == nil {
 				continue
 			}
+			if s.p2p.Host().Network().Connectedness(pe.GetID()) == network.Connected {
+				err := s.p2p.Disconnect(pe.GetID())
+				if err != nil {
+					log.Debug(err.Error())
+				}
+			}
 			//
 			node := pe.Node()
 			if node == nil ||

@@ -177,7 +177,7 @@ func (api *PrivateP2PAPI) Pause() (interface{}, error) {
 
 func (api *PrivateP2PAPI) ResetPeers() (interface{}, error) {
 	for _, pe := range api.s.Peers().AllPeers() {
-		if !pe.IsActive() {
+		if !api.s.Peers().IsActive(pe) {
 			continue
 		}
 		api.s.PeerSync().TryDisconnect(pe)

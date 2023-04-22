@@ -50,4 +50,5 @@ type P2PRPC interface {
 	IncreaseBytesRecv(pid peer.ID, size int)
 	Peers() *Status
 	IsRunning() bool
+	GetGenesisHash() *hash.Hash
 }

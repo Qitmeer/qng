@@ -21,7 +21,7 @@ type Status struct {
 	lock  sync.RWMutex
 	peers map[peer.ID]*Peer
 
-	p2p P2P
+	p2p P2PRPC
 }
 
 // Bad returns the peers that are bad.
@@ -80,14 +80,12 @@ func (p *Status) CanSyncPeers() []*Peer {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	peers := make([]*Peer, 0)
-	for _, status := range p.peers {
-		if !status.ConnectionState().IsConnected() ||
-			status.IsBad() ||
-			!status.IsConsensus() ||
-			!status.CanConnectWithNetwork() {
+	for _, pe := range p.peers {
+		if !p.IsActive(pe) ||
+			!pe.IsConsensus() {
 			continue
 		}
-		peers = append(peers, status)
+		peers = append(peers, pe)
 	}
 	return peers
 }
@@ -107,8 +105,8 @@ func (p *Status) Active() []peer.ID {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.peers {
-		if status.IsActive() {
+	for pid, pe := range p.peers {
+		if p.IsActive(pe) {
 			peers = append(peers, pid)
 		}
 	}
@@ -146,8 +144,8 @@ func (p *Status) Inactive() []peer.ID {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.peers {
-		if !status.IsActive() {
+	for pid, pe := range p.peers {
+		if !p.IsActive(pe) {
 			peers = append(peers, pid)
 		}
 	}
@@ -169,8 +167,8 @@ func (p *Status) DirInbound() []peer.ID {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.peers {
-		if status.IsActive() && status.Direction() == network.DirInbound {
+	for pid, pe := range p.peers {
+		if p.IsActive(pe) && pe.Direction() == network.DirInbound {
 			peers = append(peers, pid)
 		}
 	}
@@ -238,7 +236,7 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 	peers := make([]peer.ID, 0)
 	for pid, status := range p.peers {
 		// look at active peers
-		if status.IsActive() && status.metaData != nil && status.metaData.Subnets != nil {
+		if p.IsActive(status) && status.metaData != nil && status.metaData.Subnets != nil {
 			indices := retrieveIndicesFromBitfield(status.metaData.Subnets)
 			for _, idx := range indices {
 				if idx == index {
@@ -287,8 +285,16 @@ func (p *Status) UpdateBroadcasts() {
 	}
 }
 
+func (p *Status) CanConnect(pid peer.ID) bool {
+	return p.p2p.Host().Network().Connectedness(pid) != network.CannotConnect
+}
+
+func (p *Status) IsActive(pe *Peer) bool {
+	return pe.IsActive() && p.CanConnect(pe.GetID())
+}
+
 // NewStatus creates a new status entity.
-func NewStatus(p2p P2P) *Status {
+func NewStatus(p2p P2PRPC) *Status {
 	return &Status{
 		p2p:   p2p,
 		peers: make(map[peer.ID]*Peer),
