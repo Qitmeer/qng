@@ -25,9 +25,6 @@ func (s *Sync) SendMempoolRequest(stream network.Stream, pe *peers.Peer) *common
 }
 
 func (s *Sync) HandlerMemPool(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
-	if !s.PeerSync().IsCurrent() {
-		return s.EncodeResponseMsg(stream, nil)
-	}
 	mpr, ok := msg.(*pb.MemPoolRequest)
 	if !ok {
 		err := fmt.Errorf("message is not type *MsgFilterLoad")
