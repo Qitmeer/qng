@@ -30,7 +30,8 @@ func (s *Sync) maintainPeerStatuses() {
 			go func(id peer.ID) {
 				// If our peer status has not been updated correctly we disconnect over here
 				// and set the connection state over here instead.
-				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
+				if s.p2p.Host().Network().Connectedness(id) != network.Connected &&
+					!s.IsPeerAtLimit() {
 					s.p2p.ConnectToPeer(pe.QAddress().String(), false)
 					return
 				}
