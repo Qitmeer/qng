@@ -5,7 +5,6 @@
 package synch
 
 import (
-	"context"
 	"fmt"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/p2p/common"
@@ -13,7 +12,6 @@ import (
 	"github.com/Qitmeer/qng/p2p/runutil"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"io"
 	"time"
 )
 
@@ -33,30 +31,24 @@ func (s *Sync) maintainPeerStatuses() {
 				// If our peer status has not been updated correctly we disconnect over here
 				// and set the connection state over here instead.
 				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
-					s.peerSync.ReConnect(pe)
+					s.p2p.ConnectToPeer(pe.QAddress().String(), false)
 					return
 				}
 
-				if (pe.IsBad() && !s.IsWhitePeer(id)) || !pe.CanConnectWithNetwork() {
-					if err := s.sendGoodByeAndDisconnect(s.p2p.Context(), common.ErrBadPeer, id); err != nil {
+				if !pe.CanConnectWithNetwork() {
+					if err := s.sendGoodByeAndDisconnect(common.ErrBadPeer, pe); err != nil {
 						log.Debug(fmt.Sprintf("Error when disconnecting with bad peer: %v", err))
 					}
 					return
 				}
-				if roughtime.Now().After(pe.ChainStateLastUpdated().Add(s.PeerInterval)) {
-					if pe.ConnectionState() != peers.PeerConnected {
-						s.peerSync.ReConnect(pe)
-						return
-					}
-				}
+
 				if !pe.IsConsensus() {
 					return
 				}
 				// If the status hasn't been updated in the recent interval time.
 				if roughtime.Now().After(pe.ChainStateLastUpdated().Add(s.PeerInterval)) {
-					if err := s.reValidatePeer(s.p2p.Context(), id); err != nil && err != io.EOF {
+					if err := s.reValidatePeer(pe); err != nil {
 						log.Debug(fmt.Sprintf("Failed to revalidate peer (%v), peer:%s", err, id))
-						s.Peers().IncrementBadResponses(id, common.NewErrorStr(common.ErrRevalidate, "maintain peer to reValidatePeer"))
 					}
 				}
 
@@ -86,6 +78,7 @@ func (s *Sync) maintainPeerStatuses() {
 			if pe == nil {
 				continue
 			}
+			//
 			node := pe.Node()
 			if node == nil ||
 				time.Since(pe.ConnectionTime()) < ReconnectionTime ||
@@ -97,19 +90,16 @@ func (s *Sync) maintainPeerStatuses() {
 	})
 }
 
-func (s *Sync) reValidatePeer(ctx context.Context, id peer.ID) error {
-	if err := s.sendChainStateRequest(ctx, id); err != nil {
+func (s *Sync) reValidatePeer(pe *peers.Peer) error {
+	if _, err := s.Send(pe, RPCChainState, s.getChainState()); err != nil {
 		return err
-	}
-	pe := s.peers.Get(id)
-	if pe == nil {
-		return peers.ErrPeerUnknown
 	}
 	if !pe.IsConsensus() {
 		return nil
 	}
 	// Do not return an error for ping requests.
-	if err := s.SendPingRequest(ctx, id); err != nil {
+	metadataSeq := s.p2p.MetadataSeq()
+	if _, err := s.Send(pe, RPCPingTopic, &metadataSeq); err != nil {
 		log.Debug(fmt.Sprintf("Could not ping peer:%v", err))
 	}
 	return nil

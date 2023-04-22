@@ -1,10 +1,11 @@
-package common
+package peers
 
 import (
 	"context"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/encoder"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnode"
@@ -21,7 +22,7 @@ type P2P interface {
 	Disconnect(pid peer.ID) error
 	Context() context.Context
 	Encoding() encoder.NetworkEncoding
-	Config() *Config
+	Config() *common.Config
 	TxMemPool() *mempool.TxPool
 	Metadata() *pb.MetaData
 	MetadataSeq() uint64
@@ -36,6 +37,8 @@ type P2P interface {
 	ConnectToPeer(qmaddr string, force bool) error
 	RegainMempool()
 	IsCurrent() bool
+	Peers() *Status
+	IsRunning() bool
 }
 
 type P2PRPC interface {
@@ -45,4 +48,6 @@ type P2PRPC interface {
 	Disconnect(pid peer.ID) error
 	IncreaseBytesSent(pid peer.ID, size int)
 	IncreaseBytesRecv(pid peer.ID, size int)
+	Peers() *Status
+	IsRunning() bool
 }

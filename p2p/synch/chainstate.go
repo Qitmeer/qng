@@ -6,7 +6,6 @@ package synch
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
@@ -16,97 +15,54 @@ import (
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 const (
-	retSuccess = iota
-	retErrGeneric
-	retErrInvalidChainState
 	MaxPBGraphStateTips = 100
 )
 
-func (s *Sync) sendChainStateRequest(pctx context.Context, id peer.ID) error {
-	pe := s.peers.Get(id)
-	if pe == nil {
-		return peers.ErrPeerUnknown
-	}
-	log.Trace(fmt.Sprintf("sendChainStateRequest:%s", id))
-	ctx, cancel := context.WithTimeout(pctx, ReqTimeout)
-	defer cancel()
-
-	resp := s.getChainState()
-	stream, err := s.Send(ctx, resp, RPCChainState, id)
-	if err != nil {
-		return err
-	}
-
-	code, errMsg, err := ReadRspCode(stream, s.p2p)
-	if err != nil {
-		return err
-	}
-	if !code.IsSuccess() && code != common.ErrDAGConsensus {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), common.NewErrorStr(code, "chain state request"))
-		closeStream(stream, s.p2p)
-		return errors.New(errMsg)
+func (s *Sync) sendChainStateRequest(stream network.Stream, pe *peers.Peer) *common.Error {
+	e := ReadRspCode(stream, s.p2p)
+	if !e.Code.IsSuccess() && !e.Code.IsDAGConsensus() {
+		e.Add("chain state request")
+		return e
 	}
 
 	msg := &pb.ChainState{}
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
-		return err
+		return common.NewError(common.ErrStreamRead, err)
 	}
-	defer closeStream(stream, s.p2p)
 
-	s.UpdateChainState(pe, msg, code.IsSuccess())
+	s.UpdateChainState(pe, msg, e.Code.IsDAGConsensus())
 
-	if code == common.ErrDAGConsensus {
-		if err := s.sendGoodByeAndDisconnect(ctx, common.ErrDAGConsensus, stream.Conn().RemotePeer()); err != nil {
-			return err
-		}
-		return errors.New(errMsg)
+	if !e.Code.IsSuccess() {
+		return e
 	}
-	ret, err := s.validateChainStateMessage(ctx, msg, id)
-	if err != nil {
-		if ret == retErrInvalidChainState {
-			if err := s.sendGoodByeAndDisconnect(ctx, common.ErrDAGConsensus, stream.Conn().RemotePeer()); err != nil {
-				return err
-			}
-		} else {
-			s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), common.NewErrorStr(common.ErrGeneric, "chain state resp"))
+	e = s.validateChainStateMessage(msg, pe)
+	if e != nil {
+		if e.Code.IsDAGConsensus() {
+			go s.sendGoodByeAndDisconnect(common.ErrDAGConsensus, pe)
 		}
+		return e
 	}
-	return err
+	return e
 }
 
-func (s *Sync) chainStateHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	if !s.peerSync.IsRunning() {
-		return ErrMessage(fmt.Errorf("No run\n"))
-	}
-	pe := s.peers.Get(stream.Conn().RemotePeer())
-	if pe == nil {
-		return ErrPeerUnknown
-	}
-	log.Trace(fmt.Sprintf("chainStateHandler:%s", pe.GetID()))
-
-	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
-	defer cancel()
-
+func (s *Sync) chainStateHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
 	m, ok := msg.(*pb.ChainState)
 	if !ok {
 		return ErrMessage(fmt.Errorf("message is not type *pb.ChainState"))
 	}
-
-	if ret, err := s.validateChainStateMessage(ctx, m, stream.Conn().RemotePeer()); err != nil {
-		log.Debug(fmt.Sprintf("Invalid chain state message from peer:peer=%s  error=%v", stream.Conn().RemotePeer(), err))
-		if ret == retErrInvalidChainState {
+	e := s.validateChainStateMessage(m, pe)
+	if e != nil {
+		if e.Code.IsDAGConsensus() {
 			// Respond with our status and disconnect with the peer.
 			s.UpdateChainState(pe, m, false)
-			if err := s.EncodeResponseMsgPro(stream, s.getChainState(), common.ErrDAGConsensus); err != nil {
+			if err := s.EncodeResponseMsgPro(stream, s.getChainState(), e.Code); err != nil {
 				return err
 			}
-			return nil
 		}
-		return ErrMessage(err)
+		return e
 	}
 	if !s.bidirectionalChannelCapacity(pe, stream.Conn()) {
 		s.UpdateChainState(pe, m, false)
@@ -128,36 +84,32 @@ func (s *Sync) UpdateChainState(pe *peers.Peer, chainState *pb.ChainState, actio
 	go s.peerSync.immediatelyConnected(pe)
 }
 
-func (s *Sync) validateChainStateMessage(ctx context.Context, msg *pb.ChainState, id peer.ID) (int, error) {
+func (s *Sync) validateChainStateMessage(msg *pb.ChainState, pe *peers.Peer) *common.Error {
 	if msg == nil {
-		return retErrGeneric, fmt.Errorf("msg is nil")
+		return common.NewErrorStr(common.ErrGeneric, "msg is nil")
 	}
 	if protocol.HasServices(protocol.ServiceFlag(msg.Services), protocol.Relay) {
-		return retSuccess, nil
+		return nil
 	}
 	if protocol.HasServices(protocol.ServiceFlag(msg.Services), protocol.Observer) {
-		return retSuccess, nil
-	}
-	pe := s.peers.Get(id)
-	if msg == nil {
-		return retErrGeneric, fmt.Errorf("peer is Unkonw:%s", id)
+		return nil
 	}
 	genesisHash := s.p2p.GetGenesisHash()
 	msgGenesisHash, err := hash.NewHash(msg.GenesisHash.Hash)
 	if err != nil {
-		return retErrGeneric, fmt.Errorf("invalid genesis")
+		return common.NewErrorStr(common.ErrGeneric, "invalid genesis")
 	}
 	if !msgGenesisHash.IsEqual(genesisHash) {
-		return retErrInvalidChainState, fmt.Errorf("invalid genesis")
+		return common.NewErrorStr(common.ErrDAGConsensus, "invalid genesis")
 	}
 	// Notify and disconnect clients that have a protocol version that is
 	// too old.
 	if msg.ProtocolVersion < uint32(protocol.InitialProcotolVersion) {
-		return retErrInvalidChainState, fmt.Errorf("protocol version must be %d or greater",
-			protocol.InitialProcotolVersion)
+		return common.NewError(common.ErrDAGConsensus, fmt.Errorf("protocol version must be %d or greater",
+			protocol.InitialProcotolVersion))
 	}
 	if msg.GraphState.Total <= 0 {
-		return retErrInvalidChainState, fmt.Errorf("invalid graph state")
+		return common.NewErrorStr(common.ErrDAGConsensus, "invalid graph state")
 	}
 
 	if pe.Direction() == network.DirInbound {
@@ -166,12 +118,12 @@ func (s *Sync) validateChainStateMessage(ctx context.Context, msg *pb.ChainState
 		if !protocol.HasServices(protocol.ServiceFlag(msg.Services), wantServices) {
 			// missingServices := wantServices & ^msg.Services
 			missingServices := protocol.MissingServices(protocol.ServiceFlag(msg.Services), wantServices)
-			return retErrInvalidChainState, fmt.Errorf("Rejecting peer %s with services %v "+
-				"due to not providing desired services %v\n", id.String(), msg.Services, missingServices)
+			return common.NewErrorStr(common.ErrDAGConsensus, fmt.Sprintf("Rejecting peer %s with services %v "+
+				"due to not providing desired services %v\n", pe.GetID().String(), msg.Services, missingServices))
 		}
 	}
 
-	return retSuccess, nil
+	return nil
 }
 
 func (s *Sync) getChainState() *pb.ChainState {

@@ -6,27 +6,18 @@ package synch
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/peers"
+	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 // pingHandler reads the incoming ping rpc message from the peer.
-func (s *Sync) pingHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	if !s.peerSync.IsRunning() {
-		return ErrMessage(fmt.Errorf("No run\n"))
-	}
-	pe := s.peers.Get(stream.Conn().RemotePeer())
-	if pe == nil {
-		return ErrPeerUnknown
-	}
-
-	log.Trace(fmt.Sprintf("pingHandler:%s", pe.GetID()))
-
+func (s *Sync) pingHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
 	m, ok := msg.(*uint64)
 	if !ok {
 		return ErrMessage(fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg))
@@ -45,14 +36,12 @@ func (s *Sync) pingHandler(ctx context.Context, msg interface{}, stream libp2pco
 
 	// The sequence number was not valid.  Start our own ping back to the peer.
 	go func(id peer.ID) {
-		// New context so the calling function doesn't cancel on us.
-		ctx, cancel := context.WithTimeout(s.p2p.Context(), TtfbTimeout)
-		defer cancel()
-		md, err := s.sendMetaDataRequest(ctx, id)
+		ret, err := s.Send(pe, RPCMetaDataTopic, nil)
 		if err != nil {
 			log.Debug(fmt.Sprintf("Failed to send metadata request:peer=%s  error=%v", id, err))
 			return
 		}
+		md := ret.(*pb.MetaData)
 		// update metadata if there is no error
 		pe.SetMetadata(md)
 	}(stream.Conn().RemotePeer())
@@ -60,55 +49,35 @@ func (s *Sync) pingHandler(ctx context.Context, msg interface{}, stream libp2pco
 	return nil
 }
 
-func (s *Sync) SendPingRequest(ctx context.Context, id peer.ID) error {
-	pe := s.peers.Get(id)
-	if pe == nil {
-		return peers.ErrPeerUnknown
+func (s *Sync) SendPingRequest(stream network.Stream, pe *peers.Peer) *common.Error {
+	e := ReadRspCode(stream, s.p2p)
+	if !e.Code.IsSuccess() {
+		e.Add("ping request rsp")
+		return e
 	}
-	log.Trace(fmt.Sprintf("SendPingRequest:%s", pe.GetID()))
-	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
-	defer cancel()
 
-	metadataSeq := s.p2p.MetadataSeq()
-	stream, err := s.Send(ctx, &metadataSeq, RPCPingTopic, id)
-	if err != nil {
-		return err
-	}
 	currentTime := roughtime.Now()
-
-	code, errMsg, err := ReadRspCode(stream, s.p2p)
-	if err != nil {
-		return err
-	}
 	// Records the latency of the ping request for that peer.
-	s.p2p.Host().Peerstore().RecordLatency(id, roughtime.Now().Sub(currentTime))
+	s.p2p.Host().Peerstore().RecordLatency(pe.GetID(), roughtime.Now().Sub(currentTime))
 
-	if code != 0 {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), common.NewErrorStr(code, "ping request rsp"))
-		closeStream(stream, s.p2p)
-		return errors.New(errMsg)
-	}
 	msg := new(uint64)
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
-		return err
+		return common.NewError(common.ErrStreamRead, err)
 	}
-	defer closeStream(stream, s.p2p)
 
 	valid, err := s.validateSequenceNum(*msg, pe)
 	if err != nil {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), common.NewErrorStr(common.ErrSequence, "ping request rsp validate seq num"))
-		return err
+		return common.NewError(common.ErrSequence, fmt.Errorf("ping request rsp validate seq num:%s", err))
 	}
 	if valid {
 		return nil
 	}
-	md, err := s.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
-	if err != nil {
-		// do not increment bad responses, as its
-		// already done in the request method.
-		return err
-	}
 
+	ret, err := s.Send(pe, RPCMetaDataTopic, nil)
+	if err != nil {
+		return ErrMessage(err)
+	}
+	md := ret.(*pb.MetaData)
 	pe.SetMetadata(md)
 	return nil
 }

@@ -12,49 +12,42 @@ var (
 	ErrPeerUnknown = common.NewError(common.ErrPeerUnknown, peers.ErrPeerUnknown)
 )
 
-func closeWriteStream(stream libp2pcore.Stream, rpc common.P2PRPC) error {
+func closeWriteStream(stream libp2pcore.Stream) error {
 	err := stream.CloseWrite()
 	if err != nil {
-		log.Debug(fmt.Sprintf("Failed to close write stream(%s %s %s):%v", stream.Conn().RemotePeer(), stream.Protocol(), stream.Stat().Direction, err))
-		resetStream(stream, rpc)
-		return err
+		return fmt.Errorf("Failed to close write stream:%v", err)
 	}
 	return err
 }
 
-func closeStream(stream libp2pcore.Stream, rpc common.P2PRPC) error {
+func closeStream(stream libp2pcore.Stream) error {
 	err := stream.Close()
 	if err != nil {
-		log.Debug(fmt.Sprintf("Failed to close stream(%s %s %s):%v", stream.Conn().RemotePeer(), stream.Protocol(), stream.Stat().Direction, err))
-		processUnderlyingError(rpc, stream.Conn().RemotePeer(), err)
-		return err
+		return fmt.Errorf("Failed to close stream:%v", err)
 	}
 	return err
 }
 
-func resetStream(stream libp2pcore.Stream, rpc common.P2PRPC) error {
+func resetStream(stream libp2pcore.Stream) error {
 	if stream == nil {
 		return nil
 	}
 	err := stream.Reset()
 	if err != nil {
-		log.Debug(fmt.Sprintf("Failed to reset stream(%s %s %s):%v", stream.Conn().RemotePeer(), stream.Protocol(), stream.Stat().Direction, err))
-		processUnderlyingError(rpc, stream.Conn().RemotePeer(), err)
-		return err
+		return fmt.Errorf("Failed to reset stream(%s %s):%v", stream.Protocol(), stream.Stat().Direction, err)
 	}
 	return err
 }
 
-func DecodeMessage(stream libp2pcore.Stream, rpc common.P2PRPC, msg interface{}) error {
+func DecodeMessage(stream libp2pcore.Stream, rpc peers.P2PRPC, msg interface{}) error {
 	err := rpc.Encoding().DecodeWithMaxLength(stream, msg)
 	if err != nil {
-		resetStream(stream, rpc)
 		return err
 	}
 	return nil
 }
 
-func EncodeMessage(stream libp2pcore.Stream, rpc common.P2PRPC, msg interface{}) (int, error) {
+func EncodeMessage(stream libp2pcore.Stream, rpc peers.P2PRPC, msg interface{}) (int, error) {
 	size, err := rpc.Encoding().EncodeWithMaxLength(stream, msg)
 	if err != nil {
 		return size, err

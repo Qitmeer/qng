@@ -38,6 +38,7 @@ import (
 	"path"
 	"reflect"
 	"sync"
+	"sync/atomic"
 )
 
 type Node struct {
@@ -495,10 +496,12 @@ func (node *Node) GetAmanaService() *amanaboot.AmanaBootService {
 	return service
 }
 
-func closeSteam(stream libp2pcore.Stream) {
-	if err := stream.Close(); err != nil {
-		log.Error(fmt.Sprintf("Failed to close stream:%v", err))
-	}
+func (node *Node) Peers() *peers.Status {
+	return node.peerStatus
+}
+
+func (node *Node) IsRunning() bool {
+	return !node.IsShutdown() && node.IsStarted()
 }
 
 func logExternalDNSAddr(id peer.ID, addr string, port string) {

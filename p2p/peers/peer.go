@@ -72,6 +72,10 @@ func (p *Peer) IDWithAddress() string {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
+	return p.idWithAddress()
+}
+
+func (p *Peer) idWithAddress() string {
 	return fmt.Sprintf("%s %s", p.pid, p.address)
 }
 
@@ -124,7 +128,7 @@ func (p *Peer) IncrementBadResponses(err *common.Error) {
 		br.ID += p.badResponses[l-1].ID
 	}
 	p.badResponses = append(p.badResponses, br)
-	log.Debug(fmt.Sprintf("Bad responses:%s error:%s", p.pid.String(), err.String()))
+	log.Debug("Bad responses", "peer", p.idWithAddress(), "err", err.String())
 	//
 	if l+1 > MaxBadResponses {
 		p.badResponses = p.badResponses[1:]
@@ -136,6 +140,8 @@ func (p *Peer) ResetBad() {
 	defer p.lock.Unlock()
 
 	p.badResponses = []*BadResponse{}
+
+	log.Debug(fmt.Sprintf("Bad responses reset:%s", p.pid.String()))
 }
 
 func (p *Peer) UpdateAddrDir(record *qnr.Record, address ma.Multiaddr, direction network.Direction) {
@@ -232,6 +238,12 @@ func (p *Peer) IsActive() bool {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
+	if p.isBad() {
+		return false
+	}
+	if !p.canConnectWithNetwork() {
+		return false
+	}
 	return p.peerState.IsConnected() || p.peerState.IsConnecting()
 }
 
@@ -598,6 +610,10 @@ func (p *Peer) getNetwork() string {
 func (p *Peer) CanConnectWithNetwork() bool {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+	return p.canConnectWithNetwork()
+}
+
+func (p *Peer) canConnectWithNetwork() bool {
 	network := p.getNetwork()
 	if len(network) <= 0 {
 		return true

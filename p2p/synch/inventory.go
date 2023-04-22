@@ -2,7 +2,6 @@ package synch
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
@@ -10,6 +9,7 @@ import (
 	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
 )
 
 func (s *Sync) tryToSendInventoryRequest(pe *peers.Peer, invs []*pb.InvVect) error {
@@ -26,7 +26,7 @@ func (s *Sync) tryToSendInventoryRequest(pe *peers.Peer, invs []*pb.InvVect) err
 
 			if len(invMsg.Invs) >= MaxInvPerMsg ||
 				(i == (len(invs)-1) && len(invMsg.Invs) > 0) {
-				go s.sendInventoryRequest(s.p2p.Context(), pe, invMsg)
+				go s.Send(pe, RPCInventory, invMsg)
 				invMsg = nil
 			}
 		}
@@ -34,63 +34,26 @@ func (s *Sync) tryToSendInventoryRequest(pe *peers.Peer, invs []*pb.InvVect) err
 	return nil
 }
 
-func (s *Sync) sendInventoryRequest(ctx context.Context, pe *peers.Peer, inv *pb.Inventory) error {
-	if !s.peerSync.IsRunning() {
-		return fmt.Errorf("No run\n")
-	}
-	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
-	defer cancel()
-
-	stream, err := s.Send(ctx, inv, RPCInventory, pe.GetID())
-	if err != nil {
-		log.Trace(fmt.Sprintf("Failed to send inventory request to peer=%v, err=%v", pe.GetID(), err.Error()))
-		return err
-	}
-
-	code, errMsg, err := ReadRspCode(stream, s.p2p)
-	if err != nil {
-		return err
-	}
-	defer closeStream(stream, s.p2p)
-
-	if !code.IsSuccess() {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), common.NewErrorStr(code, "inventory request rsp"))
-		return errors.New(errMsg)
-	}
-	return err
-}
-
-func (s *Sync) inventoryHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	if !s.peerSync.IsRunning() {
-		return ErrMessage(fmt.Errorf("No run\n"))
-	}
-
-	pe := s.peers.Get(stream.Conn().RemotePeer())
-	if pe == nil {
-		return ErrPeerUnknown
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
-	var err error
-	defer func() {
-		cancel()
-	}()
-
-	m, ok := msg.(*pb.Inventory)
-	if !ok {
-		err = fmt.Errorf("message is not type *pb.Inventory")
-		return ErrMessage(err)
-	}
-	err = s.handleInventory(m, pe)
-	if err != nil {
-		return ErrMessage(err)
-	}
-	e := s.EncodeResponseMsg(stream, nil)
-	if e != nil {
+func (s *Sync) sendInventoryRequest(stream network.Stream, pe *peers.Peer) *common.Error {
+	e := ReadRspCode(stream, s.p2p)
+	if !e.Code.IsSuccess() {
+		e.Add("inventory request rsp")
 		return e
 	}
-
 	return nil
+}
+
+func (s *Sync) inventoryHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
+	m, ok := msg.(*pb.Inventory)
+	if !ok {
+		err := fmt.Errorf("message is not type *pb.Inventory")
+		return ErrMessage(err)
+	}
+	err := s.handleInventory(m, pe)
+	if err != nil {
+		return ErrMessage(err)
+	}
+	return s.EncodeResponseMsg(stream, nil)
 }
 
 func (s *Sync) handleInventory(msg *pb.Inventory, pe *peers.Peer) error {

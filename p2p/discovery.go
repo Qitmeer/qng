@@ -154,9 +154,6 @@ func (s *Service) filterPeer(node *qnode.Node) bool {
 	pe := s.Peers().Fetch(peerData.ID)
 	pe.SetQNR(nodeQNR)
 
-	if pe.IsBad() {
-		return false
-	}
 	if pe.IsActive() {
 		return false
 	}

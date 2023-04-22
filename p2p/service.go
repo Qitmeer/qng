@@ -264,7 +264,7 @@ func (s *Service) connectWithPeer(info peer.AddrInfo, force bool) error {
 		return nil
 	}
 	if !force {
-		if pe.IsBad() && !s.sy.IsWhitePeer(info.ID) {
+		if pe.IsBad() {
 			return nil
 		}
 	} else {
@@ -350,12 +350,13 @@ func (s *Service) RefreshQNR() {
 }
 
 func (s *Service) pingPeers() {
-	for _, pid := range s.Peers().Connected() {
-		go func(id peer.ID) {
-			if err := s.sy.SendPingRequest(s.Context(), id); err != nil {
-				log.Error("Failed to ping peer:id=%s  %v", id, err)
+	for _, pe := range s.Peers().ConnectedPeers() {
+		go func(pe *peers.Peer) {
+			metadataSeq := s.MetadataSeq()
+			if _, err := s.sy.Send(pe, synch.RPCPingTopic, &metadataSeq); err != nil {
+				log.Error("Failed to ping peer:id=%s  %v", pe.GetID(), err)
 			}
-		}(pid)
+		}(pe)
 	}
 }
 
@@ -570,6 +571,10 @@ func (s *Service) RegainMempool() {
 
 func (s *Service) IsCurrent() bool {
 	return s.PeerSync().IsCurrent()
+}
+
+func (s *Service) IsRunning() bool {
+	return !s.IsShutdown() && s.IsStarted()
 }
 
 func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*Service, error) {

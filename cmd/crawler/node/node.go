@@ -16,6 +16,7 @@ import (
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/encoder"
+	p "github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnode"
 	"github.com/Qitmeer/qng/p2p/synch"
@@ -384,6 +385,10 @@ func (node *Node) interruptListener() {
 	<-interrupt
 	close(node.interrupt)
 	node.wg.Done()
+}
+
+func (node *Node) Peers() *p.Status {
+	return nil
 }
 
 func closeSteam(stream libp2pcore.Stream) {

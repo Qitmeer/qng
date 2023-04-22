@@ -21,7 +21,7 @@ type Status struct {
 	lock  sync.RWMutex
 	peers map[peer.ID]*Peer
 
-	p2p common.P2P
+	p2p P2P
 }
 
 // Bad returns the peers that are bad.
@@ -69,12 +69,25 @@ func (p *Status) ConnectedPeers() []*Peer {
 	defer p.lock.RUnlock()
 	peers := make([]*Peer, 0)
 	for _, status := range p.peers {
-		if !status.IsConsensus() {
-			continue
-		}
 		if status.ConnectionState().IsConnected() {
 			peers = append(peers, status)
 		}
+	}
+	return peers
+}
+
+func (p *Status) CanSyncPeers() []*Peer {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	peers := make([]*Peer, 0)
+	for _, status := range p.peers {
+		if !status.ConnectionState().IsConnected() ||
+			status.IsBad() ||
+			!status.IsConsensus() ||
+			!status.CanConnectWithNetwork() {
+			continue
+		}
+		peers = append(peers, status)
 	}
 	return peers
 }
@@ -275,7 +288,7 @@ func (p *Status) UpdateBroadcasts() {
 }
 
 // NewStatus creates a new status entity.
-func NewStatus(p2p common.P2P) *Status {
+func NewStatus(p2p P2P) *Status {
 	return &Status{
 		p2p:   p2p,
 		peers: make(map[peer.ID]*Peer),

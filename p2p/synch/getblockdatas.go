@@ -6,7 +6,6 @@ package synch
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/bloom"
 	"github.com/Qitmeer/qng/common/hash"
@@ -16,76 +15,34 @@ import (
 	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"time"
 )
 
 const BLOCKDATA_SSZ_HEAD_SIZE = 4
 
-func (s *Sync) sendGetBlockDataRequest(ctx context.Context, id peer.ID, locator *pb.GetBlockDatas) (*pb.BlockDatas, error) {
-	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
-	defer cancel()
-
-	stream, err := s.Send(ctx, locator, RPCGetBlockDatas, id)
-	if err != nil {
-		return nil, err
+func (s *Sync) sendGetBlockDataRequest(stream network.Stream, pe *peers.Peer) (*pb.BlockDatas, *common.Error) {
+	e := ReadRspCode(stream, s.p2p)
+	if !e.Code.IsSuccess() {
+		e.Add("get block date request rsp")
+		return nil, e
 	}
-
-	code, errMsg, err := ReadRspCode(stream, s.p2p)
-	if err != nil {
-		return nil, err
-	}
-
-	if !code.IsSuccess() {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), common.NewErrorStr(code, "get block date request rsp"))
-		closeStream(stream, s.p2p)
-		return nil, errors.New(errMsg)
-	}
-
 	msg := &pb.BlockDatas{}
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
-		return nil, err
+		return nil, common.NewError(common.ErrStreamRead, err)
 	}
-	closeStream(stream, s.p2p)
-	return msg, err
+	return msg, nil
 }
 
 func (s *Sync) sendGetMerkleBlockDataRequest(ctx context.Context, id peer.ID, req *pb.MerkleBlockRequest) (*pb.MerkleBlockResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
-	defer cancel()
-
-	stream, err := s.Send(ctx, req, RPCGetMerkleBlocks, id)
-	if err != nil {
-		return nil, err
-	}
-
-	code, errMsg, err := ReadRspCode(stream, s.p2p)
-	if err != nil {
-		return nil, err
-	}
-
-	if !code.IsSuccess() {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), common.NewErrorStr(code, "get merkle bock date request rsp"))
-		closeStream(stream, s.p2p)
-		return nil, errors.New(errMsg)
-	}
-
-	msg := &pb.MerkleBlockResponse{}
-	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
-		return nil, err
-	}
-	closeStream(stream, s.p2p)
-	return msg, err
+	return nil, nil
 }
 
-func (s *Sync) getBlockDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
-	var err error
-	defer cancel()
-
+func (s *Sync) getBlockDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
 	m, ok := msg.(*pb.GetBlockDatas)
 	if !ok {
-		err = fmt.Errorf("message is not type *pb.Hash")
+		err := fmt.Errorf("message is not type *pb.Hash")
 		return ErrMessage(err)
 	}
 	bds := []*pb.BlockData{}
@@ -106,26 +63,15 @@ func (s *Sync) getBlockDataHandler(ctx context.Context, msg interface{}, stream 
 		}
 		bd.Locator = append(bd.Locator, &pbbd)
 	}
-	e := s.EncodeResponseMsg(stream, bd)
-	if e != nil {
-		err = e.Error
-		return e
-	}
-	return nil
+	return s.EncodeResponseMsg(stream, bd)
 }
 
-func (s *Sync) getMerkleBlockDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
-	var err error
-	defer cancel()
+func (s *Sync) getMerkleBlockDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
+
 	m, ok := msg.(*pb.MerkleBlockRequest)
 	if !ok {
-		err = fmt.Errorf("message is not type *pb.Hash")
+		err := fmt.Errorf("message is not type *pb.Hash")
 		return ErrMessage(err)
-	}
-	pe := s.peers.Get(stream.Conn().RemotePeer())
-	if pe == nil {
-		return ErrPeerUnknown
 	}
 	filter := pe.Filter()
 	// Do not send a response if the peer doesn't have a filter loaded.
@@ -158,7 +104,6 @@ func (s *Sync) getMerkleBlockDataHandler(ctx context.Context, msg interface{}, s
 	}
 	e := s.EncodeResponseMsg(stream, bd)
 	if e != nil {
-		err = e.Error
 		return e
 	}
 	return nil
@@ -204,11 +149,12 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 	}
 	if len(blocksReady) > 0 {
 		log.Trace(fmt.Sprintf("processGetBlockDatas::sendGetBlockDataRequest peer=%v, blocks=%d [%s -> %s] ", pe.GetID(), len(blocksReady), blocksReady[0], blocksReady[len(blocksReady)-1]), "processID", ps.processID)
-		bd, err := ps.sy.sendGetBlockDataRequest(ps.sy.p2p.Context(), pe.GetID(), &pb.GetBlockDatas{Locator: changeHashsToPBHashs(blocksReady)})
+		ret, err := ps.sy.Send(pe, RPCGetBlockDatas, &pb.GetBlockDatas{Locator: changeHashsToPBHashs(blocksReady)})
 		if err != nil {
 			log.Warn(fmt.Sprintf("getBlocks send:%v", err), "processID", ps.processID)
 			return &ProcessResult{act: ProcessResultActionTryAgain}
 		}
+		bd := ret.(*pb.BlockDatas)
 		log.Trace(fmt.Sprintf("Received:Locator=%d", len(bd.Locator)), "processID", ps.processID)
 		for _, b := range bd.Locator {
 			block, err := types.NewBlockFromBytes(b.BlockBytes)

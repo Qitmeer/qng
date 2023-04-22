@@ -8,10 +8,8 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/peers"
 	"github.com/multiformats/go-multistream"
-	"io"
 	"net"
 	"strings"
 	"sync/atomic"
@@ -41,73 +39,36 @@ func (ps *PeerSync) Connected(pid peer.ID, conn network.Conn) {
 }
 
 func (ps *PeerSync) processConnected(msg *ConnectedMsg) {
-	remotePe := ps.sy.peers.Fetch(msg.ID)
-	// Filter out unnecessary peers
-	if !ps.preProcessIfNeedConnect(remotePe) {
-		return
-	}
-	remotePe.HSlock.Lock()
-	defer remotePe.HSlock.Unlock()
+	pe := ps.sy.peers.Fetch(msg.ID)
+	pe.HSlock.Lock()
+	defer pe.HSlock.Unlock()
 
-	peerInfoStr := fmt.Sprintf("peer:%s", msg.ID)
-	remotePeer := msg.ID
 	conn := msg.Conn
+
+	pe.UpdateAddrDir(nil, conn.RemoteMultiaddr(), conn.Stat().Direction)
+
 	// Handle the various pre-existing conditions that will result in us not handshaking.
-	peerConnectionState := remotePe.ConnectionState()
-	if remotePe.IsActive() {
-		log.Trace(fmt.Sprintf("%s currentState:%d reason:already active, Ignoring connection request", peerInfoStr, peerConnectionState))
+	if pe.IsConnected() {
+		log.Trace(fmt.Sprintf("%s currentState:%d reason:already connected, Ignoring connection request", pe.IDWithAddress(), pe.ConnectionState()))
 		return
 	}
-	ps.sy.peers.Add(nil /* QNR */, remotePeer, conn.RemoteMultiaddr(), conn.Stat().Direction)
-	if remotePe.IsBad() && !ps.sy.IsWhitePeer(remotePeer) {
-		log.Trace(fmt.Sprintf("%s reason bad peer, Ignoring connection request.", peerInfoStr))
-		ps.Disconnect(remotePe)
-		return
-	}
-	if time.Since(remotePe.ConnectionTime()) <= time.Second {
-		ps.sy.Peers().IncrementBadResponses(remotePeer, common.NewErrorStr(common.ErrConnectFrequent, "Connection is too frequent"))
-		log.Debug(fmt.Sprintf("%s is too frequent, so I'll deduct you points", remotePeer))
-	}
-	remotePe.SetConnectionState(peers.PeerConnecting)
 
 	// Do not perform handshake on inbound dials.
 	if conn.Stat().Direction == network.DirInbound {
-		go func() {
-			<-time.After(RespTimeout + ReqTimeout)
-			remotePe.HSlock.Lock()
-			defer remotePe.HSlock.Unlock()
-			if remotePe.ConnectionState().IsConnecting() {
-				log.Debug(fmt.Sprintf("No handshake response, try to disconnect actively:%s(%s)", peerInfoStr, network.DirInbound))
-				ps.Disconnect(remotePe)
-			}
-		}()
 		return
 	}
 
-	if err := ps.sy.reValidatePeer(ps.sy.p2p.Context(), remotePeer); err != nil && err != io.EOF {
-		log.Trace(fmt.Sprintf("%s Handshake failed (%s)", peerInfoStr, err))
-		ps.Disconnect(remotePe)
+	if err := ps.sy.reValidatePeer(pe); err != nil {
+		log.Trace(fmt.Sprintf("%s Handshake failed (%s)", pe.IDWithAddress(), err))
 		return
 	}
-	ps.Connection(remotePe)
-}
-
-func (ps *PeerSync) preProcessIfNeedConnect(peer *peers.Peer) bool {
-	delay := time.Since(peer.ChainStateLastUpdated())
-	if delay > time.Hour*24 {
-		return true
-	}
-	return peer.CanConnectWithNetwork()
+	ps.Connection(pe)
 }
 
 func (ps *PeerSync) immediatelyConnected(pe *peers.Peer) {
 	pe.HSlock.Lock()
 	defer pe.HSlock.Unlock()
 
-	if !pe.ConnectionState().IsConnecting() {
-		go ps.PeerUpdate(pe, true)
-		return
-	}
 	ps.Connection(pe)
 }
 
@@ -126,28 +87,21 @@ func (ps *PeerSync) Connection(pe *peers.Peer) {
 	}
 	log.Info(fmt.Sprintf("%s direction:%s multiAddr:%s activePeers:%d Peer Connected",
 		pe.GetID(), pe.Direction(), multiAddr, len(ps.sy.peers.Active())))
-	ps.OnPeerConnected(pe)
+
+	go ps.OnPeerConnected(pe)
 }
 
 func (ps *PeerSync) immediatelyDisconnected(pe *peers.Peer) {
 	pe.HSlock.Lock()
 	defer pe.HSlock.Unlock()
 
-	if pe.ConnectionState().IsConnecting() &&
-		pe.Direction() == network.DirInbound {
-		ps.Disconnect(pe)
-	}
+	ps.Disconnect(pe)
 }
 
 func (ps *PeerSync) Disconnect(pe *peers.Peer) {
-	if !pe.IsActive() {
+	if !pe.IsConnected() {
 		return
 	}
-	pe.SetConnectionState(peers.PeerDisconnecting)
-	if err := ps.sy.p2p.Disconnect(pe.GetID()); err != nil {
-		log.Error(fmt.Sprintf("%s Unable to disconnect from peer:%v", pe.GetID(), err))
-	}
-	// TODO some handle
 	pe.SetConnectionState(peers.PeerDisconnected)
 	if !pe.IsConsensus() {
 		if pe.Services() == protocol.Unknown {
@@ -159,21 +113,25 @@ func (ps *PeerSync) Disconnect(pe *peers.Peer) {
 	}
 
 	log.Trace(fmt.Sprintf("Disconnect:%v ", pe.IDWithAddress()))
-	ps.OnPeerDisconnected(pe)
+	go ps.OnPeerDisconnected(pe)
 }
 
 func (ps *PeerSync) ReConnect(pe *peers.Peer) error {
 	pe.HSlock.Lock()
-	defer pe.HSlock.Unlock()
-
 	ps.Disconnect(pe)
+	pe.HSlock.Unlock()
+
 	return ps.sy.p2p.ConnectToPeer(pe.QAddress().String(), false)
 }
 
 func (ps *PeerSync) TryDisconnect(pe *peers.Peer) {
 	pe.HSlock.Lock()
-	defer pe.HSlock.Unlock()
 	ps.Disconnect(pe)
+	pe.HSlock.Unlock()
+
+	if err := ps.sy.p2p.Disconnect(pe.GetID()); err != nil {
+		log.Error(fmt.Sprintf("%s Unable to disconnect from peer:%v", pe.GetID(), err))
+	}
 }
 
 // AddConnectionHandler adds a callback function which handles the connection with a
@@ -183,9 +141,6 @@ func (s *Sync) AddConnectionHandler() {
 	s.connectionNotify = &network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			remotePeer := conn.RemotePeer()
-			if !s.connectionGater(remotePeer, conn) {
-				return
-			}
 			log.Trace(fmt.Sprintf("ConnectedF:%s, %v ", remotePeer, conn.RemoteMultiaddr()))
 			s.peerSync.Connected(remotePeer, conn)
 		},
@@ -200,7 +155,7 @@ func (ps *PeerSync) Disconnected(pid peer.ID, conn network.Conn) {
 	}
 
 	//ps.msgChan <- &DisconnectedMsg{ID: pid, Conn: conn}
-	go ps.processDisconnected(&DisconnectedMsg{ID: pid, Conn: conn})
+	//go ps.processDisconnected(&DisconnectedMsg{ID: pid, Conn: conn})
 }
 
 func (ps *PeerSync) processDisconnected(msg *DisconnectedMsg) {
@@ -212,24 +167,7 @@ func (ps *PeerSync) processDisconnected(msg *DisconnectedMsg) {
 
 	pe.HSlock.Lock()
 	defer pe.HSlock.Unlock()
-
-	peerInfoStr := fmt.Sprintf("peer:%s", msg.ID)
-
-	if pe.ConnectionState().IsDisconnected() {
-		return
-	}
-	// Exit early if we are still connected to the peer.
-	if ps.sy.p2p.Host().Network().Connectedness(msg.ID) == network.Connected {
-		return
-	}
-	priorState := pe.ConnectionState()
-
-	pe.SetConnectionState(peers.PeerDisconnected)
-	// Only log disconnections if we were fully connected.
-	if priorState == peers.PeerConnected {
-		log.Info(fmt.Sprintf("%s Peer Disconnected,activePeers:%d", peerInfoStr, len(ps.sy.peers.Active())))
-		ps.OnPeerDisconnected(pe)
-	}
+	ps.Disconnect(pe)
 }
 
 // AddDisconnectionHandler disconnects from peers.  It handles updating the peer status.
@@ -333,27 +271,40 @@ func (s *Sync) IsInboundPeerAtLimit() bool {
 	return len(s.Peers().DirInbound()) >= s.p2p.Config().MaxInbound
 }
 
-func (s *Sync) connectionGater(pid peer.ID, conn network.Conn) bool {
-	ret := true
-	if s.IsWhitePeer(pid) {
-		return ret
-	}
-	if s.IsPeerAtLimit() {
-		log.Trace(fmt.Sprintf("connectionGater  peer:%s reason:at peer max limit", pid.String()))
-		ret = false
-	}
-	if ret {
-		if conn.Stat().Direction == network.DirInbound {
-			if s.IsInboundPeerAtLimit() {
-				log.Trace(fmt.Sprintf("peer:%s reason:at peer limit,Not accepting inbound dial", pid.String()))
-				ret = false
+func (s *Sync) ConnectionGater(pid *peer.ID, dir network.Direction) bool {
+	if pid != nil {
+		pe := s.peers.Get(*pid)
+		if pe != nil {
+			delay := time.Since(pe.ChainStateLastUpdated())
+			if delay <= time.Hour*24 && !pe.CanConnectWithNetwork() {
+				return false
 			}
+		}
+
+		// generic
+		if s.IsWhitePeer(*pid) {
+			return true
 		}
 	}
 
-	if !ret {
-		if err := s.p2p.Disconnect(pid); err != nil {
-			log.Error(fmt.Sprintf("%s Unable to disconnect from peer:%v", pid, err))
+	if s.IsPeerAtLimit() {
+		if pid != nil {
+			log.Trace(fmt.Sprintf("connectionGater  peer:%s reason:at peer max limit", pid.String()))
+		} else {
+			log.Trace("connectionGater reason:at peer max limit")
+		}
+
+		return false
+	}
+	if dir == network.DirInbound {
+		if s.IsInboundPeerAtLimit() {
+			if pid != nil {
+				log.Trace(fmt.Sprintf("peer:%s reason:at peer limit,Not accepting inbound dial", pid.String()))
+			} else {
+				log.Trace("reason:at peer limit,Not accepting inbound dial")
+			}
+
+			return false
 		}
 	}
 	return true

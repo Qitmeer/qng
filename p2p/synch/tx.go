@@ -6,7 +6,6 @@ package synch
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
@@ -14,50 +13,31 @@ import (
 	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"sync/atomic"
 )
 
 const TXDATA_SSZ_HEAD_SIZE = 4
 
-func (s *Sync) sendTxRequest(ctx context.Context, id peer.ID, gtxs *pb.GetTxs) (*pb.Transactions, error) {
-	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
-	defer cancel()
-
-	stream, err := s.Send(ctx, gtxs, RPCTransaction, id)
-	if err != nil {
-		return nil, err
+func (s *Sync) sendTxRequest(stream network.Stream, pe *peers.Peer) (*pb.Transactions, *common.Error) {
+	e := ReadRspCode(stream, s.p2p)
+	if !e.Code.IsSuccess() {
+		e.Add("tx request rsp")
+		return nil, e
 	}
-
-	code, errMsg, err := ReadRspCode(stream, s.p2p)
-	if err != nil {
-		return nil, err
-	}
-
-	if !code.IsSuccess() {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), common.NewErrorStr(code, "tx request rsp"))
-		closeStream(stream, s.p2p)
-		return nil, errors.New(errMsg)
-	}
-
 	msg := &pb.Transactions{}
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
-		return nil, err
+		return nil, common.NewError(common.ErrStreamRead, err)
 	}
-	closeStream(stream, s.p2p)
-	return msg, err
+	return msg, nil
 }
 
-func (s *Sync) txHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
-	var err error
-	defer func() {
-		cancel()
-	}()
+func (s *Sync) txHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
 
 	m, ok := msg.(*pb.GetTxs)
 	if !ok {
-		err = fmt.Errorf("message is not type *pb.Transaction")
+		err := fmt.Errorf("message is not type *pb.Transaction")
 		return ErrMessage(err)
 	}
 
@@ -83,12 +63,7 @@ func (s *Sync) txHandler(ctx context.Context, msg interface{}, stream libp2pcore
 		}
 		pbtxs.Txs = append(pbtxs.Txs, pbtx)
 	}
-
-	e := s.EncodeResponseMsg(stream, pbtxs)
-	if e != nil {
-		return e
-	}
-	return nil
+	return s.EncodeResponseMsg(stream, pbtxs)
 }
 
 func (s *Sync) handleTxMsg(msg *pb.Transaction, pid peer.ID) (*hash.Hash, error) {
@@ -154,11 +129,12 @@ func (ps *PeerSync) processGetTxs(pe *peers.Peer, otxs []*hash.Hash) error {
 		}
 
 		if needSend {
-			txs, err := ps.sy.sendTxRequest(ps.sy.p2p.Context(), pe.GetID(), gtxs)
+			ret, err := ps.sy.Send(pe, RPCTransaction, gtxs)
 			if err != nil {
 				return err
 			}
-			for _, tx := range txs.Txs {
+			ptxs := ret.(*pb.Transactions)
+			for _, tx := range ptxs.Txs {
 				txh, err := ps.sy.handleTxMsg(tx, pe.GetID())
 				txsM[txh.String()] = struct{}{}
 

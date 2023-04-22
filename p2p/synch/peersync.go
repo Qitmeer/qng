@@ -364,7 +364,7 @@ func (ps *PeerSync) getBestPeer() *peers.Peer {
 	best := ps.Chain().BestSnapshot()
 	var bestPeer *peers.Peer
 	equalPeers := []*peers.Peer{}
-	for _, sp := range ps.sy.peers.ConnectedPeers() {
+	for _, sp := range ps.sy.peers.CanSyncPeers() {
 		// Remove sync candidate peers that are no longer candidates due
 		// to passing their latest known block.  NOTE: The < is
 		// intentional as opposed to <=.  While techcnically the peer
@@ -595,7 +595,7 @@ func (ps *PeerSync) EnforceNodeBloomFlag(sp *peers.Peer) bool {
 		// state.
 		log.Debug(fmt.Sprintf("%s sent a filterclear request with no "+
 			"filter loaded -- disconnecting", sp.GetID().String()))
-		ps.Disconnect(sp)
+		ps.immediatelyDisconnected(sp)
 		return false
 	}
 
@@ -616,7 +616,7 @@ func (ps *PeerSync) OnFilterAdd(sp *peers.Peer, msg *types.MsgFilterAdd) {
 	if !filter.IsLoaded() {
 		log.Debug(fmt.Sprintf("%s sent a filterclear request with no "+
 			"filter loaded -- disconnecting", sp.GetID().String()))
-		ps.Disconnect(sp)
+		ps.immediatelyDisconnected(sp)
 		return
 	}
 
@@ -638,7 +638,7 @@ func (ps *PeerSync) OnFilterClear(sp *peers.Peer, msg *types.MsgFilterClear) {
 	if !filter.IsLoaded() {
 		log.Debug(fmt.Sprintf("%s sent a filterclear request with no "+
 			"filter loaded -- disconnecting", sp.GetID().String()))
-		ps.Disconnect(sp)
+		ps.immediatelyDisconnected(sp)
 		return
 	}
 

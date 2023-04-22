@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/encoder"
+	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/libp2p/go-libp2p/core/network"
 )
@@ -25,20 +26,19 @@ func generateErrorResponse(e *common.Error, encoding encoder.NetworkEncoding) ([
 }
 
 // ReadRspCode response from a RPC stream.
-func ReadRspCode(stream network.Stream, rpc common.P2PRPC) (common.ErrorCode, string, error) {
+func ReadRspCode(stream network.Stream, rpc peers.P2PRPC) *common.Error {
 	b := make([]byte, 1)
 	_, err := stream.Read(b)
 	if err != nil {
-		resetStream(stream, rpc)
-		return common.ErrNone, "", err
+		return common.NewError(common.ErrStreamRead, err)
 	}
 
 	if b[0] == byte(common.ErrNone) {
-		return common.ErrNone, "", nil
+		return common.NewSuccess()
 	}
 
 	if b[0] == byte(common.ErrDAGConsensus) {
-		return common.ErrDAGConsensus, "", nil
+		return common.NewError(common.ErrDAGConsensus, nil)
 	}
 
 	msg := &pb.ErrorResponse{
@@ -47,7 +47,7 @@ func ReadRspCode(stream network.Stream, rpc common.P2PRPC) (common.ErrorCode, st
 
 	err = DecodeMessage(stream, rpc, msg)
 	if err != nil {
-		return common.ErrNone, "", err
+		return common.NewError(common.ErrStreamRead, err)
 	}
-	return common.ErrorCode(b[0]), string(msg.Message), nil
+	return common.NewErrorStr(common.ErrorCode(b[0]), string(msg.Message))
 }

@@ -6,61 +6,40 @@ package synch
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
 )
 
-func (s *Sync) SendMempoolRequest(ctx context.Context, pe *peers.Peer, count uint64) error {
-	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
-	defer cancel()
-
-	stream, err := s.Send(ctx, &pb.MemPoolRequest{TxsNum: count}, RPCMemPool, pe.GetID())
-	if err != nil {
-		return err
-	}
-
-	code, errMsg, err := ReadRspCode(stream, s.p2p)
-	if err != nil {
-		return err
-	}
-	defer closeStream(stream, s.p2p)
-
-	if !code.IsSuccess() {
-		return errors.New(errMsg)
+func (s *Sync) SendMempoolRequest(stream network.Stream, pe *peers.Peer) *common.Error {
+	e := ReadRspCode(stream, s.p2p)
+	if !e.Code.IsSuccess() {
+		e.Add("mempool request rsp")
+		return e
 	}
 	return nil
 }
 
-func (s *Sync) HandlerMemPool(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	if !s.peerSync.IsRunning() {
-		return ErrMessage(fmt.Errorf("No run\n"))
-	}
+func (s *Sync) HandlerMemPool(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
 	if !s.PeerSync().IsCurrent() {
 		return s.EncodeResponseMsg(stream, nil)
 	}
-	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
-	var err error
-	defer func() {
-		cancel()
-	}()
-	pe := s.peers.Get(stream.Conn().RemotePeer())
-	if pe == nil {
-		return ErrPeerUnknown
-	}
 	mpr, ok := msg.(*pb.MemPoolRequest)
 	if !ok {
-		err = fmt.Errorf("message is not type *MsgFilterLoad")
+		err := fmt.Errorf("message is not type *MsgFilterLoad")
 		return ErrMessage(err)
 	}
 
 	curCount := uint64(s.p2p.TxMemPool().Count())
 	if mpr.TxsNum != curCount && curCount != 0 {
-		go s.peerSync.OnMemPool(pe, &MsgMemPool{})
+		err := s.peerSync.OnMemPool(pe, &MsgMemPool{})
+		if err != nil {
+			return ErrMessage(err)
+		}
 	}
 	return s.EncodeResponseMsg(stream, nil)
 }
@@ -69,15 +48,13 @@ func (s *Sync) HandlerMemPool(ctx context.Context, msg interface{}, stream libp2
 // It creates and sends an inventory message with the contents of the memory
 // pool up to the maximum inventory allowed per message.  When the peer has a
 // bloom filter loaded, the contents are filtered accordingly.
-func (ps *PeerSync) OnMemPool(sp *peers.Peer, msg *MsgMemPool) {
+func (ps *PeerSync) OnMemPool(sp *peers.Peer, msg *MsgMemPool) error {
 	// Only allow mempool requests if the server has bloom filtering
 	// enabled.
 	services := sp.Services()
 	if services&protocol.Bloom != protocol.Bloom {
-		log.Debug(fmt.Sprintf("%s sent a filterclear request with no "+
-			"filter loaded -- disconnecting", sp.GetID().String()))
-		ps.Disconnect(sp)
-		return
+		return fmt.Errorf("%s sent a filterclear request with no "+
+			"filter loaded -- disconnecting", sp.GetID().String())
 	}
 
 	// Generate inventory message with the available transactions in the
@@ -99,4 +76,6 @@ func (ps *PeerSync) OnMemPool(sp *peers.Peer, msg *MsgMemPool) {
 	}
 	// Send the inventory message if there is anything to send.
 	ps.sy.tryToSendInventoryRequest(sp, invs)
+
+	return nil
 }
