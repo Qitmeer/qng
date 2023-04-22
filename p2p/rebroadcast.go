@@ -2,9 +2,7 @@ package p2p
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/synch"
 	"github.com/Qitmeer/qng/params"
@@ -167,12 +165,9 @@ func (r *Rebroadcast) onRegainMempool() {
 
 	r.regainMP = false
 
-	r.s.sy.Peers().ForPeers(peers.PeerConnected, func(pe *peers.Peer) {
-		if !protocol.HasServices(pe.Services(), protocol.Full) {
-			return
-		}
+	for _, pe := range r.s.Peers().CanSyncPeers() {
 		go r.s.sy.Send(pe, synch.RPCMemPool, &pb.MemPoolRequest{TxsNum: uint64(mptxCount)})
-	})
+	}
 }
 
 func NewRebroadcast(s *Service) *Rebroadcast {

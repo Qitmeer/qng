@@ -523,13 +523,8 @@ func (ps *PeerSync) checkContinueSync() bool {
 }
 
 func (ps *PeerSync) RelayInventory(nds []*notify.NotifyData) {
-	ps.sy.Peers().ForPeers(peers.PeerConnected, func(pe *peers.Peer) {
-		if !protocol.HasServices(pe.Services(), protocol.Full) {
-			return
-		}
-
+	for _, pe := range ps.sy.Peers().CanSyncPeers() {
 		invs := []*pb.InvVect{}
-
 		for _, nd := range nds {
 			if nd.IsFilter(pe.GetID()) {
 				continue
@@ -572,16 +567,13 @@ func (ps *PeerSync) RelayInventory(nds []*notify.NotifyData) {
 		}
 
 		ps.sy.tryToSendInventoryRequest(pe, invs)
-	})
+	}
 }
 
 func (ps *PeerSync) RelayGraphState() {
-	ps.sy.Peers().ForPeers(peers.PeerConnected, func(pe *peers.Peer) {
-		if !protocol.HasServices(pe.Services(), protocol.Full) {
-			return
-		}
+	for _, pe := range ps.sy.Peers().CanSyncPeers() {
 		ps.UpdateGraphState(pe)
-	})
+	}
 }
 
 // EnforceNodeBloomFlag disconnects the peer if the server is not configured to
