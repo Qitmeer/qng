@@ -65,9 +65,9 @@ func (api *PublicRelayAPI) GetPeerInfo(verbose *bool, network *string) (interfac
 				continue
 			}
 		}
-
+		active := api.node.peerStatus.IsActiveID(p.PeerID)
 		if !vb {
-			if !p.State.IsConnected() {
+			if !active {
 				continue
 			}
 		}
@@ -77,6 +77,9 @@ func (api *PublicRelayAPI) GetPeerInfo(verbose *bool, network *string) (interfac
 			Address:   p.Address,
 			BytesSent: p.BytesSent,
 			BytesRecv: p.BytesRecv,
+			Bads:      p.Bads,
+			ReConnect: p.ReConnect,
+			Active:    active,
 		}
 		info.Protocol = p.Protocol
 		info.Services = p.Services.String()
@@ -84,7 +87,7 @@ func (api *PublicRelayAPI) GetPeerInfo(verbose *bool, network *string) (interfac
 			info.Genesis = p.Genesis.String()
 		}
 		if p.IsTheSameNetwork() {
-			info.State = p.State.String()
+			info.State = p.State
 		}
 		if len(p.Version) > 0 {
 			info.Version = p.Version
@@ -93,7 +96,7 @@ func (api *PublicRelayAPI) GetPeerInfo(verbose *bool, network *string) (interfac
 			info.Network = p.Network
 		}
 
-		if p.State.IsConnected() {
+		if p.State {
 			info.TimeOffset = p.TimeOffset
 			if p.Genesis != nil {
 				info.Genesis = p.Genesis.String()
@@ -171,7 +174,7 @@ func (api *PublicRelayAPI) GetNetworkInfo() (interface{}, error) {
 			nstat.Infos = append(nstat.Infos, info)
 		}
 		info.Peers++
-		if p.State.IsConnected() {
+		if api.node.peerStatus.IsActiveID(p.PeerID) {
 			info.Connecteds++
 			nstat.TotalConnected++
 		}
