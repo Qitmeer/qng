@@ -305,9 +305,15 @@ func (p *Status) IsActiveID(pid peer.ID) bool {
 func (p *Status) GetByAddress(address ma.Multiaddr) *Peer {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
-
+	if address == nil {
+		return nil
+	}
 	for _, pe := range p.peers {
-		if pe.Address().Equal(address) {
+		addr := pe.Address()
+		if addr == nil {
+			continue
+		}
+		if addr.Equal(address) {
 			return pe
 		}
 	}
