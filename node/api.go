@@ -182,7 +182,7 @@ func (api *PublicBlockChainAPI) GetNetworkInfo() (interface{}, error) {
 			gsups[p.Network] = []time.Duration{0, 0, math.MaxInt64}
 		}
 		info.Peers++
-		if p.State.IsConnected() {
+		if ps.Peers().IsActiveID(p.PeerID) {
 			info.Connecteds++
 			nstat.TotalConnected++
 
@@ -305,26 +305,6 @@ func (api *PrivateBlockChainAPI) Stop() (interface{}, error) {
 	default:
 	}
 	return "Qitmeer stopping.", nil
-}
-
-// Banlist
-func (api *PrivateBlockChainAPI) Banlist() (interface{}, error) {
-	bl := api.node.GetPeerServer().GetBanlist()
-	bls := []*json.GetBanlistResult{}
-	for k, v := range bl {
-		bls = append(bls, &json.GetBanlistResult{ID: k, Bads: v})
-	}
-	return bls, nil
-}
-
-// RemoveBan
-func (api *PrivateBlockChainAPI) RemoveBan(id *string) (interface{}, error) {
-	ho := ""
-	if id != nil {
-		ho = *id
-	}
-	api.node.GetPeerServer().RemoveBan(ho)
-	return true, nil
 }
 
 // SetRpcMaxClients

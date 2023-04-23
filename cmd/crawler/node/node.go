@@ -11,11 +11,13 @@ import (
 	"github.com/Qitmeer/qng/cmd/crawler/log"
 	"github.com/Qitmeer/qng/cmd/crawler/peers"
 	"github.com/Qitmeer/qng/cmd/crawler/rpc"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	pv "github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/encoder"
+	p "github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnode"
 	"github.com/Qitmeer/qng/p2p/synch"
@@ -337,7 +339,7 @@ func (node *Node) IncreaseBytesSent(pid peer.ID, size int) {
 func (node *Node) IncreaseBytesRecv(pid peer.ID, size int) {
 }
 
-func (node *Node) chainStateHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
+func (node *Node) chainStateHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream,pe *p.Peer) *common.Error {
 	pid := stream.Conn().RemotePeer()
 	log.Log.Trace(fmt.Sprintf("chainStateHandler:%s", pid))
 
@@ -384,6 +386,17 @@ func (node *Node) interruptListener() {
 	<-interrupt
 	close(node.interrupt)
 	node.wg.Done()
+}
+
+func (node *Node) Peers() *p.Status {
+	return nil
+}
+
+func (node *Node) IsRunning() bool {
+	return true
+}
+func (node *Node) GetGenesisHash() *hash.Hash {
+	return params.ActiveNetParams.GenesisHash
 }
 
 func closeSteam(stream libp2pcore.Stream) {

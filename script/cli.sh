@@ -445,6 +445,23 @@ function reset_peers() {
   get_result "$data"
 }
 
+function set_libp2p_log_level(){
+  local level=$1
+  local data='{"jsonrpc":"2.0","method":"p2p_setLibp2pLogLevel","params":["'$level'"],"id":1}'
+  get_result "$data"
+}
+
+function ban_list(){
+  local data='{"jsonrpc":"2.0","method":"p2p_banlist","params":[],"id":null}'
+  get_result "$data"
+}
+
+function remove_ban(){
+  local bhost=$1
+  local data='{"jsonrpc":"2.0","method":"p2p_removeBan","params":["'$bhost'"],"id":1}'
+  get_result "$data"
+}
+
 function get_balance() {
   local address=$1
   local coinID=$2
@@ -541,17 +558,6 @@ function get_coinbase(){
     verbose="false"
   fi
   local data='{"jsonrpc":"2.0","method":"getCoinbase","params":["'$block_hash'",'$verbose'],"id":1}'
-  get_result "$data"
-}
-
-function ban_list(){
-  local data='{"jsonrpc":"2.0","method":"test_banlist","params":[],"id":null}'
-  get_result "$data"
-}
-
-function remove_ban(){
-  local bhost=$1
-  local data='{"jsonrpc":"2.0","method":"test_removeBan","params":["'$bhost'"],"id":1}'
   get_result "$data"
 }
 
@@ -734,20 +740,10 @@ function to_base64() {
 function usage(){
   echo "chain  :"
   echo "  nodeinfo"
-  echo "  peerinfo"
-  echo "  reloadpeers"
-  echo "  addpeer <p2p address>"
-  echo "  delpeer <p2p id>"
-  echo "  ping"
-  echo "  pause"
-  echo "  resetpeers"
-  echo "  networkinfo"
   echo "  rpcinfo"
   echo "  rpcmax <max>"
   echo "  main  <hash>"
   echo "  stop"
-  echo "  banlist"
-  echo "  removeban"
   echo "  loglevel [trace, debug, info, warn, error, critical]"
   echo "  timeinfo"
   echo "  subsidy"
@@ -773,7 +769,6 @@ function usage(){
   echo "  weight <hash>"
   echo "  orphanstotal"
   echo "  isblue <hash>   ;return [0:not blue;  1：blue  2：Cannot confirm]"
-  echo "  iscurrent"
   echo "  tips"
   echo "  coinbase <hash>"
   echo "  fees <hash>"
@@ -807,6 +802,19 @@ function usage(){
   echo "  submitblock"
   echo "  submitblockheader"
   echo "  remotegbt"
+  echo "p2p  :"
+  echo "  peerinfo"
+  echo "  reloadpeers"
+  echo "  addpeer <p2p address>"
+  echo "  delpeer <p2p id>"
+  echo "  ping"
+  echo "  pause"
+  echo "  resetpeers"
+  echo "  networkinfo"
+  echo "  banlist"
+  echo "  removeban"
+  echo "  libp2ploglevel"
+  echo "  iscurrent"
 }
 
 # -------------------
@@ -1036,6 +1044,9 @@ elif [ "$1" == "blockid" ]; then
 elif [ "$1" == "loglevel" ]; then
   shift
   set_log_level $@
+elif [ "$1" == "libp2ploglevel" ]; then
+  shift
+  set_libp2p_log_level $@
 elif [ "$1" == "blockv2" ]; then
   shift
   get_block_v2 $@

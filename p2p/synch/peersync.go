@@ -364,7 +364,7 @@ func (ps *PeerSync) getBestPeer() *peers.Peer {
 	best := ps.Chain().BestSnapshot()
 	var bestPeer *peers.Peer
 	equalPeers := []*peers.Peer{}
-	for _, sp := range ps.sy.peers.ConnectedPeers() {
+	for _, sp := range ps.sy.peers.CanSyncPeers() {
 		// Remove sync candidate peers that are no longer candidates due
 		// to passing their latest known block.  NOTE: The < is
 		// intentional as opposed to <=.  While techcnically the peer
@@ -523,13 +523,8 @@ func (ps *PeerSync) checkContinueSync() bool {
 }
 
 func (ps *PeerSync) RelayInventory(nds []*notify.NotifyData) {
-	ps.sy.Peers().ForPeers(peers.PeerConnected, func(pe *peers.Peer) {
-		if !protocol.HasServices(pe.Services(), protocol.Full) {
-			return
-		}
-
+	for _, pe := range ps.sy.Peers().CanSyncPeers() {
 		invs := []*pb.InvVect{}
-
 		for _, nd := range nds {
 			if nd.IsFilter(pe.GetID()) {
 				continue
@@ -572,16 +567,13 @@ func (ps *PeerSync) RelayInventory(nds []*notify.NotifyData) {
 		}
 
 		ps.sy.tryToSendInventoryRequest(pe, invs)
-	})
+	}
 }
 
 func (ps *PeerSync) RelayGraphState() {
-	ps.sy.Peers().ForPeers(peers.PeerConnected, func(pe *peers.Peer) {
-		if !protocol.HasServices(pe.Services(), protocol.Full) {
-			return
-		}
+	for _, pe := range ps.sy.Peers().CanSyncPeers() {
 		ps.UpdateGraphState(pe)
-	})
+	}
 }
 
 // EnforceNodeBloomFlag disconnects the peer if the server is not configured to
@@ -595,7 +587,7 @@ func (ps *PeerSync) EnforceNodeBloomFlag(sp *peers.Peer) bool {
 		// state.
 		log.Debug(fmt.Sprintf("%s sent a filterclear request with no "+
 			"filter loaded -- disconnecting", sp.GetID().String()))
-		ps.Disconnect(sp)
+		ps.immediatelyDisconnected(sp)
 		return false
 	}
 
@@ -616,7 +608,7 @@ func (ps *PeerSync) OnFilterAdd(sp *peers.Peer, msg *types.MsgFilterAdd) {
 	if !filter.IsLoaded() {
 		log.Debug(fmt.Sprintf("%s sent a filterclear request with no "+
 			"filter loaded -- disconnecting", sp.GetID().String()))
-		ps.Disconnect(sp)
+		ps.immediatelyDisconnected(sp)
 		return
 	}
 
@@ -638,7 +630,7 @@ func (ps *PeerSync) OnFilterClear(sp *peers.Peer, msg *types.MsgFilterClear) {
 	if !filter.IsLoaded() {
 		log.Debug(fmt.Sprintf("%s sent a filterclear request with no "+
 			"filter loaded -- disconnecting", sp.GetID().String()))
-		ps.Disconnect(sp)
+		ps.immediatelyDisconnected(sp)
 		return
 	}
 

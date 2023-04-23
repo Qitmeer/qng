@@ -7,6 +7,7 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
+	golog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"time"
 )
@@ -57,20 +58,22 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, network *string) (interface{
 				continue
 			}
 		}
-
+		active:=ps.Peers().IsActiveID(p.PeerID)
 		if !vb {
-			if !p.State.IsConnected() {
+			if !active {
 				continue
 			}
 		}
 		info := &json.GetPeerInfoResult{
-			ID:        p.PeerID,
+			ID:        p.PeerID.String(),
 			Name:      p.Name,
 			Address:   p.Address,
 			BytesSent: p.BytesSent,
 			BytesRecv: p.BytesRecv,
 			Circuit:   p.IsCircuit,
 			Bads:      p.Bads,
+			ReConnect: p.ReConnect,
+			Active: active,
 		}
 		info.Protocol = p.Protocol
 		info.Services = p.Services.String()
@@ -78,7 +81,7 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, network *string) (interface{
 			info.Genesis = p.Genesis.String()
 		}
 		if p.IsTheSameNetwork() {
-			info.State = p.State.String()
+			info.State = p.State
 		}
 		if len(p.Version) > 0 {
 			info.Version = p.Version
@@ -87,7 +90,7 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, network *string) (interface{
 			info.Network = p.Network
 		}
 
-		if p.State.IsConnected() {
+		if p.State {
 			info.TimeOffset = p.TimeOffset
 			if p.Genesis != nil {
 				info.Genesis = p.Genesis.String()
@@ -97,7 +100,7 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, network *string) (interface{
 				info.GraphState = marshal.GetGraphStateResult(p.GraphState)
 			}
 			if ps.PeerSync().SyncPeer() != nil {
-				info.SyncNode = p.PeerID == ps.PeerSync().SyncPeer().GetID().String()
+				info.SyncNode = p.PeerID == ps.PeerSync().SyncPeer().GetID()
 			} else {
 				info.SyncNode = false
 			}
@@ -175,7 +178,7 @@ func (api *PrivateP2PAPI) Pause() (interface{}, error) {
 
 func (api *PrivateP2PAPI) ResetPeers() (interface{}, error) {
 	for _, pe := range api.s.Peers().AllPeers() {
-		if !pe.IsActive() {
+		if !api.s.Peers().IsActive(pe) {
 			continue
 		}
 		api.s.PeerSync().TryDisconnect(pe)
@@ -206,4 +209,34 @@ func (api *PrivateP2PAPI) ResetPeers() (interface{}, error) {
 		}
 	}
 	return trynum, nil
+}
+
+func (api *PrivateP2PAPI) SetLibp2pLogLevel(level string) (interface{}, error) {
+	l, err := golog.LevelFromString(level)
+	if err != nil {
+		log.Error(err.Error())
+		return level, err
+	}
+	golog.SetAllLoggers(l)
+	return fmt.Sprintf("cur:%s (DEBUG, INFO, WARN, ERROR, DPANIC, PANIC, FATAL)", level), nil
+}
+
+// Banlist
+func (api *PrivateP2PAPI) Banlist() (interface{}, error) {
+	bl := api.s.GetBanlist()
+	bls := []*json.GetBanlistResult{}
+	for k, v := range bl {
+		bls = append(bls, &json.GetBanlistResult{PeerID: k.String(), Bads: v})
+	}
+	return bls, nil
+}
+
+// RemoveBan
+func (api *PrivateP2PAPI) RemoveBan(id *string) (interface{}, error) {
+	ho := ""
+	if id != nil {
+		ho = *id
+	}
+	api.s.RemoveBan(ho)
+	return true, nil
 }

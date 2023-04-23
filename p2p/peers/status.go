@@ -21,7 +21,7 @@ type Status struct {
 	lock  sync.RWMutex
 	peers map[peer.ID]*Peer
 
-	p2p common.P2P
+	p2p P2PRPC
 }
 
 // Bad returns the peers that are bad.
@@ -69,12 +69,23 @@ func (p *Status) ConnectedPeers() []*Peer {
 	defer p.lock.RUnlock()
 	peers := make([]*Peer, 0)
 	for _, status := range p.peers {
-		if !status.IsConsensus() {
-			continue
-		}
 		if status.ConnectionState().IsConnected() {
 			peers = append(peers, status)
 		}
+	}
+	return peers
+}
+
+func (p *Status) CanSyncPeers() []*Peer {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	peers := make([]*Peer, 0)
+	for _, pe := range p.peers {
+		if !p.IsActive(pe) ||
+			!pe.IsConsensus() {
+			continue
+		}
+		peers = append(peers, pe)
 	}
 	return peers
 }
@@ -94,8 +105,8 @@ func (p *Status) Active() []peer.ID {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.peers {
-		if status.IsActive() {
+	for pid, pe := range p.peers {
+		if p.IsActive(pe) {
 			peers = append(peers, pid)
 		}
 	}
@@ -133,8 +144,8 @@ func (p *Status) Inactive() []peer.ID {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.peers {
-		if !status.IsActive() {
+	for pid, pe := range p.peers {
+		if !p.IsActive(pe) {
 			peers = append(peers, pid)
 		}
 	}
@@ -156,8 +167,8 @@ func (p *Status) DirInbound() []peer.ID {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.peers {
-		if status.IsActive() && status.Direction() == network.DirInbound {
+	for pid, pe := range p.peers {
+		if p.IsActive(pe) && pe.Direction() == network.DirInbound {
 			peers = append(peers, pid)
 		}
 	}
@@ -208,15 +219,12 @@ func (p *Status) Add(record *qnr.Record, pid peer.ID, address ma.Multiaddr, dire
 }
 
 // IncrementBadResponses increments the number of bad responses we have received from the given remote peer.
-func (p *Status) IncrementBadResponses(pid peer.ID, reason string) {
-	if !p.p2p.Config().Banning {
-		return
-	}
+func (p *Status) IncrementBadResponses(pid peer.ID, err *common.Error) {
 	pe := p.Get(pid)
 	if pe == nil {
 		return
 	}
-	pe.IncrementBadResponses(reason)
+	pe.IncrementBadResponses(err)
 }
 
 // SubscribedToSubnet retrieves the peers subscribed to the given
@@ -228,7 +236,7 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 	peers := make([]peer.ID, 0)
 	for pid, status := range p.peers {
 		// look at active peers
-		if status.IsActive() && status.metaData != nil && status.metaData.Subnets != nil {
+		if p.IsActive(status) && status.metaData != nil && status.metaData.Subnets != nil {
 			indices := retrieveIndicesFromBitfield(status.metaData.Subnets)
 			for _, idx := range indices {
 				if idx == index {
@@ -256,27 +264,6 @@ func (p *Status) StatsSnapshots() []*StatsSnap {
 	return pes
 }
 
-// Decay reduces the bad responses of all peers, giving reformed peers a chance to join the network.
-// This can be run periodically, although note that each time it runs it does give all bad peers another chance as well to clog up
-// the network with bad responses, so should not be run too frequently; once an hour would be reasonable.
-func (p *Status) Decay() {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	for _, status := range p.peers {
-		status.Decay()
-	}
-}
-
-func (p *Status) ResetBad() {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	for _, status := range p.peers {
-		status.ResetBad()
-	}
-}
-
 func (p *Status) ForPeers(state PeerConnectionState, closure func(pe *Peer)) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
@@ -298,8 +285,43 @@ func (p *Status) UpdateBroadcasts() {
 	}
 }
 
+func (p *Status) CanConnect(pid peer.ID) bool {
+	cs := p.p2p.Host().Network().Connectedness(pid)
+	return cs == network.CanConnect || cs == network.Connected
+}
+
+func (p *Status) IsActive(pe *Peer) bool {
+	return pe.IsActive() && p.CanConnect(pe.GetID())
+}
+
+func (p *Status) IsActiveID(pid peer.ID) bool {
+	pe := p.Get(pid)
+	if pe == nil {
+		return false
+	}
+	return p.IsActive(pe)
+}
+
+func (p *Status) GetByAddress(address ma.Multiaddr) *Peer {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	if address == nil {
+		return nil
+	}
+	for _, pe := range p.peers {
+		addr := pe.Address()
+		if addr == nil {
+			continue
+		}
+		if addr.Equal(address) {
+			return pe
+		}
+	}
+	return nil
+}
+
 // NewStatus creates a new status entity.
-func NewStatus(p2p common.P2P) *Status {
+func NewStatus(p2p P2PRPC) *Status {
 	return &Status{
 		p2p:   p2p,
 		peers: make(map[peer.ID]*Peer),

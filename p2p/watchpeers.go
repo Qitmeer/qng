@@ -12,7 +12,8 @@ import (
 // ensurePeerConnections will attempt to reestablish connection to the peers
 // if there are currently no connections to that peer.
 func (s *Service) ensurePeerConnections(pes []string) {
-	if len(pes) == 0 {
+	if len(pes) == 0 ||
+		s.sy.IsPeerAtLimit() {
 		return
 	}
 	for _, p := range pes {

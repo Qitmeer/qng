@@ -5,23 +5,15 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/p2p/common"
+	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 )
 
-func (s *Sync) HandlerFilterMsgAdd(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
-	var err error
-	defer func() {
-		cancel()
-	}()
-	pe := s.peers.Get(stream.Conn().RemotePeer())
-	if pe == nil {
-		return ErrPeerUnknown
-	}
+func (s *Sync) HandlerFilterMsgAdd(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
 	m, ok := msg.(*pb.FilterAddRequest)
 	if !ok {
-		err = fmt.Errorf("message is not type *MsgFilterAdd")
+		err := fmt.Errorf("message is not type *MsgFilterAdd")
 		return ErrMessage(err)
 	}
 	s.peerSync.msgChan <- &OnFilterAddMsg{pe: pe, data: &types.MsgFilterAdd{
@@ -30,38 +22,20 @@ func (s *Sync) HandlerFilterMsgAdd(ctx context.Context, msg interface{}, stream 
 	return nil
 }
 
-func (s *Sync) HandlerFilterMsgClear(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
-	var err error
-	defer func() {
-		cancel()
-	}()
-	pe := s.peers.Get(stream.Conn().RemotePeer())
-	if pe == nil {
-		return ErrPeerUnknown
-	}
+func (s *Sync) HandlerFilterMsgClear(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
 	_, ok := msg.(*pb.FilterClearRequest)
 	if !ok {
-		err = fmt.Errorf("message is not type *MsgFilterClear")
+		err := fmt.Errorf("message is not type *MsgFilterClear")
 		return ErrMessage(err)
 	}
 	s.peerSync.msgChan <- &OnFilterClearMsg{pe: pe, data: &types.MsgFilterClear{}}
 	return nil
 }
 
-func (s *Sync) HandlerFilterMsgLoad(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
-	var err error
-	defer func() {
-		cancel()
-	}()
-	pe := s.peers.Get(stream.Conn().RemotePeer())
-	if pe == nil {
-		return ErrPeerUnknown
-	}
+func (s *Sync) HandlerFilterMsgLoad(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
 	m, ok := msg.(*pb.FilterLoadRequest)
 	if !ok {
-		err = fmt.Errorf("message is not type *MsgFilterLoad")
+		err := fmt.Errorf("message is not type *MsgFilterLoad")
 		return ErrMessage(err)
 	}
 	s.peerSync.msgChan <- &OnFilterLoadMsg{pe: pe, data: &types.MsgFilterLoad{

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/cmd/relaynode/amanaboot"
 	rconfig "github.com/Qitmeer/qng/cmd/relaynode/config"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
@@ -337,16 +338,7 @@ func (node *Node) IncreaseBytesSent(pid peer.ID, size int) {
 func (node *Node) IncreaseBytesRecv(pid peer.ID, size int) {
 }
 
-func (node *Node) chainStateHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	pe := node.peerStatus.Get(stream.Conn().RemotePeer())
-	if pe == nil {
-		return synch.ErrPeerUnknown
-	}
-	log.Trace(fmt.Sprintf("chainStateHandler:%s", pe.GetID()))
-
-	ctx, cancel := context.WithTimeout(ctx, synch.HandleTimeout)
-	defer cancel()
-
+func (node *Node) chainStateHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
 	m, ok := msg.(*pb.ChainState)
 	if !ok {
 		return synch.ErrMessage(fmt.Errorf("message is not type *pb.ChainState"))
@@ -358,35 +350,30 @@ func (node *Node) chainStateHandler(ctx context.Context, msg interface{}, stream
 }
 
 func (node *Node) processConnected(pid peer.ID, conn network.Conn) {
+	pe := node.peerStatus.Fetch(pid)
 	node.hslock.Lock()
 	defer node.hslock.Unlock()
 
-	peerInfoStr := fmt.Sprintf("peer:%s", pid)
-	remotePe := node.peerStatus.Fetch(pid)
-	peerConnectionState := remotePe.ConnectionState()
-	if remotePe.IsActive() {
-		log.Trace(fmt.Sprintf("%s currentState:%d reason:already active, Ignoring connection request", peerInfoStr, peerConnectionState))
+	pe.UpdateAddrDir(nil, conn.RemoteMultiaddr(), conn.Stat().Direction)
+	pe.IncreaseReConnect()
+	// Handle the various pre-existing conditions that will result in us not handshaking.
+	if pe.IsConnected() {
+		log.Trace(fmt.Sprintf("%s currentState:%s reason:already connected, Ignoring connection request", pe.IDWithAddress(), pe.ConnectionState().String()))
 		return
 	}
-	node.peerStatus.Add(nil /* QNR */, pid, conn.RemoteMultiaddr(), conn.Stat().Direction)
-	if remotePe.IsBad() {
-		log.Trace(fmt.Sprintf("%s reason bad peer, Ignoring connection request.", peerInfoStr))
-		node.Disconnect(pid)
-		return
-	}
-	remotePe.SetConnectionState(peers.PeerConnected)
+
+	pe.SetConnectionState(peers.PeerConnected)
 	// Go through the handshake process.
-	multiAddr := fmt.Sprintf("%s/p2p/%s", remotePe.Address().String(), remotePe.GetID().String())
+	multiAddr := fmt.Sprintf("%s/p2p/%s", pe.Address().String(), pe.GetID().String())
 
 	log.Info(fmt.Sprintf("%s direction:%s multiAddr:%s",
-		remotePe.GetID(), remotePe.Direction(), multiAddr))
+		pe.GetID(), pe.Direction(), multiAddr))
 }
 
 func (node *Node) processDisconnected(pid peer.ID, conn network.Conn) {
 	node.hslock.Lock()
 	defer node.hslock.Unlock()
 
-	peerInfoStr := fmt.Sprintf("peer:%s", pid)
 	pe := node.peerStatus.Get(pid)
 	if pe == nil {
 		return
@@ -394,17 +381,8 @@ func (node *Node) processDisconnected(pid peer.ID, conn network.Conn) {
 	if pe.ConnectionState().IsDisconnected() {
 		return
 	}
-	// Exit early if we are still connected to the peer.
-	if node.Host().Network().Connectedness(pid) == network.Connected {
-		return
-	}
-	priorState := pe.ConnectionState()
-
 	pe.SetConnectionState(peers.PeerDisconnected)
-	// Only log disconnections if we were fully connected.
-	if priorState == peers.PeerConnected {
-		log.Info(fmt.Sprintf("%s Peer Disconnected", peerInfoStr))
-	}
+	log.Info(fmt.Sprintf("%s Peer Disconnected", pe.IDWithAddress()))
 }
 
 func (node *Node) getChainState() *pb.ChainState {
@@ -495,10 +473,15 @@ func (node *Node) GetAmanaService() *amanaboot.AmanaBootService {
 	return service
 }
 
-func closeSteam(stream libp2pcore.Stream) {
-	if err := stream.Close(); err != nil {
-		log.Error(fmt.Sprintf("Failed to close stream:%v", err))
-	}
+func (node *Node) Peers() *peers.Status {
+	return node.peerStatus
+}
+
+func (node *Node) IsRunning() bool {
+	return !node.IsShutdown() && node.IsStarted()
+}
+func (node *Node) GetGenesisHash() *hash.Hash {
+	return params.ActiveNetParams.GenesisHash
 }
 
 func logExternalDNSAddr(id peer.ID, addr string, port string) {

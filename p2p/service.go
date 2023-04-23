@@ -9,6 +9,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
+	"github.com/Qitmeer/qng/core/json"
 	pv "github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p/common"
@@ -140,8 +141,6 @@ func (s *Service) Start() error {
 		})
 	}
 
-	runutil.RunEvery(s.Context(), pollingPeriod, s.Peers().Decay)
-	runutil.RunEvery(s.Context(), s.sy.PeerInterval, s.Peers().ResetBad)
 	runutil.RunEvery(s.Context(), refreshRate, func() {
 		s.RefreshQNR()
 	})
@@ -236,7 +235,7 @@ func (s *Service) ConnectToPeer(qmaddr string, force bool) error {
 	}
 	err = s.connectWithPeer(*addrInfo, false)
 	if err != nil {
-		log.Error(fmt.Sprintf("Could not connect with peer %s :%v", addrInfo.String(), err))
+		log.Debug(fmt.Sprintf("Could not connect with peer %s :%v", addrInfo.String(), err))
 	}
 	return err
 }
@@ -265,7 +264,7 @@ func (s *Service) connectWithPeer(info peer.AddrInfo, force bool) error {
 		return nil
 	}
 	if !force {
-		if pe.IsBad() && !s.sy.IsWhitePeer(info.ID) {
+		if pe.IsBad() {
 			return nil
 		}
 	} else {
@@ -351,12 +350,13 @@ func (s *Service) RefreshQNR() {
 }
 
 func (s *Service) pingPeers() {
-	for _, pid := range s.Peers().Connected() {
-		go func(id peer.ID) {
-			if err := s.sy.SendPingRequest(s.Context(), id); err != nil {
-				log.Error("Failed to ping peer:id=%s  %v", id, err)
+	for _, pe := range s.Peers().ConnectedPeers() {
+		go func(pe *peers.Peer) {
+			metadataSeq := s.MetadataSeq()
+			if _, err := s.sy.Send(pe, synch.RPCPingTopic, &metadataSeq); err != nil {
+				log.Error("Failed to ping peer:id=%s  %v", pe.GetID(), err)
 			}
-		}(pid)
+		}(pe)
 	}
 }
 
@@ -476,15 +476,24 @@ func (s *Service) BroadcastMessage(data interface{}) {
 
 }
 
-func (s *Service) GetBanlist() map[string]int {
-	result := map[string]int{}
+func (s *Service) GetBanlist() map[peer.ID][]*json.BadResponse {
+	result := map[peer.ID][]*json.BadResponse{}
 	bads := s.Peers().Bad()
 	for _, bad := range bads {
 		pe := s.Peers().Get(bad)
 		if pe == nil {
 			continue
 		}
-		result[pe.GetID().String()] = pe.BadResponses()
+		brs := []*json.BadResponse{}
+		for _, br := range pe.BadResponses() {
+			brj := &json.BadResponse{
+				ID:    br.ID,
+				Time:  br.Time.String(),
+				Error: br.Err.String(),
+			}
+			brs = append(brs, brj)
+		}
+		result[pe.GetID()] = brs
 	}
 	return result
 }
@@ -562,6 +571,10 @@ func (s *Service) RegainMempool() {
 
 func (s *Service) IsCurrent() bool {
 	return s.PeerSync().IsCurrent()
+}
+
+func (s *Service) IsRunning() bool {
+	return !s.IsShutdown() && s.IsStarted()
 }
 
 func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*Service, error) {

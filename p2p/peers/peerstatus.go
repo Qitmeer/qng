@@ -61,5 +61,5 @@ type peerStatus struct {
 	metaData              *pb.MetaData
 	chainState            *pb.ChainState
 	chainStateLastUpdated time.Time
-	badResponses          int
+	badResponses          []*BadResponse
 }
