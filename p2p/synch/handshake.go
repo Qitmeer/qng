@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/p2p/peers"
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/multiformats/go-multistream"
 	"net"
 	"strings"
@@ -272,19 +273,28 @@ func (s *Sync) IsInboundPeerAtLimit() bool {
 	return len(s.Peers().DirInbound()) >= s.p2p.Config().MaxInbound
 }
 
-func (s *Sync) ConnectionGater(pid *peer.ID, dir network.Direction) bool {
-	if pid != nil {
-		pe := s.peers.Get(*pid)
-		if pe != nil {
-			delay := time.Since(pe.ChainStateLastUpdated())
-			if delay <= time.Hour*24 && !pe.CanConnectWithNetwork() {
-				return false
-			}
-		}
+func (s *Sync) ConnectionGater(pid *peer.ID,addr ma.Multiaddr, dir network.Direction) bool {
 
+	var pe *peers.Peer
+	if pid != nil {
 		// generic
 		if s.IsWhitePeer(*pid) {
 			return true
+		}
+		pe = s.peers.Get(*pid)
+	}else if addr != nil {
+		pe =s.peers.GetByAddress(addr)
+	}
+
+	if pe != nil {
+		if pe.IsBad() {
+			log.Trace("connectionGater reason:you are bad")
+			return false
+		}
+		delay := time.Since(pe.ChainStateLastUpdated())
+		if delay <= time.Hour*24 && !pe.CanConnectWithNetwork() {
+			log.Trace("connectionGater reason:CanConnectWithNetwork")
+			return false
 		}
 	}
 

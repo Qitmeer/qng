@@ -302,6 +302,18 @@ func (p *Status) IsActiveID(pid peer.ID) bool {
 	return p.IsActive(pe)
 }
 
+func (p *Status) GetByAddress(address ma.Multiaddr) *Peer {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	for _, pe := range p.peers {
+		if pe.Address().Equal(address) {
+			return pe
+		}
+	}
+	return nil
+}
+
 // NewStatus creates a new status entity.
 func NewStatus(p2p P2PRPC) *Status {
 	return &Status{
