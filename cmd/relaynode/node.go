@@ -72,7 +72,7 @@ func (node *Node) init(cfg *rconfig.Config) error {
 	node.privateKey = pk
 
 	//
-	node.peerStatus = peers.NewStatus(nil)
+	node.peerStatus = peers.NewStatus(node)
 
 	if err := node.RegisterRpcService(); err != nil {
 		return err
