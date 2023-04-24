@@ -496,7 +496,7 @@ function get_acctinfo() {
 }
 
 function get_network_info(){
-  local data='{"jsonrpc":"2.0","method":"getNetworkInfo","params":[],"id":null}'
+  local data='{"jsonrpc":"2.0","method":"p2p_getNetworkInfo","params":[],"id":null}'
   get_result "$data"
 }
 
