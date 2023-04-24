@@ -8,7 +8,6 @@ package node
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/marshal"
-	"github.com/Qitmeer/qng/common/math"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/core/json"
@@ -152,77 +151,6 @@ func (api *PublicBlockChainAPI) GetRpcInfo() (interface{}, error) {
 
 func (api *PublicBlockChainAPI) GetTimeInfo() (interface{}, error) {
 	return fmt.Sprintf("Now:%s offset:%s", roughtime.Now(), roughtime.Offset()), nil
-}
-
-func (api *PublicBlockChainAPI) GetNetworkInfo() (interface{}, error) {
-	ps := api.node.GetPeerServer()
-	peers := ps.Peers().StatsSnapshots()
-	nstat := &json.NetworkStat{MaxConnected: ps.Config().MaxPeers,
-		MaxInbound: ps.Config().MaxInbound, Infos: []*json.NetworkInfo{}}
-	infos := map[string]*json.NetworkInfo{}
-	gsups := map[string][]time.Duration{}
-
-	for _, p := range peers {
-		nstat.TotalPeers++
-
-		if p.Services&protocol.Relay > 0 {
-			nstat.TotalRelays++
-		}
-		//
-		if len(p.Network) <= 0 {
-			continue
-		}
-
-		info, ok := infos[p.Network]
-		if !ok {
-			info = &json.NetworkInfo{Name: p.Network}
-			infos[p.Network] = info
-			nstat.Infos = append(nstat.Infos, info)
-
-			gsups[p.Network] = []time.Duration{0, 0, math.MaxInt64}
-		}
-		info.Peers++
-		if ps.Peers().IsActiveID(p.PeerID) {
-			info.Connecteds++
-			nstat.TotalConnected++
-
-			gsups[p.Network][0] = gsups[p.Network][0] + p.GraphStateDur
-			if p.GraphStateDur > gsups[p.Network][1] {
-				gsups[p.Network][1] = p.GraphStateDur
-			}
-			if p.GraphStateDur < gsups[p.Network][2] {
-				gsups[p.Network][2] = p.GraphStateDur
-			}
-		}
-		if p.Services&protocol.Relay > 0 {
-			info.Relays++
-		}
-	}
-	for k, gu := range gsups {
-		info, ok := infos[k]
-		if !ok {
-			continue
-		}
-		if info.Connecteds > 0 {
-			avegs := time.Duration(0)
-			if info.Connecteds > 2 {
-				avegs = gu[0] - gu[1] - gu[2]
-				if avegs < 0 {
-					avegs = 0
-				}
-				cons := info.Connecteds - 2
-				avegs = time.Duration(int64(avegs) / int64(cons))
-
-			} else {
-				avegs = time.Duration(int64(gu[0]) / int64(info.Connecteds))
-			}
-
-			info.AverageGS = avegs.Truncate(time.Second).String()
-			info.MaxGS = gu[1].Truncate(time.Second).String()
-			info.MinGS = gu[2].Truncate(time.Second).String()
-		}
-	}
-	return nstat, nil
 }
 
 func (api *PublicBlockChainAPI) GetSubsidy() (interface{}, error) {
