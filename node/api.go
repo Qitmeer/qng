@@ -65,7 +65,7 @@ func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 		ProtocolVersion: int32(protocol.ProtocolVersion),
 		TotalSubsidy:    best.TotalSubsidy,
 		TimeOffset:      int64(api.node.GetBlockChain().TimeSource().Offset().Seconds()),
-		Connections:     int32(len(api.node.GetPeerServer().Peers().Connected())),
+		Connections:     int32(len(api.node.GetPeerServer().Peers().Active())),
 		PowDiff: &json.PowDiff{
 			CurrentDiff: getDifficultyRatio(powNodes, api.node.node.Params, pow.MEERXKECCAKV1),
 		},
