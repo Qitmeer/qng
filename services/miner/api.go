@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -37,24 +38,72 @@ func (m *Miner) APIs() []api.API {
 	}
 }
 
+type MiningStats struct {
+	lastGBTTime          time.Time
+	lastSubmit           time.Time
+	last100GbtTimes      []int64
+	last100GbtPerTime    float64
+	last100SubmitTimes   []int64
+	last100SubmitPerTime float64
+	submitPerTime        float64
+	gbtPerTime           float64
+}
+
 type PublicMinerAPI struct {
-	miner      *Miner
-	lastSubmit time.Time
+	miner *Miner
+	stats MiningStats
 }
 
 func NewPublicMinerAPI(m *Miner) *PublicMinerAPI {
-	pmAPI := &PublicMinerAPI{miner: m, lastSubmit: time.Now()}
+	pmAPI := &PublicMinerAPI{miner: m, stats: MiningStats{
+		lastSubmit:         time.Now(),
+		lastGBTTime:        time.Now(),
+		last100GbtTimes:    make([]int64, 0),
+		last100SubmitTimes: make([]int64, 0),
+	}}
 	return pmAPI
 }
+func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64) {
+	if len(api.stats.last100GbtTimes) >= 100 {
+		api.stats.last100GbtTimes = api.stats.last100GbtTimes[len(api.stats.last100GbtTimes)-99:]
+	}
+	api.stats.last100GbtTimes = append(api.stats.last100GbtTimes, currentReqMillSec)
+	sum := int64(0)
+	for _, v := range api.stats.last100GbtTimes {
+		sum += v
+	}
+	api.stats.last100GbtPerTime = float64(sum) / float64(len(api.stats.last100GbtTimes)) / 1000
+	api.stats.gbtPerTime = (api.stats.gbtPerTime + float64(currentReqMillSec)) / 2 / 1000
+}
+func (api *PublicMinerAPI) StatsSubmit(currentReqMillSec int64) {
+	if len(api.stats.last100SubmitTimes) >= 100 {
+		api.stats.last100SubmitTimes = api.stats.last100SubmitTimes[len(api.stats.last100SubmitTimes)-99:]
+	}
+	api.stats.last100SubmitTimes = append(api.stats.last100SubmitTimes, currentReqMillSec)
+	sum := int64(0)
+	for _, v := range api.stats.last100SubmitTimes {
+		sum += v
+	}
+	api.stats.last100SubmitPerTime = float64(sum) / float64(len(api.stats.last100SubmitTimes)) / 1000
+	api.stats.submitPerTime = (api.stats.submitPerTime + float64(currentReqMillSec)) / 2 / 1000
+}
 
-//func (api *PublicMinerAPI) GetBlockTemplate(request *mining.TemplateRequest) (interface{}, error){
+// func (api *PublicMinerAPI) GetBlockTemplate(request *mining.TemplateRequest) (interface{}, error){
 func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte) (interface{}, error) {
 	// Set the default mode and override it if supplied.
 	mode := "template"
 	request := json.TemplateRequest{Mode: mode, Capabilities: capabilities, PowType: powType}
+	if err := api.checkGBTTime(); err != nil {
+		return nil, err
+	}
 	switch mode {
 	case "template":
-		return handleGetBlockTemplateRequest(api, &request)
+		start := time.Now().UnixMilli()
+		log.Debug("gbtstart")
+		data, err := handleGetBlockTemplateRequest(api, &request)
+		api.StatsGbt(time.Now().UnixMilli() - start)
+		log.Debug("gbtend")
+		return data, err
 	case "proposal":
 		//TODO LL, will be added
 		//return handleGetBlockTemplateProposal(s, request)
@@ -62,7 +111,12 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 	return nil, rpc.RpcInvalidError("Invalid mode")
 }
 
-//LL
+// GetMiningStats func (api *PublicMinerAPI) GetMiningStats() (interface{}, error){
+func (api *PublicMinerAPI) GetMiningStats() (interface{}, error) {
+	return api.stats, nil
+}
+
+// LL
 // handleGetBlockTemplateRequest is a helper for handleGetBlockTemplate which
 // deals with generating and returning block templates to the caller. In addition,
 // it detects the capabilities reported by the caller
@@ -79,14 +133,14 @@ func handleGetBlockTemplateRequest(api *PublicMinerAPI, request *json.TemplateRe
 	return resp.result, resp.err
 }
 
-//LL
-//Attempts to submit new block to network.
-//See https://en.bitcoin.it/wiki/BIP_0022 for full specification
+// LL
+// Attempts to submit new block to network.
+// See https://en.bitcoin.it/wiki/BIP_0022 for full specification
 func (api *PublicMinerAPI) SubmitBlock(hexBlock string) (interface{}, error) {
 	if err := api.checkSubmitLimit(); err != nil {
 		return nil, err
 	}
-	api.lastSubmit = time.Now()
+	api.stats.lastSubmit = time.Now()
 	// Deserialize the hexBlock.
 	m := api.miner
 
@@ -107,13 +161,20 @@ func (api *PublicMinerAPI) SubmitBlock(hexBlock string) (interface{}, error) {
 	if len(block.Block().Transactions) <= 0 {
 		return nil, fmt.Errorf("block is illegal")
 	}
+
 	height, err := blockchain.ExtractCoinbaseHeight(block.Block().Transactions[0])
 	if err != nil {
 		return nil, err
 	}
 
 	block.SetHeight(uint(height))
-	return m.submitBlock(block)
+	start := time.Now().UnixMilli()
+	log.Debug("submitstart", "blockhash", block.Block().BlockHash(), "txcount", len(block.Block().Transactions))
+	res, err := m.submitBlock(block)
+	api.StatsSubmit(time.Now().UnixMilli() - start)
+	log.Debug("submitend", "blockhash", block.Block().BlockHash(), "txcount",
+		len(block.Block().Transactions), "res", res, "err", err)
+	return res, err
 }
 
 func (api *PublicMinerAPI) GetMinerInfo() (interface{}, error) {
@@ -159,7 +220,7 @@ func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string, extraNonce *
 	if err := api.checkSubmitLimit(); err != nil {
 		return nil, err
 	}
-	api.lastSubmit = time.Now()
+	api.stats.lastSubmit = time.Now()
 	// Deserialize the hexBlock.
 	m := api.miner
 
@@ -183,8 +244,17 @@ func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string, extraNonce *
 }
 
 func (api *PublicMinerAPI) checkSubmitLimit() error {
-	if time.Since(api.lastSubmit) < SubmitInterval {
-		return fmt.Errorf("Submission interval Limited:%s < %s\n", time.Since(api.lastSubmit), SubmitInterval)
+	if time.Since(api.stats.lastSubmit) < SubmitInterval {
+		return fmt.Errorf("Submission interval Limited:%s < %s\n", time.Since(api.stats.lastSubmit), SubmitInterval)
+	}
+	return nil
+}
+
+func (api *PublicMinerAPI) checkGBTTime() error {
+	if time.Since(api.stats.lastGBTTime) < params.ActiveNetParams.TargetTimePerBlock {
+		log.Trace("Client in sunc, qitmeer is sync tx...")
+		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
+			"qitmeer is downloading tx...")
 	}
 	return nil
 }

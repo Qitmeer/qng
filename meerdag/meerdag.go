@@ -869,7 +869,8 @@ func (bd *MeerDAG) CheckSubMainChainTip(parents []*hash.Hash) error {
 	}
 	mainTip := bd.getMainChainTip()
 	if mainTip.GetHash().String() != parents[0].String() {
-		return fmt.Errorf("Main chain tip is overdue")
+		return fmt.Errorf("main chain tip is overdue,submit parent:%v , but main tip is :%v\n",
+			parents[0].String(), mainTip.GetHash().String())
 	}
 	for _, pa := range parents {
 		ib := bd.getBlock(pa)
