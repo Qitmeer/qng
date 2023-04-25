@@ -39,14 +39,14 @@ func (m *Miner) APIs() []api.API {
 }
 
 type MiningStats struct {
-	lastGBTTime          time.Time
-	lastSubmit           time.Time
-	last100GbtTimes      []int64
-	last100GbtPerTime    float64
-	last100SubmitTimes   []int64
-	last100SubmitPerTime float64
-	submitPerTime        float64
-	gbtPerTime           float64
+	LastGBTTime          time.Time `json:"last_gbt_time"`
+	LastSubmit           time.Time `json:"last_submit_time"`
+	Last100GbtTimes      []int64   `json:"last_100_gbt_times"`
+	Last100GbtPerTime    float64   `json:"last_100_gbt_per_time"`
+	Last100SubmitTimes   []int64   `json:"last_100_submit_times"`
+	Last100SubmitPerTime float64   `json:"last_100_submit_per_time"`
+	SubmitPerTime        float64   `json:"submit_per_time"`
+	GbtPerTime           float64   `json:"gbt_per_time"`
 }
 
 type PublicMinerAPI struct {
@@ -56,36 +56,36 @@ type PublicMinerAPI struct {
 
 func NewPublicMinerAPI(m *Miner) *PublicMinerAPI {
 	pmAPI := &PublicMinerAPI{miner: m, stats: MiningStats{
-		lastSubmit:         time.Now(),
-		lastGBTTime:        time.Now(),
-		last100GbtTimes:    make([]int64, 0),
-		last100SubmitTimes: make([]int64, 0),
+		LastSubmit:         time.Now(),
+		LastGBTTime:        time.Now(),
+		Last100GbtTimes:    make([]int64, 0),
+		Last100SubmitTimes: make([]int64, 0),
 	}}
 	return pmAPI
 }
 func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64) {
-	if len(api.stats.last100GbtTimes) >= 100 {
-		api.stats.last100GbtTimes = api.stats.last100GbtTimes[len(api.stats.last100GbtTimes)-99:]
+	if len(api.stats.Last100GbtTimes) >= 100 {
+		api.stats.Last100GbtTimes = api.stats.Last100GbtTimes[len(api.stats.Last100GbtTimes)-99:]
 	}
-	api.stats.last100GbtTimes = append(api.stats.last100GbtTimes, currentReqMillSec)
+	api.stats.Last100GbtTimes = append(api.stats.Last100GbtTimes, currentReqMillSec)
 	sum := int64(0)
-	for _, v := range api.stats.last100GbtTimes {
+	for _, v := range api.stats.Last100GbtTimes {
 		sum += v
 	}
-	api.stats.last100GbtPerTime = float64(sum) / float64(len(api.stats.last100GbtTimes)) / 1000
-	api.stats.gbtPerTime = (api.stats.gbtPerTime + float64(currentReqMillSec)) / 2 / 1000
+	api.stats.Last100GbtPerTime = float64(sum) / float64(len(api.stats.Last100GbtTimes)) / 1000
+	api.stats.GbtPerTime = (api.stats.GbtPerTime + float64(currentReqMillSec)) / 2 / 1000
 }
 func (api *PublicMinerAPI) StatsSubmit(currentReqMillSec int64) {
-	if len(api.stats.last100SubmitTimes) >= 100 {
-		api.stats.last100SubmitTimes = api.stats.last100SubmitTimes[len(api.stats.last100SubmitTimes)-99:]
+	if len(api.stats.Last100SubmitTimes) >= 100 {
+		api.stats.Last100SubmitTimes = api.stats.Last100SubmitTimes[len(api.stats.Last100SubmitTimes)-99:]
 	}
-	api.stats.last100SubmitTimes = append(api.stats.last100SubmitTimes, currentReqMillSec)
+	api.stats.Last100SubmitTimes = append(api.stats.Last100SubmitTimes, currentReqMillSec)
 	sum := int64(0)
-	for _, v := range api.stats.last100SubmitTimes {
+	for _, v := range api.stats.Last100SubmitTimes {
 		sum += v
 	}
-	api.stats.last100SubmitPerTime = float64(sum) / float64(len(api.stats.last100SubmitTimes)) / 1000
-	api.stats.submitPerTime = (api.stats.submitPerTime + float64(currentReqMillSec)) / 2 / 1000
+	api.stats.Last100SubmitPerTime = float64(sum) / float64(len(api.stats.Last100SubmitTimes)) / 1000
+	api.stats.SubmitPerTime = (api.stats.SubmitPerTime + float64(currentReqMillSec)) / 2 / 1000
 }
 
 // func (api *PublicMinerAPI) GetBlockTemplate(request *mining.TemplateRequest) (interface{}, error){
@@ -140,7 +140,7 @@ func (api *PublicMinerAPI) SubmitBlock(hexBlock string) (interface{}, error) {
 	if err := api.checkSubmitLimit(); err != nil {
 		return nil, err
 	}
-	api.stats.lastSubmit = time.Now()
+	api.stats.LastSubmit = time.Now()
 	// Deserialize the hexBlock.
 	m := api.miner
 
@@ -220,7 +220,7 @@ func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string, extraNonce *
 	if err := api.checkSubmitLimit(); err != nil {
 		return nil, err
 	}
-	api.stats.lastSubmit = time.Now()
+	api.stats.LastSubmit = time.Now()
 	// Deserialize the hexBlock.
 	m := api.miner
 
@@ -244,14 +244,14 @@ func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string, extraNonce *
 }
 
 func (api *PublicMinerAPI) checkSubmitLimit() error {
-	if time.Since(api.stats.lastSubmit) < SubmitInterval {
-		return fmt.Errorf("Submission interval Limited:%s < %s\n", time.Since(api.stats.lastSubmit), SubmitInterval)
+	if time.Since(api.stats.LastSubmit) < SubmitInterval {
+		return fmt.Errorf("Submission interval Limited:%s < %s\n", time.Since(api.stats.LastSubmit), SubmitInterval)
 	}
 	return nil
 }
 
 func (api *PublicMinerAPI) checkGBTTime() error {
-	if time.Since(api.stats.lastGBTTime) < params.ActiveNetParams.TargetTimePerBlock {
+	if time.Since(api.stats.LastGBTTime) < params.ActiveNetParams.TargetTimePerBlock {
 		log.Trace("Client in sunc, qitmeer is sync tx...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading tx...")
