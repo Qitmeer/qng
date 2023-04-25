@@ -74,6 +74,7 @@ func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64) {
 	for _, v := range api.stats.Last100GbtTimes {
 		sum += v
 	}
+	api.stats.LastGBTTime = time.Now()
 	api.stats.Last100GbtPerTime = float64(sum) / float64(len(api.stats.Last100GbtTimes)) / 1000
 	api.stats.GbtPerTime = (api.stats.GbtPerTime + float64(currentReqMillSec)) / 2 / 1000
 	if float64(currentReqMillSec)/1000 > api.stats.MaxGbtTime {
