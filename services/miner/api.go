@@ -49,6 +49,9 @@ type MiningStats struct {
 	GbtPerTime           float64   `json:"gbt_per_time"`
 	MaxGbtTime           float64   `json:"max_gbt_time"`
 	MaxSubmitTime        float64   `json:"max_submit_time"`
+	MaxSubmitTimeHash    string    `json:"max_submit_time_hash"`
+	TotalGbtTimes        int64     `json:"total_gbt_times"`
+	TotalSubmitTimes     int64     `json:"total_submit_times"`
 }
 
 type PublicMinerAPI struct {
@@ -80,8 +83,9 @@ func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64) {
 	if float64(currentReqMillSec)/1000 > api.stats.MaxGbtTime {
 		api.stats.MaxGbtTime = float64(currentReqMillSec) / 1000
 	}
+	api.stats.TotalGbtTimes++
 }
-func (api *PublicMinerAPI) StatsSubmit(currentReqMillSec int64) {
+func (api *PublicMinerAPI) StatsSubmit(currentReqMillSec int64, bh string) {
 	if len(api.stats.Last100SubmitTimes) >= 100 {
 		api.stats.Last100SubmitTimes = api.stats.Last100SubmitTimes[len(api.stats.Last100SubmitTimes)-99:]
 	}
@@ -94,7 +98,9 @@ func (api *PublicMinerAPI) StatsSubmit(currentReqMillSec int64) {
 	api.stats.SubmitPerTime = (api.stats.SubmitPerTime + float64(currentReqMillSec)) / 2 / 1000
 	if float64(currentReqMillSec)/1000 > api.stats.MaxSubmitTime {
 		api.stats.MaxSubmitTime = float64(currentReqMillSec) / 1000
+		api.stats.MaxSubmitTimeHash = bh
 	}
+	api.stats.TotalSubmitTimes++
 }
 
 // func (api *PublicMinerAPI) GetBlockTemplate(request *mining.TemplateRequest) (interface{}, error){
@@ -180,7 +186,7 @@ func (api *PublicMinerAPI) SubmitBlock(hexBlock string) (interface{}, error) {
 	start := time.Now().UnixMilli()
 	log.Debug("submitstart", "blockhash", block.Block().BlockHash(), "txcount", len(block.Block().Transactions))
 	res, err := m.submitBlock(block)
-	api.StatsSubmit(time.Now().UnixMilli() - start)
+	api.StatsSubmit(time.Now().UnixMilli()-start, block.Block().BlockHash().String())
 	log.Debug("submitend", "blockhash", block.Block().BlockHash(), "txcount",
 		len(block.Block().Transactions), "res", res, "err", err)
 	return res, err
