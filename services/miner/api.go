@@ -118,6 +118,9 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 		data, err := handleGetBlockTemplateRequest(api, &request)
 		api.StatsGbt(time.Now().UnixMilli() - start)
 		log.Debug("gbtend")
+		if err != nil {
+			return nil, err
+		}
 		return data, err
 	case "proposal":
 		//TODO LL, will be added
@@ -266,7 +269,7 @@ func (api *PublicMinerAPI) checkSubmitLimit() error {
 }
 
 func (api *PublicMinerAPI) checkGBTTime() error {
-	if time.Since(api.stats.LastGBTTime) < params.ActiveNetParams.TargetTimePerBlock {
+	if len(api.miner.template.Block.Transactions) < 1 && time.Since(api.stats.LastGBTTime) < params.ActiveNetParams.TargetTimePerBlock {
 		log.Trace("Client in sunc, qitmeer is sync tx...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading tx...")
