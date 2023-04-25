@@ -51,6 +51,7 @@ type MiningStats struct {
 	MaxSubmitTime        float64   `json:"max_submit_time"`
 	MaxSubmitTimeHash    string    `json:"max_submit_time_hash"`
 	TotalGbtTimes        int64     `json:"total_gbt_times"`
+	TotalTxZeroTimes     int64     `json:"total_tx_zero_times"`
 	TotalSubmitTimes     int64     `json:"total_submit_times"`
 }
 
@@ -68,7 +69,7 @@ func NewPublicMinerAPI(m *Miner) *PublicMinerAPI {
 	}}
 	return pmAPI
 }
-func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64) {
+func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64, txcount int) {
 	if len(api.stats.Last100GbtTimes) >= 100 {
 		api.stats.Last100GbtTimes = api.stats.Last100GbtTimes[len(api.stats.Last100GbtTimes)-99:]
 	}
@@ -84,6 +85,9 @@ func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64) {
 		api.stats.MaxGbtTime = float64(currentReqMillSec) / 1000
 	}
 	api.stats.TotalGbtTimes++
+	if txcount < 1 {
+		api.stats.TotalTxZeroTimes++
+	}
 }
 func (api *PublicMinerAPI) StatsSubmit(currentReqMillSec int64, bh string) {
 	if len(api.stats.Last100SubmitTimes) >= 100 {
@@ -108,19 +112,22 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 	// Set the default mode and override it if supplied.
 	mode := "template"
 	request := json.TemplateRequest{Mode: mode, Capabilities: capabilities, PowType: powType}
-	if err := api.checkGBTTime(); err != nil {
-		return nil, err
-	}
+
 	switch mode {
 	case "template":
 		start := time.Now().UnixMilli()
 		log.Debug("gbtstart")
 		data, err := handleGetBlockTemplateRequest(api, &request)
-		api.StatsGbt(time.Now().UnixMilli() - start)
-		log.Debug("gbtend")
+
 		if err != nil {
 			return nil, err
 		}
+		txcount := len(data.(*json.GetBlockTemplateResult).Transactions)
+		if err := api.checkGBTTime(txcount); err != nil {
+			return nil, err
+		}
+		api.StatsGbt(time.Now().UnixMilli()-start, txcount)
+		log.Debug("gbtend", "txcount", txcount)
 		return data, err
 	case "proposal":
 		//TODO LL, will be added
@@ -268,9 +275,9 @@ func (api *PublicMinerAPI) checkSubmitLimit() error {
 	return nil
 }
 
-func (api *PublicMinerAPI) checkGBTTime() error {
-	if len(api.miner.template.Block.Transactions) < 1 && time.Since(api.stats.LastGBTTime) < params.ActiveNetParams.TargetTimePerBlock {
-		log.Trace("Client in sunc, qitmeer is sync tx...")
+func (api *PublicMinerAPI) checkGBTTime(txcount int) error {
+	if txcount < 1 && time.Since(api.stats.LastGBTTime) < params.ActiveNetParams.TargetTimePerBlock {
+		log.Debug("[gbttxzreo]Client init download, qitmeer is sync tx...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading tx...")
 	}
