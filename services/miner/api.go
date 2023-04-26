@@ -91,7 +91,6 @@ func (api *PublicMinerAPI) StatsGbtTxEmptyAvgTimes() {
 	} else {
 		api.stats.TxEmptyAvgTime = (api.stats.TxEmptyAvgTime + float64(time.Now().Unix()-api.stats.LastTxEmptyTime)) / 2
 	}
-	api.stats.LastTxEmptyTime = 0
 }
 
 func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64, txcount int, longpollid string) {
@@ -161,7 +160,10 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 			api.StatsGbtTxEmptyErr()
 			return nil, err
 		}
-		api.StatsGbtTxEmptyAvgTimes()
+		if txcount > 0 {
+			api.StatsGbtTxEmptyAvgTimes()
+		}
+		api.stats.LastTxEmptyTime = 0
 		api.StatsGbt(time.Now().UnixMilli()-start, txcount, data.(*json.GetBlockTemplateResult).LongPollID)
 		log.Debug("gbtend", "txcount", txcount, "longpollid",
 			data.(*json.GetBlockTemplateResult).LongPollID, "spent", (time.Now().UnixMilli()-start)/1000)
