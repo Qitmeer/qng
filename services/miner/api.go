@@ -42,9 +42,9 @@ type MiningStats struct {
 	LastGBTTime          time.Time `json:"last_gbt_time"`
 	LastSubmit           time.Time `json:"last_submit_time"`
 	Last100Gbts          []int64   `json:"-"`
-	Last100GbtPerTime    float64   `json:"last_100_gbt_per_time"`
+	Last100GbtAvgTime    float64   `json:"last_100_gbt_avg_time"`
 	Last100Submits       []int64   `json:"-"`
-	Last100SubmitPerTime float64   `json:"last_100_submit_per_time"`
+	Last100SubmitAvgTime float64   `json:"last_100_submit_avg_time"`
 	SubmitAvgTime        float64   `json:"submit_avg_time"`
 	GbtAvgTime           float64   `json:"gbt_avg_time"`
 	MaxGbtTime           float64   `json:"max_gbt_time"`
@@ -104,7 +104,7 @@ func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64, txcount int, longpo
 		sum += v
 	}
 	api.stats.LastGBTTime = time.Now()
-	api.stats.Last100GbtPerTime = float64(sum) / float64(len(api.stats.Last100Gbts)) / 1000
+	api.stats.Last100GbtAvgTime = float64(sum) / float64(len(api.stats.Last100Gbts)) / 1000
 	if api.stats.GbtAvgTime > 0 {
 		api.stats.GbtAvgTime = (api.stats.GbtAvgTime + float64(currentReqMillSec)) / 2 / 1000
 	} else {
@@ -128,7 +128,7 @@ func (api *PublicMinerAPI) StatsSubmit(currentReqMillSec int64, bh string) {
 	for _, v := range api.stats.Last100Submits {
 		sum += v
 	}
-	api.stats.Last100SubmitPerTime = float64(sum) / float64(len(api.stats.Last100Submits)) / 1000
+	api.stats.Last100SubmitAvgTime = float64(sum) / float64(len(api.stats.Last100Submits)) / 1000
 	if api.stats.SubmitAvgTime > 0 {
 		api.stats.SubmitAvgTime = (api.stats.SubmitAvgTime + float64(currentReqMillSec)) / 2 / 1000
 	} else {
