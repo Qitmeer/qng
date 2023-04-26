@@ -116,7 +116,7 @@ func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64, txcount int, longpo
 	}
 	api.stats.TotalGbts++
 	if txcount < 1 {
-		api.stats.TotalSubmits++
+		api.stats.TotalEmptyGbts++
 	}
 }
 func (api *PublicMinerAPI) StatsSubmit(currentReqMillSec int64, bh string) {
