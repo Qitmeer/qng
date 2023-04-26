@@ -86,12 +86,12 @@ func (api *PublicMinerAPI) StatsGbtTxEmptyAvgTimes() {
 	if api.stats.LastTxEmptyTime <= 0 || time.Now().Unix() <= api.stats.LastTxEmptyTime {
 		return
 	}
-	api.stats.LastTxEmptyTime = 0
 	if api.stats.TxEmptyAvgTime <= 0 {
 		api.stats.TxEmptyAvgTime = float64(time.Now().Unix() - api.stats.LastTxEmptyTime)
 	} else {
 		api.stats.TxEmptyAvgTime = (api.stats.TxEmptyAvgTime + float64(time.Now().Unix()-api.stats.LastTxEmptyTime)) / 2
 	}
+	api.stats.LastTxEmptyTime = 0
 }
 
 func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64, txcount int, longpollid string) {
