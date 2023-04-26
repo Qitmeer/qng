@@ -48,6 +48,7 @@ type MiningStats struct {
 	SubmitPerTime        float64   `json:"submit_per_time"`
 	GbtPerTime           float64   `json:"gbt_per_time"`
 	MaxGbtTime           float64   `json:"max_gbt_time"`
+	MaxGbtTimeLongpollid string    `json:"max_gbt_time_longpollid"`
 	MaxSubmitTime        float64   `json:"max_submit_time"`
 	MaxSubmitTimeHash    string    `json:"max_submit_time_hash"`
 	TotalGbtTimes        int64     `json:"total_gbt_times"`
@@ -69,7 +70,7 @@ func NewPublicMinerAPI(m *Miner) *PublicMinerAPI {
 	}}
 	return pmAPI
 }
-func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64, txcount int) {
+func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64, txcount int, longpollid string) {
 	if len(api.stats.Last100GbtTimes) >= 100 {
 		api.stats.Last100GbtTimes = api.stats.Last100GbtTimes[len(api.stats.Last100GbtTimes)-99:]
 	}
@@ -126,8 +127,9 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 		if err := api.checkGBTTime(txcount); err != nil {
 			return nil, err
 		}
-		api.StatsGbt(time.Now().UnixMilli()-start, txcount)
-		log.Debug("gbtend", "txcount", txcount)
+		api.StatsGbt(time.Now().UnixMilli()-start, txcount, data.(*json.GetBlockTemplateResult).LongPollID)
+		log.Debug("gbtend", "txcount", txcount, "longpollid",
+			data.(*json.GetBlockTemplateResult).LongPollID, "spent", (time.Now().UnixMilli()-start)/1000)
 		return data, err
 	case "proposal":
 		//TODO LL, will be added
@@ -198,7 +200,7 @@ func (api *PublicMinerAPI) SubmitBlock(hexBlock string) (interface{}, error) {
 	res, err := m.submitBlock(block)
 	api.StatsSubmit(time.Now().UnixMilli()-start, block.Block().BlockHash().String())
 	log.Debug("submitend", "blockhash", block.Block().BlockHash(), "txcount",
-		len(block.Block().Transactions), "res", res, "err", err)
+		len(block.Block().Transactions), "res", res, "err", err, "spent", (time.Now().UnixMilli()-start)/1000)
 	return res, err
 }
 

@@ -293,7 +293,8 @@ func (w *GBTWorker) getResult(useCoinbaseValue bool, submitOld *bool) (*json.Get
 
 		reply.CoinbaseTxn = &resultTx
 	}
-	log.Debug("gbtdetail", "txcount", len(reply.Transactions), "parents", parents, "prehash", reply.PreviousHash)
+	log.Debug("gbtdetail", "txcount", len(reply.Transactions), "parents", parents, "prehash",
+		reply.PreviousHash, "longpollid", reply.LongPollID)
 	return &reply, nil
 }
 
