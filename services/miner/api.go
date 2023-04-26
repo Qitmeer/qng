@@ -83,7 +83,7 @@ func (api *PublicMinerAPI) StatsGbtTxEmptyErr() {
 }
 
 func (api *PublicMinerAPI) StatsGbtTxEmptyAvgTimes() {
-	if api.stats.LastTxEmptyTime <= 0 && time.Now().Unix() <= api.stats.LastTxEmptyTime {
+	if api.stats.LastTxEmptyTime <= 0 || time.Now().Unix() <= api.stats.LastTxEmptyTime {
 		return
 	}
 	api.stats.LastTxEmptyTime = 0
