@@ -112,14 +112,11 @@ func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64, txcount int, longpo
 	}
 	if float64(currentReqMillSec)/1000 > api.stats.MaxGbtTime {
 		api.stats.MaxGbtTime = float64(currentReqMillSec) / 1000
+		api.stats.MaxGbtTimeLongpollid = longpollid
 	}
 	api.stats.TotalGbts++
 	if txcount < 1 {
 		api.stats.TotalSubmits++
-	}
-	if float64(currentReqMillSec)/1000 > api.stats.MaxGbtTime {
-		api.stats.MaxGbtTime = float64(currentReqMillSec) / 1000
-		api.stats.MaxGbtTimeLongpollid = longpollid
 	}
 }
 func (api *PublicMinerAPI) StatsSubmit(currentReqMillSec int64, bh string) {
