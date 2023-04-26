@@ -41,19 +41,23 @@ func (m *Miner) APIs() []api.API {
 type MiningStats struct {
 	LastGBTTime          time.Time `json:"last_gbt_time"`
 	LastSubmit           time.Time `json:"last_submit_time"`
-	Last100GbtTimes      []int64   `json:"-"`
+	Last100Gbts          []int64   `json:"-"`
 	Last100GbtPerTime    float64   `json:"last_100_gbt_per_time"`
-	Last100SubmitTimes   []int64   `json:"-"`
+	Last100Submits       []int64   `json:"-"`
 	Last100SubmitPerTime float64   `json:"last_100_submit_per_time"`
-	SubmitPerTime        float64   `json:"submit_per_time"`
-	GbtPerTime           float64   `json:"gbt_per_time"`
+	SubmitAvgTime        float64   `json:"submit_avg_time"`
+	GbtAvgTime           float64   `json:"gbt_avg_time"`
 	MaxGbtTime           float64   `json:"max_gbt_time"`
 	MaxGbtTimeLongpollid string    `json:"max_gbt_time_longpollid"`
 	MaxSubmitTime        float64   `json:"max_submit_time"`
 	MaxSubmitTimeHash    string    `json:"max_submit_time_hash"`
-	TotalGbtTimes        int64     `json:"total_gbt_times"`
-	TotalTxZeroTimes     int64     `json:"total_tx_zero_times"`
-	TotalSubmitTimes     int64     `json:"total_submit_times"`
+	TotalGbts            int64     `json:"total_gbts"`
+	TotalGbtRequests     int64     `json:"total_gbt_requests"`
+	TotalEmptyGbts       int64     `json:"total_empty_gbts"`
+	TotalSubmits         int64     `json:"total_submits"`
+	LastTxEmptyTime      int64     `json:"-"`
+	TxEmptyAvgTime       float64   `json:"tx_empty_avg_time"`
+	TxEmptyErrs          float64   `json:"tx_empty_errs"`
 }
 
 type PublicMinerAPI struct {
@@ -63,49 +67,82 @@ type PublicMinerAPI struct {
 
 func NewPublicMinerAPI(m *Miner) *PublicMinerAPI {
 	pmAPI := &PublicMinerAPI{miner: m, stats: MiningStats{
-		LastSubmit:         time.Now(),
-		LastGBTTime:        time.Now(),
-		Last100GbtTimes:    make([]int64, 0),
-		Last100SubmitTimes: make([]int64, 0),
+		LastSubmit:     time.Now(),
+		LastGBTTime:    time.Now(),
+		Last100Gbts:    make([]int64, 0),
+		Last100Submits: make([]int64, 0),
 	}}
 	return pmAPI
 }
-func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64, txcount int, longpollid string) {
-	if len(api.stats.Last100GbtTimes) >= 100 {
-		api.stats.Last100GbtTimes = api.stats.Last100GbtTimes[len(api.stats.Last100GbtTimes)-99:]
+
+func (api *PublicMinerAPI) StatsGbtTxEmptyErr() {
+	api.stats.TxEmptyErrs++
+	if api.stats.LastTxEmptyTime <= 0 {
+		api.stats.LastTxEmptyTime = time.Now().Unix()
 	}
-	api.stats.Last100GbtTimes = append(api.stats.Last100GbtTimes, currentReqMillSec)
+}
+
+func (api *PublicMinerAPI) StatsGbtTxEmptyAvgTimes() {
+	if api.stats.LastTxEmptyTime <= 0 && time.Now().Unix() <= api.stats.LastTxEmptyTime {
+		return
+	}
+	api.stats.LastTxEmptyTime = 0
+	if api.stats.TxEmptyAvgTime <= 0 {
+		api.stats.TxEmptyAvgTime = float64(time.Now().Unix() - api.stats.LastTxEmptyTime)
+	} else {
+		api.stats.TxEmptyAvgTime = (api.stats.TxEmptyAvgTime + float64(time.Now().Unix()-api.stats.LastTxEmptyTime)) / 2
+	}
+}
+
+func (api *PublicMinerAPI) StatsGbt(currentReqMillSec int64, txcount int, longpollid string) {
+	if len(api.stats.Last100Gbts) >= 100 {
+		api.stats.Last100Gbts = api.stats.Last100Gbts[len(api.stats.Last100Gbts)-99:]
+	}
+	api.stats.Last100Gbts = append(api.stats.Last100Gbts, currentReqMillSec)
 	sum := int64(0)
-	for _, v := range api.stats.Last100GbtTimes {
+	for _, v := range api.stats.Last100Gbts {
 		sum += v
 	}
 	api.stats.LastGBTTime = time.Now()
-	api.stats.Last100GbtPerTime = float64(sum) / float64(len(api.stats.Last100GbtTimes)) / 1000
-	api.stats.GbtPerTime = (api.stats.GbtPerTime + float64(currentReqMillSec)) / 2 / 1000
+	api.stats.Last100GbtPerTime = float64(sum) / float64(len(api.stats.Last100Gbts)) / 1000
+	if api.stats.GbtAvgTime > 0 {
+		api.stats.GbtAvgTime = (api.stats.GbtAvgTime + float64(currentReqMillSec)) / 2 / 1000
+	} else {
+		api.stats.GbtAvgTime = float64(currentReqMillSec) / 1000
+	}
 	if float64(currentReqMillSec)/1000 > api.stats.MaxGbtTime {
 		api.stats.MaxGbtTime = float64(currentReqMillSec) / 1000
 	}
-	api.stats.TotalGbtTimes++
+	api.stats.TotalGbts++
 	if txcount < 1 {
-		api.stats.TotalTxZeroTimes++
+		api.stats.TotalSubmits++
+	}
+	if float64(currentReqMillSec)/1000 > api.stats.MaxGbtTime {
+		api.stats.MaxGbtTime = float64(currentReqMillSec) / 1000
+		api.stats.MaxGbtTimeLongpollid = longpollid
 	}
 }
 func (api *PublicMinerAPI) StatsSubmit(currentReqMillSec int64, bh string) {
-	if len(api.stats.Last100SubmitTimes) >= 100 {
-		api.stats.Last100SubmitTimes = api.stats.Last100SubmitTimes[len(api.stats.Last100SubmitTimes)-99:]
+	if len(api.stats.Last100Submits) >= 100 {
+		api.stats.Last100Submits = api.stats.Last100Submits[len(api.stats.Last100Submits)-99:]
 	}
-	api.stats.Last100SubmitTimes = append(api.stats.Last100SubmitTimes, currentReqMillSec)
+	api.stats.Last100Submits = append(api.stats.Last100Submits, currentReqMillSec)
 	sum := int64(0)
-	for _, v := range api.stats.Last100SubmitTimes {
+	for _, v := range api.stats.Last100Submits {
 		sum += v
 	}
-	api.stats.Last100SubmitPerTime = float64(sum) / float64(len(api.stats.Last100SubmitTimes)) / 1000
-	api.stats.SubmitPerTime = (api.stats.SubmitPerTime + float64(currentReqMillSec)) / 2 / 1000
+	api.stats.Last100SubmitPerTime = float64(sum) / float64(len(api.stats.Last100Submits)) / 1000
+	if api.stats.SubmitAvgTime > 0 {
+		api.stats.SubmitAvgTime = (api.stats.SubmitAvgTime + float64(currentReqMillSec)) / 2 / 1000
+	} else {
+		api.stats.SubmitAvgTime = float64(currentReqMillSec) / 1000
+	}
+
 	if float64(currentReqMillSec)/1000 > api.stats.MaxSubmitTime {
 		api.stats.MaxSubmitTime = float64(currentReqMillSec) / 1000
 		api.stats.MaxSubmitTimeHash = bh
 	}
-	api.stats.TotalSubmitTimes++
+	api.stats.TotalSubmits++
 }
 
 // func (api *PublicMinerAPI) GetBlockTemplate(request *mining.TemplateRequest) (interface{}, error){
@@ -119,14 +156,15 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 		start := time.Now().UnixMilli()
 		log.Debug("gbtstart")
 		data, err := handleGetBlockTemplateRequest(api, &request)
-
 		if err != nil {
 			return nil, err
 		}
 		txcount := len(data.(*json.GetBlockTemplateResult).Transactions)
 		if err := api.checkGBTTime(txcount); err != nil {
+			api.StatsGbtTxEmptyErr()
 			return nil, err
 		}
+		api.StatsGbtTxEmptyAvgTimes()
 		api.StatsGbt(time.Now().UnixMilli()-start, txcount, data.(*json.GetBlockTemplateResult).LongPollID)
 		log.Debug("gbtend", "txcount", txcount, "longpollid",
 			data.(*json.GetBlockTemplateResult).LongPollID, "spent", (time.Now().UnixMilli()-start)/1000)
