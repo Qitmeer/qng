@@ -16,16 +16,16 @@ import (
 )
 
 const (
-	defaultDataDirname   = "relay"
-	defaultPort          = "2001"
-	DefaultIP            = "0.0.0.0"
-	defaultLogDirname    = "logs"
-	defaultLogFilename   = "relaynode.log"
-	defaultRPCKeyFile    = "rpc.key"
-	defaultRPCCertFile   = "rpc.cert"
-	defaultMaxRPCClients = 10
-	defaultRPCListener   = "127.0.0.1:2002"
-	defaultMaxPeers      = 1000
+	defaultDataDirname     = "relay"
+	defaultPort            = "2001"
+	DefaultIP              = "0.0.0.0"
+	defaultLogDirname      = "logs"
+	defaultLogFilename     = "relaynode.log"
+	defaultRPCKeyFile      = "rpc.key"
+	defaultRPCCertFile     = "rpc.cert"
+	defaultMaxRPCClients   = 10
+	defaultRPCListener     = "127.0.0.1:2002"
+	defaultMaxPeers        = 1000
 	defaultAmanaListenAddr = ":2003"
 )
 
@@ -112,6 +112,14 @@ var (
 		Usage:       "Disable file logging.",
 		Value:       false,
 		Destination: &Conf.NoFileLogging,
+	}
+
+	LogRotatorSize = &cli.Int64Flag{
+		Name:        "logrotatorsize",
+		Aliases:     []string{"lrs"},
+		Usage:       "log rotator size.",
+		Value:       10 * 1024,
+		Destination: &Conf.LogRotatorSize,
 	}
 
 	DebugLevel = &cli.StringFlag{
@@ -258,6 +266,7 @@ var (
 		HostDNS,
 		UsePeerStore,
 		NoFileLogging,
+		LogRotatorSize,
 		DebugLevel,
 		DebugPrintOrigins,
 		DisableRPC,
@@ -289,6 +298,7 @@ type Config struct {
 	HostDNS           string
 	UsePeerStore      bool
 	NoFileLogging     bool
+	LogRotatorSize    int64
 	DebugLevel        string
 	DebugPrintOrigins bool
 
@@ -361,7 +371,7 @@ func (c *Config) Load() error {
 	if !c.NoFileLogging {
 		logDir := filepath.Join(c.DataDir, defaultLogDirname, params.ActiveNetParams.Name)
 
-		l.InitLogRotator(filepath.Join(logDir, defaultLogFilename))
+		l.InitLogRotator(filepath.Join(logDir, defaultLogFilename), c.LogRotatorSize)
 	}
 	err = common.ParseAndSetDebugLevels(c.DebugLevel)
 	if err != nil {

@@ -58,14 +58,15 @@ const (
 )
 
 var (
-	defaultHomeDir     = util.AppDataDir("qng", false)
-	defaultConfigFile  = filepath.Join(defaultHomeDir, defaultConfigFilename)
-	defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
-	defaultDbType      = "ffldb"
-	defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
-	defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
-	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
-	defaultDAGType     = "phantom"
+	defaultHomeDir        = util.AppDataDir("qng", false)
+	defaultConfigFile     = filepath.Join(defaultHomeDir, defaultConfigFilename)
+	defaultDataDir        = filepath.Join(defaultHomeDir, defaultDataDirname)
+	defaultDbType         = "ffldb"
+	defaultLogDir         = filepath.Join(defaultHomeDir, defaultLogDirname)
+	defaultLogRotatorSize = int64(1024 * 10)
+	defaultRPCKeyFile     = filepath.Join(defaultHomeDir, "rpc.key")
+	defaultRPCCertFile    = filepath.Join(defaultHomeDir, "rpc.cert")
+	defaultDAGType        = "phantom"
 )
 
 var (
@@ -116,6 +117,12 @@ var (
 			Usage:       "Directory to log output.",
 			Value:       defaultLogDir,
 			Destination: &cfg.LogDir,
+		},
+		&cli.Int64Flag{
+			Name:        "logrotatorsize",
+			Usage:       "Directory to log output.",
+			Value:       defaultLogRotatorSize,
+			Destination: &cfg.LogRotatorSize,
 		},
 		&cli.BoolFlag{
 			Name:        "nofilelogging",
@@ -791,7 +798,7 @@ func LoadConfig(ctx *cli.Context, parsefile bool) (*config.Config, error) {
 
 		// Initialize log rotation.  After log rotation has been initialized, the
 		// logger variables may be used.
-		log.InitLogRotator(filepath.Join(cfg.LogDir, defaultLogFilename))
+		log.InitLogRotator(filepath.Join(cfg.LogDir, defaultLogFilename), cfg.LogRotatorSize)
 	}
 
 	// Parse, validate, and set debug log level(s).

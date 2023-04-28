@@ -10,6 +10,7 @@ type Config struct {
 	ConfigFile         string   `short:"C" long:"configfile" description:"Path to configuration file"`
 	DataDir            string   `short:"b" long:"datadir" description:"Directory to store data"`
 	LogDir             string   `long:"logdir" description:"Directory to log output."`
+	LogRotatorSize     int64    `long:"logrotatorsize" description:"unit KB."`
 	NoFileLogging      bool     `long:"nofilelogging" description:"Disable file logging."`
 	Listener           string   `long:"listen" description:"Add an IP to listen for connections"`
 	DefaultPort        string   `long:"port" description:"Default p2p port."`
