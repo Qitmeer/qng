@@ -61,7 +61,7 @@ type MiningStats struct {
 	TotalGbts                       int64     `json:"total_gbts"`
 	TotalGbtRequests                int64     `json:"total_gbt_requests"`
 	TotalEmptyGbts                  int64     `json:"total_empty_gbts"`
-	TotalEmptyGbtResponse           int64     `json:"total_empty_request_gbts"`
+	TotalEmptyGbtResponse           int64     `json:"total_empty_gbt_response"`
 	TotalSubmits                    int64     `json:"total_submits"`
 	LastestMempoolTxEmptyTimestamp  int64     `json:"-"`
 	MempoolEmptyAvgDuration         float64   `json:"mempool_empty_avg_duration"`
