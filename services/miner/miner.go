@@ -108,106 +108,106 @@ type Miner struct {
 	stats  MiningStats
 }
 
-func (api *Miner) StatsEmptyGbt() {
-	if api.stats.LastestMempoolEmptyTimestamp <= 0 {
-		api.stats.LastestMempoolEmptyTimestamp = time.Now().Unix()
+func (m *Miner) StatsEmptyGbt() {
+	if m.stats.LastestMempoolEmptyTimestamp <= 0 {
+		m.stats.LastestMempoolEmptyTimestamp = time.Now().Unix()
 	}
 }
 
-func (api *Miner) StatsGbtTxEmptyAvgTimes() {
-	if api.stats.LastestMempoolEmptyTimestamp <= 0 || time.Now().Unix() <= api.stats.LastestMempoolEmptyTimestamp {
+func (m *Miner) StatsGbtTxEmptyAvgTimes() {
+	if m.stats.LastestMempoolEmptyTimestamp <= 0 || time.Now().Unix() <= m.stats.LastestMempoolEmptyTimestamp {
 		return
 	}
-	duration := float64(time.Now().Unix() - api.stats.LastestMempoolEmptyTimestamp)
-	if api.stats.MempoolEmptyAvgDuration <= 0 {
-		api.stats.MempoolEmptyAvgDuration = duration
+	duration := float64(time.Now().Unix() - m.stats.LastestMempoolEmptyTimestamp)
+	if m.stats.MempoolEmptyAvgDuration <= 0 {
+		m.stats.MempoolEmptyAvgDuration = duration
 	} else {
-		api.stats.MempoolEmptyAvgDuration = (api.stats.MempoolEmptyAvgDuration + duration) / 2
+		m.stats.MempoolEmptyAvgDuration = (m.stats.MempoolEmptyAvgDuration + duration) / 2
 	}
-	if len(api.stats.Lastest100MempoolEmptyDuration) >= 100 {
-		api.stats.Lastest100MempoolEmptyDuration = api.stats.Lastest100MempoolEmptyDuration[len(api.stats.Lastest100MempoolEmptyDuration)-99:]
+	if len(m.stats.Lastest100MempoolEmptyDuration) >= 100 {
+		m.stats.Lastest100MempoolEmptyDuration = m.stats.Lastest100MempoolEmptyDuration[len(m.stats.Lastest100MempoolEmptyDuration)-99:]
 	}
-	api.stats.Lastest100MempoolEmptyDuration = append(api.stats.Lastest100MempoolEmptyDuration, duration)
+	m.stats.Lastest100MempoolEmptyDuration = append(m.stats.Lastest100MempoolEmptyDuration, duration)
 	sum := float64(0)
-	for _, v := range api.stats.Lastest100MempoolEmptyDuration {
+	for _, v := range m.stats.Lastest100MempoolEmptyDuration {
 		sum += v
 	}
-	api.stats.Lastest100MempoolEmptyAvgDuration = float64(sum) / float64(len(api.stats.Lastest100MempoolEmptyDuration))
+	m.stats.Lastest100MempoolEmptyAvgDuration = float64(sum) / float64(len(m.stats.Lastest100MempoolEmptyDuration))
 }
 
-func (api *Miner) StatsSubmit(currentReqMillSec int64, bh string) {
-	if len(api.stats.Last100Submits) >= 100 {
-		api.stats.Last100Submits = api.stats.Last100Submits[len(api.stats.Last100Submits)-99:]
+func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string) {
+	if len(m.stats.Last100Submits) >= 100 {
+		m.stats.Last100Submits = m.stats.Last100Submits[len(m.stats.Last100Submits)-99:]
 	}
-	api.stats.Last100Submits = append(api.stats.Last100Submits, currentReqMillSec)
+	m.stats.Last100Submits = append(m.stats.Last100Submits, currentReqMillSec)
 	sum := int64(0)
-	for _, v := range api.stats.Last100Submits {
+	for _, v := range m.stats.Last100Submits {
 		sum += v
 	}
-	api.stats.Last100SubmitAvgDuration = float64(sum) / float64(len(api.stats.Last100Submits)) / 1000
-	if api.stats.SubmitAvgDuration > 0 {
-		api.stats.SubmitAvgDuration = (api.stats.SubmitAvgDuration + float64(currentReqMillSec)) / 2 / 1000
+	m.stats.Last100SubmitAvgDuration = float64(sum) / float64(len(m.stats.Last100Submits)) / 1000
+	if m.stats.SubmitAvgDuration > 0 {
+		m.stats.SubmitAvgDuration = (m.stats.SubmitAvgDuration + float64(currentReqMillSec)) / 2 / 1000
 	} else {
-		api.stats.SubmitAvgDuration = float64(currentReqMillSec) / 1000
+		m.stats.SubmitAvgDuration = float64(currentReqMillSec) / 1000
 	}
 
-	if float64(currentReqMillSec)/1000 > api.stats.MaxSubmitDuration {
-		api.stats.MaxSubmitDuration = float64(currentReqMillSec) / 1000
-		api.stats.MaxSubmitDurationBlockHash = bh
+	if float64(currentReqMillSec)/1000 > m.stats.MaxSubmitDuration {
+		m.stats.MaxSubmitDuration = float64(currentReqMillSec) / 1000
+		m.stats.MaxSubmitDurationBlockHash = bh
 	}
-	api.stats.TotalSubmits++
+	m.stats.TotalSubmits++
 }
 
-func (api *Miner) StatsGbtRequest(currentReqMillSec int64, txcount int, longpollid string) {
-	if len(api.stats.Lastest100GbtRequests) >= 100 {
-		api.stats.Lastest100GbtRequests = api.stats.Lastest100GbtRequests[len(api.stats.Lastest100GbtRequests)-99:]
+func (m *Miner) StatsGbtRequest(currentReqMillSec int64, txcount int, longpollid string) {
+	if len(m.stats.Lastest100GbtRequests) >= 100 {
+		m.stats.Lastest100GbtRequests = m.stats.Lastest100GbtRequests[len(m.stats.Lastest100GbtRequests)-99:]
 	}
-	api.stats.Lastest100GbtRequests = append(api.stats.Lastest100GbtRequests, currentReqMillSec)
+	m.stats.Lastest100GbtRequests = append(m.stats.Lastest100GbtRequests, currentReqMillSec)
 	sum := int64(0)
-	for _, v := range api.stats.Lastest100GbtRequests {
+	for _, v := range m.stats.Lastest100GbtRequests {
 		sum += v
 	}
-	api.stats.LastestGbtRequest = time.Now()
-	api.stats.Lastest100GbtRequestAvgDuration = float64(sum) / float64(len(api.stats.Lastest100GbtRequests)) / 1000
-	if api.stats.GbtRequestAvgDuration > 0 {
-		api.stats.GbtRequestAvgDuration = (api.stats.GbtRequestAvgDuration + float64(currentReqMillSec)) / 2 / 1000
+	m.stats.LastestGbtRequest = time.Now()
+	m.stats.Lastest100GbtRequestAvgDuration = float64(sum) / float64(len(m.stats.Lastest100GbtRequests)) / 1000
+	if m.stats.GbtRequestAvgDuration > 0 {
+		m.stats.GbtRequestAvgDuration = (m.stats.GbtRequestAvgDuration + float64(currentReqMillSec)) / 2 / 1000
 	} else {
-		api.stats.GbtRequestAvgDuration = float64(currentReqMillSec) / 1000
+		m.stats.GbtRequestAvgDuration = float64(currentReqMillSec) / 1000
 	}
-	if float64(currentReqMillSec)/1000 > api.stats.MaxGbtRequestDuration {
-		api.stats.MaxGbtRequestDuration = float64(currentReqMillSec) / 1000
-		api.stats.MaxGbtRequestTimeLongpollid = longpollid
+	if float64(currentReqMillSec)/1000 > m.stats.MaxGbtRequestDuration {
+		m.stats.MaxGbtRequestDuration = float64(currentReqMillSec) / 1000
+		m.stats.MaxGbtRequestTimeLongpollid = longpollid
 	}
 	if txcount < 1 {
-		api.stats.TotalEmptyGbtResponse++
+		m.stats.TotalEmptyGbtResponse++
 	}
 }
 
-func (api *Miner) StatsGbt(currentReqMillSec int64, txcount int) {
-	if len(api.stats.Lastest100Gbts) >= 100 {
-		api.stats.Lastest100Gbts = api.stats.Lastest100Gbts[len(api.stats.Lastest100Gbts)-99:]
+func (m *Miner) StatsGbt(currentReqMillSec int64, txcount int) {
+	if len(m.stats.Lastest100Gbts) >= 100 {
+		m.stats.Lastest100Gbts = m.stats.Lastest100Gbts[len(m.stats.Lastest100Gbts)-99:]
 	}
-	api.stats.Lastest100Gbts = append(api.stats.Lastest100Gbts, currentReqMillSec)
+	m.stats.Lastest100Gbts = append(m.stats.Lastest100Gbts, currentReqMillSec)
 	sum := int64(0)
-	for _, v := range api.stats.Lastest100Gbts {
+	for _, v := range m.stats.Lastest100Gbts {
 		sum += v
 	}
-	api.stats.LastestGbt = time.Now()
-	api.stats.Lastest100GbtAvgDuration = float64(sum) / float64(len(api.stats.Lastest100Gbts)) / 1000
-	if api.stats.GbtAvgDuration > 0 {
-		api.stats.GbtAvgDuration = (api.stats.GbtAvgDuration + float64(currentReqMillSec)) / 2 / 1000
+	m.stats.LastestGbt = time.Now()
+	m.stats.Lastest100GbtAvgDuration = float64(sum) / float64(len(m.stats.Lastest100Gbts)) / 1000
+	if m.stats.GbtAvgDuration > 0 {
+		m.stats.GbtAvgDuration = (m.stats.GbtAvgDuration + float64(currentReqMillSec)) / 2 / 1000
 	} else {
-		api.stats.GbtAvgDuration = float64(currentReqMillSec) / 1000
+		m.stats.GbtAvgDuration = float64(currentReqMillSec) / 1000
 	}
-	if float64(currentReqMillSec)/1000 > api.stats.MaxGbtDuration {
-		api.stats.MaxGbtDuration = float64(currentReqMillSec) / 1000
+	if float64(currentReqMillSec)/1000 > m.stats.MaxGbtDuration {
+		m.stats.MaxGbtDuration = float64(currentReqMillSec) / 1000
 	}
 	if txcount < 1 {
-		api.StatsEmptyGbt()
-		api.stats.TotalEmptyGbts++
+		m.StatsEmptyGbt()
+		m.stats.TotalEmptyGbts++
 	} else {
-		api.StatsGbtTxEmptyAvgTimes()
-		api.stats.LastestMempoolEmptyTimestamp = 0
+		m.StatsGbtTxEmptyAvgTimes()
+		m.stats.LastestMempoolEmptyTimestamp = 0
 	}
 }
 
