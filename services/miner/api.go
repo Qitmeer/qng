@@ -64,11 +64,7 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 		}
 		txcount := len(data.(*json.GetBlockTemplateResult).Transactions)
 		if err := api.checkGBTTime(txcount); err != nil {
-			api.miner.StatsEmptyGbt()
 			return nil, err
-		}
-		if txcount > 0 {
-			api.miner.StatsGbtTxEmptyAvgTimes()
 		}
 		api.miner.stats.LastestMempoolTxEmptyDuration = 0
 		api.miner.StatsGbtRequest(time.Now().UnixMilli()-start, txcount, data.(*json.GetBlockTemplateResult).LongPollID)

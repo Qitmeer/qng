@@ -192,7 +192,11 @@ func (api *Miner) StatsGbt(currentReqMillSec int64, txcount int) {
 		api.stats.MaxGbtDuration = float64(currentReqMillSec) / 1000
 	}
 	if txcount < 1 {
+		api.StatsEmptyGbt()
 		api.stats.TotalEmptyGbts++
+	} else {
+		api.StatsGbtTxEmptyAvgTimes()
+		api.stats.LastestMempoolTxEmptyDuration = 0
 	}
 }
 
