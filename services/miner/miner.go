@@ -74,9 +74,7 @@ type MiningStats struct {
 
 func (ms *MiningStats) MarshalJSON() ([]byte, error) {
 	tFormat := "2006-01-02 15:04:05"
-	// 定义一个该结构体的别名
 	type MiningStatsOutput MiningStats
-	// 定义一个新的结构体
 	tmpMiningStats := struct {
 		MiningStatsOutput
 		LastestGbt                        string `json:"lastest_gbt"`
