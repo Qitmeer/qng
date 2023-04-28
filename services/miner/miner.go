@@ -41,31 +41,33 @@ const (
 
 // mining stats
 type MiningStats struct {
-	LastestGbt                      time.Time `json:"lastest_gbt"`
-	LastestGbtRequest               time.Time `json:"lastest_gbt_request"`
-	LastestSubmit                   time.Time `json:"lastest_submit"`
-	Lastest100GbtRequests           []int64   `json:"-"`
-	Lastest100Gbts                  []int64   `json:"-"`
-	Lastest100GbtAvgDuration        float64   `json:"lastest_100_gbt_avg_duration"`
-	Lastest100GbtRequestAvgDuration float64   `json:"lastest_100_gbt_request_avg_duration"`
-	Last100Submits                  []int64   `json:"-"`
-	Last100SubmitAvgDuration        float64   `json:"last_100_submit_avg_duration"`
-	SubmitAvgDuration               float64   `json:"submit_avg_duration"`
-	GbtAvgDuration                  float64   `json:"gbt_avg_duration"`
-	GbtRequestAvgDuration           float64   `json:"gbt_request_avg_duration"`
-	MaxGbtDuration                  float64   `json:"max_gbt_duration"`
-	MaxGbtRequestDuration           float64   `json:"max_gbt_request_duration"`
-	MaxGbtRequestTimeLongpollid     string    `json:"max_gbt_time_longpollid"`
-	MaxSubmitDuration               float64   `json:"max_submit_duration"`
-	MaxSubmitDurationBlockHash      string    `json:"max_submit_duration_block_hash"`
-	TotalGbts                       int64     `json:"total_gbts"`
-	TotalGbtRequests                int64     `json:"total_gbt_requests"`
-	TotalEmptyGbts                  int64     `json:"total_empty_gbts"`
-	TotalEmptyGbtResponse           int64     `json:"total_empty_gbt_response"`
-	TotalSubmits                    int64     `json:"total_submits"`
-	LastestMempoolTxEmptyTimestamp  int64     `json:"-"`
-	MempoolEmptyAvgDuration         float64   `json:"mempool_empty_avg_duration"`
-	MempoolEmptyWarns               float64   `json:"mempool_empty_warns"`
+	LastestGbt                        time.Time `json:"lastest_gbt"`
+	LastestGbtRequest                 time.Time `json:"lastest_gbt_request"`
+	LastestSubmit                     time.Time `json:"lastest_submit"`
+	Lastest100GbtRequests             []int64   `json:"-"`
+	Lastest100Gbts                    []int64   `json:"-"`
+	Lastest100GbtAvgDuration          float64   `json:"lastest_100_gbt_avg_duration"`
+	Lastest100GbtRequestAvgDuration   float64   `json:"lastest_100_gbt_request_avg_duration"`
+	Last100Submits                    []int64   `json:"-"`
+	Last100SubmitAvgDuration          float64   `json:"last_100_submit_avg_duration"`
+	SubmitAvgDuration                 float64   `json:"submit_avg_duration"`
+	GbtAvgDuration                    float64   `json:"gbt_avg_duration"`
+	GbtRequestAvgDuration             float64   `json:"gbt_request_avg_duration"`
+	MaxGbtDuration                    float64   `json:"max_gbt_duration"`
+	MaxGbtRequestDuration             float64   `json:"max_gbt_request_duration"`
+	MaxGbtRequestTimeLongpollid       string    `json:"max_gbt_time_longpollid"`
+	MaxSubmitDuration                 float64   `json:"max_submit_duration"`
+	MaxSubmitDurationBlockHash        string    `json:"max_submit_duration_block_hash"`
+	TotalGbts                         int64     `json:"total_gbts"`
+	TotalGbtRequests                  int64     `json:"total_gbt_requests"`
+	TotalEmptyGbts                    int64     `json:"total_empty_gbts"`
+	TotalEmptyGbtResponse             int64     `json:"total_empty_gbt_response"`
+	TotalSubmits                      int64     `json:"total_submits"`
+	LastestMempoolEmptyTimestamp      int64     `json:"lastest_mempool_empty_timestamp"`
+	MempoolEmptyAvgDuration           float64   `json:"mempool_empty_avg_duration"`
+	MempoolEmptyWarns                 float64   `json:"mempool_empty_warns"`
+	Lastest100MempoolEmptyDuration    []float64 `json:"-"`
+	Lastest100MempoolEmptyAvgDuration float64   `json:"lastest_100_mempool_empty_avg_duration"`
 }
 
 // Miner creates blocks and searches for proof-of-work values.
@@ -107,20 +109,30 @@ type Miner struct {
 }
 
 func (api *Miner) StatsEmptyGbt() {
-	if api.stats.LastestMempoolTxEmptyTimestamp <= 0 {
-		api.stats.LastestMempoolTxEmptyTimestamp = time.Now().Unix()
+	if api.stats.LastestMempoolEmptyTimestamp <= 0 {
+		api.stats.LastestMempoolEmptyTimestamp = time.Now().Unix()
 	}
 }
 
 func (api *Miner) StatsGbtTxEmptyAvgTimes() {
-	if api.stats.LastestMempoolTxEmptyTimestamp <= 0 || time.Now().Unix() <= api.stats.LastestMempoolTxEmptyTimestamp {
+	if api.stats.LastestMempoolEmptyTimestamp <= 0 || time.Now().Unix() <= api.stats.LastestMempoolEmptyTimestamp {
 		return
 	}
+	duration := float64(time.Now().Unix() - api.stats.LastestMempoolEmptyTimestamp)
 	if api.stats.MempoolEmptyAvgDuration <= 0 {
-		api.stats.MempoolEmptyAvgDuration = float64(time.Now().Unix() - api.stats.LastestMempoolTxEmptyTimestamp)
+		api.stats.MempoolEmptyAvgDuration = duration
 	} else {
-		api.stats.MempoolEmptyAvgDuration = (api.stats.MempoolEmptyAvgDuration + float64(time.Now().Unix()-api.stats.LastestMempoolTxEmptyTimestamp)) / 2
+		api.stats.MempoolEmptyAvgDuration = (api.stats.MempoolEmptyAvgDuration + duration) / 2
 	}
+	if len(api.stats.Lastest100MempoolEmptyDuration) >= 100 {
+		api.stats.Lastest100MempoolEmptyDuration = api.stats.Lastest100MempoolEmptyDuration[len(api.stats.Lastest100MempoolEmptyDuration)-99:]
+	}
+	api.stats.Lastest100MempoolEmptyDuration = append(api.stats.Lastest100MempoolEmptyDuration, duration)
+	sum := float64(0)
+	for _, v := range api.stats.Lastest100MempoolEmptyDuration {
+		sum += v
+	}
+	api.stats.Lastest100MempoolEmptyAvgDuration = float64(sum) / float64(len(api.stats.Lastest100MempoolEmptyDuration))
 }
 
 func (api *Miner) StatsSubmit(currentReqMillSec int64, bh string) {
@@ -195,7 +207,7 @@ func (api *Miner) StatsGbt(currentReqMillSec int64, txcount int) {
 		api.stats.TotalEmptyGbts++
 	} else {
 		api.StatsGbtTxEmptyAvgTimes()
-		api.stats.LastestMempoolTxEmptyTimestamp = 0
+		api.stats.LastestMempoolEmptyTimestamp = 0
 	}
 }
 

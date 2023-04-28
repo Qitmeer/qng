@@ -67,7 +67,7 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 			api.miner.stats.MempoolEmptyWarns++
 			return nil, err
 		}
-		api.miner.stats.LastestMempoolTxEmptyTimestamp = 0
+		api.miner.stats.LastestMempoolEmptyTimestamp = 0
 		api.miner.StatsGbtRequest(time.Now().UnixMilli()-start, txcount, data.(*json.GetBlockTemplateResult).LongPollID)
 		log.Debug("gbtend", "txcount", txcount, "longpollid",
 			data.(*json.GetBlockTemplateResult).LongPollID, "spent", (time.Now().UnixMilli()-start)/1000)
