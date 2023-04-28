@@ -64,6 +64,7 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 		}
 		txcount := len(data.(*json.GetBlockTemplateResult).Transactions)
 		if err := api.checkGBTTime(txcount); err != nil {
+			api.miner.stats.MempoolEmptyWarns++
 			return nil, err
 		}
 		api.miner.stats.LastestMempoolTxEmptyDuration = 0

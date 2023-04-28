@@ -107,7 +107,6 @@ type Miner struct {
 }
 
 func (api *Miner) StatsEmptyGbt() {
-	api.stats.MempoolEmptyWarns++
 	if api.stats.LastestMempoolTxEmptyDuration <= 0 {
 		api.stats.LastestMempoolTxEmptyDuration = time.Now().Unix()
 	}
