@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -38,23 +39,39 @@ func (m *Miner) APIs() []api.API {
 }
 
 type PublicMinerAPI struct {
-	miner      *Miner
-	lastSubmit time.Time
+	miner *Miner
 }
 
 func NewPublicMinerAPI(m *Miner) *PublicMinerAPI {
-	pmAPI := &PublicMinerAPI{miner: m, lastSubmit: time.Now()}
+	pmAPI := &PublicMinerAPI{miner: m}
 	return pmAPI
 }
 
-//func (api *PublicMinerAPI) GetBlockTemplate(request *mining.TemplateRequest) (interface{}, error){
+// func (api *PublicMinerAPI) GetBlockTemplate(request *mining.TemplateRequest) (interface{}, error){
 func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte) (interface{}, error) {
 	// Set the default mode and override it if supplied.
 	mode := "template"
 	request := json.TemplateRequest{Mode: mode, Capabilities: capabilities, PowType: powType}
+
 	switch mode {
 	case "template":
-		return handleGetBlockTemplateRequest(api, &request)
+		start := time.Now().UnixMilli()
+		log.Debug("gbtstart")
+		api.miner.stats.TotalGbtRequests++
+		data, err := handleGetBlockTemplateRequest(api, &request)
+		if err != nil {
+			return nil, err
+		}
+		txcount := len(data.(*json.GetBlockTemplateResult).Transactions)
+		if err := api.checkGBTTime(txcount); err != nil {
+			api.miner.stats.MempoolEmptyWarns++
+			return nil, err
+		}
+		api.miner.stats.LastestMempoolEmptyTimestamp = 0
+		api.miner.StatsGbtRequest(time.Now().UnixMilli()-start, txcount, data.(*json.GetBlockTemplateResult).LongPollID)
+		log.Debug("gbtend", "txcount", txcount, "longpollid",
+			data.(*json.GetBlockTemplateResult).LongPollID, "spent", (time.Now().UnixMilli()-start)/1000)
+		return data, err
 	case "proposal":
 		//TODO LL, will be added
 		//return handleGetBlockTemplateProposal(s, request)
@@ -62,7 +79,12 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 	return nil, rpc.RpcInvalidError("Invalid mode")
 }
 
-//LL
+// GetMiningStats func (api *PublicMinerAPI) GetMiningStats() (interface{}, error){
+func (api *PrivateMinerAPI) GetMiningStats() (interface{}, error) {
+	return api.miner.stats, nil
+}
+
+// LL
 // handleGetBlockTemplateRequest is a helper for handleGetBlockTemplate which
 // deals with generating and returning block templates to the caller. In addition,
 // it detects the capabilities reported by the caller
@@ -79,14 +101,14 @@ func handleGetBlockTemplateRequest(api *PublicMinerAPI, request *json.TemplateRe
 	return resp.result, resp.err
 }
 
-//LL
-//Attempts to submit new block to network.
-//See https://en.bitcoin.it/wiki/BIP_0022 for full specification
+// LL
+// Attempts to submit new block to network.
+// See https://en.bitcoin.it/wiki/BIP_0022 for full specification
 func (api *PublicMinerAPI) SubmitBlock(hexBlock string) (interface{}, error) {
 	if err := api.checkSubmitLimit(); err != nil {
 		return nil, err
 	}
-	api.lastSubmit = time.Now()
+	api.miner.stats.LastestSubmit = time.Now()
 	// Deserialize the hexBlock.
 	m := api.miner
 
@@ -107,13 +129,20 @@ func (api *PublicMinerAPI) SubmitBlock(hexBlock string) (interface{}, error) {
 	if len(block.Block().Transactions) <= 0 {
 		return nil, fmt.Errorf("block is illegal")
 	}
+
 	height, err := blockchain.ExtractCoinbaseHeight(block.Block().Transactions[0])
 	if err != nil {
 		return nil, err
 	}
 
 	block.SetHeight(uint(height))
-	return m.submitBlock(block)
+	start := time.Now().UnixMilli()
+	log.Debug("submitstart", "blockhash", block.Block().BlockHash(), "txcount", len(block.Block().Transactions))
+	res, err := m.submitBlock(block)
+	api.miner.StatsSubmit(time.Now().UnixMilli()-start, block.Block().BlockHash().String())
+	log.Debug("submitend", "blockhash", block.Block().BlockHash(), "txcount",
+		len(block.Block().Transactions), "res", res, "err", err, "spent", (time.Now().UnixMilli()-start)/1000)
+	return res, err
 }
 
 func (api *PublicMinerAPI) GetMinerInfo() (interface{}, error) {
@@ -159,7 +188,7 @@ func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string, extraNonce *
 	if err := api.checkSubmitLimit(); err != nil {
 		return nil, err
 	}
-	api.lastSubmit = time.Now()
+	api.miner.stats.LastestSubmit = time.Now()
 	// Deserialize the hexBlock.
 	m := api.miner
 
@@ -183,8 +212,17 @@ func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string, extraNonce *
 }
 
 func (api *PublicMinerAPI) checkSubmitLimit() error {
-	if time.Since(api.lastSubmit) < SubmitInterval {
-		return fmt.Errorf("Submission interval Limited:%s < %s\n", time.Since(api.lastSubmit), SubmitInterval)
+	if time.Since(api.miner.stats.LastestSubmit) < SubmitInterval {
+		return fmt.Errorf("Submission interval Limited:%s < %s\n", time.Since(api.miner.stats.LastestSubmit), SubmitInterval)
+	}
+	return nil
+}
+
+func (api *PublicMinerAPI) checkGBTTime(txcount int) error {
+	if txcount < 1 && time.Since(api.miner.stats.LastestGbt) < params.ActiveNetParams.TargetTimePerBlock {
+		log.Debug("[gbttxzreo]Client init download, qitmeer is sync tx...")
+		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
+			"qitmeer is downloading tx...")
 	}
 	return nil
 }

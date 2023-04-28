@@ -361,6 +361,11 @@ function get_block_template(){
   get_result "$data"
 }
 
+function get_mining_stats(){
+  local data='{"jsonrpc":"2.0","method":"miner_getMiningStats","params":[],"id":1}'
+  get_result "$data"
+}
+
 function get_mainchain_height(){
   local data='{"jsonrpc":"2.0","method":"getMainChainHeight","params":[],"id":1}'
   get_result "$data"
@@ -794,6 +799,7 @@ function usage(){
   echo "  getutxo <tx_id> <index> <include_mempool,default=true>"
   echo "miner  :"
   echo "  template"
+  echo "  miningstats"
   echo "  generate <num>"
   echo "  mempool"
   echo "  mempool_count"
@@ -1088,6 +1094,10 @@ elif [ "$1" == "main" ]; then
 elif [ "$1" == "template" ]; then
     shift
     get_block_template $@ | jq .
+
+elif [ "$1" == "miningstats" ]; then
+    shift
+    get_mining_stats $@ | jq .
 
 elif [ "$1" == "mainHeight" ]; then
     shift

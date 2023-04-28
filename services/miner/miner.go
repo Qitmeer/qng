@@ -39,6 +39,37 @@ const (
 	NotifyURLTimeout = 1 * time.Second
 )
 
+// mining stats
+type MiningStats struct {
+	LastestGbt                        time.Time `json:"lastest_gbt"`
+	LastestGbtRequest                 time.Time `json:"lastest_gbt_request"`
+	LastestSubmit                     time.Time `json:"lastest_submit"`
+	Lastest100GbtRequests             []int64   `json:"-"`
+	Lastest100Gbts                    []int64   `json:"-"`
+	Lastest100GbtAvgDuration          float64   `json:"lastest_100_gbt_avg_duration"`
+	Lastest100GbtRequestAvgDuration   float64   `json:"lastest_100_gbt_request_avg_duration"`
+	Last100Submits                    []int64   `json:"-"`
+	Last100SubmitAvgDuration          float64   `json:"last_100_submit_avg_duration"`
+	SubmitAvgDuration                 float64   `json:"submit_avg_duration"`
+	GbtAvgDuration                    float64   `json:"gbt_avg_duration"`
+	GbtRequestAvgDuration             float64   `json:"gbt_request_avg_duration"`
+	MaxGbtDuration                    float64   `json:"max_gbt_duration"`
+	MaxGbtRequestDuration             float64   `json:"max_gbt_request_duration"`
+	MaxGbtRequestTimeLongpollid       string    `json:"max_gbt_time_longpollid"`
+	MaxSubmitDuration                 float64   `json:"max_submit_duration"`
+	MaxSubmitDurationBlockHash        string    `json:"max_submit_duration_block_hash"`
+	TotalGbts                         int64     `json:"total_gbts"`
+	TotalGbtRequests                  int64     `json:"total_gbt_requests"`
+	TotalEmptyGbts                    int64     `json:"total_empty_gbts"`
+	TotalEmptyGbtResponse             int64     `json:"total_empty_gbt_response"`
+	TotalSubmits                      int64     `json:"total_submits"`
+	LastestMempoolEmptyTimestamp      int64     `json:"lastest_mempool_empty_timestamp"`
+	MempoolEmptyAvgDuration           float64   `json:"mempool_empty_avg_duration"`
+	MempoolEmptyWarns                 float64   `json:"mempool_empty_warns"`
+	Lastest100MempoolEmptyDuration    []float64 `json:"-"`
+	Lastest100MempoolEmptyAvgDuration float64   `json:"lastest_100_mempool_empty_avg_duration"`
+}
+
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
 	service.Service
@@ -46,14 +77,14 @@ type Miner struct {
 	wg      sync.WaitGroup
 	quit    chan struct{}
 
-	cfg          *config.Config
-	events       *event.Feed
-	txpool *mempool.TxPool
-	timeSource   model.MedianTimeSource
-	consensus model.Consensus
-	policy       *mining.Policy
-	sigCache     *txscript.SigCache
-	worker       IWorker
+	cfg        *config.Config
+	events     *event.Feed
+	txpool     *mempool.TxPool
+	timeSource model.MedianTimeSource
+	consensus  model.Consensus
+	policy     *mining.Policy
+	sigCache   *txscript.SigCache
+	worker     IWorker
 
 	template        *types.BlockTemplate
 	lastTxUpdate    time.Time
@@ -74,6 +105,110 @@ type Miner struct {
 
 	RpcSer *rpc.RpcServer
 	p2pSer model.P2PService
+	stats  MiningStats
+}
+
+func (m *Miner) StatsEmptyGbt() {
+	if m.stats.LastestMempoolEmptyTimestamp <= 0 {
+		m.stats.LastestMempoolEmptyTimestamp = time.Now().Unix()
+	}
+}
+
+func (m *Miner) StatsGbtTxEmptyAvgTimes() {
+	if m.stats.LastestMempoolEmptyTimestamp <= 0 || time.Now().Unix() <= m.stats.LastestMempoolEmptyTimestamp {
+		return
+	}
+	duration := float64(time.Now().Unix() - m.stats.LastestMempoolEmptyTimestamp)
+	if m.stats.MempoolEmptyAvgDuration <= 0 {
+		m.stats.MempoolEmptyAvgDuration = duration
+	} else {
+		m.stats.MempoolEmptyAvgDuration = (m.stats.MempoolEmptyAvgDuration + duration) / 2
+	}
+	if len(m.stats.Lastest100MempoolEmptyDuration) >= 100 {
+		m.stats.Lastest100MempoolEmptyDuration = m.stats.Lastest100MempoolEmptyDuration[len(m.stats.Lastest100MempoolEmptyDuration)-99:]
+	}
+	m.stats.Lastest100MempoolEmptyDuration = append(m.stats.Lastest100MempoolEmptyDuration, duration)
+	sum := float64(0)
+	for _, v := range m.stats.Lastest100MempoolEmptyDuration {
+		sum += v
+	}
+	m.stats.Lastest100MempoolEmptyAvgDuration = float64(sum) / float64(len(m.stats.Lastest100MempoolEmptyDuration))
+}
+
+func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string) {
+	if len(m.stats.Last100Submits) >= 100 {
+		m.stats.Last100Submits = m.stats.Last100Submits[len(m.stats.Last100Submits)-99:]
+	}
+	m.stats.Last100Submits = append(m.stats.Last100Submits, currentReqMillSec)
+	sum := int64(0)
+	for _, v := range m.stats.Last100Submits {
+		sum += v
+	}
+	m.stats.Last100SubmitAvgDuration = float64(sum) / float64(len(m.stats.Last100Submits)) / 1000
+	if m.stats.SubmitAvgDuration > 0 {
+		m.stats.SubmitAvgDuration = (m.stats.SubmitAvgDuration + float64(currentReqMillSec)) / 2 / 1000
+	} else {
+		m.stats.SubmitAvgDuration = float64(currentReqMillSec) / 1000
+	}
+
+	if float64(currentReqMillSec)/1000 > m.stats.MaxSubmitDuration {
+		m.stats.MaxSubmitDuration = float64(currentReqMillSec) / 1000
+		m.stats.MaxSubmitDurationBlockHash = bh
+	}
+	m.stats.TotalSubmits++
+}
+
+func (m *Miner) StatsGbtRequest(currentReqMillSec int64, txcount int, longpollid string) {
+	if len(m.stats.Lastest100GbtRequests) >= 100 {
+		m.stats.Lastest100GbtRequests = m.stats.Lastest100GbtRequests[len(m.stats.Lastest100GbtRequests)-99:]
+	}
+	m.stats.Lastest100GbtRequests = append(m.stats.Lastest100GbtRequests, currentReqMillSec)
+	sum := int64(0)
+	for _, v := range m.stats.Lastest100GbtRequests {
+		sum += v
+	}
+	m.stats.LastestGbtRequest = time.Now()
+	m.stats.Lastest100GbtRequestAvgDuration = float64(sum) / float64(len(m.stats.Lastest100GbtRequests)) / 1000
+	if m.stats.GbtRequestAvgDuration > 0 {
+		m.stats.GbtRequestAvgDuration = (m.stats.GbtRequestAvgDuration + float64(currentReqMillSec)) / 2 / 1000
+	} else {
+		m.stats.GbtRequestAvgDuration = float64(currentReqMillSec) / 1000
+	}
+	if float64(currentReqMillSec)/1000 > m.stats.MaxGbtRequestDuration {
+		m.stats.MaxGbtRequestDuration = float64(currentReqMillSec) / 1000
+		m.stats.MaxGbtRequestTimeLongpollid = longpollid
+	}
+	if txcount < 1 {
+		m.stats.TotalEmptyGbtResponse++
+	}
+}
+
+func (m *Miner) StatsGbt(currentReqMillSec int64, txcount int) {
+	if len(m.stats.Lastest100Gbts) >= 100 {
+		m.stats.Lastest100Gbts = m.stats.Lastest100Gbts[len(m.stats.Lastest100Gbts)-99:]
+	}
+	m.stats.Lastest100Gbts = append(m.stats.Lastest100Gbts, currentReqMillSec)
+	sum := int64(0)
+	for _, v := range m.stats.Lastest100Gbts {
+		sum += v
+	}
+	m.stats.LastestGbt = time.Now()
+	m.stats.Lastest100GbtAvgDuration = float64(sum) / float64(len(m.stats.Lastest100Gbts)) / 1000
+	if m.stats.GbtAvgDuration > 0 {
+		m.stats.GbtAvgDuration = (m.stats.GbtAvgDuration + float64(currentReqMillSec)) / 2 / 1000
+	} else {
+		m.stats.GbtAvgDuration = float64(currentReqMillSec) / 1000
+	}
+	if float64(currentReqMillSec)/1000 > m.stats.MaxGbtDuration {
+		m.stats.MaxGbtDuration = float64(currentReqMillSec) / 1000
+	}
+	if txcount < 1 {
+		m.StatsEmptyGbt()
+		m.stats.TotalEmptyGbts++
+	} else {
+		m.StatsGbtTxEmptyAvgTimes()
+		m.stats.LastestMempoolEmptyTimestamp = 0
+	}
 }
 
 func (m *Miner) Start() error {
@@ -311,7 +446,9 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 	}
 
 	if reCreate {
-		template, err := mining.NewBlockTemplate(m.policy, params.ActiveNetParams.Params, m.sigCache, m.txpool, m.timeSource,m.consensus, m.coinbaseAddress, nil, m.powType, m.coinbaseFlags)
+		m.stats.TotalGbts++ //gbt generates
+		start := time.Now().UnixMilli()
+		template, err := mining.NewBlockTemplate(m.policy, params.ActiveNetParams.Params, m.sigCache, m.txpool, m.timeSource, m.consensus, m.coinbaseAddress, nil, m.powType, m.coinbaseFlags)
 		if err != nil {
 			e := fmt.Errorf("Failed to create new block template: %s", err.Error())
 			log.Warn(e.Error())
@@ -326,7 +463,7 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 		// median timestamp of the last several blocks per the chain
 		// consensus rules.
 		m.minTimestamp = mining.MinimumMedianTime(m.consensus.BlockChain().(*blockchain.BlockChain))
-
+		m.StatsGbt(time.Now().UnixMilli()-start, len(template.Block.Transactions)-1) //exclude coinbase
 		m.notifyBlockTemplate()
 		return nil
 	} else {
@@ -399,7 +536,7 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 
 	// Process this block using the same rules as blocks coming from other
 	// nodes. This will in turn relay it to the network like normal.
-	IsOrphan,IsTipsExpired,err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd)
+	IsOrphan, IsTipsExpired, err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd)
 	if err != nil {
 		if IsTipsExpired {
 			go m.BlockChainChange()
@@ -425,7 +562,7 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	if IsOrphan {
 		return nil, fmt.Errorf(fmt.Sprintf("Block submitted via %s is an orphan building "+
 			"on parent %v", m.worker.GetType(), block.Block().Header.ParentRoot))
-	}else{
+	} else {
 		m.txpool.PruneExpiredTx()
 	}
 
@@ -696,20 +833,20 @@ func (m *Miner) BlockChain() *blockchain.BlockChain {
 	return m.consensus.BlockChain().(*blockchain.BlockChain)
 }
 
-func NewMiner(consensus model.Consensus,policy *mining.Policy, txpool *mempool.TxPool,p2pSer model.P2PService) *Miner {
+func NewMiner(consensus model.Consensus, policy *mining.Policy, txpool *mempool.TxPool, p2pSer model.P2PService) *Miner {
 	m := Miner{
 		msgChan:       make(chan interface{}),
 		quit:          make(chan struct{}),
 		cfg:           consensus.Config(),
 		policy:        policy,
 		sigCache:      consensus.SigCache(),
-		txpool:      txpool,
+		txpool:        txpool,
 		timeSource:    consensus.MedianTimeSource(),
 		powType:       pow.MEERXKECCAKV1,
 		events:        consensus.Events(),
 		coinbaseFlags: mining.CoinbaseFlagsStatic,
-		consensus: consensus,
-		p2pSer: p2pSer,
+		consensus:     consensus,
+		p2pSer:        p2pSer,
 	}
 
 	return &m
