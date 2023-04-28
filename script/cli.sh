@@ -362,7 +362,7 @@ function get_block_template(){
 }
 
 function get_mining_stats(){
-  local data='{"jsonrpc":"2.0","method":"getMiningStats","params":[],"id":1}'
+  local data='{"jsonrpc":"2.0","method":"miner_getMiningStats","params":[],"id":1}'
   get_result "$data"
 }
 
