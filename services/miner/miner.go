@@ -61,9 +61,9 @@ type MiningStats struct {
 	TotalGbts                       int64     `json:"total_gbts"`
 	TotalGbtRequests                int64     `json:"total_gbt_requests"`
 	TotalEmptyGbts                  int64     `json:"total_empty_gbts"`
-	TotalEmptyGbtRequests           int64     `json:"total_empty_request_gbts"`
+	TotalEmptyGbtResponse           int64     `json:"total_empty_request_gbts"`
 	TotalSubmits                    int64     `json:"total_submits"`
-	LastestMempoolTxEmptyDuration   int64     `json:"-"`
+	LastestMempoolTxEmptyTimestamp  int64     `json:"-"`
 	MempoolEmptyAvgDuration         float64   `json:"mempool_empty_avg_duration"`
 	MempoolEmptyWarns               float64   `json:"mempool_empty_warns"`
 }
@@ -107,19 +107,19 @@ type Miner struct {
 }
 
 func (api *Miner) StatsEmptyGbt() {
-	if api.stats.LastestMempoolTxEmptyDuration <= 0 {
-		api.stats.LastestMempoolTxEmptyDuration = time.Now().Unix()
+	if api.stats.LastestMempoolTxEmptyTimestamp <= 0 {
+		api.stats.LastestMempoolTxEmptyTimestamp = time.Now().Unix()
 	}
 }
 
 func (api *Miner) StatsGbtTxEmptyAvgTimes() {
-	if api.stats.LastestMempoolTxEmptyDuration <= 0 || time.Now().Unix() <= api.stats.LastestMempoolTxEmptyDuration {
+	if api.stats.LastestMempoolTxEmptyTimestamp <= 0 || time.Now().Unix() <= api.stats.LastestMempoolTxEmptyTimestamp {
 		return
 	}
 	if api.stats.MempoolEmptyAvgDuration <= 0 {
-		api.stats.MempoolEmptyAvgDuration = float64(time.Now().Unix() - api.stats.LastestMempoolTxEmptyDuration)
+		api.stats.MempoolEmptyAvgDuration = float64(time.Now().Unix() - api.stats.LastestMempoolTxEmptyTimestamp)
 	} else {
-		api.stats.MempoolEmptyAvgDuration = (api.stats.MempoolEmptyAvgDuration + float64(time.Now().Unix()-api.stats.LastestMempoolTxEmptyDuration)) / 2
+		api.stats.MempoolEmptyAvgDuration = (api.stats.MempoolEmptyAvgDuration + float64(time.Now().Unix()-api.stats.LastestMempoolTxEmptyTimestamp)) / 2
 	}
 }
 
@@ -167,7 +167,7 @@ func (api *Miner) StatsGbtRequest(currentReqMillSec int64, txcount int, longpoll
 		api.stats.MaxGbtRequestTimeLongpollid = longpollid
 	}
 	if txcount < 1 {
-		api.stats.TotalEmptyGbtRequests++
+		api.stats.TotalEmptyGbtResponse++
 	}
 }
 
@@ -195,7 +195,7 @@ func (api *Miner) StatsGbt(currentReqMillSec int64, txcount int) {
 		api.stats.TotalEmptyGbts++
 	} else {
 		api.StatsGbtTxEmptyAvgTimes()
-		api.stats.LastestMempoolTxEmptyDuration = 0
+		api.stats.LastestMempoolTxEmptyTimestamp = 0
 	}
 }
 
