@@ -63,11 +63,61 @@ type MiningStats struct {
 	TotalEmptyGbts                    int64     `json:"total_empty_gbts"`
 	TotalEmptyGbtResponse             int64     `json:"total_empty_gbt_response"`
 	TotalSubmits                      int64     `json:"total_submits"`
-	LastestMempoolEmptyTimestamp      int64     `json:"lastest_mempool_empty_timestamp"`
+	TotalTxEmptySubmits               int64     `json:"total_tx_empty_submits"`
+	LastestMempoolEmptyTimestamp      int64     `json:"-"`
 	MempoolEmptyAvgDuration           float64   `json:"mempool_empty_avg_duration"`
-	MempoolEmptyWarns                 float64   `json:"mempool_empty_warns"`
-	Lastest100MempoolEmptyDuration    []float64 `json:"-"`
+	MempoolEmptyMaxDuration           float64   `json:"mempool_empty_max_duration"`
+	MempoolEmptyWarns                 int64     `json:"mempool_empty_warns"`
+	Lastest100MempoolEmptyDuration    []float64 `json:"lastest_100_mempool_empty_duration"`
 	Lastest100MempoolEmptyAvgDuration float64   `json:"lastest_100_mempool_empty_avg_duration"`
+}
+
+func (ms *MiningStats) MarshalJSON() ([]byte, error) {
+	tFormat := "2006-01-02 15:04:05"
+	// 定义一个该结构体的别名
+	type MiningStatsOutput MiningStats
+	// 定义一个新的结构体
+	tmpMiningStats := struct {
+		MiningStatsOutput
+		LastestGbt                        string `json:"lastest_gbt"`
+		LastestGbtRequest                 string `json:"lastest_gbt_request"`
+		LastestSubmit                     string `json:"lastest_submit"`
+		Lastest1MempoolEmptyAvgDuration   string `json:"lastest_1_mempool_empty_avg_duration"`
+		Lastest100GbtAvgDuration          string `json:"lastest_100_gbt_avg_duration"`
+		Lastest100GbtRequestAvgDuration   string `json:"lastest_100_gbt_request_avg_duration"`
+		Last100SubmitAvgDuration          string `json:"last_100_submit_avg_duration"`
+		SubmitAvgDuration                 string `json:"submit_avg_duration"`
+		GbtAvgDuration                    string `json:"gbt_avg_duration"`
+		GbtRequestAvgDuration             string `json:"gbt_request_avg_duration"`
+		MaxGbtDuration                    string `json:"max_gbt_duration"`
+		MaxGbtRequestDuration             string `json:"max_gbt_request_duration"`
+		MaxSubmitDuration                 string `json:"max_submit_duration"`
+		MempoolEmptyAvgDuration           string `json:"mempool_empty_avg_duration"`
+		Lastest100MempoolEmptyAvgDuration string `json:"lastest_100_mempool_empty_avg_duration"`
+		MempoolEmptyMaxDuration           string `json:"mempool_empty_max_duration"`
+	}{
+		MiningStatsOutput:                 (MiningStatsOutput)(*ms),
+		LastestGbt:                        ms.LastestGbt.Format(tFormat),
+		LastestGbtRequest:                 ms.LastestGbtRequest.Format(tFormat),
+		LastestSubmit:                     ms.LastestSubmit.Format(tFormat),
+		Lastest100GbtAvgDuration:          fmt.Sprintf("%.3f s", ms.Lastest100GbtAvgDuration),
+		Lastest100GbtRequestAvgDuration:   fmt.Sprintf("%.3f s", ms.Lastest100GbtRequestAvgDuration),
+		Last100SubmitAvgDuration:          fmt.Sprintf("%.3f s", ms.Last100SubmitAvgDuration),
+		SubmitAvgDuration:                 fmt.Sprintf("%.3f s", ms.SubmitAvgDuration),
+		GbtAvgDuration:                    fmt.Sprintf("%.3f s", ms.GbtAvgDuration),
+		GbtRequestAvgDuration:             fmt.Sprintf("%.3f s", ms.GbtRequestAvgDuration),
+		MaxGbtDuration:                    fmt.Sprintf("%.3f s", ms.MaxGbtDuration),
+		MaxGbtRequestDuration:             fmt.Sprintf("%.3f s", ms.MaxGbtRequestDuration),
+		MaxSubmitDuration:                 fmt.Sprintf("%.3f s", ms.MaxSubmitDuration),
+		MempoolEmptyAvgDuration:           fmt.Sprintf("%.3f s", ms.MempoolEmptyAvgDuration),
+		Lastest100MempoolEmptyAvgDuration: fmt.Sprintf("%.3f s", ms.Lastest100MempoolEmptyAvgDuration),
+		MempoolEmptyMaxDuration:           fmt.Sprintf("%.3f s", ms.MempoolEmptyMaxDuration),
+	}
+	if len(ms.Lastest100MempoolEmptyDuration) > 0 {
+		tmpMiningStats.Lastest1MempoolEmptyAvgDuration = fmt.Sprintf("%.3f s",
+			ms.Lastest100MempoolEmptyDuration[len(ms.Lastest100MempoolEmptyDuration)-1 : len(ms.Lastest100MempoolEmptyDuration)][0])
+	}
+	return ejson.Marshal(tmpMiningStats)
 }
 
 // Miner creates blocks and searches for proof-of-work values.
@@ -133,9 +183,13 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 		sum += v
 	}
 	m.stats.Lastest100MempoolEmptyAvgDuration = float64(sum) / float64(len(m.stats.Lastest100MempoolEmptyDuration))
+
+	if duration > m.stats.MempoolEmptyAvgDuration {
+		m.stats.MempoolEmptyMaxDuration = duration
+	}
 }
 
-func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string) {
+func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string, txcount int) {
 	if len(m.stats.Last100Submits) >= 100 {
 		m.stats.Last100Submits = m.stats.Last100Submits[len(m.stats.Last100Submits)-99:]
 	}
@@ -156,6 +210,9 @@ func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string) {
 		m.stats.MaxSubmitDurationBlockHash = bh
 	}
 	m.stats.TotalSubmits++
+	if txcount < 1 {
+		m.stats.TotalTxEmptySubmits++
+	}
 }
 
 func (m *Miner) StatsGbtRequest(currentReqMillSec int64, txcount int, longpollid string) {
