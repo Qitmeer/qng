@@ -51,7 +51,10 @@ type MiningStats struct {
 	Last100Submits                    []int64   `json:"-"`
 	Last100SubmitAvgDuration          float64   `json:"last_100_submit_avg_duration"`
 	SubmitAvgDuration                 float64   `json:"submit_avg_duration"`
+	TotalSubmitDuration               float64   `json:"total_submit_duration"`
+	TotalGbtDuration                  float64   `json:"total_gbt_duration"`
 	GbtAvgDuration                    float64   `json:"gbt_avg_duration"`
+	TotalGbtRequestDuration           float64   `json:"total_gbt_request_duration"`
 	GbtRequestAvgDuration             float64   `json:"gbt_request_avg_duration"`
 	MaxGbtDuration                    float64   `json:"max_gbt_duration"`
 	MaxGbtRequestDuration             float64   `json:"max_gbt_request_duration"`
@@ -65,6 +68,7 @@ type MiningStats struct {
 	TotalSubmits                      int64     `json:"total_submits"`
 	TotalTxEmptySubmits               int64     `json:"total_tx_empty_submits"`
 	LastestMempoolEmptyTimestamp      int64     `json:"-"`
+	TotalMempoolEmptyDuration         float64   `json:"total_mempool_empty_duration"`
 	MempoolEmptyAvgDuration           float64   `json:"mempool_empty_avg_duration"`
 	MempoolEmptyMaxDuration           float64   `json:"mempool_empty_max_duration"`
 	MempoolEmptyWarns                 int64     `json:"mempool_empty_warns"`
@@ -167,11 +171,11 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 		return
 	}
 	duration := float64(time.Now().Unix() - m.stats.LastestMempoolEmptyTimestamp)
-	if m.stats.MempoolEmptyAvgDuration <= 0 {
-		m.stats.MempoolEmptyAvgDuration = duration
-	} else {
-		m.stats.MempoolEmptyAvgDuration = (m.stats.MempoolEmptyAvgDuration + duration) / 2
+	m.stats.TotalMempoolEmptyDuration += duration
+	if m.stats.TotalEmptyGbts > 0 {
+		m.stats.MempoolEmptyAvgDuration = m.stats.TotalMempoolEmptyDuration / float64(m.stats.TotalEmptyGbts)
 	}
+
 	if len(m.stats.Lastest100MempoolEmptyDuration) >= 100 {
 		m.stats.Lastest100MempoolEmptyDuration = m.stats.Lastest100MempoolEmptyDuration[len(m.stats.Lastest100MempoolEmptyDuration)-99:]
 	}
@@ -188,6 +192,7 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 }
 
 func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string, txcount int) {
+	m.stats.TotalSubmits++
 	if len(m.stats.Last100Submits) >= 100 {
 		m.stats.Last100Submits = m.stats.Last100Submits[len(m.stats.Last100Submits)-99:]
 	}
@@ -197,17 +202,15 @@ func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string, txcount int) {
 		sum += v
 	}
 	m.stats.Last100SubmitAvgDuration = float64(sum) / float64(len(m.stats.Last100Submits)) / 1000
-	if m.stats.SubmitAvgDuration > 0 {
-		m.stats.SubmitAvgDuration = (m.stats.SubmitAvgDuration + float64(currentReqMillSec)) / 2 / 1000
-	} else {
-		m.stats.SubmitAvgDuration = float64(currentReqMillSec) / 1000
+	m.stats.TotalSubmitDuration += float64(currentReqMillSec) / 1000
+	if m.stats.TotalSubmits > 0 {
+		m.stats.SubmitAvgDuration = m.stats.TotalSubmitDuration / float64(m.stats.TotalSubmits)
 	}
 
 	if float64(currentReqMillSec)/1000 > m.stats.MaxSubmitDuration {
 		m.stats.MaxSubmitDuration = float64(currentReqMillSec) / 1000
 		m.stats.MaxSubmitDurationBlockHash = bh
 	}
-	m.stats.TotalSubmits++
 	if txcount < 1 {
 		m.stats.TotalTxEmptySubmits++
 	}
@@ -224,10 +227,9 @@ func (m *Miner) StatsGbtRequest(currentReqMillSec int64, txcount int, longpollid
 	}
 	m.stats.LastestGbtRequest = time.Now()
 	m.stats.Lastest100GbtRequestAvgDuration = float64(sum) / float64(len(m.stats.Lastest100GbtRequests)) / 1000
-	if m.stats.GbtRequestAvgDuration > 0 {
-		m.stats.GbtRequestAvgDuration = (m.stats.GbtRequestAvgDuration + float64(currentReqMillSec)) / 2 / 1000
-	} else {
-		m.stats.GbtRequestAvgDuration = float64(currentReqMillSec) / 1000
+	m.stats.TotalGbtRequestDuration += float64(currentReqMillSec) / 1000
+	if m.stats.TotalGbtRequests > 0 {
+		m.stats.GbtRequestAvgDuration = m.stats.TotalGbtRequestDuration / float64(m.stats.TotalGbtRequests)
 	}
 	if float64(currentReqMillSec)/1000 > m.stats.MaxGbtRequestDuration {
 		m.stats.MaxGbtRequestDuration = float64(currentReqMillSec) / 1000
@@ -249,10 +251,10 @@ func (m *Miner) StatsGbt(currentReqMillSec int64, txcount int) {
 	}
 	m.stats.LastestGbt = time.Now()
 	m.stats.Lastest100GbtAvgDuration = float64(sum) / float64(len(m.stats.Lastest100Gbts)) / 1000
-	if m.stats.GbtAvgDuration > 0 {
-		m.stats.GbtAvgDuration = (m.stats.GbtAvgDuration + float64(currentReqMillSec)) / 2 / 1000
-	} else {
-		m.stats.GbtAvgDuration = float64(currentReqMillSec) / 1000
+
+	m.stats.TotalGbtDuration += float64(currentReqMillSec) / 1000
+	if m.stats.TotalGbts > 0 {
+		m.stats.GbtAvgDuration = m.stats.TotalGbtDuration / float64(m.stats.TotalGbts)
 	}
 	if float64(currentReqMillSec)/1000 > m.stats.MaxGbtDuration {
 		m.stats.MaxGbtDuration = float64(currentReqMillSec) / 1000
