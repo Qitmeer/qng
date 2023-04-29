@@ -85,7 +85,7 @@ func (ms *MiningStats) MarshalJSON() ([]byte, error) {
 		LastestGbt                        string `json:"lastest_gbt"`
 		LastestGbtRequest                 string `json:"lastest_gbt_request"`
 		LastestSubmit                     string `json:"lastest_submit"`
-		Lastest1MempoolEmptyAvgDuration   string `json:"lastest_1_mempool_empty_avg_duration"`
+		Lastest1MempoolEmptyDuration      string `json:"lastest_1_mempool_empty_duration"`
 		Lastest100GbtAvgDuration          string `json:"lastest_100_gbt_avg_duration"`
 		Lastest100GbtRequestAvgDuration   string `json:"lastest_100_gbt_request_avg_duration"`
 		Last100SubmitAvgDuration          string `json:"last_100_submit_avg_duration"`
@@ -117,7 +117,7 @@ func (ms *MiningStats) MarshalJSON() ([]byte, error) {
 		MempoolEmptyMaxDuration:           fmt.Sprintf("%.3f s", ms.MempoolEmptyMaxDuration),
 	}
 	if len(ms.Lastest100MempoolEmptyDuration) > 0 {
-		tmpMiningStats.Lastest1MempoolEmptyAvgDuration = fmt.Sprintf("%.3f s",
+		tmpMiningStats.Lastest1MempoolEmptyDuration = fmt.Sprintf("%.3f s",
 			ms.Lastest100MempoolEmptyDuration[len(ms.Lastest100MempoolEmptyDuration)-1 : len(ms.Lastest100MempoolEmptyDuration)][0])
 	}
 	return ejson.Marshal(tmpMiningStats)
