@@ -64,6 +64,7 @@ type MiningStats struct {
 	TotalGbts                         int64     `json:"total_gbts"`
 	TotalGbtRequests                  int64     `json:"total_gbt_requests"`
 	TotalEmptyGbts                    int64     `json:"total_empty_gbts"`
+	TotalEmptyGbtDuarations           int64     `json:"total_empty_gbt_duarations"`
 	TotalEmptyGbtResponse             int64     `json:"total_empty_gbt_response"`
 	TotalSubmits                      int64     `json:"total_submits"`
 	TotalTxEmptySubmits               int64     `json:"total_tx_empty_submits"`
@@ -170,10 +171,11 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 	if m.stats.LastestMempoolEmptyTimestamp <= 0 || time.Now().Unix() <= m.stats.LastestMempoolEmptyTimestamp {
 		return
 	}
+	m.stats.TotalEmptyGbtDuarations++
 	duration := float64(time.Now().Unix() - m.stats.LastestMempoolEmptyTimestamp)
 	m.stats.TotalMempoolEmptyDuration += duration
-	if m.stats.TotalEmptyGbts > 0 {
-		m.stats.MempoolEmptyAvgDuration = m.stats.TotalMempoolEmptyDuration / float64(m.stats.TotalEmptyGbts)
+	if m.stats.TotalEmptyGbtDuarations > 0 {
+		m.stats.MempoolEmptyAvgDuration = m.stats.TotalMempoolEmptyDuration / float64(m.stats.TotalEmptyGbtDuarations)
 	}
 
 	if len(m.stats.Lastest100MempoolEmptyDuration) >= 100 {
@@ -186,7 +188,7 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 	}
 	m.stats.Lastest100MempoolEmptyAvgDuration = float64(sum) / float64(len(m.stats.Lastest100MempoolEmptyDuration))
 
-	if duration > m.stats.MempoolEmptyAvgDuration {
+	if duration > m.stats.MempoolEmptyMaxDuration {
 		m.stats.MempoolEmptyMaxDuration = duration
 	}
 }
