@@ -81,7 +81,8 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 
 // GetMiningStats func (api *PublicMinerAPI) GetMiningStats() (interface{}, error){
 func (api *PrivateMinerAPI) GetMiningStats() (interface{}, error) {
-	return api.miner.stats, nil
+	b, err := api.miner.stats.MarshalJSON()
+	return string(b), err
 }
 
 // LL
@@ -139,7 +140,7 @@ func (api *PublicMinerAPI) SubmitBlock(hexBlock string) (interface{}, error) {
 	start := time.Now().UnixMilli()
 	log.Debug("submitstart", "blockhash", block.Block().BlockHash(), "txcount", len(block.Block().Transactions))
 	res, err := m.submitBlock(block)
-	api.miner.StatsSubmit(time.Now().UnixMilli()-start, block.Block().BlockHash().String())
+	api.miner.StatsSubmit(time.Now().UnixMilli()-start, block.Block().BlockHash().String(), len(block.Block().Transactions)-1)
 	log.Debug("submitend", "blockhash", block.Block().BlockHash(), "txcount",
 		len(block.Block().Transactions), "res", res, "err", err, "spent", (time.Now().UnixMilli()-start)/1000)
 	return res, err

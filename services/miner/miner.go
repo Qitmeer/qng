@@ -51,7 +51,10 @@ type MiningStats struct {
 	Last100Submits                    []int64   `json:"-"`
 	Last100SubmitAvgDuration          float64   `json:"last_100_submit_avg_duration"`
 	SubmitAvgDuration                 float64   `json:"submit_avg_duration"`
+	TotalSubmitDuration               float64   `json:"total_submit_duration"`
+	TotalGbtDuration                  float64   `json:"total_gbt_duration"`
 	GbtAvgDuration                    float64   `json:"gbt_avg_duration"`
+	TotalGbtRequestDuration           float64   `json:"total_gbt_request_duration"`
 	GbtRequestAvgDuration             float64   `json:"gbt_request_avg_duration"`
 	MaxGbtDuration                    float64   `json:"max_gbt_duration"`
 	MaxGbtRequestDuration             float64   `json:"max_gbt_request_duration"`
@@ -61,13 +64,63 @@ type MiningStats struct {
 	TotalGbts                         int64     `json:"total_gbts"`
 	TotalGbtRequests                  int64     `json:"total_gbt_requests"`
 	TotalEmptyGbts                    int64     `json:"total_empty_gbts"`
+	TotalEmptyGbtDuarations           int64     `json:"total_empty_gbt_duarations"`
 	TotalEmptyGbtResponse             int64     `json:"total_empty_gbt_response"`
 	TotalSubmits                      int64     `json:"total_submits"`
-	LastestMempoolEmptyTimestamp      int64     `json:"lastest_mempool_empty_timestamp"`
+	TotalTxEmptySubmits               int64     `json:"total_tx_empty_submits"`
+	LastestMempoolEmptyTimestamp      int64     `json:"-"`
+	TotalMempoolEmptyDuration         float64   `json:"total_mempool_empty_duration"`
 	MempoolEmptyAvgDuration           float64   `json:"mempool_empty_avg_duration"`
-	MempoolEmptyWarns                 float64   `json:"mempool_empty_warns"`
-	Lastest100MempoolEmptyDuration    []float64 `json:"-"`
+	MempoolEmptyMaxDuration           float64   `json:"mempool_empty_max_duration"`
+	MempoolEmptyWarns                 int64     `json:"mempool_empty_warns"`
+	Lastest100MempoolEmptyDuration    []float64 `json:"lastest_100_mempool_empty_duration"`
 	Lastest100MempoolEmptyAvgDuration float64   `json:"lastest_100_mempool_empty_avg_duration"`
+}
+
+func (ms *MiningStats) MarshalJSON() ([]byte, error) {
+	tFormat := "2006-01-02 15:04:05"
+	type MiningStatsOutput MiningStats
+	tmpMiningStats := struct {
+		MiningStatsOutput
+		LastestGbt                        string `json:"lastest_gbt"`
+		LastestGbtRequest                 string `json:"lastest_gbt_request"`
+		LastestSubmit                     string `json:"lastest_submit"`
+		Lastest1MempoolEmptyDuration      string `json:"lastest_1_mempool_empty_duration"`
+		Lastest100GbtAvgDuration          string `json:"lastest_100_gbt_avg_duration"`
+		Lastest100GbtRequestAvgDuration   string `json:"lastest_100_gbt_request_avg_duration"`
+		Last100SubmitAvgDuration          string `json:"last_100_submit_avg_duration"`
+		SubmitAvgDuration                 string `json:"submit_avg_duration"`
+		GbtAvgDuration                    string `json:"gbt_avg_duration"`
+		GbtRequestAvgDuration             string `json:"gbt_request_avg_duration"`
+		MaxGbtDuration                    string `json:"max_gbt_duration"`
+		MaxGbtRequestDuration             string `json:"max_gbt_request_duration"`
+		MaxSubmitDuration                 string `json:"max_submit_duration"`
+		MempoolEmptyAvgDuration           string `json:"mempool_empty_avg_duration"`
+		Lastest100MempoolEmptyAvgDuration string `json:"lastest_100_mempool_empty_avg_duration"`
+		MempoolEmptyMaxDuration           string `json:"mempool_empty_max_duration"`
+	}{
+		MiningStatsOutput:                 (MiningStatsOutput)(*ms),
+		LastestGbt:                        ms.LastestGbt.Format(tFormat),
+		LastestGbtRequest:                 ms.LastestGbtRequest.Format(tFormat),
+		LastestSubmit:                     ms.LastestSubmit.Format(tFormat),
+		Lastest100GbtAvgDuration:          fmt.Sprintf("%.3f s", ms.Lastest100GbtAvgDuration),
+		Lastest100GbtRequestAvgDuration:   fmt.Sprintf("%.3f s", ms.Lastest100GbtRequestAvgDuration),
+		Last100SubmitAvgDuration:          fmt.Sprintf("%.3f s", ms.Last100SubmitAvgDuration),
+		SubmitAvgDuration:                 fmt.Sprintf("%.3f s", ms.SubmitAvgDuration),
+		GbtAvgDuration:                    fmt.Sprintf("%.3f s", ms.GbtAvgDuration),
+		GbtRequestAvgDuration:             fmt.Sprintf("%.3f s", ms.GbtRequestAvgDuration),
+		MaxGbtDuration:                    fmt.Sprintf("%.3f s", ms.MaxGbtDuration),
+		MaxGbtRequestDuration:             fmt.Sprintf("%.3f s", ms.MaxGbtRequestDuration),
+		MaxSubmitDuration:                 fmt.Sprintf("%.3f s", ms.MaxSubmitDuration),
+		MempoolEmptyAvgDuration:           fmt.Sprintf("%.3f s", ms.MempoolEmptyAvgDuration),
+		Lastest100MempoolEmptyAvgDuration: fmt.Sprintf("%.3f s", ms.Lastest100MempoolEmptyAvgDuration),
+		MempoolEmptyMaxDuration:           fmt.Sprintf("%.3f s", ms.MempoolEmptyMaxDuration),
+	}
+	if len(ms.Lastest100MempoolEmptyDuration) > 0 {
+		tmpMiningStats.Lastest1MempoolEmptyDuration = fmt.Sprintf("%.3f s",
+			ms.Lastest100MempoolEmptyDuration[len(ms.Lastest100MempoolEmptyDuration)-1 : len(ms.Lastest100MempoolEmptyDuration)][0])
+	}
+	return ejson.Marshal(tmpMiningStats)
 }
 
 // Miner creates blocks and searches for proof-of-work values.
@@ -118,12 +171,13 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 	if m.stats.LastestMempoolEmptyTimestamp <= 0 || time.Now().Unix() <= m.stats.LastestMempoolEmptyTimestamp {
 		return
 	}
+	m.stats.TotalEmptyGbtDuarations++
 	duration := float64(time.Now().Unix() - m.stats.LastestMempoolEmptyTimestamp)
-	if m.stats.MempoolEmptyAvgDuration <= 0 {
-		m.stats.MempoolEmptyAvgDuration = duration
-	} else {
-		m.stats.MempoolEmptyAvgDuration = (m.stats.MempoolEmptyAvgDuration + duration) / 2
+	m.stats.TotalMempoolEmptyDuration += duration
+	if m.stats.TotalEmptyGbtDuarations > 0 {
+		m.stats.MempoolEmptyAvgDuration = m.stats.TotalMempoolEmptyDuration / float64(m.stats.TotalEmptyGbtDuarations)
 	}
+
 	if len(m.stats.Lastest100MempoolEmptyDuration) >= 100 {
 		m.stats.Lastest100MempoolEmptyDuration = m.stats.Lastest100MempoolEmptyDuration[len(m.stats.Lastest100MempoolEmptyDuration)-99:]
 	}
@@ -133,9 +187,14 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 		sum += v
 	}
 	m.stats.Lastest100MempoolEmptyAvgDuration = float64(sum) / float64(len(m.stats.Lastest100MempoolEmptyDuration))
+
+	if duration > m.stats.MempoolEmptyMaxDuration {
+		m.stats.MempoolEmptyMaxDuration = duration
+	}
 }
 
-func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string) {
+func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string, txcount int) {
+	m.stats.TotalSubmits++
 	if len(m.stats.Last100Submits) >= 100 {
 		m.stats.Last100Submits = m.stats.Last100Submits[len(m.stats.Last100Submits)-99:]
 	}
@@ -145,17 +204,18 @@ func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string) {
 		sum += v
 	}
 	m.stats.Last100SubmitAvgDuration = float64(sum) / float64(len(m.stats.Last100Submits)) / 1000
-	if m.stats.SubmitAvgDuration > 0 {
-		m.stats.SubmitAvgDuration = (m.stats.SubmitAvgDuration + float64(currentReqMillSec)) / 2 / 1000
-	} else {
-		m.stats.SubmitAvgDuration = float64(currentReqMillSec) / 1000
+	m.stats.TotalSubmitDuration += float64(currentReqMillSec) / 1000
+	if m.stats.TotalSubmits > 0 {
+		m.stats.SubmitAvgDuration = m.stats.TotalSubmitDuration / float64(m.stats.TotalSubmits)
 	}
 
 	if float64(currentReqMillSec)/1000 > m.stats.MaxSubmitDuration {
 		m.stats.MaxSubmitDuration = float64(currentReqMillSec) / 1000
 		m.stats.MaxSubmitDurationBlockHash = bh
 	}
-	m.stats.TotalSubmits++
+	if txcount < 1 {
+		m.stats.TotalTxEmptySubmits++
+	}
 }
 
 func (m *Miner) StatsGbtRequest(currentReqMillSec int64, txcount int, longpollid string) {
@@ -169,10 +229,9 @@ func (m *Miner) StatsGbtRequest(currentReqMillSec int64, txcount int, longpollid
 	}
 	m.stats.LastestGbtRequest = time.Now()
 	m.stats.Lastest100GbtRequestAvgDuration = float64(sum) / float64(len(m.stats.Lastest100GbtRequests)) / 1000
-	if m.stats.GbtRequestAvgDuration > 0 {
-		m.stats.GbtRequestAvgDuration = (m.stats.GbtRequestAvgDuration + float64(currentReqMillSec)) / 2 / 1000
-	} else {
-		m.stats.GbtRequestAvgDuration = float64(currentReqMillSec) / 1000
+	m.stats.TotalGbtRequestDuration += float64(currentReqMillSec) / 1000
+	if m.stats.TotalGbtRequests > 0 {
+		m.stats.GbtRequestAvgDuration = m.stats.TotalGbtRequestDuration / float64(m.stats.TotalGbtRequests)
 	}
 	if float64(currentReqMillSec)/1000 > m.stats.MaxGbtRequestDuration {
 		m.stats.MaxGbtRequestDuration = float64(currentReqMillSec) / 1000
@@ -194,10 +253,10 @@ func (m *Miner) StatsGbt(currentReqMillSec int64, txcount int) {
 	}
 	m.stats.LastestGbt = time.Now()
 	m.stats.Lastest100GbtAvgDuration = float64(sum) / float64(len(m.stats.Lastest100Gbts)) / 1000
-	if m.stats.GbtAvgDuration > 0 {
-		m.stats.GbtAvgDuration = (m.stats.GbtAvgDuration + float64(currentReqMillSec)) / 2 / 1000
-	} else {
-		m.stats.GbtAvgDuration = float64(currentReqMillSec) / 1000
+
+	m.stats.TotalGbtDuration += float64(currentReqMillSec) / 1000
+	if m.stats.TotalGbts > 0 {
+		m.stats.GbtAvgDuration = m.stats.TotalGbtDuration / float64(m.stats.TotalGbts)
 	}
 	if float64(currentReqMillSec)/1000 > m.stats.MaxGbtDuration {
 		m.stats.MaxGbtDuration = float64(currentReqMillSec) / 1000
