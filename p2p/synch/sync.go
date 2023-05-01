@@ -331,7 +331,7 @@ func RegisterRPC(rpc peers.P2PRPC, basetopic string, base interface{}, handle rp
 
 	rpc.Host().SetStreamHandler(protocol.ID(topic), func(stream network.Stream) {
 		if !rpc.IsRunning() {
-			log.Error("PeerSync is not running")
+			log.Debug("PeerSync is not running, ignore the handling", "protocol", topic)
 			return
 		}
 		ctx, cancel := context.WithTimeout(rpc.Context(), RespTimeout)
