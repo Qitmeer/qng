@@ -443,8 +443,8 @@ func (b *BlockChain) HasBlockInDB(h *hash.Hash) bool {
 // IsCurrent returns whether or not the chain believes it is current.  Several
 // factors are used to guess, but the key factors that allow the chain to
 // believe it is current are:
-//  - Latest block height is after the latest checkpoint (if enabled)
-//  - Latest block has a timestamp newer than 24 hours ago
+//   - Latest block height is after the latest checkpoint (if enabled)
+//   - Latest block has a timestamp newer than 24 hours ago
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) IsCurrent() bool {
@@ -456,8 +456,8 @@ func (b *BlockChain) IsCurrent() bool {
 // isCurrent returns whether or not the chain believes it is current.  Several
 // factors are used to guess, but the key factors that allow the chain to
 // believe it is current are:
-//  - Latest block height is after the latest checkpoint (if enabled)
-//  - Latest block has a timestamp newer than 24 hours ago
+//   - Latest block height is after the latest checkpoint (if enabled)
+//   - Latest block has a timestamp newer than 24 hours ago
 //
 // This function MUST be called with the chain state lock held (for reads).
 func (b *BlockChain) isCurrent() bool {
@@ -628,11 +628,13 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		oldBlocks = append(oldBlocks, ob.Block.GetHash())
 	}
 
-	b.sendNotification(Reorganization, &ReorganizationNotifyData{
-		OldBlocks: oldBlocks,
-		NewBlock:  newBlock.Hash(),
-		NewOrder:  uint64(ib.GetOrder()),
-	})
+	if len(oldBlocks) > 0 {
+		b.sendNotification(Reorganization, &ReorganizationNotifyData{
+			OldBlocks: oldBlocks,
+			NewBlock:  newBlock.Hash(),
+			NewOrder:  uint64(ib.GetOrder()),
+		})
+	}
 
 	// Why the old order is the order that was removed by the new block, because the new block
 	// must be one of the tip of the dag.This is very important for the following understanding.
