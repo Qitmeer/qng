@@ -314,6 +314,10 @@ func (pb *OldPhantomBlock) toPhantomBlock() *PhantomBlock {
 	}
 }
 
+func (pb *OldPhantomBlock) Bytes() []byte {
+	return nil
+}
+
 type OldBlock struct {
 	id       uint
 	hash     hash.Hash
