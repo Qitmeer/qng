@@ -1,13 +1,14 @@
 package meerdag
 
 import (
+	"bytes"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"io"
 )
 
-//The abstract inferface is used to dag block
+// The abstract inferface is used to dag block
 type IBlockData interface {
 	// Get hash of block
 	GetHash() *hash.Hash
@@ -22,7 +23,7 @@ type IBlockData interface {
 	GetPriority() int
 }
 
-//The interface of block
+// The interface of block
 type IBlock interface {
 	// Return block ID
 	GetID() uint
@@ -84,6 +85,8 @@ type IBlock interface {
 
 	// decode
 	Decode(r io.Reader) error
+
+	Bytes() []byte
 
 	// block data
 	GetData() IBlockData
@@ -494,4 +497,14 @@ func (b *Block) DetachChild(ib IBlock) {
 		return
 	}
 	b.children.Add(ib.GetID())
+}
+
+func (b *Block) Bytes() []byte {
+	var buff bytes.Buffer
+	err := b.Encode(&buff)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return buff.Bytes()
 }
