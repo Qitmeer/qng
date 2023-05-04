@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type ChainVM interface {
@@ -47,4 +48,6 @@ type ChainVM interface {
 
 	GetBlockID(bh *hash.Hash) uint64
 	GetBlockIDByTxHash(txhash *hash.Hash) uint64
+
+	GetCurStateRoot() common.Hash
 }

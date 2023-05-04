@@ -17,6 +17,7 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/ethereum/go-ethereum/common"
 	"time"
 )
 
@@ -349,7 +350,8 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 		if !ib.GetStatus().KnownInvalid() {
 			b.bd.ValidBlock(ib)
 		}
-
+		b.bd.UpdateWeight(ib)
+		b.updateBlockState(ib,block,b.VMService().GetCurStateRoot())
 		// TODO, validating previous block
 		log.Debug("Block connected to the main chain", "hash", ib.GetHash(), "order", ib.GetOrder())
 		return true, nil
@@ -666,10 +668,6 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 	// database and later memory if all database updates are successful.
 	lastState := b.BestSnapshot()
 
-	for e := attachNodes.Front(); e != nil; e = e.Next() {
-		b.bd.UpdateWeight(e.Value.(meerdag.IBlock))
-	}
-
 	// Calculate the number of transactions that would be added by adding
 	// this block.
 	numTxns := uint64(len(block.Block().Transactions))
@@ -712,5 +710,13 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 	b.stateSnapshot = state
 	b.stateLock.Unlock()
 
+
 	return b.bd.Commit()
+}
+
+func (b *BlockChain) updateBlockState(ib meerdag.IBlock,block *types.SerializedBlock,evmRoot common.Hash) {
+	if ib.GetState() == nil {
+		return
+	}
+	ib.GetState().Update(block,b.VMService().GetCurStateRoot())
 }

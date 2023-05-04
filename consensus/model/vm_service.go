@@ -3,6 +3,7 @@ package model
 import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type VMI interface {
@@ -22,4 +23,5 @@ type VMI interface {
 	GetBalance(addr string) (int64, error)
 	SetLogLevel(level string)
 	GetBlockByNumber(num uint64) (interface{}, error)
+	GetCurStateRoot() common.Hash
 }

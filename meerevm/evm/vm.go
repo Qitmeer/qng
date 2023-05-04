@@ -348,6 +348,10 @@ func (vm *VM) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
 	return blockNumber
 }
 
+func (vm *VM) GetCurStateRoot() common.Hash {
+	return vm.chain.Ether().BlockChain().CurrentBlock().Root
+}
+
 func New() *VM {
 	return &VM{}
 }

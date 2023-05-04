@@ -14,6 +14,7 @@ import (
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/vm/consensus"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type Factory interface {
@@ -394,6 +395,14 @@ func (s *Service) GetBlockByNumber(num uint64) (interface{}, error) {
 		return nil, err
 	}
 	return vm.GetBlockByNumber(num)
+}
+
+func (s *Service) GetCurStateRoot() common.Hash {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return common.Hash{}
+	}
+	return vm.GetCurStateRoot()
 }
 
 func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
