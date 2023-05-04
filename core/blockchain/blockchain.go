@@ -732,7 +732,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			b.bd.ValidBlock(nodeBlock)
 		}
 		b.bd.UpdateWeight(ib)
-		b.updateBlockState(ib, block, b.VMService().GetCurStateRoot())
+		b.updateBlockState(ib, block)
 	}
 
 	// Log the point where the chain forked and old and new best chain
