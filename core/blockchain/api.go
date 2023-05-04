@@ -500,7 +500,7 @@ func (api *PublicBlockAPI) GetStateRoot(order int64, verbose *bool) (interface{}
 		num = eblock.Number()
 	}
 	if vb {
-		ret:= qjson.OrderedResult{
+		ret := qjson.OrderedResult{
 			qjson.KV{Key: "Hash", Val: ib.GetHash().String()},
 			qjson.KV{Key: "Order", Val: order},
 			qjson.KV{Key: "Height", Val: ib.GetHeight()},
@@ -509,9 +509,9 @@ func (api *PublicBlockAPI) GetStateRoot(order int64, verbose *bool) (interface{}
 			qjson.KV{Key: "EVMHeight", Val: num},
 		}
 		if ib.GetState() != nil {
-			ret=append(ret,qjson.KV{Key: "StateRoot", Val: ib.GetState().Root().String()})
+			ret = append(ret, qjson.KV{Key: "StateRoot", Val: ib.GetState().Root().String()})
 		}
-		return ret,nil
+		return ret, nil
 	}
 	return sr, nil
 }

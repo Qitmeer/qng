@@ -50,7 +50,7 @@ func (qm *QitmeerFull) APIs() []api.API {
 }
 
 func (qm *QitmeerFull) RegisterP2PService() error {
-	peerServer, err := p2p.NewService(qm.node.Config, qm.node.consensus.Events(), qm.node.Params)
+	peerServer, err := p2p.NewService(qm.node.Config, qm.node.consensus, qm.node.Params)
 	if err != nil {
 		return err
 	}

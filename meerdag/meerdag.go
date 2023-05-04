@@ -352,7 +352,7 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 	}
 	lastMT := bd.instance.GetMainChainTipId()
 	//
-	block := Block{id: bd.blockTotal, hash: *b.GetHash(), layer: 0, status: model.StatusNone, mainParent: MaxId, data: b,state: state.NewBlockState(uint64(bd.blockTotal))}
+	block := Block{id: bd.blockTotal, hash: *b.GetHash(), layer: 0, status: model.StatusNone, mainParent: MaxId, data: b, state: state.NewBlockState(uint64(bd.blockTotal))}
 	if bd.blocks == nil {
 		bd.blocks = map[uint]IBlock{}
 	}

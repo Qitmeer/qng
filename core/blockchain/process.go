@@ -301,8 +301,8 @@ func (b *BlockChain) FastAcceptBlock(block *types.SerializedBlock, flags Behavio
 // main chain).
 //
 // The flags modify the behavior of this function as follows:
-//  - BFFastAdd: Avoids several expensive transaction validation operations.
-//    This is useful when using checkpoints.
+//   - BFFastAdd: Avoids several expensive transaction validation operations.
+//     This is useful when using checkpoints.
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedBlock, newOrders *list.List, oldOrders *list.List, connectedBlocks *list.List) (bool, error) {
@@ -351,7 +351,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 			b.bd.ValidBlock(ib)
 		}
 		b.bd.UpdateWeight(ib)
-		b.updateBlockState(ib,block,b.VMService().GetCurStateRoot())
+		b.updateBlockState(ib, block, b.VMService().GetCurStateRoot())
 		// TODO, validating previous block
 		log.Debug("Block connected to the main chain", "hash", ib.GetHash(), "order", ib.GetOrder())
 		return true, nil
@@ -710,13 +710,12 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 	b.stateSnapshot = state
 	b.stateLock.Unlock()
 
-
 	return b.bd.Commit()
 }
 
-func (b *BlockChain) updateBlockState(ib meerdag.IBlock,block *types.SerializedBlock,evmRoot common.Hash) {
+func (b *BlockChain) updateBlockState(ib meerdag.IBlock, block *types.SerializedBlock, evmRoot common.Hash) {
 	if ib.GetState() == nil {
 		return
 	}
-	ib.GetState().Update(block,b.VMService().GetCurStateRoot())
+	ib.GetState().Update(block, b.VMService().GetCurStateRoot())
 }

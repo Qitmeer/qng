@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package qitmeer.p2p.v1;
+
+import "message.proto";
+
+message StateRootReq {
+  Hash block =1;
+}
+
+message StateRootRsp {
+  Hash root =1;
+  bool has =2;
+}
+

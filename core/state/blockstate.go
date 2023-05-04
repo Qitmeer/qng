@@ -12,13 +12,13 @@ import (
 const MaxBlockOrder = uint64(^uint32(0))
 
 type BlockState struct {
-	id    uint64
-	order uint64
-	weight   uint64
-	status   model.BlockStatus
+	id           uint64
+	order        uint64
+	weight       uint64
+	status       model.BlockStatus
 	duplicateTxs []int
-	evmRoot common.Hash
-	root hash.Hash
+	evmRoot      common.Hash
+	root         hash.Hash
 }
 
 func (b *BlockState) SetWeight(weight uint64) {
@@ -66,42 +66,42 @@ func (b *BlockState) Root() *hash.Hash {
 }
 
 func (b *BlockState) Reset() {
-	b.root=hash.ZeroHash
+	b.root = hash.ZeroHash
 }
 
-func (b *BlockState) Update(block *types.SerializedBlock,evmRoot common.Hash) {
+func (b *BlockState) Update(block *types.SerializedBlock, evmRoot common.Hash) {
 	defer func() {
-		log.Trace("Update block state","id",b.id,"order",b.order,"root",b.root.String())
+		log.Trace("Update block state", "id", b.id, "order", b.order, "root", b.root.String())
 	}()
-	b.evmRoot=evmRoot
-	b.root=hash.ZeroHash
+	b.evmRoot = evmRoot
+	b.root = hash.ZeroHash
 	if b.status.KnownInvalid() ||
 		!b.IsOrdered() {
 		return
 	}
-	b.duplicateTxs=[]int{}
-	txs:=[]*types.Tx{}
-	txRoot:=block.Block().Header.TxRoot
-	for _,tx:=range block.Transactions() {
-		if tx.IsDuplicate{
-			b.duplicateTxs=append(b.duplicateTxs,tx.Index())
-		}else{
-			txs=append(txs,tx)
+	b.duplicateTxs = []int{}
+	txs := []*types.Tx{}
+	txRoot := block.Block().Header.TxRoot
+	for _, tx := range block.Transactions() {
+		if tx.IsDuplicate {
+			b.duplicateTxs = append(b.duplicateTxs, tx.Index())
+		} else {
+			txs = append(txs, tx)
 		}
 	}
 	if len(b.duplicateTxs) > 0 {
 		merkles := merkle.BuildMerkleTreeStore(txs, false)
-		txRoot= *merkles[len(merkles)-1]
+		txRoot = *merkles[len(merkles)-1]
 	}
 	//
-	data:=serialization.SerializeUint64(b.order)
-	data=append(data,serialization.SerializeUint64(b.weight)...)
-	data=append(data,byte(b.status))
-	data=append(data,txRoot.Bytes()...)
-	data=append(data,b.evmRoot.Bytes()...)
-	b.root=hash.DoubleHashH(data)
+	data := serialization.SerializeUint64(b.order)
+	data = append(data, serialization.SerializeUint64(b.weight)...)
+	data = append(data, byte(b.status))
+	data = append(data, txRoot.Bytes()...)
+	data = append(data, b.evmRoot.Bytes()...)
+	b.root = hash.DoubleHashH(data)
 }
 
 func NewBlockState(id uint64) *BlockState {
-	return &BlockState{id: id,status: model.StatusNone,root: hash.ZeroHash,order: MaxBlockOrder}
+	return &BlockState{id: id, status: model.StatusNone, root: hash.ZeroHash, order: MaxBlockOrder}
 }

@@ -124,7 +124,7 @@ type Block struct {
 	height     uint
 	status     model.BlockStatus
 
-	data IBlockData
+	data  IBlockData
 	state *state.BlockState
 }
 
