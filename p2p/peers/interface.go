@@ -39,6 +39,7 @@ type P2P interface {
 	IsCurrent() bool
 	Peers() *Status
 	IsRunning() bool
+	Consensus() model.Consensus
 }
 
 type P2PRPC interface {

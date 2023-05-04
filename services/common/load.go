@@ -568,6 +568,12 @@ var (
 			Usage:       "Enable Amana",
 			Destination: &cfg.Amana,
 		},
+		&cli.BoolFlag{
+			Name:        "consistency",
+			Usage:       "Detect data consistency through P2P",
+			Destination: &cfg.Consistency,
+			Value:       true,
+		},
 	}
 )
 

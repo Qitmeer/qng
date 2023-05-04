@@ -790,13 +790,13 @@ func (ph *Phantom) UpdateWeight(ib IBlock) {
 	if ib.GetID() != GenesisId {
 		pb := ib.(*PhantomBlock)
 		tp := ph.getBlock(pb.GetMainParent())
-		pb.weight = tp.GetWeight()
+		pb.SetWeight(tp.GetWeight())
 
-		pb.weight += uint64(ph.bd.calcWeight(pb, ph.bd.getBlueInfo(pb)))
+		pb.SetWeight(pb.GetWeight() + uint64(ph.bd.calcWeight(pb, ph.bd.getBlueInfo(pb))))
 		if pb.GetBlueDiffAnticoneSize() > 0 {
 			for k := range pb.blueDiffAnticone.GetMap() {
 				bdpb := ph.getBlock(k)
-				pb.weight += uint64(ph.bd.calcWeight(bdpb, ph.bd.getBlueInfo(bdpb)))
+				pb.SetWeight(pb.GetWeight() + uint64(ph.bd.calcWeight(bdpb, ph.bd.getBlueInfo(bdpb))))
 			}
 		}
 		ph.bd.commitBlock.AddPair(ib.GetID(), ib)

@@ -300,8 +300,8 @@ func (b *BlockChain) FastAcceptBlock(block *types.SerializedBlock, flags Behavio
 // main chain).
 //
 // The flags modify the behavior of this function as follows:
-//  - BFFastAdd: Avoids several expensive transaction validation operations.
-//    This is useful when using checkpoints.
+//   - BFFastAdd: Avoids several expensive transaction validation operations.
+//     This is useful when using checkpoints.
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedBlock, newOrders *list.List, oldOrders *list.List, connectedBlocks *list.List) (bool, error) {
@@ -349,7 +349,8 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 		if !ib.GetStatus().KnownInvalid() {
 			b.bd.ValidBlock(ib)
 		}
-
+		b.bd.UpdateWeight(ib)
+		b.updateBlockState(ib, block)
 		// TODO, validating previous block
 		log.Debug("Block connected to the main chain", "hash", ib.GetHash(), "order", ib.GetOrder())
 		return true, nil
@@ -666,10 +667,6 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 	// database and later memory if all database updates are successful.
 	lastState := b.BestSnapshot()
 
-	for e := attachNodes.Front(); e != nil; e = e.Next() {
-		b.bd.UpdateWeight(e.Value.(meerdag.IBlock))
-	}
-
 	// Calculate the number of transactions that would be added by adding
 	// this block.
 	numTxns := uint64(len(block.Block().Transactions))
@@ -713,4 +710,11 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 	b.stateLock.Unlock()
 
 	return b.bd.Commit()
+}
+
+func (b *BlockChain) updateBlockState(ib meerdag.IBlock, block *types.SerializedBlock) {
+	if ib.GetState() == nil {
+		return
+	}
+	ib.GetState().Update(block, b.VMService().GetCurStateRoot())
 }

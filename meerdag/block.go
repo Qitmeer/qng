@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	s "github.com/Qitmeer/qng/core/serialization"
+	"github.com/Qitmeer/qng/core/state"
 	"io"
 )
 
@@ -104,6 +105,9 @@ type IBlock interface {
 
 	AttachChild(ib IBlock)
 	DetachChild(ib IBlock)
+
+	// GetState
+	GetState() *state.BlockState
 }
 
 // It is the element of a DAG. It is the most basic data unit.
@@ -120,7 +124,8 @@ type Block struct {
 	height     uint
 	status     model.BlockStatus
 
-	data IBlockData
+	data  IBlockData
+	state *state.BlockState
 }
 
 // Return block ID
@@ -205,6 +210,9 @@ func (b *Block) RemoveChild(child uint) {
 // Setting the weight of block
 func (b *Block) SetWeight(weight uint64) {
 	b.weight = weight
+	if b.state != nil {
+		b.state.SetWeight(b.weight)
+	}
 }
 
 // Acquire the weight of blue blocks
@@ -225,6 +233,9 @@ func (b *Block) GetLayer() uint {
 // Setting the order of block
 func (b *Block) SetOrder(o uint) {
 	b.order = o
+	if b.state != nil {
+		b.state.SetOrder(uint64(o))
+	}
 }
 
 // Acquire the order of block
@@ -441,10 +452,16 @@ func (b *Block) IsLoaded() bool {
 
 func (b *Block) Valid() {
 	b.UnsetStatusFlags(model.StatusInvalid)
+	if b.state != nil {
+		b.state.Valid()
+	}
 }
 
 func (b *Block) Invalid() {
 	b.SetStatusFlags(model.StatusInvalid)
+	if b.state != nil {
+		b.state.Invalid()
+	}
 }
 
 func (b *Block) AttachParent(ib IBlock) {
@@ -507,4 +524,9 @@ func (b *Block) Bytes() []byte {
 		return nil
 	}
 	return buff.Bytes()
+}
+
+// GetState
+func (b *Block) GetState() *state.BlockState {
+	return b.state
 }

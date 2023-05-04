@@ -6,6 +6,7 @@ import (
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/consensus/model"
 	s "github.com/Qitmeer/qng/core/serialization"
+	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/database"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/schollz/progressbar/v3"
@@ -676,4 +677,9 @@ func (b *OldBlock) DetachChild(ib IBlock) {
 		return
 	}
 	b.children.Add(ib.GetID())
+}
+
+// GetState
+func (b *OldBlock) GetState() *state.BlockState {
+	return nil
 }

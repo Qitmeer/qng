@@ -28,4 +28,5 @@ type Consensus interface {
 	VMService() VMI
 	Rebuild() error
 	AmanaService() service.IService
+	Shutdown()
 }

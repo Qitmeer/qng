@@ -58,6 +58,8 @@ const (
 	RPCMemPool = "/qitmeer/req/mempool/1"
 	// RPCMemPool defines the topic for the getdata rpc method.
 	RPCGetData = "/qitmeer/req/getdata/1"
+	// RPCStateRoot defines the topic for the stateroot rpc method.
+	RPCStateRoot = "/qitmeer/req/stateroot/1"
 )
 
 // Time to first byte timeout. The maximum time to wait for first byte of
@@ -97,6 +99,7 @@ func (s *Sync) Start() error {
 	s.AddDisconnectionHandler()
 
 	s.maintainPeerStatuses()
+	s.consistency()
 
 	return s.peerSync.Start()
 }
@@ -220,6 +223,12 @@ func (s *Sync) registerRPCHandlers() {
 		&pb.Inventory{},
 		s.GetDataHandler,
 	)
+
+	s.registerRPC(
+		RPCStateRoot,
+		&pb.StateRootReq{},
+		s.stateRootHandler,
+	)
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
@@ -270,6 +279,8 @@ func (s *Sync) Send(pe *peers.Peer, protocol string, message interface{}) (inter
 		ret, e = s.sendQNRRequest(stream, pe)
 	case RPCTransaction:
 		ret, e = s.sendTxRequest(stream, pe)
+	case RPCStateRoot:
+		ret, e = s.sendStateRootRequest(stream, pe)
 	default:
 		return nil, fmt.Errorf("Can't support:%s", protocol)
 	}

@@ -85,6 +85,8 @@ type Service struct {
 	txMemPool   *mempool.TxPool
 	notify      consensus.Notify
 	rebroadcast *Rebroadcast
+
+	consensus model.Consensus
 }
 
 func (s *Service) Start() error {
@@ -577,7 +579,11 @@ func (s *Service) IsRunning() bool {
 	return !s.IsShutdown() && s.IsStarted()
 }
 
-func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*Service, error) {
+func (s *Service) Consensus() model.Consensus {
+	return s.consensus
+}
+
+func NewService(cfg *config.Config, consensus model.Consensus, param *params.Params) (*Service, error) {
 	rand.Seed(roughtime.Now().UnixNano())
 
 	var err error
@@ -654,10 +660,12 @@ func NewService(cfg *config.Config, events *event.Feed, param *params.Params) (*
 			DisableListen:        cfg.DisableListen,
 			LANPeers:             lanPeers,
 			IsCircuit:            cfg.Circuit,
+			Consistency:          cfg.Consistency,
 		},
 		exclusionList: cache,
 		isPreGenesis:  true,
-		events:        events,
+		events:        consensus.Events(),
+		consensus:     consensus,
 	}
 	s.InitContext()
 
