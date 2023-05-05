@@ -250,7 +250,7 @@ func (mp *TxPool) notify() {
 	}
 }
 
-//Call addTransaction
+// Call addTransaction
 func (mp *TxPool) AddTransaction(tx *types.Tx, height uint64, fee int64) {
 	mp.addTransaction(nil, tx, height, fee)
 }
@@ -838,8 +838,6 @@ func (mp *TxPool) MaybeAcceptTransaction(tx *types.Tx, isNew, rateLimit bool) ([
 //
 // This function MUST be called with the mempool lock held (for writes).
 func (mp *TxPool) removeOrphan(txHash *hash.Hash) {
-	log.Trace(fmt.Sprintf("Removing orphan transaction %v", txHash))
-
 	// Nothing to do if passed tx is not an orphan.
 	tx, exists := mp.orphans[*txHash]
 	if !exists {
@@ -862,6 +860,7 @@ func (mp *TxPool) removeOrphan(txHash *hash.Hash) {
 
 	// Remove the transaction from the orphan pool.
 	delete(mp.orphans, *txHash)
+	log.Trace(fmt.Sprintf("Removing orphan transaction %v", txHash))
 }
 
 // RemoveOrphan removes the passed orphan transaction from the orphan pool and

@@ -537,14 +537,24 @@ func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
 	if !opreturn.IsMeerEVMTx(tx) {
 		return fmt.Errorf("%s is not %v", tx.TxHash().String(), qtypes.TxTypeCrossChainVM)
 	}
+	_, ok := m.remoteTxsQM[tx.TxHash().String()]
+	if ok {
+		delete(m.remoteTxsQM, tx.TxHash().String())
+		log.Debug(fmt.Sprintf("Meer pool:remove tx %s from remote", tx.TxHash()))
+	}
+
 	h := qcommon.ToEVMHash(&tx.TxIn[0].PreviousOut.Hash)
+	_, ok = m.remoteTxsM[h.String()]
+	if ok {
+		delete(m.remoteTxsM, h.String())
+		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from remote", tx.TxHash(), h))
+	}
 
-	delete(m.remoteTxsQM, tx.TxHash().String())
-	delete(m.remoteTxsM, h.String())
+	if m.eth.TxPool().Has(h) {
+		m.eth.TxPool().RemoveTx(h, false)
+		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from eth", tx.TxHash(), h))
+	}
 
-	m.eth.TxPool().RemoveTx(h, false)
-
-	log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s)", tx.TxHash(), h))
 	return nil
 }
 

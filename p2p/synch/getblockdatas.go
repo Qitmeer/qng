@@ -147,24 +147,49 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 	if len(blockDatas) <= 0 {
 		return &ProcessResult{act: ProcessResultActionContinue, orphan: false}
 	}
-	if len(blocksReady) > 0 {
-		log.Trace(fmt.Sprintf("processGetBlockDatas::sendGetBlockDataRequest peer=%v, blocks=%d [%s -> %s] ", pe.GetID(), len(blocksReady), blocksReady[0], blocksReady[len(blocksReady)-1]), "processID", ps.processID)
-		ret, err := ps.sy.Send(pe, RPCGetBlockDatas, &pb.GetBlockDatas{Locator: changeHashsToPBHashs(blocksReady)})
-		if err != nil {
-			log.Warn(fmt.Sprintf("getBlocks send:%v", err), "processID", ps.processID)
-			return &ProcessResult{act: ProcessResultActionTryAgain}
-		}
-		bd := ret.(*pb.BlockDatas)
-		log.Trace(fmt.Sprintf("Received:Locator=%d", len(bd.Locator)), "processID", ps.processID)
-		for _, b := range bd.Locator {
-			block, err := types.NewBlockFromBytes(b.BlockBytes)
+	readys := len(blocksReady)
+	if readys > 0 {
+		packageNumber := 0
+		for index := 0; index < readys; packageNumber++ {
+			sendBlocks := blocksReady[index:]
+			log.Trace(fmt.Sprintf("processGetBlockDatas::sendGetBlockDataRequest peer=%v, blocks=%d [%s -> %s] ", pe.GetID(), len(sendBlocks), sendBlocks[0], sendBlocks[len(sendBlocks)-1]), "processID", ps.processID, "package number", packageNumber)
+			ret, err := ps.sy.Send(pe, RPCGetBlockDatas, &pb.GetBlockDatas{Locator: changeHashsToPBHashs(sendBlocks)})
 			if err != nil {
-				log.Warn(fmt.Sprintf("getBlocks from:%v", err), "processID", ps.processID)
-				break
+				log.Warn(fmt.Sprintf("getBlocks send:%v", err), "processID", ps.processID)
+				if index == 0 {
+					return &ProcessResult{act: ProcessResultActionTryAgain}
+				} else {
+					break
+				}
 			}
-			bd, ok := blockDataM[*block.Hash()]
-			if ok {
-				bd.Block = block
+			bd := ret.(*pb.BlockDatas)
+			log.Trace(fmt.Sprintf("Received:Locator=%d", len(bd.Locator)), "processID", ps.processID)
+			//
+			var lastBlockHash *hash.Hash
+			for i, b := range bd.Locator {
+				block, err := types.NewBlockFromBytes(b.BlockBytes)
+				if err != nil {
+					log.Warn(fmt.Sprintf("getBlocks from:%v", err), "processID", ps.processID)
+					break
+				}
+				bdm, ok := blockDataM[*block.Hash()]
+				if ok {
+					bdm.Block = block
+				}
+				if i+1 == len(bd.Locator) {
+					lastBlockHash = block.Hash()
+				}
+			}
+			if lastBlockHash != nil {
+				index++
+				for i := 0; i < readys; i++ {
+					if lastBlockHash.IsEqual(blocksReady[i]) {
+						index = i + 1
+						break
+					}
+				}
+			} else {
+				break
 			}
 		}
 	}
@@ -173,13 +198,13 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 	add := 0
 	hasOrphan := false
 
-	for i, b := range blockDatas {
+	for _, b := range blockDatas {
 		if ps.IsInterrupt() {
 			return nil
 		}
 		block := b.Block
 		if block == nil {
-			log.Trace(fmt.Sprintf("No block bytes:%d : %s", i, b.Hash.String()), "processID", ps.processID)
+			//log.Trace(fmt.Sprintf("No block bytes:%d : %s", i, b.Hash.String()), "processID", ps.processID)
 			continue
 		}
 		//
