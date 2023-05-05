@@ -22,7 +22,9 @@ import (
 	"github.com/urfave/cli/v2"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -414,7 +416,87 @@ func importBlockChain(consensus model.Consensus, inputPath string) error {
 }
 
 func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan struct{}, inputPath string, end string, byID bool, aidMode bool) error {
-	blocks := []*types.SerializedBlock{}
+	// new block chain
+	var err error
+	newCfg := *cfg
+	newCfg.DataDir, err = util.GetPathByBrother("temp", cfg.DataDir)
+	if err != nil {
+		return err
+	}
+	common.CleanupBlockDB(&newCfg)
+	time.Sleep(time.Second * 2)
+
+	newdb, err := common.LoadBlockDB(&newCfg)
+	if err != nil {
+		log.Error("load block database", "error", err)
+		return err
+	}
+	defer func() {
+		if newdb != nil {
+			err = newdb.Close()
+			if err != nil {
+				log.Error(err.Error())
+			}
+			time.Sleep(time.Second * 2)
+			common.CleanupBlockDB(&newCfg)
+		}
+	}()
+	//
+	newCfg.InvalidTxIndex = false
+	newCfg.VMBlockIndex = false
+	newCfg.AddrIndex = false
+	newcons := consensus.New(&newCfg, newdb, interrupt, make(chan struct{}))
+	err = newcons.Init()
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	err = newcons.VMService().(*vm.Service).Start()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if newcons != nil {
+			err = newcons.VMService().(*vm.Service).Stop()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+
+	}()
+	newbc := newcons.BlockChain().(*blockchain.BlockChain)
+	err =newbc.Start()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if newbc != nil {
+			err = newbc.Stop()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+
+	}()
+	log.Info(fmt.Sprintf("Be ready workspace:%s", newCfg.DataDir))
+
+	processBlock := func(block *types.SerializedBlock, bar *progressbar.ProgressBar) error {
+		er := newbc.CheckBlockSanity(block, newbc.TimeSource(), blockchain.BFFastAdd, params.ActiveNetParams.Params)
+		if er != nil {
+			return er
+		}
+		er = newbc.FastAcceptBlock(block, blockchain.BFFastAdd)
+		if er != nil {
+			return er
+		}
+		if bar != nil {
+			bar.Add(1)
+		}
+		return nil
+	}
+
+	logLvl := log.Glogger().GetVerbosity()
+	//
 	if aidMode {
 		endNum := uint(0)
 		err := db.Update(func(dbTx database.Tx) error {
@@ -439,9 +521,20 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 			return err
 		}
 
-		logLvl := log.Glogger().GetVerbosity()
-		bar := progressbar.Default(int64(endNum-1), "Export:")
+		if len(end) > 0 {
+			endV, err := strconv.Atoi(end)
+			if err != nil {
+				return err
+			}
+			if endV > 0 && int64(endV) < int64(endNum) {
+				endNum = uint(endV)
+			}
+		}
+		log.Info("Target end point", "block id", endNum)
+
+		bar := progressbar.Default(int64(endNum-1), "Upgrade:")
 		log.Glogger().Verbosity(log.LvlCrit)
+		newcons.VMService().SetLogLevel(log.LvlCrit.String())
 
 		var i uint
 		var blockHash *hash.Hash
@@ -495,10 +588,19 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 			if err != nil {
 				return err
 			}
-			blocks = append(blocks, block)
+			//
+			err = processBlock(block, bar)
+			if err != nil {
+				return err
+			}
+
+			if system.InterruptRequested(interrupt) {
+				break
+			}
 		}
 		fmt.Println()
 		log.Glogger().Verbosity(logLvl)
+		newcons.VMService().SetLogLevel(logLvl.String())
 	} else {
 		cfg.InvalidTxIndex = false
 		cfg.VMBlockIndex = false
@@ -550,9 +652,10 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 			}
 
 		}
-		logLvl := log.Glogger().GetVerbosity()
+
 		bar := progressbar.Default(int64(endNum-1), "Export:")
 		log.Glogger().Verbosity(log.LvlCrit)
+		newcons.VMService().SetLogLevel(log.LvlCrit.String())
 
 		var i uint
 		var blockHash *hash.Hash
@@ -578,10 +681,17 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 			if err != nil {
 				return err
 			}
-			blocks = append(blocks, block)
+			err = processBlock(block, bar)
+			if err != nil {
+				return err
+			}
+			if system.InterruptRequested(interrupt) {
+				break
+			}
 		}
 		fmt.Println()
 		log.Glogger().Verbosity(logLvl)
+		newcons.VMService().SetLogLevel(logLvl.String())
 
 		err = cons.VMService().(*vm.Service).Stop()
 		if err != nil {
@@ -589,71 +699,41 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 			return err
 		}
 	}
-	log.Info(fmt.Sprintf("Gracefully shutting down the last database:%s", cfg.DataDir))
-	db.Close()
-
-	time.Sleep(time.Second * 1)
-
-	common.CleanupBlockDB(cfg)
-
-	time.Sleep(time.Second * 2)
-
-	db, err := common.LoadBlockDB(cfg)
-	if err != nil {
-		log.Error("load block database", "error", err)
-		return err
-	}
-	defer func() {
-		err = db.Close()
-		if err != nil {
-			log.Error(err.Error())
-		}
-	}()
-	//
-	cfg.InvalidTxIndex = false
-	cfg.VMBlockIndex = false
-	cfg.AddrIndex = false
-	cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
-	err = cons.Init()
+	err = newbc.Stop()
 	if err != nil {
 		log.Error(err.Error())
-		return err
 	}
-	err = cons.VMService().(*vm.Service).Start()
+	total:=newbc.BlockDAG().GetBlockTotal()
+	newbc=nil
+	err = newcons.VMService().(*vm.Service).Stop()
+	if err != nil {
+		log.Error(err.Error())
+	}
+	newcons = nil
+	err = newdb.Close()
+	if err != nil {
+		log.Error(err.Error())
+	}
+	newdb = nil
+	//
+	log.Info(fmt.Sprintf("Gracefully shutting down the last database:%s", cfg.DataDir))
+	db.Close()
+	err = os.Rename(filepath.Join(cfg.DataDir, "network.key"), filepath.Join(newCfg.DataDir, "network.key"))
+	if err != nil {
+		log.Info(err.Error())
+	}
+	time.Sleep(time.Second * 2)
+	err = os.RemoveAll(cfg.DataDir)
+	if err != nil {
+		log.Info(err.Error())
+	}
+	time.Sleep(time.Second * 2)
+
+	err = os.Rename(newCfg.DataDir, cfg.DataDir)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err = cons.VMService().(*vm.Service).Stop()
-		if err != nil {
-			log.Error(err.Error())
-		}
-	}()
-	bc := cons.BlockChain().(*blockchain.BlockChain)
-
-	log.Info(fmt.Sprintf("Load new data:%s", cfg.DataDir))
-
-	logLvl := log.Glogger().GetVerbosity()
-	bar := progressbar.Default(int64(len(blocks)), "Upgrade:")
-	log.Glogger().Verbosity(log.LvlCrit)
-
-	for _, block := range blocks {
-		err = bc.CheckBlockSanity(block, bc.TimeSource(), blockchain.BFFastAdd, params.ActiveNetParams.Params)
-		if err != nil {
-			return err
-		}
-		err := bc.FastAcceptBlock(block, blockchain.BFFastAdd)
-		if err != nil {
-			return err
-		}
-		if bar != nil {
-			bar.Add(1)
-		}
-	}
-	fmt.Println()
-	log.Glogger().Verbosity(logLvl)
-
-	log.Info(fmt.Sprintf("Finish upgrade: blocks(%d)", len(blocks)))
+	log.Info(fmt.Sprintf("Finish upgrade: blocks(%d)", total))
 	return nil
 }
 
@@ -670,7 +750,6 @@ func GetIBDFilePath(path string) (string, error) {
 	return strings.TrimRight(strings.TrimRight(path, "/"), "\\") + "/" + defaultFileName, nil
 }
 
-//
 type IBDBlock struct {
 	length uint32
 	bytes  []byte
