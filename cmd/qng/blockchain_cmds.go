@@ -465,7 +465,19 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 
 	}()
 	newbc := newcons.BlockChain().(*blockchain.BlockChain)
+	err =newbc.Start()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if newbc != nil {
+			err = newbc.Stop()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
 
+	}()
 	log.Info(fmt.Sprintf("Be ready workspace:%s", newCfg.DataDir))
 
 	processBlock := func(block *types.SerializedBlock, bar *progressbar.ProgressBar) error {
@@ -687,6 +699,12 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 			return err
 		}
 	}
+	err = newbc.Stop()
+	if err != nil {
+		log.Error(err.Error())
+	}
+	total:=newbc.BlockDAG().GetBlockTotal()
+	newbc=nil
 	err = newcons.VMService().(*vm.Service).Stop()
 	if err != nil {
 		log.Error(err.Error())
@@ -715,7 +733,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 	if err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("Finish upgrade: blocks(%d)", newbc.BlockDAG().GetBlockTotal()))
+	log.Info(fmt.Sprintf("Finish upgrade: blocks(%d)", total))
 	return nil
 }
 
