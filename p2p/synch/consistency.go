@@ -57,14 +57,14 @@ func (s *Sync) consistency() {
 				log.Debug("Data consistency start", "block", block.GetHash().String(), "state root", stateRoot.String(), "peer", pee.IDWithAddress())
 
 				root, err := s.Send(pee, RPCStateRoot, &pb.StateRootReq{Block: &pb.Hash{Hash: block.GetHash().Bytes()}})
-				if err == nil {
-					atomic.AddInt32(&total, 1)
-					if root != nil {
-						sr, ok := root.(*hash.Hash)
-						if ok {
-							if sr.IsEqual(&stateRoot) {
-								atomic.AddInt32(&valid, 1)
-							}
+				if err == nil && root != nil {
+					sr, ok := root.(*hash.Hash)
+					if ok && sr != nil {
+						atomic.AddInt32(&total, 1)
+						if sr.IsEqual(&stateRoot) {
+							atomic.AddInt32(&valid, 1)
+						}else{
+							log.Debug("Data inconsistency", "block", block.GetHash().String(), "stateRoot", stateRoot.String(),"peerStateRoot",sr.String(), "peer", pee.IDWithAddress())
 						}
 					}
 				}
