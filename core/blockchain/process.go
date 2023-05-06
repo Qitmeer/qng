@@ -305,54 +305,56 @@ func (b *BlockChain) FastAcceptBlock(block *types.SerializedBlock, flags Behavio
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedBlock, newOrders *list.List, oldOrders *list.List, connectedBlocks *list.List) (bool, error) {
-	// We are extending the main (best) chain with a new block.  This is the
-	// most common case.
-	newOr := []uint{}
-	for e := newOrders.Front(); e != nil; e = e.Next() {
-		nodeBlock := e.Value.(meerdag.IBlock)
-		if !nodeBlock.IsOrdered() {
-			continue
-		}
-		newOr = append(newOr, nodeBlock.GetID())
-	}
 
-	if oldOrders.Len() <= 0 &&
-		(len(newOr) == 0 || len(newOr) == 1 && newOr[0] == ib.GetID()) {
-		if !ib.IsOrdered() {
-			return true, nil
+	if oldOrders.Len() <= 0 {
+		newOr := []meerdag.IBlock{}
+		for e := newOrders.Front(); e != nil; e = e.Next() {
+			nodeBlock := e.Value.(meerdag.IBlock)
+			newOr = append(newOr, nodeBlock)
 		}
-		// Perform several checks to verify the block can be connected
-		// to the main chain without violating any rules and without
-		// actually connecting the block.
-		view := utxo.NewUtxoViewpoint()
-		view.SetViewpoints([]*hash.Hash{ib.GetHash()})
-
-		stxos := []utxo.SpentTxOut{}
-		err := b.checkConnectBlock(ib, block, view, &stxos)
-		if err != nil {
-			log.Trace(err.Error())
-			b.bd.InvalidBlock(ib)
-			stxos = []utxo.SpentTxOut{}
-			view.Clean()
+		if len(newOr) <= 0 {
+			newOr=append(newOr,ib)
 		}
-		// In the fast add case the code to check the block connection
-		// was skipped, so the utxo view needs to load the referenced
-		// utxos, spend them, and add the new utxos being created by
-		// this block.
-
-		// Connect the block to the main chain.
-		err = b.connectBlock(ib, block, view, stxos, connectedBlocks)
-		if err != nil {
-			b.bd.InvalidBlock(ib)
-			return true, err
+		var sb *types.SerializedBlock
+		var err error
+		for _,nodeBlock:=range newOr {
+			if nodeBlock.GetID() == ib.GetID() {
+				sb = block
+			} else {
+				sb, err = b.FetchBlockByHash(nodeBlock.GetHash())
+				if err != nil {
+					return false,err
+				}
+				sb.SetOrder(uint64(nodeBlock.GetOrder()))
+				sb.SetHeight(nodeBlock.GetHeight())
+			}
+			if !nodeBlock.IsOrdered() {
+				continue
+			}
+			if sb == nil {
+				return false,fmt.Errorf("No block:%s,id:%d\n",nodeBlock.GetHash().String(),nodeBlock.GetID())
+			}
+			view := utxo.NewUtxoViewpoint()
+			view.SetViewpoints([]*hash.Hash{nodeBlock.GetHash()})
+			stxos := []utxo.SpentTxOut{}
+			err = b.checkConnectBlock(nodeBlock, sb, view, &stxos)
+			if err != nil {
+				b.bd.InvalidBlock(nodeBlock)
+				stxos = []utxo.SpentTxOut{}
+				view.Clean()
+			}
+			err = b.connectBlock(nodeBlock, sb, view, stxos, connectedBlocks)
+			if err != nil {
+				b.bd.InvalidBlock(nodeBlock)
+				return false,err
+			}
+			if !nodeBlock.GetStatus().KnownInvalid() {
+				b.bd.ValidBlock(nodeBlock)
+			}
+			b.bd.UpdateWeight(nodeBlock)
+			b.updateBlockState(nodeBlock, sb)
+			log.Debug("Block connected to the main chain", "hash", nodeBlock.GetHash(), "order", nodeBlock.GetOrder())
 		}
-		if !ib.GetStatus().KnownInvalid() {
-			b.bd.ValidBlock(ib)
-		}
-		b.bd.UpdateWeight(ib)
-		b.updateBlockState(ib, block)
-		// TODO, validating previous block
-		log.Debug("Block connected to the main chain", "hash", ib.GetHash(), "order", ib.GetOrder())
 		return true, nil
 	}
 
@@ -365,7 +367,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 	// common ancenstor (the point where the chain forked).
 
 	// Reorganize the chain.
-	log.Debug(fmt.Sprintf("Start DAG REORGANIZE: Block %v is causing a reorganize.", ib.GetHash()))
+	log.Info(fmt.Sprintf("Start DAG REORGANIZE: Block %v is causing a reorganize.", ib.GetHash()))
 	err := b.reorganizeChain(ib, oldOrders, newOrders, block, connectedBlocks)
 	if err != nil {
 		return false, err
