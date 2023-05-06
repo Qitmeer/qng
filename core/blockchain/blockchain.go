@@ -314,7 +314,7 @@ func (b *BlockChain) createChainState() error {
 	genesisBlock := types.NewBlock(b.params.GenesisBlock)
 	genesisBlock.SetOrder(0)
 	header := &genesisBlock.Block().Header
-	node := NewBlockNode(genesisBlock, genesisBlock.Block().Parents)
+	node := NewBlockNode(genesisBlock)
 	_, _, ib, _ := b.bd.AddBlock(node)
 	//node.FlushToDB(b)
 	// Initialize the state related to the best block.  Since it is the
@@ -735,7 +735,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 
 	// Log the point where the chain forked and old and new best chain
 	// heads.
-	log.Info(fmt.Sprintf("End DAG REORGANIZE: Old Len= %d;New Len= %d", detachNodes.Len(),attachNodes.Len()))
+	log.Info(fmt.Sprintf("End DAG REORGANIZE: Old Len= %d;New Len= %d", detachNodes.Len(), attachNodes.Len()))
 
 	return nil
 }

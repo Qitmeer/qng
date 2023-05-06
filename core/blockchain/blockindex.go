@@ -45,7 +45,7 @@ func (b *BlockChain) getBlockData(hash *hash.Hash) meerdag.IBlockData {
 		log.Error(err.Error())
 		return nil
 	}
-	return NewBlockNode(block, block.Block().Parents)
+	return NewBlockNode(block)
 }
 
 func (b *BlockChain) GetBlock(h *hash.Hash) meerdag.IBlock {

@@ -175,11 +175,11 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		b.flushNotifications()
 	}()
 
-	newNode := NewBlockNode(block, block.Block().Parents)
+	newNode := NewBlockNode(block)
 
 	fastAdd := flags&BFFastAdd == BFFastAdd
 	if !fastAdd {
-		mainParent := b.bd.GetMainParentByHashs(block.Block().Parents)
+		mainParent := b.bd.GetBlock(newNode.GetMainParent())
 		if mainParent == nil {
 			b.ChainUnlock()
 			return fmt.Errorf("Can't find main parent\n")
@@ -313,17 +313,17 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 			newOr = append(newOr, nodeBlock)
 		}
 		if len(newOr) <= 0 {
-			newOr=append(newOr,ib)
+			newOr = append(newOr, ib)
 		}
 		var sb *types.SerializedBlock
 		var err error
-		for _,nodeBlock:=range newOr {
+		for _, nodeBlock := range newOr {
 			if nodeBlock.GetID() == ib.GetID() {
 				sb = block
 			} else {
 				sb, err = b.FetchBlockByHash(nodeBlock.GetHash())
 				if err != nil {
-					return false,err
+					return false, err
 				}
 				sb.SetOrder(uint64(nodeBlock.GetOrder()))
 				sb.SetHeight(nodeBlock.GetHeight())
@@ -332,7 +332,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 				continue
 			}
 			if sb == nil {
-				return false,fmt.Errorf("No block:%s,id:%d\n",nodeBlock.GetHash().String(),nodeBlock.GetID())
+				return false, fmt.Errorf("No block:%s,id:%d\n", nodeBlock.GetHash().String(), nodeBlock.GetID())
 			}
 			view := utxo.NewUtxoViewpoint()
 			view.SetViewpoints([]*hash.Hash{nodeBlock.GetHash()})
@@ -346,7 +346,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 			err = b.connectBlock(nodeBlock, sb, view, stxos, connectedBlocks)
 			if err != nil {
 				b.bd.InvalidBlock(nodeBlock)
-				return false,err
+				return false, err
 			}
 			if !nodeBlock.GetStatus().KnownInvalid() {
 				b.bd.ValidBlock(nodeBlock)

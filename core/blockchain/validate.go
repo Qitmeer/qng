@@ -281,8 +281,8 @@ func checkBlockHeaderSanity(header *types.BlockHeader, timeSource model.MedianTi
 // target difficulty as claimed.
 //
 // The flags modify the behavior of this function as follows:
-//  - BFNoPoWCheck: The check to ensure the block hash is less than the target
-//    difficulty is not performed.
+//   - BFNoPoWCheck: The check to ensure the block hash is less than the target
+//     difficulty is not performed.
 func checkProofOfWork(header *types.BlockHeader, powConfig *pow.PowConfig, flags BehaviorFlags, mHeight uint) error {
 
 	// The block hash must be less than the claimed target unless the flag
@@ -570,8 +570,8 @@ func CountSigOps(tx *types.Tx) int {
 // on its position within the block chain.
 //
 // The flags modify the behavior of this function as follows:
-//  - BFFastAdd: The transactions are not checked to see if they are finalized
-//    and the somewhat expensive duplication transaction check is not performed.
+//   - BFFastAdd: The transactions are not checked to see if they are finalized
+//     and the somewhat expensive duplication transaction check is not performed.
 //
 // The flags are also passed to checkBlockHeaderContext.  See its documentation
 // for how the flags modify its behavior.
@@ -741,8 +741,8 @@ func (b *BlockChain) checkBlockSubsidy(block *types.SerializedBlock) error {
 // header which depend on its position within the block chain.
 //
 // The flags modify the behavior of this function as follows:
-//  - BFFastAdd: All checks except those involving comparing the header against
-//    the checkpoints are not performed.
+//   - BFFastAdd: All checks except those involving comparing the header against
+//     the checkpoints are not performed.
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) checkBlockHeaderContext(block *types.SerializedBlock, prevNode meerdag.IBlock, flags BehaviorFlags) error {
@@ -1356,7 +1356,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) err
 		return err
 	}
 
-	newNode := NewBlockNode(block, block.Block().Parents)
+	newNode := NewBlockNode(block)
 	virBlock := b.bd.CreateVirtualBlock(newNode)
 	if virBlock == nil {
 		return ruleError(ErrPrevBlockNotBest, "tipsNode")

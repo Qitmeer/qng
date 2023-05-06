@@ -17,6 +17,8 @@ type IBlockData interface {
 	// Get all parents set,the dag block has more than one parent
 	GetParents() []*hash.Hash
 
+	GetMainParent() *hash.Hash
+
 	// Timestamp
 	GetTimestamp() int64
 

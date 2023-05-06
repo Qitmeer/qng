@@ -330,12 +330,14 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 		return nil, nil, nil, false
 	}
 	parents := []IBlock{}
+	var mp IBlock
 	if bd.blockTotal > 0 {
 		parentsIds := b.GetParents()
 		if len(parentsIds) == 0 {
 			log.Error(fmt.Sprintf("No paretns:%s", b.GetHash()))
 			return nil, nil, nil, false
 		}
+		ids := NewIdSet()
 		for _, v := range parentsIds {
 			pib := bd.getBlock(v)
 			if pib == nil {
@@ -343,16 +345,30 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 				return nil, nil, nil, false
 			}
 			parents = append(parents, pib)
+			ids.Add(pib.GetID())
 		}
 
 		if !bd.isDAG(parents, b) {
 			log.Error(fmt.Sprintf("Not DAG block:%s", b.GetHash()))
 			return nil, nil, nil, false
 		}
+		// main parent
+		mp = bd.instance.GetMainParent(ids)
+		if mp == nil {
+			log.Error("No main parent", "hash", b.GetHash().String())
+			return nil, nil, nil, false
+		}
+		if !mp.GetHash().IsEqual(b.GetMainParent()) {
+			log.Error("Main parent is inconsistent in block", "mainParentInDAG", mp.GetHash().String(), "mainParentInBlock", b.GetMainParent().String(), "block", b.GetHash().String())
+			return nil, nil, nil, false
+		}
 	}
 	lastMT := bd.instance.GetMainChainTipId()
 	//
 	block := Block{id: bd.blockTotal, hash: *b.GetHash(), layer: 0, status: model.StatusNone, mainParent: MaxId, data: b, state: state.NewBlockState(uint64(bd.blockTotal))}
+	if mp != nil {
+		block.mainParent = mp.GetID()
+	}
 	if bd.blocks == nil {
 		bd.blocks = map[uint]IBlock{}
 	}
@@ -382,10 +398,6 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 			ib.AddParent(parent)
 			parent.AddChild(ib)
 			bd.commitBlock.AddPair(parent.GetID(), parent)
-			if block.mainParent > parent.GetID() {
-				block.mainParent = parent.GetID()
-			}
-
 			if maxLayer == 0 || maxLayer < parent.GetLayer() {
 				maxLayer = parent.GetLayer()
 			}

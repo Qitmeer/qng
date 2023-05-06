@@ -71,10 +71,8 @@ func (ph *Phantom) CreateBlock(b *Block) IBlock {
 }
 
 func (ph *Phantom) updateBlockColor(pb *PhantomBlock) {
-
 	if pb.HasParents() {
-		tp := ph.getBluest(pb.GetParents())
-		pb.mainParent = tp.GetID()
+		tp := ph.getBlock(pb.mainParent)
 		pb.blueNum = tp.blueNum + 1
 		pb.height = tp.height + 1
 
