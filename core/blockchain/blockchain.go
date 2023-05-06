@@ -628,13 +628,11 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		oldBlocks = append(oldBlocks, ob.Block.GetHash())
 	}
 
-	if len(oldBlocks) > 0 {
-		b.sendNotification(Reorganization, &ReorganizationNotifyData{
-			OldBlocks: oldBlocks,
-			NewBlock:  newBlock.Hash(),
-			NewOrder:  uint64(ib.GetOrder()),
-		})
-	}
+	b.sendNotification(Reorganization, &ReorganizationNotifyData{
+		OldBlocks: oldBlocks,
+		NewBlock:  newBlock.Hash(),
+		NewOrder:  uint64(ib.GetOrder()),
+	})
 
 	// Why the old order is the order that was removed by the new block, because the new block
 	// must be one of the tip of the dag.This is very important for the following understanding.
@@ -737,7 +735,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 
 	// Log the point where the chain forked and old and new best chain
 	// heads.
-	log.Debug(fmt.Sprintf("End DAG REORGANIZE: Old Len= %d;New Len= %d", attachNodes.Len(), detachNodes.Len()))
+	log.Info(fmt.Sprintf("End DAG REORGANIZE: Old Len= %d;New Len= %d", detachNodes.Len(),attachNodes.Len()))
 
 	return nil
 }
