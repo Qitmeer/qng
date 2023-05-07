@@ -89,5 +89,5 @@ func (bd *MeerDAG) getBlueInfo(ib IBlock) *BlueInfo {
 	}
 	blues := 1
 	blues += pb.GetBlueDiffAnticoneSize()
-	return NewBlueInfo(pb.blueNum+1, mt/int64(blues), int64(mainIB.GetWeight()), int64(ib.GetHeight()))
+	return NewBlueInfo(pb.blueNum+1, mt/int64(blues), int64(mainIB.GetState().GetWeight()), int64(ib.GetHeight()))
 }

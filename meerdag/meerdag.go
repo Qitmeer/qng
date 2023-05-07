@@ -6,7 +6,6 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/database"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag/anticone"
@@ -160,6 +159,14 @@ type ConsensusAlgorithm interface {
 type CalcWeight func(ib IBlock, bi *BlueInfo) int64
 
 type GetBlockData func(*hash.Hash) IBlockData
+
+type CreateBlockState func(id uint64) model.BlockState
+
+var createBlockState CreateBlockState
+
+type CreateBlockStateFromBytes func(data []byte) (model.BlockState, error)
+
+var createBlockStateFromBytes CreateBlockStateFromBytes
 
 // The general foundation framework of Block DAG implement
 type MeerDAG struct {
@@ -365,7 +372,12 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 	}
 	lastMT := bd.instance.GetMainChainTipId()
 	//
-	block := Block{id: bd.blockTotal, hash: *b.GetHash(), layer: 0, status: model.StatusNone, mainParent: MaxId, data: b, state: state.NewBlockState(uint64(bd.blockTotal))}
+	block := Block{id: bd.blockTotal,
+		hash:       *b.GetHash(),
+		layer:      0,
+		mainParent: MaxId,
+		data:       b,
+		state:      createBlockState(uint64(bd.blockTotal))}
 	if mp != nil {
 		block.mainParent = mp.GetID()
 	}
@@ -1156,6 +1168,13 @@ func (bd *MeerDAG) UpdateWeight(ib IBlock) {
 	bd.instance.(*Phantom).UpdateWeight(ib)
 }
 
+func (bd *MeerDAG) AddToCommit(block IBlock) {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+
+	bd.commitBlock.AddPair(block.GetID(), block)
+}
+
 // Commit the consensus content to the database for persistence
 func (bd *MeerDAG) Commit() error {
 	bd.stateLock.Lock()
@@ -1358,7 +1377,7 @@ func (bd *MeerDAG) CreateVirtualBlock(data IBlockData) IBlock {
 		mainParentId = mainParent.GetID()
 		mainHeight = mainParent.GetHeight()
 	}
-	block := Block{id: bd.GetBlockTotal(), hash: *data.GetHash(), parents: parents, layer: maxLayer + 1, status: model.StatusNone, mainParent: mainParentId, data: data, order: MaxBlockOrder, height: mainHeight + 1}
+	block := Block{id: bd.GetBlockTotal(), hash: *data.GetHash(), parents: parents, layer: maxLayer + 1, mainParent: mainParentId, data: data, height: mainHeight + 1, state: createBlockState(uint64(bd.GetBlockTotal()))}
 	return &PhantomBlock{&block, 0, NewIdSet(), NewIdSet()}
 }
 
@@ -1412,7 +1431,9 @@ out:
 	log.Trace("MeerDAG handler done")
 }
 
-func New(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData) *MeerDAG {
+func New(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData, createBS CreateBlockState, createBSB CreateBlockStateFromBytes) *MeerDAG {
+	createBlockState = createBS
+	createBlockStateFromBytes = createBSB
 	md := &MeerDAG{
 		quit:           make(chan struct{}),
 		blockDataCache: map[uint]time.Time{},

@@ -181,7 +181,7 @@ func (api *PublicBlockAPI) GetBlock(h hash.Hash, verbose *bool, inclTx *bool, fu
 
 	//TODO, refactor marshal api
 	fields, err := marshal.MarshalJsonBlock(blk, iTx, fTx, api.chain.params, confirmations, children,
-		!node.GetStatus().KnownInvalid(), node.IsOrdered(), coinbaseAmout, nil)
+		!node.GetState().GetStatus().KnownInvalid(), node.IsOrdered(), coinbaseAmout, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +245,7 @@ func (api *PublicBlockAPI) GetBlockV2(h hash.Hash, verbose *bool, inclTx *bool, 
 
 	//TODO, refactor marshal api
 	fields, err := marshal.MarshalJsonBlock(blk, iTx, fTx, api.chain.params, confirmations, children,
-		!node.GetStatus().KnownInvalid(), node.IsOrdered(), coinbaseAmout, coinbaseFees)
+		!node.GetState().GetStatus().KnownInvalid(), node.IsOrdered(), coinbaseAmout, coinbaseFees)
 	if err != nil {
 		return nil, err
 	}
@@ -504,12 +504,10 @@ func (api *PublicBlockAPI) GetStateRoot(order int64, verbose *bool) (interface{}
 			qjson.KV{Key: "Hash", Val: ib.GetHash().String()},
 			qjson.KV{Key: "Order", Val: order},
 			qjson.KV{Key: "Height", Val: ib.GetHeight()},
-			qjson.KV{Key: "Valid", Val: !ib.GetStatus().KnownInvalid()},
+			qjson.KV{Key: "Valid", Val: !ib.GetState().GetStatus().KnownInvalid()},
 			qjson.KV{Key: "EVMStateRoot", Val: sr},
 			qjson.KV{Key: "EVMHeight", Val: num},
-		}
-		if ib.GetState() != nil {
-			ret = append(ret, qjson.KV{Key: "StateRoot", Val: ib.GetState().Root().String()})
+			qjson.KV{Key: "StateRoot", Val: ib.GetState().Root().String()},
 		}
 		return ret, nil
 	}

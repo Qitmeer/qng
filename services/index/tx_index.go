@@ -475,7 +475,7 @@ func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock,
 		return fmt.Errorf("TxIndex.curOrder != block(%s).order(%d)", block.Hash(), block.Order())
 	}
 
-	if !blk.GetStatus().KnownInvalid() {
+	if !blk.GetState().GetStatus().KnownInvalid() {
 		if err := dbAddTxIndexEntries(dbTx, block, uint32(newOrder)); err != nil {
 			return err
 		}

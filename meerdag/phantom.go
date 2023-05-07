@@ -46,7 +46,7 @@ func (ph *Phantom) Init(bd *MeerDAG) bool {
 	ph.diffAnticone = NewIdSet()
 
 	//vb
-	vb := &Block{hash: hash.ZeroHash, layer: 0, mainParent: MaxId}
+	vb := &Block{hash: hash.ZeroHash, layer: 0, mainParent: MaxId, state: createBlockState(uint64(MaxId))}
 	ph.virtualBlock = &PhantomBlock{vb, 0, NewIdSet(), NewIdSet()}
 
 	return true
@@ -788,13 +788,13 @@ func (ph *Phantom) UpdateWeight(ib IBlock) {
 	if ib.GetID() != GenesisId {
 		pb := ib.(*PhantomBlock)
 		tp := ph.getBlock(pb.GetMainParent())
-		pb.SetWeight(tp.GetWeight())
+		pb.GetState().SetWeight(tp.GetState().GetWeight())
 
-		pb.SetWeight(pb.GetWeight() + uint64(ph.bd.calcWeight(pb, ph.bd.getBlueInfo(pb))))
+		pb.GetState().SetWeight(pb.GetState().GetWeight() + uint64(ph.bd.calcWeight(pb, ph.bd.getBlueInfo(pb))))
 		if pb.GetBlueDiffAnticoneSize() > 0 {
 			for k := range pb.blueDiffAnticone.GetMap() {
 				bdpb := ph.getBlock(k)
-				pb.SetWeight(pb.GetWeight() + uint64(ph.bd.calcWeight(bdpb, ph.bd.getBlueInfo(bdpb))))
+				pb.GetState().SetWeight(pb.GetState().GetWeight() + uint64(ph.bd.calcWeight(bdpb, ph.bd.getBlueInfo(bdpb))))
 			}
 		}
 		ph.bd.commitBlock.AddPair(ib.GetID(), ib)

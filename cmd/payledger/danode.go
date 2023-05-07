@@ -153,7 +153,7 @@ func (node *DebugAddressNode) processAddress(blueM *map[uint]bool) error {
 						tr.blockId = ib.GetID()
 						tr.blockOrder = ib.GetOrder()
 						tr.blockConfirm = confims
-						tr.blockStatus = byte(ib.GetStatus())
+						tr.blockStatus = byte(ib.GetState().GetStatus())
 						tr.blockBlue = 2
 						tr.blockHeight = ib.GetHeight()
 						tr.txHash = txHash
@@ -201,7 +201,7 @@ func (node *DebugAddressNode) processAddress(blueM *map[uint]bool) error {
 				tr.blockId = ib.GetID()
 				tr.blockOrder = ib.GetOrder()
 				tr.blockConfirm = confims
-				tr.blockStatus = byte(ib.GetStatus())
+				tr.blockStatus = byte(ib.GetState().GetStatus())
 				tr.blockBlue = 2
 				tr.blockHeight = ib.GetHeight()
 				tr.txHash = txHash

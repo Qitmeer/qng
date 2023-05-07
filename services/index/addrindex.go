@@ -746,7 +746,7 @@ func (idx *AddrIndex) indexBlock(data writeIndexData, block *types.SerializedBlo
 //
 // This is part of the Indexer interface.
 func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
-	if blk.GetStatus().KnownInvalid() {
+	if blk.GetState().GetStatus().KnownInvalid() {
 		return nil
 	}
 	// The offset and length of the transactions within the serialized

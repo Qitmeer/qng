@@ -200,7 +200,7 @@ func (sp *Spectre) Vote(b1 IBlock, b2 IBlock) (bool, error) {
 	return sp.candidate1.GetHash().String() < sp.candidate2.GetHash().String(), nil
 }
 
-//  TODO: test if there is ancestor-descendant relationship between b1 and b2
+// TODO: test if there is ancestor-descendant relationship between b1 and b2
 func (sp *Spectre) IsInPastOf(b1 IBlock, b2 IBlock) bool {
 	return false
 }
@@ -256,7 +256,7 @@ func (sp *Spectre) votedPast(virtualBlock IBlock) *MeerDAG {
 		vh = *virtualBlock.GetHash()
 	}
 	sb := &SpectreBlockData{hash: vh}
-	vp := New(spectre, nil, -1, nil, nil)
+	vp := New(spectre, nil, -1, nil, nil, createMockBlockState, createMockBlockStateFromBytes)
 	vp.AddBlock(sb)
 	visited = NewHashSet()
 
@@ -730,7 +730,7 @@ func (sp *Spectre) newVoter(vh hash.Hash, votedPast *MeerDAG) IBlock {
 		log.Error("has already voter ", vh)
 	}
 	//votedPast.AddBlock(&sb)
-	block := Block{hash: *sb.GetHash(), weight: 1}
+	block := Block{hash: *sb.GetHash()}
 	if sb.parents != nil {
 		block.parents = NewIdSet()
 		for _, h := range sb.parents {
@@ -753,7 +753,7 @@ func (sp *Spectre) newVoter(vh hash.Hash, votedPast *MeerDAG) IBlock {
 	return &block
 }
 
-//5) finally, (for the case where z equals x or y ), z votes for itself to succeed any block in past (z) and to precede any block outside past (z).
+// 5) finally, (for the case where z equals x or y ), z votes for itself to succeed any block in past (z) and to precede any block outside past (z).
 func (sp *Spectre) voteBySelf(b1 IBlock, b2 IBlock) {
 	sp.voteFirst(*b1.GetHash())
 	sp.voteSecond(*b2.GetHash())
