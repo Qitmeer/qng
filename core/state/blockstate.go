@@ -75,6 +75,10 @@ func (b *BlockState) Root() *hash.Hash {
 	return &b.root
 }
 
+func (b *BlockState) SetRoot(root *hash.Hash) {
+	b.root = *root
+}
+
 func (b *BlockState) Reset() {
 	b.root = hash.ZeroHash
 }

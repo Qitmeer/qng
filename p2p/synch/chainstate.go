@@ -149,7 +149,7 @@ func (s *Sync) getChainState() *pb.ChainState {
 		GraphState:      s.getGraphState(),
 		UserAgent:       []byte(s.p2p.Config().UserAgent),
 		DisableRelayTx:  s.p2p.Config().DisableRelayTx,
-		StateRoot:       &pb.Hash{Hash: s.p2p.BlockChain().BlockDAG().GetMainChainTip().GetState().Root().Bytes()},
+		StateRoot:       &pb.Hash{Hash: s.p2p.BlockChain().BestSnapshot().StateRoot.Bytes()},
 	}
 
 	return cs

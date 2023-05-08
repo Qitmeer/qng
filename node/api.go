@@ -74,7 +74,7 @@ func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 		Modules:          []string{cmds.DefaultServiceNameSpace, cmds.MinerNameSpace, cmds.TestNameSpace, cmds.LogNameSpace, cmds.P2PNameSpace},
 	}
 	ret.GraphState = marshal.GetGraphStateResult(best.GraphState)
-	ret.StateRoot = node.GetState().Root().String()
+	ret.StateRoot = best.StateRoot.String()
 	hostdns := api.node.GetPeerServer().HostDNS()
 	if hostdns != nil {
 		ret.DNS = hostdns.String()

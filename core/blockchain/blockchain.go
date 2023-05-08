@@ -299,7 +299,7 @@ func (b *BlockChain) initChainState() error {
 	b.TokenTipID = uint32(b.bd.GetBlockId(&state.tokenTipHash))
 	b.stateSnapshot = newBestState(mainTip.GetHash(), mainTipNode.Difficulty(), blockSize, numTxns,
 		b.CalcPastMedianTime(mainTip), state.totalTxns, b.bd.GetMainChainTip().GetState().GetWeight(),
-		b.bd.GetGraphState(), &state.tokenTipHash)
+		b.bd.GetGraphState(), &state.tokenTipHash, *mainTip.GetState().Root())
 	ts := b.GetTokenState(b.TokenTipID)
 	if ts == nil {
 		return fmt.Errorf("token state error")
@@ -323,7 +323,7 @@ func (b *BlockChain) createChainState() error {
 	numTxns := uint64(len(genesisBlock.Block().Transactions))
 	blockSize := uint64(genesisBlock.Block().SerializeSize())
 	b.stateSnapshot = newBestState(node.GetHash(), node.Difficulty(), blockSize, numTxns,
-		time.Unix(node.GetTimestamp(), 0), numTxns, 0, b.bd.GetGraphState(), node.GetHash())
+		time.Unix(node.GetTimestamp(), 0), numTxns, 0, b.bd.GetGraphState(), node.GetHash(), hash.ZeroHash)
 	b.TokenTipID = 0
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
@@ -648,6 +648,10 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			panic(fmt.Errorf("No BlockOrderHelp"))
 		}
 		b.updateTokenState(n.Block, nil, true)
+		er := b.updateDefaultBlockState(n.Block)
+		if er != nil {
+			log.Error(er.Error())
+		}
 		//
 		block, err = b.fetchBlockByHash(n.Block.GetHash())
 		if err != nil {
@@ -710,7 +714,10 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			block.SetHeight(nodeBlock.GetHeight())
 		}
 		if !nodeBlock.IsOrdered() {
-			b.updateBlockState(nodeBlock, block)
+			er := b.updateDefaultBlockState(nodeBlock)
+			if er != nil {
+				log.Error(er.Error())
+			}
 			continue
 		}
 		view := utxo.NewUtxoViewpoint()
@@ -726,14 +733,20 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		err = b.connectBlock(nodeBlock, block, view, stxos, connectedBlocks)
 		if err != nil {
 			b.bd.InvalidBlock(nodeBlock)
-			b.updateBlockState(nodeBlock, block)
+			er := b.updateDefaultBlockState(nodeBlock)
+			if er != nil {
+				log.Error(er.Error())
+			}
 			return err
 		}
 		if !nodeBlock.GetState().GetStatus().KnownInvalid() {
 			b.bd.ValidBlock(nodeBlock)
 		}
 		b.bd.UpdateWeight(nodeBlock)
-		b.updateBlockState(nodeBlock, block)
+		er := b.updateBlockState(nodeBlock, block)
+		if er != nil {
+			log.Error(er.Error())
+		}
 	}
 
 	// Log the point where the chain forked and old and new best chain
