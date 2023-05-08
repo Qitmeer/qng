@@ -29,11 +29,12 @@ type BestState struct {
 	TotalSubsidy uint64              // The total subsidy for the chain.
 	TokenTipHash *hash.Hash          // The Hash of token state tip for the chain.
 	GraphState   *meerdag.GraphState // The graph state of dag
+	StateRoot    hash.Hash
 }
 
 // newBestState returns a new best stats instance for the given parameters.
 func newBestState(tipHash *hash.Hash, bits uint32, blockSize, numTxns uint64, medianTime time.Time,
-	totalTxns uint64, totalsubsidy uint64, gs *meerdag.GraphState, tokenTipHash *hash.Hash) *BestState {
+	totalTxns uint64, totalsubsidy uint64, gs *meerdag.GraphState, tokenTipHash *hash.Hash, stateRoot hash.Hash) *BestState {
 	return &BestState{
 		Hash:         *tipHash,
 		Bits:         bits,
@@ -44,6 +45,7 @@ func newBestState(tipHash *hash.Hash, bits uint32, blockSize, numTxns uint64, me
 		TotalSubsidy: totalsubsidy,
 		TokenTipHash: tokenTipHash,
 		GraphState:   gs,
+		StateRoot:    stateRoot,
 	}
 }
 

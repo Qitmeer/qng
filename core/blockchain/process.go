@@ -330,7 +330,10 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 				sb.SetHeight(nodeBlock.GetHeight())
 			}
 			if !nodeBlock.IsOrdered() {
-				b.updateBlockState(nodeBlock, sb)
+				er := b.updateDefaultBlockState(nodeBlock)
+				if er != nil {
+					log.Error(er.Error())
+				}
 				continue
 			}
 			if sb == nil {
@@ -348,14 +351,20 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 			err = b.connectBlock(nodeBlock, sb, view, stxos, connectedBlocks)
 			if err != nil {
 				b.bd.InvalidBlock(nodeBlock)
-				b.updateBlockState(nodeBlock, sb)
+				er := b.updateDefaultBlockState(nodeBlock)
+				if er != nil {
+					log.Error(er.Error())
+				}
 				return false, err
 			}
 			if !nodeBlock.GetState().GetStatus().KnownInvalid() {
 				b.bd.ValidBlock(nodeBlock)
 			}
 			b.bd.UpdateWeight(nodeBlock)
-			b.updateBlockState(nodeBlock, sb)
+			er := b.updateBlockState(nodeBlock, sb)
+			if er != nil {
+				log.Error(er.Error())
+			}
 			log.Debug("Block connected to the main chain", "hash", nodeBlock.GetHash(), "order", nodeBlock.GetOrder())
 		}
 		return true, nil
@@ -684,7 +693,7 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 		return fmt.Errorf("No main tip node\n")
 	}
 	state := newBestState(mainTip.GetHash(), mainTipNode.Difficulty(), blockSize, numTxns, b.CalcPastMedianTime(mainTip), lastState.TotalTxns+numTxns,
-		b.bd.GetMainChainTip().GetState().GetWeight(), b.bd.GetGraphState(), b.GetTokenTipHash())
+		b.bd.GetMainChainTip().GetState().GetWeight(), b.bd.GetGraphState(), b.GetTokenTipHash(), *mainTip.GetState().Root())
 
 	// Atomically insert info into the database.
 	err := b.db.Update(func(dbTx database.Tx) error {
@@ -730,6 +739,23 @@ func (b *BlockChain) updateBlockState(ib meerdag.IBlock, block *types.Serialized
 		return fmt.Errorf("No main parent:%d %s", ib.GetID(), ib.GetHash().String())
 	}
 	bs.Update(block, mp.GetState().Root(), b.VMService().GetCurStateRoot())
+	b.BlockDAG().AddToCommit(ib)
+	return nil
+}
+
+func (b *BlockChain) updateDefaultBlockState(ib meerdag.IBlock) error {
+	if ib.GetState() == nil {
+		return fmt.Errorf("block state is nill:%d %s", ib.GetID(), ib.GetHash().String())
+	}
+	bs, ok := ib.GetState().(*state.BlockState)
+	if !ok {
+		return fmt.Errorf("block state is nill:%d %s", ib.GetID(), ib.GetHash().String())
+	}
+	mp := b.bd.GetBlockById(ib.GetMainParent())
+	if mp == nil {
+		return fmt.Errorf("No main parent:%d %s", ib.GetID(), ib.GetHash().String())
+	}
+	bs.SetRoot(mp.GetState().Root())
 	b.BlockDAG().AddToCommit(ib)
 	return nil
 }
