@@ -17,6 +17,7 @@ import (
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/shutdown"
+	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/database"
@@ -297,7 +298,7 @@ func (b *BlockChain) initChainState() error {
 
 	b.TokenTipID = uint32(b.bd.GetBlockId(&state.tokenTipHash))
 	b.stateSnapshot = newBestState(mainTip.GetHash(), mainTipNode.Difficulty(), blockSize, numTxns,
-		b.CalcPastMedianTime(mainTip), state.totalTxns, b.bd.GetMainChainTip().GetWeight(),
+		b.CalcPastMedianTime(mainTip), state.totalTxns, b.bd.GetMainChainTip().GetState().GetWeight(),
 		b.bd.GetGraphState(), &state.tokenTipHash)
 	ts := b.GetTokenState(b.TokenTipID)
 	if ts == nil {
@@ -314,7 +315,7 @@ func (b *BlockChain) createChainState() error {
 	genesisBlock := types.NewBlock(b.params.GenesisBlock)
 	genesisBlock.SetOrder(0)
 	header := &genesisBlock.Block().Header
-	node := NewBlockNode(genesisBlock, genesisBlock.Block().Parents)
+	node := NewBlockNode(genesisBlock)
 	_, _, ib, _ := b.bd.AddBlock(node)
 	//node.FlushToDB(b)
 	// Initialize the state related to the best block.  Since it is the
@@ -659,7 +660,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		var stxos []utxo.SpentTxOut
 		view := utxo.NewUtxoViewpoint()
 		view.SetViewpoints([]*hash.Hash{block.Hash()})
-		if !n.Block.GetStatus().KnownInvalid() {
+		if !n.Block.GetState().GetStatus().KnownInvalid() {
 			b.CalculateDAGDuplicateTxs(block)
 			err = b.fetchInputUtxos(b.db, block, view)
 			if err != nil {
@@ -709,6 +710,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			block.SetHeight(nodeBlock.GetHeight())
 		}
 		if !nodeBlock.IsOrdered() {
+			b.updateBlockState(nodeBlock, block)
 			continue
 		}
 		view := utxo.NewUtxoViewpoint()
@@ -724,18 +726,19 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		err = b.connectBlock(nodeBlock, block, view, stxos, connectedBlocks)
 		if err != nil {
 			b.bd.InvalidBlock(nodeBlock)
+			b.updateBlockState(nodeBlock, block)
 			return err
 		}
-		if !nodeBlock.GetStatus().KnownInvalid() {
+		if !nodeBlock.GetState().GetStatus().KnownInvalid() {
 			b.bd.ValidBlock(nodeBlock)
 		}
-		b.bd.UpdateWeight(ib)
-		b.updateBlockState(ib, block)
+		b.bd.UpdateWeight(nodeBlock)
+		b.updateBlockState(nodeBlock, block)
 	}
 
 	// Log the point where the chain forked and old and new best chain
 	// heads.
-	log.Info(fmt.Sprintf("End DAG REORGANIZE: Old Len= %d;New Len= %d", detachNodes.Len(),attachNodes.Len()))
+	log.Info(fmt.Sprintf("End DAG REORGANIZE: Old Len= %d;New Len= %d", detachNodes.Len(), attachNodes.Len()))
 
 	return nil
 }
@@ -884,7 +887,7 @@ func (b *BlockChain) GetFees(h *hash.Hash) types.AmountMap {
 	if ib == nil {
 		return nil
 	}
-	if ib.GetStatus().KnownInvalid() {
+	if ib.GetState().GetStatus().KnownInvalid() {
 		return nil
 	}
 	block, err := b.FetchBlockByHash(h)
@@ -905,7 +908,7 @@ func (b *BlockChain) GetFeeByCoinID(h *hash.Hash, coinId types.CoinID) int64 {
 }
 
 func (b *BlockChain) CalcWeight(ib meerdag.IBlock, bi *meerdag.BlueInfo) int64 {
-	if ib.GetStatus().KnownInvalid() {
+	if ib.GetState().GetStatus().KnownInvalid() {
 		return 0
 	}
 	block, err := b.FetchBlockByHash(ib.GetHash())
@@ -1137,7 +1140,7 @@ func (b *BlockChain) Rebuild() error {
 			b.bd.InvalidBlock(ib)
 			return err
 		}
-		if !ib.GetStatus().KnownInvalid() {
+		if !ib.GetState().GetStatus().KnownInvalid() {
 			b.bd.ValidBlock(ib)
 		}
 		b.bd.UpdateWeight(ib)
@@ -1195,7 +1198,8 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
 	b.bd = meerdag.New(config.DAGType, b.CalcWeight,
-		1.0/float64(par.TargetTimePerBlock/time.Second), b.db, b.getBlockData)
+		1.0/float64(par.TargetTimePerBlock/time.Second),
+		b.db, b.getBlockData, state.CreateBlockState, state.CreateBlockStateFromBytes)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
 	b.bd.SetCacheSize(config.DAGCacheSize, config.BlockDataCacheSize)
 

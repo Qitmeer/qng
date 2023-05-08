@@ -467,6 +467,12 @@ function remove_ban(){
   get_result "$data"
 }
 
+function check_consistency() {
+  local hashOrOrder=$1
+  local data='{"jsonrpc":"2.0","method":"p2p_checkConsistency","params":["'$hashOrOrder'"],"id":1}'
+  get_result "$data"
+}
+
 function get_balance() {
   local address=$1
   local coinID=$2
@@ -821,6 +827,7 @@ function usage(){
   echo "  removeban"
   echo "  libp2ploglevel"
   echo "  iscurrent"
+  echo "  consistency <hashOrOrder>"
 }
 
 # -------------------
@@ -1217,6 +1224,9 @@ elif [ "$1" == "banlist" ]; then
 elif [ "$1" == "removeban" ]; then
   shift
   remove_ban $@
+elif [ "$1" == "consistency" ]; then
+  shift
+  check_consistency $@
 
 ## Tx
 elif [ "$1" == "tx" ]; then

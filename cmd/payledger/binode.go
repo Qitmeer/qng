@@ -39,12 +39,12 @@ func (node *BINode) init(cfg *Config) error {
 
 	node.db = db
 	//
-	ccfg:=common.DefaultConfig(node.cfg.HomeDir)
-	ccfg.DataDir=cfg.DataDir
-	ccfg.DbType=cfg.DbType
-	ccfg.DAGType=cfg.DAGType
-	cons:=consensus.NewPure(ccfg,db)
-	err=cons.Init()
+	ccfg := common.DefaultConfig(node.cfg.HomeDir)
+	ccfg.DataDir = cfg.DataDir
+	ccfg.DbType = cfg.DbType
+	ccfg.DAGType = cfg.DAGType
+	cons := consensus.NewPure(ccfg, db)
+	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -83,7 +83,7 @@ func (node *BINode) statistics() error {
 		if ib == nil {
 			return fmt.Errorf("No block:%d", i)
 		}
-		if !knownInvalid(byte(ib.GetStatus())) {
+		if !knownInvalid(byte(ib.GetState().GetStatus())) {
 			validCount++
 
 			block, err := node.bc.FetchBlockByHash(ib.GetHash())

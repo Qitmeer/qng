@@ -115,6 +115,10 @@ func (tb *TestBlock) GetParents() []*hash.Hash {
 	return tb.block.Block().Parents
 }
 
+func (tb *TestBlock) GetMainParent() *hash.Hash {
+	return tb.block.Block().Parents[0]
+}
+
 func (tb *TestBlock) GetTimestamp() int64 {
 	return tb.block.Block().Header.Timestamp.Unix()
 }
@@ -185,7 +189,7 @@ func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
 		return nil
 	}
 
-	bd = New(dagType, CalcBlockWeight, -1, db, nil)
+	bd = New(dagType, CalcBlockWeight, -1, db, nil, createMockBlockState, createMockBlockStateFromBytes)
 	instance := bd.GetInstance()
 	tbMap = map[string]IBlock{}
 	for i := 0; i < blen; i++ {
@@ -216,13 +220,18 @@ func buildBlock(tag string, parents []*hash.Hash) (*TestBlock, error) {
 }
 
 func addBlock(tag string, parents []*hash.Hash) (*TestBlock, IBlock, error) {
+	ps := parents
+	if len(parents) > 1 {
+		_, ps = bd.GetMainParentAndList(parents)
+	}
+
 	b := &types.Block{
 		Header: types.BlockHeader{
 			Pow:        pow.GetInstance(pow.MEERXKECCAKV1, 0, []byte{}),
 			Timestamp:  time.Unix(int64(len(tbMap)), 0),
 			Difficulty: uint32(len(tbMap)),
 		},
-		Parents:      parents,
+		Parents:      ps,
 		Transactions: []*types.Transaction{},
 	}
 	block := &TestBlock{block: types.NewBlock(b)}

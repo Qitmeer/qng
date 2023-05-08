@@ -396,7 +396,7 @@ func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk
 	if m.vmblockIndex != nil {
 		return m.vmblockIndex.ConnectBlock(block.Hash(), vmbid)
 	}
-	if blk.GetStatus().KnownInvalid() {
+	if blk.GetState().GetStatus().KnownInvalid() {
 		if m.invalidtxIndex != nil {
 			return m.invalidtxIndex.ConnectBlock(uint64(blk.GetID()), block)
 		}

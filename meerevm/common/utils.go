@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-func ReverseBytes(bs *[]byte) {
+func ReverseBytes(bs *[]byte) *[]byte {
 	length := len(*bs)
 	for i := 0; i < length/2; i++ {
 		index := length - 1 - i
@@ -32,6 +32,7 @@ func ReverseBytes(bs *[]byte) {
 		(*bs)[index] = (*bs)[i]
 		(*bs)[i] = temp
 	}
+	return bs
 }
 
 func NewMeerEVMAddress(pubkeyHex string) (common.Address, error) {

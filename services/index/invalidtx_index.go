@@ -89,7 +89,7 @@ func (idx *InvalidTxIndex) caughtUpFrom(startOrder uint) error {
 			if err != nil {
 				return err
 			}
-			if !blk.GetStatus().KnownInvalid() {
+			if !blk.GetState().GetStatus().KnownInvalid() {
 				continue
 			}
 			err = idx.ConnectBlock(uint64(blk.GetID()), block)

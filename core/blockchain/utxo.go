@@ -19,7 +19,7 @@ func (bc *BlockChain) IsInvalidOut(entry *utxo.UtxoEntry) bool {
 	}
 	node := bc.BlockDAG().GetBlock(entry.BlockHash())
 	if node != nil {
-		if !node.GetStatus().KnownInvalid() {
+		if !node.GetState().GetStatus().KnownInvalid() {
 			return false
 		}
 	}

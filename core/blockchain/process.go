@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
+	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/database"
@@ -175,11 +176,11 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		b.flushNotifications()
 	}()
 
-	newNode := NewBlockNode(block, block.Block().Parents)
+	newNode := NewBlockNode(block)
 
 	fastAdd := flags&BFFastAdd == BFFastAdd
 	if !fastAdd {
-		mainParent := b.bd.GetMainParentByHashs(block.Block().Parents)
+		mainParent := b.bd.GetBlock(newNode.GetMainParent())
 		if mainParent == nil {
 			b.ChainUnlock()
 			return fmt.Errorf("Can't find main parent\n")
@@ -313,26 +314,27 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 			newOr = append(newOr, nodeBlock)
 		}
 		if len(newOr) <= 0 {
-			newOr=append(newOr,ib)
+			newOr = append(newOr, ib)
 		}
 		var sb *types.SerializedBlock
 		var err error
-		for _,nodeBlock:=range newOr {
+		for _, nodeBlock := range newOr {
 			if nodeBlock.GetID() == ib.GetID() {
 				sb = block
 			} else {
 				sb, err = b.FetchBlockByHash(nodeBlock.GetHash())
 				if err != nil {
-					return false,err
+					return false, err
 				}
 				sb.SetOrder(uint64(nodeBlock.GetOrder()))
 				sb.SetHeight(nodeBlock.GetHeight())
 			}
 			if !nodeBlock.IsOrdered() {
+				b.updateBlockState(nodeBlock, sb)
 				continue
 			}
 			if sb == nil {
-				return false,fmt.Errorf("No block:%s,id:%d\n",nodeBlock.GetHash().String(),nodeBlock.GetID())
+				return false, fmt.Errorf("No block:%s,id:%d\n", nodeBlock.GetHash().String(), nodeBlock.GetID())
 			}
 			view := utxo.NewUtxoViewpoint()
 			view.SetViewpoints([]*hash.Hash{nodeBlock.GetHash()})
@@ -346,9 +348,10 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 			err = b.connectBlock(nodeBlock, sb, view, stxos, connectedBlocks)
 			if err != nil {
 				b.bd.InvalidBlock(nodeBlock)
-				return false,err
+				b.updateBlockState(nodeBlock, sb)
+				return false, err
 			}
-			if !nodeBlock.GetStatus().KnownInvalid() {
+			if !nodeBlock.GetState().GetStatus().KnownInvalid() {
 				b.bd.ValidBlock(nodeBlock)
 			}
 			b.bd.UpdateWeight(nodeBlock)
@@ -392,7 +395,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 	for _, stxo := range stxos {
 		pkss = append(pkss, stxo.PkScript)
 	}
-	if !node.GetStatus().KnownInvalid() {
+	if !node.GetState().GetStatus().KnownInvalid() {
 		vmbid, err := b.VMService().ConnectBlock(block)
 		if err != nil {
 			return err
@@ -681,7 +684,7 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 		return fmt.Errorf("No main tip node\n")
 	}
 	state := newBestState(mainTip.GetHash(), mainTipNode.Difficulty(), blockSize, numTxns, b.CalcPastMedianTime(mainTip), lastState.TotalTxns+numTxns,
-		b.bd.GetMainChainTip().GetWeight(), b.bd.GetGraphState(), b.GetTokenTipHash())
+		b.bd.GetMainChainTip().GetState().GetWeight(), b.bd.GetGraphState(), b.GetTokenTipHash())
 
 	// Atomically insert info into the database.
 	err := b.db.Update(func(dbTx database.Tx) error {
@@ -714,9 +717,19 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 	return b.bd.Commit()
 }
 
-func (b *BlockChain) updateBlockState(ib meerdag.IBlock, block *types.SerializedBlock) {
+func (b *BlockChain) updateBlockState(ib meerdag.IBlock, block *types.SerializedBlock) error {
 	if ib.GetState() == nil {
-		return
+		return fmt.Errorf("block state is nill:%d %s", ib.GetID(), ib.GetHash().String())
 	}
-	ib.GetState().Update(block, b.VMService().GetCurStateRoot())
+	bs, ok := ib.GetState().(*state.BlockState)
+	if !ok {
+		return fmt.Errorf("block state is nill:%d %s", ib.GetID(), ib.GetHash().String())
+	}
+	mp := b.bd.GetBlockById(ib.GetMainParent())
+	if mp == nil {
+		return fmt.Errorf("No main parent:%d %s", ib.GetID(), ib.GetHash().String())
+	}
+	bs.Update(block, mp.GetState().Root(), b.VMService().GetCurStateRoot())
+	b.BlockDAG().AddToCommit(ib)
+	return nil
 }
