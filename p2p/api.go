@@ -80,8 +80,8 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, pid *string) (interface{}, e
 		if p.Genesis != nil {
 			info.Genesis = p.Genesis.String()
 		}
-		if p.StateRoot != nil {
-			info.StateRoot = p.StateRoot.String()
+		if len(p.StateRoot) > 0 {
+			info.StateRoot = p.StateRoot
 		}
 		if p.IsTheSameNetwork() {
 			info.State = p.State

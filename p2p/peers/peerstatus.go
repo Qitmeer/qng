@@ -62,4 +62,5 @@ type peerStatus struct {
 	chainState            *pb.ChainState
 	chainStateLastUpdated time.Time
 	badResponses          []*BadResponse
+	stateRootOrder        uint64
 }
