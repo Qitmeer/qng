@@ -8,7 +8,6 @@ import (
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/meerdag"
-	mcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 	"io"
@@ -127,8 +126,7 @@ func (b *BlockState) EncodeRLP(_w io.Writer) error {
 	}
 	w.ListEnd(_tmp1)
 	w.WriteBytes(b.evmRoot.Bytes())
-	rootBytes := b.root.Bytes()
-	w.WriteBytes(*mcommon.ReverseBytes(&rootBytes))
+	w.WriteBytes(b.root.Bytes())
 	w.ListEnd(_tmp0)
 	return w.Flush()
 }

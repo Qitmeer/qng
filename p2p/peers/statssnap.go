@@ -35,6 +35,7 @@ type StatsSnap struct {
 	IsCircuit     bool
 	Bads          []string
 	ReConnect     uint64
+	StateRoot     *hash.Hash
 }
 
 func (p *StatsSnap) IsRelay() bool {

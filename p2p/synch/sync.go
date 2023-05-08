@@ -99,7 +99,6 @@ func (s *Sync) Start() error {
 	s.AddDisconnectionHandler()
 
 	s.maintainPeerStatuses()
-	s.consistency()
 
 	return s.peerSync.Start()
 }

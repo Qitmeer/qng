@@ -108,6 +108,21 @@ func (s *Sync) validateChainStateMessage(msg *pb.ChainState, pe *peers.Peer) *co
 	if msg.GraphState.Total <= 0 {
 		return common.NewErrorStr(common.ErrDAGConsensus, "invalid graph state")
 	}
+	// state root check
+	gs := changePBGraphStateToGraphState(msg.GraphState)
+	if gs != nil {
+		mt := s.p2p.BlockChain().BlockDAG().GetMainChainTip()
+		pmt := gs.GetMainChainTip()
+		if mt != nil &&
+			pmt != nil &&
+			mt.GetHash().IsEqual(pmt) {
+			sr := changePBHashToHash(msg.StateRoot)
+			if !mt.GetState().Root().IsEqual(sr) {
+				return common.NewError(common.ErrDAGConsensus,
+					fmt.Errorf("State root inconsistent:me(%s) != peer(%s) in block %s order(%d)", mt.GetState().Root().String(), sr.String(), mt.GetHash().String(), mt.GetOrder()))
+			}
+		}
+	}
 
 	if pe.Direction() == network.DirInbound {
 		// Reject outbound peers that are not full nodes.
@@ -134,6 +149,7 @@ func (s *Sync) getChainState() *pb.ChainState {
 		GraphState:      s.getGraphState(),
 		UserAgent:       []byte(s.p2p.Config().UserAgent),
 		DisableRelayTx:  s.p2p.Config().DisableRelayTx,
+		StateRoot:       &pb.Hash{Hash: s.p2p.BlockChain().BlockDAG().GetMainChainTip().GetState().Root().Bytes()},
 	}
 
 	return cs

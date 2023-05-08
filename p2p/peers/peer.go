@@ -355,6 +355,7 @@ func (p *Peer) StatsSnapshot() (*StatsSnap, error) {
 		IsCircuit:  p.isCircuit(),
 		Bads:       p.badResponseStrs(),
 		ReConnect:  p.reconnect,
+		StateRoot:  p.stateRoot(),
 	}
 	n := p.node()
 	if n != nil {
@@ -407,6 +408,20 @@ func (p *Peer) genesis() *hash.Hash {
 		return nil
 	}
 	return genesisHash
+}
+
+func (p *Peer) stateRoot() *hash.Hash {
+	if p.chainState == nil {
+		return nil
+	}
+	if p.chainState.StateRoot == nil {
+		return nil
+	}
+	sr, err := hash.NewHash(p.chainState.StateRoot.Hash)
+	if err != nil {
+		return nil
+	}
+	return sr
 }
 
 func (p *Peer) Services() protocol.ServiceFlag {
