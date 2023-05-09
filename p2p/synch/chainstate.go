@@ -108,22 +108,6 @@ func (s *Sync) validateChainStateMessage(msg *pb.ChainState, pe *peers.Peer) *co
 	if msg.GraphState.Total <= 0 {
 		return common.NewErrorStr(common.ErrDAGConsensus, "invalid graph state")
 	}
-	// state root check
-	gs := changePBGraphStateToGraphState(msg.GraphState)
-	if gs != nil {
-		bs := s.p2p.BlockChain().BestSnapshot()
-		pmt := gs.GetMainChainTip()
-		if bs.GraphState != nil &&
-			pmt != nil &&
-			bs.GraphState.GetMainChainTip().IsEqual(pmt) {
-			sr := changePBHashToHash(msg.StateRoot)
-			if !bs.StateRoot.IsEqual(sr) {
-				return common.NewError(common.ErrDAGConsensus,
-					fmt.Errorf("State root inconsistent:me(%s) != peer(%s) in block %s order(%d)", bs.StateRoot.String(), sr.String(), bs.Hash.String(), bs.GraphState.GetMainOrder()))
-			}
-		}
-	}
-
 	if pe.Direction() == network.DirInbound {
 		// Reject outbound peers that are not full nodes.
 		wantServices := protocol.Full
