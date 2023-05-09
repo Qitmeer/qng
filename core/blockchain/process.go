@@ -35,7 +35,7 @@ import (
 // best chain.
 //
 // This function is safe for concurrent access.
-// return IsOrphan,IsTipsExpired,error
+// return IsOrphan,error
 func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
 	isOrphan, err := b.processBlock(block, flags)
 	return isOrphan, err
