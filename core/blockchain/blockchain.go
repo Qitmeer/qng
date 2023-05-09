@@ -728,7 +728,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			b.bd.InvalidBlock(nodeBlock)
 			stxos = []utxo.SpentTxOut{}
 			view.Clean()
-			log.Info(fmt.Sprintf("%s", err))
+			log.Warn(err.Error(), "block", nodeBlock.GetHash().String(), "order", nodeBlock.GetOrder())
 		}
 		err = b.connectBlock(nodeBlock, block, view, stxos, connectedBlocks)
 		if err != nil {

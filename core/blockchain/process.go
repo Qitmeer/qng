@@ -347,6 +347,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 				b.bd.InvalidBlock(nodeBlock)
 				stxos = []utxo.SpentTxOut{}
 				view.Clean()
+				log.Warn(err.Error(), "block", nodeBlock.GetHash().String(), "order", nodeBlock.GetOrder())
 			}
 			err = b.connectBlock(nodeBlock, sb, view, stxos, connectedBlocks)
 			if err != nil {
