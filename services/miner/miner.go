@@ -593,13 +593,15 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	defer m.submitLocker.Unlock()
 	m.totalSubmit++
 
+	err := m.consensus.BlockChain().(*blockchain.BlockChain).BlockDAG().CheckSubMainChainTip(block.Block().Parents)
+	if err != nil {
+		go m.BlockChainChange()
+		return nil, fmt.Errorf("The tips of block is expired:%s (error:%s)\n", block.Hash().String(), err.Error())
+	}
 	// Process this block using the same rules as blocks coming from other
 	// nodes. This will in turn relay it to the network like normal.
-	IsOrphan, IsTipsExpired, err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd)
+	IsOrphan, err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd)
 	if err != nil {
-		if IsTipsExpired {
-			go m.BlockChainChange()
-		}
 		// Anything other than a rule violation is an unexpected error,
 		// so log that error as an internal error.
 		rErr, ok := err.(blockchain.RuleError)

@@ -35,16 +35,10 @@ import (
 // best chain.
 //
 // This function is safe for concurrent access.
-// return IsOrphan,IsTipsExpired,error
-func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, bool, error) {
-	if flags.Has(BFRPCAdd) {
-		err := b.BlockDAG().CheckSubMainChainTip(block.Block().Parents)
-		if err != nil {
-			return false, true, fmt.Errorf("The tips of block is expired:%s (error:%s)\n", block.Hash().String(), err.Error())
-		}
-	}
+// return IsOrphan,error
+func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
 	isOrphan, err := b.processBlock(block, flags)
-	return isOrphan, false, err
+	return isOrphan, err
 }
 
 func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
