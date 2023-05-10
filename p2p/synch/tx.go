@@ -135,6 +135,9 @@ func (ps *PeerSync) processGetTxs(pe *peers.Peer, otxs []*hash.Hash) error {
 			}
 			ptxs := ret.(*pb.Transactions)
 			for _, tx := range ptxs.Txs {
+				if !ps.IsRunning() {
+					return fmt.Errorf("No run PeerSync\n")
+				}
 				txh, err := ps.sy.handleTxMsg(tx, pe.GetID())
 				txsM[txh.String()] = struct{}{}
 

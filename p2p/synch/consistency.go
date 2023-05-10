@@ -17,22 +17,26 @@ func (s *Sync) CheckConsistency(hashOrOrder *protocol.HashOrNumber) (string, err
 	if !s.p2p.Config().Consistency {
 		return "", fmt.Errorf("Please enable --consistency")
 	}
-
+	var stateRoot hash.Hash
 	var block meerdag.IBlock
 	if hashOrOrder == nil {
-		block = s.p2p.BlockChain().BlockDAG().GetMainChainTip()
+		bs := s.p2p.BlockChain().BestSnapshot()
+		block = s.p2p.BlockChain().BlockDAG().GetBlock(&bs.Hash)
+		stateRoot = bs.StateRoot
 	} else {
 		if hashOrOrder.IsHash() {
 			block = s.p2p.BlockChain().BlockDAG().GetBlock(hashOrOrder.Hash)
 		} else {
 			block = s.p2p.BlockChain().BlockDAG().GetBlockByOrder(uint(hashOrOrder.Number))
 		}
+		if block == nil {
+			return "", fmt.Errorf("No block:%v\n", hashOrOrder)
+		}
+		stateRoot = *block.GetState().Root()
 	}
 
 	startTime := time.Now()
-	if block == nil || block.GetState() == nil {
-		return "", fmt.Errorf("No block:%v\n", hashOrOrder)
-	}
+
 	connectedPeers := s.Peers().CanSyncPeers()
 
 	pes := []*peers.Peer{}
@@ -48,7 +52,7 @@ func (s *Sync) CheckConsistency(hashOrOrder *protocol.HashOrNumber) (string, err
 	if len(pes) <= 0 {
 		return "", fmt.Errorf("No peers")
 	}
-	stateRoot := *block.GetState().Root()
+
 	total := int32(0)
 	valid := int32(0)
 	wg := sync.WaitGroup{}

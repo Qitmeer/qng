@@ -143,6 +143,9 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 	// Protect concurrent access.
 	mp.mtx.Lock()
 	if opreturn.IsMeerEVMTx(tx.Tx) {
+		if mp.cfg.BC.VMService().IsShutdown() {
+			return
+		}
 		err := mp.cfg.BC.VMService().RemoveTxFromMempool(tx.Tx)
 		if err != nil {
 			log.Error(err.Error())

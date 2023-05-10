@@ -151,6 +151,9 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 	if readys > 0 {
 		packageNumber := 0
 		for index := 0; index < readys; packageNumber++ {
+			if ps.IsInterrupt() {
+				return nil
+			}
 			sendBlocks := blocksReady[index:]
 			log.Trace(fmt.Sprintf("processGetBlockDatas::sendGetBlockDataRequest peer=%v, blocks=%d [%s -> %s] ", pe.GetID(), len(sendBlocks), sendBlocks[0], sendBlocks[len(sendBlocks)-1]), "processID", ps.processID, "package number", packageNumber)
 			ret, err := ps.sy.Send(pe, RPCGetBlockDatas, &pb.GetBlockDatas{Locator: changeHashsToPBHashs(sendBlocks)})

@@ -37,8 +37,39 @@ import (
 // This function is safe for concurrent access.
 // return IsOrphan,error
 func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
-	isOrphan, err := b.processBlock(block, flags)
-	return isOrphan, err
+	if b.IsShutdown() {
+		return false, fmt.Errorf("block chain is shutdown")
+	}
+	msg := processMsg{block: block, flags: flags, result: make(chan *processResult)}
+	b.msgChan <- &msg
+	result := <-msg.result
+	return result.isOrphan, result.err
+}
+
+func (b *BlockChain) handler() {
+	log.Trace("BlockChain handler")
+out:
+	for {
+		select {
+		case msg := <-b.msgChan:
+			isOrphan, err := b.processBlock(msg.block, msg.flags)
+			msg.result <- &processResult{isOrphan: isOrphan, err: err}
+		case <-b.quit:
+			break out
+		}
+	}
+
+cleanup:
+	for {
+		select {
+		case <-b.msgChan:
+		default:
+			break cleanup
+		}
+	}
+
+	b.wg.Done()
+	log.Trace("BlockChain handler done")
 }
 
 func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
@@ -753,4 +784,15 @@ func (b *BlockChain) updateDefaultBlockState(ib meerdag.IBlock) error {
 	bs.SetRoot(mp.GetState().Root())
 	b.BlockDAG().AddToCommit(ib)
 	return nil
+}
+
+type processMsg struct {
+	block  *types.SerializedBlock
+	flags  BehaviorFlags
+	result chan *processResult
+}
+
+type processResult struct {
+	isOrphan bool
+	err      error
 }

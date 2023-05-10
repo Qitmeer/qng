@@ -24,4 +24,5 @@ type VMI interface {
 	SetLogLevel(level string)
 	GetBlockByNumber(num uint64) (interface{}, error)
 	GetCurStateRoot() common.Hash
+	IsShutdown() bool
 }

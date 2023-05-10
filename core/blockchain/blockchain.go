@@ -133,6 +133,10 @@ type BlockChain struct {
 	consensus model.Consensus
 
 	progressLogger *progresslog.BlockProgressLogger
+
+	msgChan chan *processMsg
+	wg      sync.WaitGroup
+	quit    chan struct{}
 }
 
 func (b *BlockChain) Init() error {
@@ -408,6 +412,8 @@ func (b *BlockChain) Start() error {
 	if err := b.Service.Start(); err != nil {
 		return err
 	}
+	b.wg.Add(1)
+	go b.handler()
 	return nil
 }
 
@@ -415,6 +421,8 @@ func (b *BlockChain) Stop() error {
 	if err := b.Service.Stop(); err != nil {
 		return err
 	}
+	close(b.quit)
+	b.wg.Wait()
 	return nil
 }
 
@@ -1207,6 +1215,8 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		shutdownTracker:    shutdown.NewTracker(config.DataDir),
 		headerList:         list.New(),
 		progressLogger:     progresslog.NewBlockProgressLogger("Processed", log),
+		msgChan:            make(chan *processMsg),
+		quit:               make(chan struct{}),
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
