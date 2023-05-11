@@ -272,7 +272,7 @@ func (b *MeerChain) prepareEnvironment(state model.BlockState) (*types.Header, e
 		return curBlockHeader, nil
 	}
 	getError := func(msg string) error {
-		return fmt.Errorf("meer chain env error:targetEVM.number=%d, targetEVM.hash=%s, targetState.order=%d, cur.number=%d, cur.hash=%s", state.GetEVMNumber(), state.GetEVMHash().String(), state.GetOrder(), curBlockHeader.Number, curBlockHeader.Hash().String(), msg)
+		return fmt.Errorf("meer chain env error:targetEVM.number=%d, targetEVM.hash=%s, targetState.order=%d, cur.number=%d, cur.hash=%s, %s", state.GetEVMNumber(), state.GetEVMHash().String(), state.GetOrder(), curBlockHeader.Number, curBlockHeader.Hash().String(), msg)
 	}
 	if state.GetOrder() <= 0 {
 		return nil, getError("reach genesis")
