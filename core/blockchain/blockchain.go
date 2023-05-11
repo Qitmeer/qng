@@ -321,13 +321,14 @@ func (b *BlockChain) createChainState() error {
 	header := &genesisBlock.Block().Header
 	node := NewBlockNode(genesisBlock)
 	_, _, ib, _ := b.bd.AddBlock(node)
+	ib.GetState().SetEVM(b.VMService().GetCurHeader())
 	//node.FlushToDB(b)
 	// Initialize the state related to the best block.  Since it is the
 	// genesis block, use its timestamp for the median time.
 	numTxns := uint64(len(genesisBlock.Block().Transactions))
 	blockSize := uint64(genesisBlock.Block().SerializeSize())
 	b.stateSnapshot = newBestState(node.GetHash(), node.Difficulty(), blockSize, numTxns,
-		time.Unix(node.GetTimestamp(), 0), numTxns, 0, b.bd.GetGraphState(), node.GetHash(), hash.ZeroHash)
+		time.Unix(node.GetTimestamp(), 0), numTxns, 0, b.bd.GetGraphState(), node.GetHash(), *ib.GetState().Root())
 	b.TokenTipID = 0
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
@@ -665,7 +666,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		if err != nil {
 			panic(err)
 		}
-
+		log.Debug("detach block", "hash", n.Block.GetHash().String(), "old order", n.OldOrder, "status", n.Block.GetState().GetStatus().String())
 		block.SetOrder(uint64(n.OldOrder))
 		// Load all of the utxos referenced by the block that aren't
 		// already in the view.
@@ -704,6 +705,18 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		if err != nil {
 			return err
 		}
+	}
+	for e := attachNodes.Front(); e != nil; e = e.Next() {
+		nodeBlock := e.Value.(meerdag.IBlock)
+		if !nodeBlock.IsOrdered() {
+			continue
+		}
+		startState := b.bd.GetBlockByOrder(nodeBlock.GetOrder() - 1).GetState()
+		err = b.VMService().RewindTo(startState)
+		if err != nil {
+			return err
+		}
+		break
 	}
 
 	for e := attachNodes.Front(); e != nil; e = e.Next() {
@@ -755,6 +768,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		if er != nil {
 			log.Error(er.Error())
 		}
+		log.Debug("attach block", "hash", nodeBlock.GetHash().String(), "order", nodeBlock.GetOrder(), "status", nodeBlock.GetState().GetStatus().String())
 	}
 
 	// Log the point where the chain forked and old and new best chain
@@ -1171,6 +1185,14 @@ func (b *BlockChain) Rebuild() error {
 		}
 	}
 	return nil
+}
+
+func (b *BlockChain) GetBlockState(order uint64) model.BlockState {
+	block := b.BlockDAG().GetBlockByOrder(uint(order))
+	if block == nil {
+		return nil
+	}
+	return block.GetState()
 }
 
 // New returns a BlockChain instance using the provided configuration details.

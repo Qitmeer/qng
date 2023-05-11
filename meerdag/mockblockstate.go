@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/ethereum/go-ethereum/common"
+	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"io"
 )
@@ -113,6 +115,22 @@ func (b *mockBlockState) Bytes() ([]byte, error) {
 }
 
 func (b *mockBlockState) Root() *hash.Hash {
+	return nil
+}
+
+func (b *mockBlockState) GetEVMRoot() common.Hash {
+	return common.Hash{}
+}
+func (b *mockBlockState) GetEVMHash() common.Hash {
+	return common.Hash{}
+}
+func (b *mockBlockState) GetEVMNumber() uint64 {
+	return 0
+}
+func (b *mockBlockState) SetEVM(header *etypes.Header) {
+
+}
+func (b *mockBlockState) GetDuplicateTxs() []int {
 	return nil
 }
 

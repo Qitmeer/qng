@@ -83,7 +83,7 @@ func (s *consensus) Init() error {
 	}
 	s.blockchain = blockchain
 	//
-	vmService, err := vm.NewService(s.Config(), s.Events())
+	vmService, err := vm.NewService(s)
 	if err != nil {
 		return err
 	}

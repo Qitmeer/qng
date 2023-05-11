@@ -9,6 +9,7 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/ethereum/go-ethereum/common"
+	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"io"
 )
@@ -20,6 +21,8 @@ type BlockState struct {
 	status       model.BlockStatus
 	duplicateTxs []int
 	evmRoot      common.Hash
+	evmHash      common.Hash
+	evmNumber    uint64
 	root         hash.Hash
 }
 
@@ -29,10 +32,6 @@ func (b *BlockState) GetID() uint64 {
 
 func (b *BlockState) SetOrder(o uint64) {
 	b.order = o
-
-	if !b.IsOrdered() {
-		b.Reset()
-	}
 }
 
 func (b *BlockState) GetOrder() uint64 {
@@ -79,20 +78,47 @@ func (b *BlockState) SetRoot(root *hash.Hash) {
 	b.root = *root
 }
 
-func (b *BlockState) Reset() {
-	b.root = hash.ZeroHash
+func (b *BlockState) SetDefault(parent *BlockState) {
+	b.root = parent.root
+	b.evmHash = parent.evmHash
+	b.evmNumber = parent.evmNumber
+	b.evmRoot = parent.evmRoot
 }
 
-func (b *BlockState) Update(block *types.SerializedBlock, mainParentRoot *hash.Hash, evmRoot common.Hash) {
+func (b *BlockState) GetEVMRoot() common.Hash {
+	return b.evmRoot
+}
+
+func (b *BlockState) GetEVMHash() common.Hash {
+	return b.evmHash
+}
+
+func (b *BlockState) GetEVMNumber() uint64 {
+	return b.evmNumber
+}
+
+func (b *BlockState) GetDuplicateTxs() []int {
+	return b.duplicateTxs
+}
+
+func (b *BlockState) SetEVM(header *etypes.Header) {
+	b.evmNumber = header.Number.Uint64()
+	b.evmHash = header.Hash()
+	b.evmRoot = header.Root
+}
+
+func (b *BlockState) Update(block *types.SerializedBlock, prev *BlockState, header *etypes.Header) {
 	defer func() {
 		log.Trace("Update block state", "id", b.id, "order", b.order, "root", b.root.String())
 	}()
-	b.root = *mainParentRoot
-	b.evmRoot = evmRoot
-	if b.status.KnownInvalid() ||
-		!b.IsOrdered() {
+	b.SetDefault(prev)
+	if b.status.KnownInvalid() {
 		return
 	}
+	b.evmRoot = header.Root
+	b.evmHash = header.Hash()
+	b.evmNumber = header.Number.Uint64()
+	//
 	b.duplicateTxs = []int{}
 	txs := []*types.Tx{}
 	txRoot := block.Block().Header.TxRoot
@@ -108,7 +134,7 @@ func (b *BlockState) Update(block *types.SerializedBlock, mainParentRoot *hash.H
 		txRoot = *merkles[len(merkles)-1]
 	}
 	//
-	data := mainParentRoot.Bytes()
+	data := prev.Root().Bytes()
 	data = append(data, serialization.SerializeUint64(b.order)...)
 	data = append(data, serialization.SerializeUint64(b.weight)...)
 	data = append(data, byte(b.status))
@@ -130,6 +156,8 @@ func (b *BlockState) EncodeRLP(_w io.Writer) error {
 	}
 	w.ListEnd(_tmp1)
 	w.WriteBytes(b.evmRoot.Bytes())
+	w.WriteBytes(b.evmHash.Bytes())
+	w.WriteUint64(b.evmNumber)
 	w.WriteBytes(b.root.Bytes())
 	w.ListEnd(_tmp0)
 	return w.Flush()
@@ -187,12 +215,24 @@ func (b *BlockState) DecodeRLP(dec *rlp.Stream) error {
 			return err
 		}
 		_tmp0.evmRoot = _tmp7
-		// Root:
-		var _tmp8 hash.Hash
+		// EvmHash:
+		var _tmp8 common.Hash
 		if err := dec.ReadBytes(_tmp8[:]); err != nil {
 			return err
 		}
-		_tmp0.root = _tmp8
+		_tmp0.evmHash = _tmp8
+		// evmNumber:
+		_tmp9, err := dec.Uint64()
+		if err != nil {
+			return err
+		}
+		_tmp0.evmNumber = _tmp9
+		// Root:
+		var _tmp10 hash.Hash
+		if err := dec.ReadBytes(_tmp10[:]); err != nil {
+			return err
+		}
+		_tmp0.root = _tmp10
 		if err := dec.ListEnd(); err != nil {
 			return err
 		}

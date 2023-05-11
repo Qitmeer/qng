@@ -13,9 +13,10 @@ import (
 )
 
 type Block struct {
-	Id   *hash.Hash
-	Txs  []model.Tx
-	Time time.Time
+	Id               *hash.Hash
+	Txs              []model.Tx
+	Time             time.Time
+	ParentBlockState model.BlockState
 }
 
 func (b *Block) ID() *hash.Hash {
@@ -68,4 +69,8 @@ func (b *Block) String() string {
 
 func (b *Block) Transactions() []model.Tx {
 	return b.Txs
+}
+
+func (b *Block) ParentState() model.BlockState {
+	return b.ParentBlockState
 }
