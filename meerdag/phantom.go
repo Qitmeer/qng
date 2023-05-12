@@ -625,7 +625,7 @@ func (ph *Phantom) Load() error {
 	for _, v := range tips {
 		tip := ph.getBlock(v)
 		if tip == nil {
-			return fmt.Errorf("Can't find tip:%d\n", v)
+			return fmt.Errorf("Can't find tip:%d", v)
 		}
 		ph.bd.updateTips(tip)
 	}
@@ -638,7 +638,7 @@ func (ph *Phantom) Load() error {
 	for _, da := range diffs {
 		dab := ph.getBlock(da)
 		if dab == nil {
-			return fmt.Errorf("Can't find tip:%d\n", da)
+			return fmt.Errorf("Can't find tip:%d", da)
 		}
 		ph.diffAnticone.AddPair(da, dab)
 	}

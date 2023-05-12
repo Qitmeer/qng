@@ -281,7 +281,7 @@ func (b *BlockChain) initChainState() error {
 	mainTip := b.bd.GetMainChainTip()
 	mainTipNode := b.GetBlockNode(mainTip)
 	if mainTipNode == nil {
-		return fmt.Errorf("No main tip\n")
+		return fmt.Errorf("No main tip")
 	}
 
 	var block *types.SerializedBlock

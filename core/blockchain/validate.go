@@ -82,7 +82,7 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource m
 	}
 
 	if block.Hash().String() == forks.BadBlockHashHex {
-		return fmt.Errorf("Bad block:%s\n", block.Hash().String())
+		return fmt.Errorf("Bad block:%s", block.Hash().String())
 	}
 
 	err = checkBlockHeaderSanity(header, timeSource, flags, chainParams, uint(height))
