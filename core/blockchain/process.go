@@ -431,7 +431,8 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		pkss = append(pkss, stxo.PkScript)
 	}
 	if !node.GetState().GetStatus().KnownInvalid() {
-		vmbid, err := b.VMService().ConnectBlock(block)
+		prevState := b.bd.GetBlockByOrder(node.GetOrder() - 1).GetState()
+		vmbid, err := b.VMService().ConnectBlock(block, prevState)
 		if err != nil {
 			return err
 		}
@@ -494,12 +495,8 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, view *utxo.UtxoViewpoint, stxos []utxo.SpentTxOut) error {
-	vmbid, err := b.VMService().DisconnectBlock(block)
-	if err != nil {
-		return err
-	}
 	// Calculate the exact subsidy produced by adding the block.
-	err = b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx database.Tx) error {
 		// Update the utxo set using the state of the utxo view.  This
 		// entails restoring all of the utxos spent and removing the new
 		// ones created by the block.
@@ -526,7 +523,7 @@ func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedB
 		for _, stxo := range stxos {
 			pkss = append(pkss, stxo.PkScript)
 		}
-		err := b.indexManager.DisconnectBlock(block, pkss, ib, vmbid)
+		err := b.indexManager.DisconnectBlock(block, pkss, ib, 0)
 		if err != nil {
 			return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 		}
@@ -753,18 +750,22 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 }
 
 func (b *BlockChain) updateBlockState(ib meerdag.IBlock, block *types.SerializedBlock) error {
-	if ib.GetState() == nil {
+	if !ib.IsOrdered() {
+		return b.updateDefaultBlockState(ib)
+	}
+	if ib.GetState() == nil ||
+		ib.GetOrder() <= 0 {
 		return fmt.Errorf("block state is nill:%d %s", ib.GetID(), ib.GetHash().String())
 	}
 	bs, ok := ib.GetState().(*state.BlockState)
 	if !ok {
 		return fmt.Errorf("block state is nill:%d %s", ib.GetID(), ib.GetHash().String())
 	}
-	mp := b.bd.GetBlockById(ib.GetMainParent())
-	if mp == nil {
-		return fmt.Errorf("No main parent:%d %s", ib.GetID(), ib.GetHash().String())
+	prev := b.bd.GetBlockByOrder(ib.GetOrder() - 1)
+	if prev == nil {
+		return fmt.Errorf("No prev block:%d %s", ib.GetID(), ib.GetHash().String())
 	}
-	bs.Update(block, mp.GetState().Root(), b.VMService().GetCurStateRoot())
+	bs.Update(block, prev.GetState().(*state.BlockState), b.VMService().GetCurHeader())
 	b.BlockDAG().AddToCommit(ib)
 	return nil
 }
@@ -781,7 +782,7 @@ func (b *BlockChain) updateDefaultBlockState(ib meerdag.IBlock) error {
 	if mp == nil {
 		return fmt.Errorf("No main parent:%d %s", ib.GetID(), ib.GetHash().String())
 	}
-	bs.SetRoot(mp.GetState().Root())
+	bs.SetDefault(mp.GetState().(*state.BlockState))
 	b.BlockDAG().AddToCommit(ib)
 	return nil
 }

@@ -1,6 +1,10 @@
 package model
 
-import "github.com/Qitmeer/qng/common/hash"
+import (
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/ethereum/go-ethereum/common"
+	etypes "github.com/ethereum/go-ethereum/core/types"
+)
 
 type BlockState interface {
 	GetID() uint64
@@ -14,4 +18,9 @@ type BlockState interface {
 	Invalid()
 	Root() *hash.Hash
 	Bytes() ([]byte, error)
+	GetEVMRoot() common.Hash
+	GetEVMHash() common.Hash
+	GetEVMNumber() uint64
+	SetEVM(header *etypes.Header)
+	GetDuplicateTxs() []int
 }

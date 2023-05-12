@@ -11,4 +11,5 @@ type Context interface {
 	GetConfig() *config.Config
 	GetTxPool() model.TxPool
 	GetNotify() Notify
+	GetConsensus() model.Consensus
 }

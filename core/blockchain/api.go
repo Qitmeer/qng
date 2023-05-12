@@ -13,7 +13,6 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/meerevm/evm"
 	rapi "github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"strconv"
@@ -489,27 +488,18 @@ func (api *PublicBlockAPI) GetStateRoot(order int64, verbose *bool) (interface{}
 	if ib == nil {
 		return nil, internalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %d", order))
 	}
-	eb, err := api.chain.GetMeerBlock(ib.GetOrder())
-	if err != nil {
-		return nil, err
-	}
-	sr := ""
-	num := uint64(0)
-	if eblock, ok := eb.(*evm.Block); ok {
-		sr = eblock.StateRoot().String()
-		num = eblock.Number()
-	}
 	if vb {
 		ret := qjson.OrderedResult{
 			qjson.KV{Key: "Hash", Val: ib.GetHash().String()},
 			qjson.KV{Key: "Order", Val: order},
 			qjson.KV{Key: "Height", Val: ib.GetHeight()},
 			qjson.KV{Key: "Valid", Val: !ib.GetState().GetStatus().KnownInvalid()},
-			qjson.KV{Key: "EVMStateRoot", Val: sr},
-			qjson.KV{Key: "EVMHeight", Val: num},
+			qjson.KV{Key: "EVMStateRoot", Val: ib.GetState().GetEVMRoot().String()},
+			qjson.KV{Key: "EVMHeight", Val: ib.GetState().GetEVMNumber()},
+			qjson.KV{Key: "EVMHead", Val: ib.GetState().GetEVMHash().String()},
 			qjson.KV{Key: "StateRoot", Val: ib.GetState().Root().String()},
 		}
 		return ret, nil
 	}
-	return sr, nil
+	return ib.GetState().Root().String(), nil
 }

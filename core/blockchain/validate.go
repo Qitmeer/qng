@@ -19,6 +19,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
@@ -940,7 +941,8 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 	if err != nil {
 		return err
 	}
-	return b.VMService().CheckConnectBlock(block)
+	prevState := b.bd.GetBlockByOrder(ib.GetOrder() - 1).GetState()
+	return b.VMService().CheckConnectBlock(block, prevState)
 }
 
 // consensusScriptVerifyFlags returns the script flags that must be used when
@@ -1361,7 +1363,6 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) err
 	if virBlock == nil {
 		return ruleError(ErrPrevBlockNotBest, "tipsNode")
 	}
-	virBlock.SetOrder(uint(block.Order()))
 	if virBlock.GetHeight() != block.Height() {
 		return ruleError(ErrPrevBlockNotBest, "tipsNode height")
 	}
@@ -1369,7 +1370,9 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) err
 	if mainParent == nil {
 		return ruleError(ErrPrevBlockNotBest, "main parent")
 	}
-
+	block.SetOrder(uint64(mainParent.GetOrder() + 1))
+	virBlock.SetOrder(uint(block.Order()))
+	virBlock.GetState().(*state.BlockState).SetDefault(mainParent.GetState().(*state.BlockState))
 	err = b.checkBlockContext(block, mainParent, flags)
 	if err != nil {
 		return err

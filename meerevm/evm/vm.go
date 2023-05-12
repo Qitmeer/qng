@@ -173,7 +173,11 @@ func (vm *VM) ConnectBlock(block consensus.Block) (uint64, error) {
 }
 
 func (vm *VM) DisconnectBlock(block consensus.Block) (uint64, error) {
-	return vm.mchain.DisconnectBlock(block)
+	return 0, nil
+}
+
+func (vm *VM) RewindTo(state model.BlockState) error {
+	return vm.mchain.RewindTo(state)
 }
 
 func (vm *VM) ParseBlock([]byte) (consensus.Block, error) {
@@ -332,14 +336,6 @@ func (vm *VM) Genesis() *hash.Hash {
 	return nmbb
 }
 
-func (vm *VM) GetBlockID(bh *hash.Hash) uint64 {
-	bn := meer.ReadBlockNumber(vm.chain.Ether().ChainDb(), qcommon.ToEVMHash(bh))
-	if bn == nil {
-		return 0
-	}
-	return *bn
-}
-
 func (vm *VM) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
 	tx, _, blockNumber, _, _ := vm.chain.Backend().GetTransaction(nil, qcommon.ToEVMHash(txhash))
 	if tx == nil {
@@ -350,6 +346,10 @@ func (vm *VM) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
 
 func (vm *VM) GetCurStateRoot() common.Hash {
 	return vm.chain.Ether().BlockChain().CurrentBlock().Root
+}
+
+func (vm *VM) GetCurHeader() *types.Header {
+	return vm.chain.Ether().BlockChain().CurrentBlock()
 }
 
 func New() *VM {

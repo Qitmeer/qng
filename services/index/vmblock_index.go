@@ -79,15 +79,15 @@ func (idx *VMBlockIndex) caughtUpFrom(startOrder uint) error {
 			if i == 0 {
 				continue
 			}
-			bh := bc.GetBlockHashByOrder(i)
-			if bh == nil {
+			ob := bc.(*blockchain.BlockChain).BlockDAG().GetBlockByOrder(i)
+			if ob == nil {
 				return fmt.Errorf("No block in order:%d", i)
 			}
-			bid := bc.(*blockchain.BlockChain).VMService().GetBlockID(bh)
+			bid := ob.GetState().GetEVMNumber()
 			if bid == 0 {
 				continue
 			}
-			err := idx.ConnectBlock(bh, bid)
+			err := idx.ConnectBlock(ob.GetHash(), bid)
 			if err != nil {
 				return err
 			}
