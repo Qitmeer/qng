@@ -533,7 +533,9 @@ func (m *MeerPool) GetSize() int64 {
 func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
+	if !m.isRunning() {
+		return fmt.Errorf("meer pool is not running")
+	}
 	if !opreturn.IsMeerEVMTx(tx) {
 		return fmt.Errorf("%s is not %v", tx.TxHash().String(), qtypes.TxTypeCrossChainVM)
 	}
