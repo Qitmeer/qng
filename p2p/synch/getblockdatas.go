@@ -159,8 +159,10 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 			if err != nil {
 				log.Warn(fmt.Sprintf("getBlocks send:%v", err), "processID", ps.processID)
 				if index == 0 {
+					index++
 					return false
 				} else {
+					index = readys
 					return true
 				}
 			}
@@ -190,6 +192,8 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 						return true
 					}
 				}
+			} else {
+				index = readys
 			}
 			return true
 		}
