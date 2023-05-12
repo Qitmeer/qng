@@ -208,7 +208,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		mainParent := b.bd.GetBlock(newNode.GetMainParent())
 		if mainParent == nil {
 			b.ChainUnlock()
-			return fmt.Errorf("Can't find main parent\n")
+			return fmt.Errorf("Can't find main parent")
 		}
 		// The block must pass all of the validation rules which depend on the
 		// position of the block within the block chain.
@@ -227,7 +227,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	newOrders, oldOrders, ib, isMainChainTipChange := b.bd.AddBlock(newNode)
 	if ib == nil {
 		b.ChainUnlock()
-		return fmt.Errorf("Irreparable error![%s]\n", newNode.GetHash().String())
+		return fmt.Errorf("Irreparable error![%s]", newNode.GetHash().String())
 	}
 	block.SetOrder(uint64(ib.GetOrder()))
 	block.SetHeight(ib.GetHeight())
