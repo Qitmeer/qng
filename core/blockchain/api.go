@@ -488,6 +488,8 @@ func (api *PublicBlockAPI) GetStateRoot(order int64, verbose *bool) (interface{}
 	if ib == nil {
 		return nil, internalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %d", order))
 	}
+	api.chain.ChainRLock()
+	defer api.chain.ChainRUnlock()
 	if vb {
 		ret := qjson.OrderedResult{
 			qjson.KV{Key: "Hash", Val: ib.GetHash().String()},
