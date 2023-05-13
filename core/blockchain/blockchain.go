@@ -1152,7 +1152,7 @@ func (b *BlockChain) Rebuild() error {
 
 		if i == 0 {
 			if b.indexManager != nil {
-				err = b.indexManager.ConnectBlock(block, nil, ib, 0)
+				err = b.indexManager.ConnectBlock(block, nil, ib)
 				if err != nil {
 					return err
 				}

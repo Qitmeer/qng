@@ -432,7 +432,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 	}
 	if !node.GetState().GetStatus().KnownInvalid() {
 		prevState := b.bd.GetBlockByOrder(node.GetOrder() - 1).GetState()
-		vmbid, err := b.VMService().ConnectBlock(block, prevState)
+		_, err := b.VMService().ConnectBlock(block, prevState)
 		if err != nil {
 			return err
 		}
@@ -463,7 +463,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		// optional indexes with the block being connected so they can
 		// update themselves accordingly.
 		if b.indexManager != nil {
-			err := b.indexManager.ConnectBlock(block, pkss, node, vmbid)
+			err := b.indexManager.ConnectBlock(block, pkss, node)
 			if err != nil {
 				return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 			}
@@ -480,7 +480,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 	} else {
 		// Atomically insert info into the database.
 		if b.indexManager != nil {
-			err := b.indexManager.ConnectBlock(block, pkss, node, 0)
+			err := b.indexManager.ConnectBlock(block, pkss, node)
 			if err != nil {
 				return err
 			}
@@ -523,7 +523,7 @@ func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedB
 		for _, stxo := range stxos {
 			pkss = append(pkss, stxo.PkScript)
 		}
-		err := b.indexManager.DisconnectBlock(block, pkss, ib, 0)
+		err := b.indexManager.DisconnectBlock(block, pkss, ib)
 		if err != nil {
 			return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 		}

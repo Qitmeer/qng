@@ -21,7 +21,6 @@ type Consensus interface {
 	Events() *event.Feed
 	MedianTimeSource() MedianTimeSource
 	SigCache() *txscript.SigCache
-	VMBlockIndexStore() VMBlockIndexStore
 	InvalidTxIndexStore() InvalidTxIndexStore
 	Interrupt() <-chan struct{}
 	Params() *params.Params
