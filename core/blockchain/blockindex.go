@@ -192,6 +192,8 @@ func (b *BlockChain) HasTx(txid *hash.Hash) bool {
 	return b.indexManager.HasTx(txid)
 }
 
+// Get Meer DAG block through the EVM block number
+// TODO: Will continue to optimize in the future due to insufficient performance
 func (b *BlockChain) GetBlockByNumber(number uint64) meerdag.IBlock {
 	if number == 0 {
 		return b.BlockDAG().GetBlockByOrder(0)
