@@ -95,7 +95,6 @@ func blockchainCmd() *cli.Command {
 					}()
 					//
 					cfg.InvalidTxIndex = false
-					cfg.VMBlockIndex = false
 					cfg.AddrIndex = false
 					cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
 					err = cons.Init()
@@ -158,7 +157,6 @@ func blockchainCmd() *cli.Command {
 					}()
 					//
 					cfg.InvalidTxIndex = false
-					cfg.VMBlockIndex = false
 					cfg.AddrIndex = false
 					cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
 					err = cons.Init()
@@ -443,7 +441,6 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 	}()
 	//
 	newCfg.InvalidTxIndex = false
-	newCfg.VMBlockIndex = false
 	newCfg.AddrIndex = false
 	newcons := consensus.New(&newCfg, newdb, interrupt, make(chan struct{}))
 	err = newcons.Init()
@@ -465,7 +462,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 
 	}()
 	newbc := newcons.BlockChain().(*blockchain.BlockChain)
-	err =newbc.Start()
+	err = newbc.Start()
 	if err != nil {
 		return err
 	}
@@ -603,7 +600,6 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 		newcons.VMService().SetLogLevel(logLvl.String())
 	} else {
 		cfg.InvalidTxIndex = false
-		cfg.VMBlockIndex = false
 		cfg.AddrIndex = false
 		cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
 		err := cons.Init()
@@ -703,8 +699,8 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 	if err != nil {
 		log.Error(err.Error())
 	}
-	total:=newbc.BlockDAG().GetBlockTotal()
-	newbc=nil
+	total := newbc.BlockDAG().GetBlockTotal()
+	newbc = nil
 	err = newcons.VMService().(*vm.Service).Stop()
 	if err != nil {
 		log.Error(err.Error())

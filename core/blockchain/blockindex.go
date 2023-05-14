@@ -191,3 +191,59 @@ func (b *BlockChain) GetMiningTips(expectPriority int) []*hash.Hash {
 func (b *BlockChain) HasTx(txid *hash.Hash) bool {
 	return b.indexManager.HasTx(txid)
 }
+
+// Get Meer DAG block through the EVM block number
+// TODO: Will continue to optimize in the future due to insufficient performance
+func (b *BlockChain) GetBlockByNumber(number uint64) meerdag.IBlock {
+	if number == 0 {
+		return b.BlockDAG().GetBlockByOrder(0)
+	}
+	b.ChainRLock()
+	defer b.ChainRUnlock()
+
+	mainTip := b.BlockDAG().GetMainChainTip()
+	var section meerdag.IBlock
+	if number > uint64(mainTip.GetOrder()) ||
+		number > mainTip.GetState().GetEVMNumber() {
+		return nil
+	} else if number == uint64(mainTip.GetOrder()) ||
+		number == mainTip.GetState().GetEVMNumber() {
+		section = mainTip
+	} else {
+		start := number
+		end := uint64(mainTip.GetOrder())
+		mid := uint64(0)
+		for start <= end {
+			mid = start + (end-start)/2
+			cur := b.BlockDAG().GetBlockByOrder(uint(mid))
+			if cur == nil {
+				return nil
+			}
+			if cur.GetState().GetEVMNumber() == number {
+				section = cur
+				break
+			} else if cur.GetState().GetEVMNumber() > number {
+				end = mid - 1
+			} else {
+				start = mid + 1
+			}
+		}
+	}
+	if section == nil {
+		return nil
+	}
+	if section.GetOrder() == 0 {
+		return section
+	}
+	for i := section.GetOrder() - 1; i >= 0; i-- {
+		prev := b.BlockDAG().GetBlockByOrder(i)
+		if prev == nil {
+			return nil
+		}
+		if prev.GetState().GetEVMNumber()+1 == number {
+			return section
+		}
+		section = prev
+	}
+	return nil
+}

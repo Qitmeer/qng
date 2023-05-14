@@ -118,138 +118,11 @@ func (api *PublicBlockAPI) GetBlockByOrder(order int64, verbose *bool, inclTx *b
 }
 
 func (api *PublicBlockAPI) GetBlock(h hash.Hash, verbose *bool, inclTx *bool, fullTx *bool) (interface{}, error) {
-
-	vb := false
-	if verbose != nil {
-		vb = *verbose
-	}
-	iTx := true
-	if inclTx != nil {
-		iTx = *inclTx
-	}
-	fTx := true
-	if fullTx != nil {
-		fTx = *fullTx
-	}
-
-	// Load the raw block bytes from the database.
-	// Note :
-	// FetchBlockByHash differs from BlockByHash in that this one also returns blocks
-	// that are not part of the main chain (if they are known).
-	blk, err := api.chain.FetchBlockByHash(&h)
-	if err != nil {
-		return nil, err
-	}
-	node := api.chain.BlockDAG().GetBlock(&h)
-	if node == nil {
-		return nil, fmt.Errorf("no node")
-	}
-	// Update the source block order
-	blk.SetOrder(uint64(node.GetOrder()))
-	blk.SetHeight(node.GetHeight())
-	// When the verbose flag isn't set, simply return the
-	// network-serialized block as a hex-encoded string.
-	if !vb {
-		blkBytes, err := blk.Bytes()
-		if err != nil {
-			return nil, internalError(err.Error(),
-				"Could not serialize block")
-		}
-		return hex.EncodeToString(blkBytes), nil
-	}
-	confirmations := int64(api.chain.BlockDAG().GetConfirmations(node.GetID()))
-	bd := api.chain.BlockDAG()
-	ib := bd.GetBlock(&h)
-	cs := bd.GetChildren(ib)
-	children := []*hash.Hash{}
-	if cs != nil && !cs.IsEmpty() {
-		for _, v := range cs.GetMap() {
-			children = append(children, v.(meerdag.IBlock).GetHash())
-		}
-	}
-	api.chain.CalculateDAGDuplicateTxs(blk)
-
-	coinbaseAmout := types.AmountMap{}
-	coinbaseFees := api.chain.CalculateFees(blk)
-	if coinbaseFees == nil {
-		coinbaseAmout[blk.Transactions()[0].Tx.TxOut[0].Amount.Id] = blk.Transactions()[0].Tx.TxOut[0].Amount.Value
-	} else {
-		coinbaseAmout = coinbaseFees
-		coinbaseAmout[blk.Transactions()[0].Tx.TxOut[0].Amount.Id] += blk.Transactions()[0].Tx.TxOut[0].Amount.Value
-	}
-
-	//TODO, refactor marshal api
-	fields, err := marshal.MarshalJsonBlock(blk, iTx, fTx, api.chain.params, confirmations, children,
-		!node.GetState().GetStatus().KnownInvalid(), node.IsOrdered(), coinbaseAmout, nil)
-	if err != nil {
-		return nil, err
-	}
-	return fields, nil
+	return api.makeBlock(h, verbose, inclTx, fullTx, false)
 }
 
 func (api *PublicBlockAPI) GetBlockV2(h hash.Hash, verbose *bool, inclTx *bool, fullTx *bool) (interface{}, error) {
-
-	vb := false
-	if verbose != nil {
-		vb = *verbose
-	}
-	iTx := true
-	if inclTx != nil {
-		iTx = *inclTx
-	}
-	fTx := true
-	if fullTx != nil {
-		fTx = *fullTx
-	}
-
-	// Load the raw block bytes from the database.
-	// Note :
-	// FetchBlockByHash differs from BlockByHash in that this one also returns blocks
-	// that are not part of the main chain (if they are known).
-	blk, err := api.chain.FetchBlockByHash(&h)
-	if err != nil {
-		return nil, err
-	}
-	node := api.chain.BlockDAG().GetBlock(&h)
-	if node == nil {
-		return nil, fmt.Errorf("no node")
-	}
-	// Update the source block order
-	blk.SetOrder(uint64(node.GetOrder()))
-	blk.SetHeight(node.GetHeight())
-	// When the verbose flag isn't set, simply return the
-	// network-serialized block as a hex-encoded string.
-	if !vb {
-		blkBytes, err := blk.Bytes()
-		if err != nil {
-			return nil, internalError(err.Error(),
-				"Could not serialize block")
-		}
-		return hex.EncodeToString(blkBytes), nil
-	}
-	confirmations := int64(api.chain.BlockDAG().GetConfirmations(node.GetID()))
-	bd := api.chain.BlockDAG()
-	ib := bd.GetBlock(&h)
-	cs := bd.GetChildren(ib)
-	children := []*hash.Hash{}
-	if cs != nil && !cs.IsEmpty() {
-		for _, v := range cs.GetMap() {
-			children = append(children, v.(meerdag.IBlock).GetHash())
-		}
-	}
-	api.chain.CalculateDAGDuplicateTxs(blk)
-	coinbaseFees := api.chain.CalculateFees(blk)
-	coinbaseAmout := types.AmountMap{}
-	coinbaseAmout[blk.Transactions()[0].Tx.TxOut[0].Amount.Id] = blk.Transactions()[0].Tx.TxOut[0].Amount.Value
-
-	//TODO, refactor marshal api
-	fields, err := marshal.MarshalJsonBlock(blk, iTx, fTx, api.chain.params, confirmations, children,
-		!node.GetState().GetStatus().KnownInvalid(), node.IsOrdered(), coinbaseAmout, coinbaseFees)
-	if err != nil {
-		return nil, err
-	}
-	return fields, nil
-
+	return api.makeBlock(h, verbose, inclTx, fullTx, true)
 }
 
 func (api *PublicBlockAPI) GetBestBlockHash() (interface{}, error) {
@@ -347,15 +220,9 @@ func (api *PublicBlockAPI) GetOrphansTotal() (interface{}, error) {
 
 // Obsoleted GetBlockByID Method, since the confused naming, replaced by GetBlockByNum method
 func (api *PublicBlockAPI) GetBlockByID(id uint64, verbose *bool, inclTx *bool, fullTx *bool) (interface{}, error) {
-	return api.GetBlockByNum(id, verbose, inclTx, fullTx)
-}
-
-// GetBlockByNum works like GetBlockByOrder, the different is the GetBlockByNum is return the order result from
-// the current node's DAG directly instead of according to the consensus of BlockDAG algorithm.
-func (api *PublicBlockAPI) GetBlockByNum(num uint64, verbose *bool, inclTx *bool, fullTx *bool) (interface{}, error) {
-	blockHash := api.chain.BlockDAG().GetBlockHash(uint(num))
+	blockHash := api.chain.BlockDAG().GetBlockHash(uint(id))
 	if blockHash == nil {
-		return nil, internalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: %v", num))
+		return nil, internalError(fmt.Errorf("no block").Error(), fmt.Sprintf("Block not found: id=%v", id))
 	}
 	vb := false
 	if verbose != nil {
@@ -504,4 +371,92 @@ func (api *PublicBlockAPI) GetStateRoot(order int64, verbose *bool) (interface{}
 		return ret, nil
 	}
 	return ib.GetState().Root().String(), nil
+}
+
+// Get json format block through the EVM block number
+// verbose: Show Details or hexadecimal
+// inclTx: Show transactions or not
+// fullTx: Is complete transaction information displayed
+func (api *PublicBlockAPI) GetBlockByNumber(number uint64, verbose *bool, inclTx *bool, fullTx *bool) (interface{}, error) {
+	block := api.chain.GetBlockByNumber(number)
+	if block == nil {
+		return nil, fmt.Errorf("Can't find block: number=%d", number)
+	}
+	return api.makeBlock(*block.GetHash(), verbose, inclTx, fullTx, true)
+}
+
+func (api *PublicBlockAPI) makeBlock(h hash.Hash, verbose *bool, inclTx *bool, fullTx *bool, showFees bool) (interface{}, error) {
+
+	vb := false
+	if verbose != nil {
+		vb = *verbose
+	}
+	iTx := true
+	if inclTx != nil {
+		iTx = *inclTx
+	}
+	fTx := true
+	if fullTx != nil {
+		fTx = *fullTx
+	}
+
+	// Load the raw block bytes from the database.
+	// Note :
+	// FetchBlockByHash differs from BlockByHash in that this one also returns blocks
+	// that are not part of the main chain (if they are known).
+	blk, err := api.chain.FetchBlockByHash(&h)
+	if err != nil {
+		return nil, err
+	}
+	node := api.chain.BlockDAG().GetBlock(&h)
+	if node == nil {
+		return nil, fmt.Errorf("no node")
+	}
+	// Update the source block order
+	blk.SetOrder(uint64(node.GetOrder()))
+	blk.SetHeight(node.GetHeight())
+	// When the verbose flag isn't set, simply return the
+	// network-serialized block as a hex-encoded string.
+	if !vb {
+		blkBytes, err := blk.Bytes()
+		if err != nil {
+			return nil, internalError(err.Error(),
+				"Could not serialize block")
+		}
+		return hex.EncodeToString(blkBytes), nil
+	}
+	confirmations := int64(api.chain.BlockDAG().GetConfirmations(node.GetID()))
+	bd := api.chain.BlockDAG()
+	ib := bd.GetBlock(&h)
+	cs := bd.GetChildren(ib)
+	children := []*hash.Hash{}
+	if cs != nil && !cs.IsEmpty() {
+		for _, v := range cs.GetMap() {
+			children = append(children, v.(meerdag.IBlock).GetHash())
+		}
+	}
+	api.chain.CalculateDAGDuplicateTxs(blk)
+	coinbaseFees := api.chain.CalculateFees(blk)
+	coinbaseAmout := types.AmountMap{}
+
+	if showFees {
+		coinbaseAmout[blk.Transactions()[0].Tx.TxOut[0].Amount.Id] = blk.Transactions()[0].Tx.TxOut[0].Amount.Value
+	} else {
+		if coinbaseFees == nil {
+			coinbaseAmout[blk.Transactions()[0].Tx.TxOut[0].Amount.Id] = blk.Transactions()[0].Tx.TxOut[0].Amount.Value
+		} else {
+			coinbaseAmout = coinbaseFees
+			coinbaseAmout[blk.Transactions()[0].Tx.TxOut[0].Amount.Id] += blk.Transactions()[0].Tx.TxOut[0].Amount.Value
+		}
+		coinbaseFees = nil
+	}
+
+	//TODO, refactor marshal api
+	fields, err := marshal.MarshalJsonBlock(blk, iTx, fTx, api.chain.params, confirmations, children,
+		!node.GetState().GetStatus().KnownInvalid(), node.IsOrdered(), coinbaseAmout, coinbaseFees)
+	if err != nil {
+		return nil, err
+	}
+	return fields, nil
+
 }

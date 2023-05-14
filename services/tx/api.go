@@ -8,7 +8,6 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/common/math"
-	"github.com/Qitmeer/qng/consensus/model"
 	qconsensus "github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain/token"
@@ -1003,15 +1002,11 @@ func (api *PublicTxAPI) GetTxIDByMeerEVMTxHash(etxh hash.Hash) (interface{}, err
 	if bid == 0 {
 		return nil, fmt.Errorf("No meerevm tx:%s", etxh.String())
 	}
-	vmbiStore := api.txManager.consensus.VMBlockIndexStore()
-	if vmbiStore == nil {
-		return nil, fmt.Errorf("You must be enable by --vmblockindex")
+	b := api.txManager.GetChain().GetBlockByNumber(bid)
+	if b != nil {
+		return nil, fmt.Errorf("Can't find block: number=%d  evm tx hash=%s", bid, etxh.String())
 	}
-	bh, err := vmbiStore.Get(model.NewStagingArea(), bid)
-	if err != nil {
-		return nil, err
-	}
-	block, err := api.txManager.GetChain().FetchBlockByHash(bh)
+	block, err := api.txManager.GetChain().FetchBlockByHash(b.GetHash())
 	if err != nil {
 		return nil, err
 	}

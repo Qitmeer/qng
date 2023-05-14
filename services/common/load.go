@@ -223,11 +223,6 @@ var (
 			Destination: &cfg.DropAddrIndex,
 		},
 		&cli.BoolFlag{
-			Name:        "vmblockindex",
-			Usage:       "Maintain a full vm block index which makes the GetTxIDByMeerEVMTxHash RPC available",
-			Destination: &cfg.VMBlockIndex,
-		},
-		&cli.BoolFlag{
 			Name:        "light",
 			Usage:       "start as a qitmeer light node",
 			Destination: &cfg.LightNode,

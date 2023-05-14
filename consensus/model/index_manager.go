@@ -19,13 +19,13 @@ type IndexManager interface {
 
 	// ConnectBlock is invoked when a new block has been connected to the
 	// main chain.
-	ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk Block,vmbid uint64) error
+	ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk Block) error
 
 	// DisconnectBlock is invoked when a block has been disconnected from
 	// the main chain.
-	DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, blk Block,vmbid uint64) error
+	DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, blk Block) error
 
-	UpdateMainTip(bh *hash.Hash,order uint64) error
+	UpdateMainTip(bh *hash.Hash, order uint64) error
 
 	// IsDuplicateTx
 	IsDuplicateTx(tx database.Tx, txid *hash.Hash, blockHash *hash.Hash) bool
