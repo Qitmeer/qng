@@ -118,6 +118,9 @@ func (b *BlockChain) flushNotifications() {
 	if len(b.CacheNotifications) <= 0 {
 		return
 	}
+	if b.IsShutdown() {
+		return
+	}
 	for _, n := range b.CacheNotifications {
 		log.Trace("send blkmgr notification", "type", n.Type, "data", n.Data)
 		b.events.Send(event.New(n))

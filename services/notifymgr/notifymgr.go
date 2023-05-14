@@ -116,13 +116,13 @@ func (ntmgr *NotifyMgr) Stop() error {
 	}
 	log.Info("Stop NotifyMgr...")
 
+	close(ntmgr.quit)
+	ntmgr.wg.Wait()
+
 	if ntmgr.ticker != nil {
 		ntmgr.ticker.Stop()
 		ntmgr.ticker = nil
 	}
-
-	close(ntmgr.quit)
-	ntmgr.wg.Wait()
 
 	ntmgr.zmqNotify.Shutdown()
 	return nil
@@ -148,7 +148,8 @@ func (ntmgr *NotifyMgr) handleStallSample() {
 	ntmgr.Lock()
 	defer ntmgr.Unlock()
 
-	if len(ntmgr.nds) <= 0 {
+	if len(ntmgr.nds) <= 0 ||
+		ntmgr.IsShutdown() {
 		return
 	}
 
@@ -187,6 +188,9 @@ func (ntmgr *NotifyMgr) Reset() {
 }
 
 func (ntmgr *NotifyMgr) handleNotifyMsg(notification *blockchain.Notification) {
+	if ntmgr.IsShutdown() {
+		return
+	}
 	switch notification.Type {
 	case blockchain.BlockAccepted:
 		band, ok := notification.Data.(*blockchain.BlockAcceptedNotifyData)
