@@ -373,6 +373,10 @@ func (api *PublicBlockAPI) GetStateRoot(order int64, verbose *bool) (interface{}
 	return ib.GetState().Root().String(), nil
 }
 
+// Get json format block through the EVM block number
+// verbose: Show Details or hexadecimal
+// inclTx: Show transactions or not
+// fullTx: Is complete transaction information displayed
 func (api *PublicBlockAPI) GetBlockByNumber(number uint64, verbose *bool, inclTx *bool, fullTx *bool) (interface{}, error) {
 	block := api.chain.GetBlockByNumber(number)
 	if block == nil {
