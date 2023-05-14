@@ -30,6 +30,10 @@ func (ctx *MContext) GetNotify() consensus.Notify {
 	return nil
 }
 
+func (ctx *MContext) GetConsensus() model.Consensus {
+	return nil
+}
+
 func main() {
 	debugLevel := "trace"
 	debugPrintOrigins := true
