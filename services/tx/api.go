@@ -1003,7 +1003,7 @@ func (api *PublicTxAPI) GetTxIDByMeerEVMTxHash(etxh hash.Hash) (interface{}, err
 		return nil, fmt.Errorf("No meerevm tx:%s", etxh.String())
 	}
 	b := api.txManager.GetChain().GetBlockByNumber(bid)
-	if b != nil {
+	if b == nil {
 		return nil, fmt.Errorf("Can't find block: number=%d  evm tx hash=%s", bid, etxh.String())
 	}
 	block, err := api.txManager.GetChain().FetchBlockByHash(b.GetHash())
