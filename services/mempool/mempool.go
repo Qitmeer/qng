@@ -197,7 +197,7 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 	}
 
 	if utxoView != nil {
-		txD.StartingPriority = CalcPriority(msgTx, utxoView, height, mp.cfg.BD)
+		txD.StartingPriority = CalcPriority(msgTx, utxoView, height, mp.cfg.BC)
 	}
 
 	if !types.IsCrossChainVMTx(tx.Tx) {
@@ -618,7 +618,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	if isNew && !mp.cfg.Policy.DisableRelayPriority && txFee.Value < minFee {
 
 		currentPriority := CalcPriority(msgTx, utxoView,
-			nextBlockHeight, mp.cfg.BD)
+			nextBlockHeight, mp.cfg.BC)
 
 		if currentPriority <= MinHighPriority {
 			str := fmt.Sprintf("transaction %v has insufficient "+

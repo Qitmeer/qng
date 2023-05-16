@@ -50,7 +50,7 @@ func makeConfigNode(ctx *cli.Context, cfg *config.Config) (*node.Node, *eth.Conf
 		}
 	}
 	var n *node.Node
-	n, err = eth.MakeNakedNode(ecfg, args)
+	n, _, err = eth.MakeNakedNode(ecfg, args)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, nil

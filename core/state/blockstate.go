@@ -78,11 +78,11 @@ func (b *BlockState) SetRoot(root *hash.Hash) {
 	b.root = *root
 }
 
-func (b *BlockState) SetDefault(parent *BlockState) {
-	b.root = parent.root
-	b.evmHash = parent.evmHash
-	b.evmNumber = parent.evmNumber
-	b.evmRoot = parent.evmRoot
+func (b *BlockState) SetDefault(parent model.BlockState) {
+	b.root = *parent.Root()
+	b.evmHash = parent.GetEVMHash()
+	b.evmNumber = parent.GetEVMNumber()
+	b.evmRoot = parent.GetEVMRoot()
 }
 
 func (b *BlockState) GetEVMRoot() common.Hash {
@@ -107,7 +107,7 @@ func (b *BlockState) SetEVM(header *etypes.Header) {
 	b.evmRoot = header.Root
 }
 
-func (b *BlockState) Update(block *types.SerializedBlock, prev *BlockState, header *etypes.Header) {
+func (b *BlockState) Update(block *types.SerializedBlock, prev model.BlockState, header *etypes.Header) {
 	defer func() {
 		log.Trace("Update block state", "id", b.id, "order", b.order, "root", b.root.String())
 	}()

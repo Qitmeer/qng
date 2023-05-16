@@ -228,7 +228,6 @@ func NewTxManager(consensus model.Consensus, ntmgr vmconsensus.Notify) (*TxManag
 		SigCache:         sigCache,
 		PastMedianTime:   func() time.Time { return bc.BestSnapshot().MedianTime },
 		IndexManager:     consensus.IndexManager().(*index.Manager),
-		BD:               bc.BlockDAG(),
 		BC:               bc,
 		DataDir:          cfg.DataDir,
 		Expiry:           time.Duration(cfg.MempoolExpiry),

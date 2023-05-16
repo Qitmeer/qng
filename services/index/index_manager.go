@@ -427,17 +427,7 @@ func (m *Manager) UpdateMainTip(bh *hash.Hash, order uint64) error {
 
 // HasTransaction
 func (m *Manager) IsDuplicateTx(dbTx database.Tx, txid *hash.Hash, blockHash *hash.Hash) bool {
-	blockRegion, err := dbFetchTxIndexEntry(dbTx, txid)
-	if err != nil {
-		return false
-	}
-	if blockRegion == nil {
-		return false
-	}
-	if blockRegion.Hash.IsEqual(blockHash) {
-		return false
-	}
-	return true
+	return IsDuplicateTx(dbTx, txid, blockHash)
 }
 
 func (m *Manager) HasTx(txid *hash.Hash) bool {
@@ -890,4 +880,18 @@ func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan s
 
 	log.Info(fmt.Sprintf("Dropped %s", idxName))
 	return nil
+}
+
+func IsDuplicateTx(dbTx database.Tx, txid *hash.Hash, blockHash *hash.Hash) bool {
+	blockRegion, err := dbFetchTxIndexEntry(dbTx, txid)
+	if err != nil {
+		return false
+	}
+	if blockRegion == nil {
+		return false
+	}
+	if blockRegion.Hash.IsEqual(blockHash) {
+		return false
+	}
+	return true
 }
