@@ -13,6 +13,5 @@ message ChainState {
   uint64 services = 4;
   bool disableRelayTx =5;
   GraphState graphState = 6;
-  Hash stateRoot = 7;
-  bytes  userAgent = 8 [(gogoproto.moretags) = "ssz-max:\"256\""];
+  bytes  userAgent = 7 [(gogoproto.moretags) = "ssz-max:\"256\""];
 }

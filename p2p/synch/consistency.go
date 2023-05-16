@@ -67,6 +67,7 @@ func (s *Sync) CheckConsistency(hashOrOrder *protocol.HashOrNumber) (string, err
 			if err == nil && root != nil {
 				sr, ok := root.(*hash.Hash)
 				if ok && sr != nil {
+					pee.SetStateRoot(sr, uint64(block.GetOrder()))
 					atomic.AddInt32(&total, 1)
 					if sr.IsEqual(&stateRoot) {
 						atomic.AddInt32(&valid, 1)

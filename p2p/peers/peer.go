@@ -411,32 +411,19 @@ func (p *Peer) genesis() *hash.Hash {
 	return genesisHash
 }
 
-func (p *Peer) stateRoot() *hash.Hash {
-	if p.chainState == nil {
-		return nil
-	}
-	if p.chainState.StateRoot == nil {
-		return nil
-	}
-	sr, err := hash.NewHash(p.chainState.StateRoot.Hash)
-	if err != nil {
-		return nil
-	}
-	return sr
+func (p *Peer) SetStateRoot(stateRoot *hash.Hash, order uint64) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.stateRoot = stateRoot
+	p.stateRootOrder = order
 }
 
 func (p *Peer) stateRootAndOrder() string {
-	if p.chainState == nil {
+	if p.stateRoot == nil {
 		return ""
 	}
-	if p.chainState.StateRoot == nil {
-		return ""
-	}
-	sr, err := hash.NewHash(p.chainState.StateRoot.Hash)
-	if err != nil {
-		return ""
-	}
-	return fmt.Sprintf("%s (order:%d)", sr.String(), p.stateRootOrder)
+	return fmt.Sprintf("%s (order:%d)", p.stateRoot.String(), p.stateRootOrder)
 }
 
 func (p *Peer) Services() protocol.ServiceFlag {
