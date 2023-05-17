@@ -6,7 +6,6 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/database"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag/anticone"
@@ -160,6 +159,14 @@ type ConsensusAlgorithm interface {
 type CalcWeight func(ib IBlock, bi *BlueInfo) int64
 
 type GetBlockData func(*hash.Hash) IBlockData
+
+type CreateBlockState func(id uint64) model.BlockState
+
+var createBlockState CreateBlockState
+
+type CreateBlockStateFromBytes func(data []byte) (model.BlockState, error)
+
+var createBlockStateFromBytes CreateBlockStateFromBytes
 
 // The general foundation framework of Block DAG implement
 type MeerDAG struct {
@@ -330,12 +337,14 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 		return nil, nil, nil, false
 	}
 	parents := []IBlock{}
+	var mp IBlock
 	if bd.blockTotal > 0 {
 		parentsIds := b.GetParents()
 		if len(parentsIds) == 0 {
 			log.Error(fmt.Sprintf("No paretns:%s", b.GetHash()))
 			return nil, nil, nil, false
 		}
+		ids := NewIdSet()
 		for _, v := range parentsIds {
 			pib := bd.getBlock(v)
 			if pib == nil {
@@ -343,16 +352,35 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 				return nil, nil, nil, false
 			}
 			parents = append(parents, pib)
+			ids.Add(pib.GetID())
 		}
 
 		if !bd.isDAG(parents, b) {
 			log.Error(fmt.Sprintf("Not DAG block:%s", b.GetHash()))
 			return nil, nil, nil, false
 		}
+		// main parent
+		mp = bd.instance.GetMainParent(ids)
+		if mp == nil {
+			log.Error("No main parent", "hash", b.GetHash().String())
+			return nil, nil, nil, false
+		}
+		if !mp.GetHash().IsEqual(b.GetMainParent()) {
+			log.Error("Main parent is inconsistent in block", "mainParentInDAG", mp.GetHash().String(), "mainParentInBlock", b.GetMainParent().String(), "block", b.GetHash().String())
+			return nil, nil, nil, false
+		}
 	}
 	lastMT := bd.instance.GetMainChainTipId()
 	//
-	block := Block{id: bd.blockTotal, hash: *b.GetHash(), layer: 0, status: model.StatusNone, mainParent: MaxId, data: b, state: state.NewBlockState(uint64(bd.blockTotal))}
+	block := Block{id: bd.blockTotal,
+		hash:       *b.GetHash(),
+		layer:      0,
+		mainParent: MaxId,
+		data:       b,
+		state:      createBlockState(uint64(bd.blockTotal))}
+	if mp != nil {
+		block.mainParent = mp.GetID()
+	}
 	if bd.blocks == nil {
 		bd.blocks = map[uint]IBlock{}
 	}
@@ -382,10 +410,6 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 			ib.AddParent(parent)
 			parent.AddChild(ib)
 			bd.commitBlock.AddPair(parent.GetID(), parent)
-			if block.mainParent > parent.GetID() {
-				block.mainParent = parent.GetID()
-			}
-
 			if maxLayer == 0 || maxLayer < parent.GetLayer() {
 				maxLayer = parent.GetLayer()
 			}
@@ -1144,6 +1168,13 @@ func (bd *MeerDAG) UpdateWeight(ib IBlock) {
 	bd.instance.(*Phantom).UpdateWeight(ib)
 }
 
+func (bd *MeerDAG) AddToCommit(block IBlock) {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+
+	bd.commitBlock.AddPair(block.GetID(), block)
+}
+
 // Commit the consensus content to the database for persistence
 func (bd *MeerDAG) Commit() error {
 	bd.stateLock.Lock()
@@ -1346,7 +1377,7 @@ func (bd *MeerDAG) CreateVirtualBlock(data IBlockData) IBlock {
 		mainParentId = mainParent.GetID()
 		mainHeight = mainParent.GetHeight()
 	}
-	block := Block{id: bd.GetBlockTotal(), hash: *data.GetHash(), parents: parents, layer: maxLayer + 1, status: model.StatusNone, mainParent: mainParentId, data: data, order: MaxBlockOrder, height: mainHeight + 1}
+	block := Block{id: bd.GetBlockTotal(), hash: *data.GetHash(), parents: parents, layer: maxLayer + 1, mainParent: mainParentId, data: data, height: mainHeight + 1, state: createBlockState(uint64(bd.GetBlockTotal()))}
 	return &PhantomBlock{&block, 0, NewIdSet(), NewIdSet()}
 }
 
@@ -1400,7 +1431,9 @@ out:
 	log.Trace("MeerDAG handler done")
 }
 
-func New(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData) *MeerDAG {
+func New(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData, createBS CreateBlockState, createBSB CreateBlockStateFromBytes) *MeerDAG {
+	createBlockState = createBS
+	createBlockStateFromBytes = createBSB
 	md := &MeerDAG{
 		quit:           make(chan struct{}),
 		blockDataCache: map[uint]time.Time{},

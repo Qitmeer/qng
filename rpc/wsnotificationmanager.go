@@ -533,7 +533,7 @@ func (m *wsNotificationManager) notifyForBlockTx(wsc *wsClient, tx *types.Tx,
 	}
 	confirmations := int64(m.server.BC.BlockDAG().GetConfirmations(node.GetID()))
 	isBlue := m.server.BC.BlockDAG().IsBlue(ib.GetID())
-	InValid := node.GetStatus().KnownInvalid()
+	InValid := node.GetState().GetStatus().KnownInvalid()
 
 	var err error
 

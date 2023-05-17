@@ -1,143 +1,122 @@
 package meerdag
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/system"
+	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
 	s "github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/core/state"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	l "github.com/Qitmeer/qng/log"
+	qcommon "github.com/Qitmeer/qng/meerevm/common"
+	"github.com/Qitmeer/qng/meerevm/eth"
+	"github.com/Qitmeer/qng/meerevm/meer"
+	"github.com/Qitmeer/qng/params"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/node"
 	"github.com/schollz/progressbar/v3"
+	"github.com/urfave/cli/v2"
 	"io"
 )
 
 // update db to new version
-func (bd *MeerDAG) UpgradeDB(dbTx database.Tx, mainTip *hash.Hash, total uint64, genesis *hash.Hash, fortips bool, interrupt <-chan struct{}) error {
-	if fortips {
-		bucket := dbTx.Metadata().Bucket(DAGTipsBucketName)
-		cursor := bucket.Cursor()
-		if cursor.First() {
-			return fmt.Errorf("Data format error: already exists tips")
-		}
-	}
+func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, genesis *hash.Hash, interrupt <-chan struct{}, dbFetchBlockByHash func(dbTx database.Tx, hash *hash.Hash) (*types.SerializedBlock, error), isDuplicateTx func(dbTx database.Tx, txid *hash.Hash, blockHash *hash.Hash) bool, evmbc *core.BlockChain, edb ethdb.Database) error {
 	log.Info(fmt.Sprintf("Start upgrade MeerDAG🛠 (total=%d mainTip=%s)", total, mainTip.String()))
+	//
+	mainTipBlock := getOldBlock(db, mainTip)
 	//
 	var bar *progressbar.ProgressBar
 	logLvl := l.Glogger().GetVerbosity()
-	bar = progressbar.Default(int64(total), "MeerDAG:")
+	bar = progressbar.Default(int64(mainTipBlock.GetOrder()), "MeerDAG:")
 	l.Glogger().Verbosity(l.LvlCrit)
 	defer func() {
 		bar.Finish()
 		l.Glogger().Verbosity(logLvl)
 	}()
 	//
-	blocks := map[uint]IBlock{}
-	var tips *IdSet
-	var mainTipBlock IBlock
-
-	getBlockById := func(id uint) IBlock {
-		if id == MaxId {
-			return nil
-		}
-		block, ok := blocks[id]
-		if !ok {
-			return nil
-		}
-		return block
+	evmGenesis := evmbc.GetHeaderByNumber(0)
+	if evmGenesis == nil {
+		return fmt.Errorf("No evm data")
+	} else {
+		log.Info("EVM genesis", "hash", evmGenesis.Hash().String())
 	}
-
-	updateTips := func(b IBlock) {
-		if tips == nil {
-			tips = NewIdSet()
-			tips.AddPair(b.GetID(), b)
-			return
-		}
-		for k, v := range tips.GetMap() {
-			block := v.(IBlock)
-			if block.HasChildren() {
-				tips.Remove(k)
-			}
-		}
-		tips.AddPair(b.GetID(), b)
-	}
-	diffAnticone := NewIdSet()
-	for i := uint(0); i < uint(total); i++ {
+	curEVM := evmGenesis
+	var prev model.BlockState
+	for i := uint(0); i <= mainTipBlock.GetOrder(); i++ {
 		bar.Add(1)
 		if system.InterruptRequested(interrupt) {
-			return fmt.Errorf("interrupt upgrade database")
+			return fmt.Errorf("interrupt upgrade database:Data corruption caused by exiting midway")
 		}
-		block := OldBlock{id: i}
-		ib := &OldPhantomBlock{&block, 0, NewIdSet(), NewIdSet()}
-		err := DBGetDAGBlock(dbTx, ib)
-		if err != nil {
-			if err.(*DAGError).IsEmpty() {
-				continue
-			}
-			return err
+		var ib IBlock
+		if i == mainTipBlock.GetOrder() {
+			ib = mainTipBlock
+		} else {
+			ib = getOldBlockByOrder(db, i)
 		}
-		if i == 0 && !ib.GetHash().IsEqual(genesis) {
-			return fmt.Errorf("genesis data mismatch")
+
+		bs := createBlockState(uint64(ib.GetID()))
+		opb := ib.(*OldPhantomBlock)
+		opb.state = bs
+		//
+		bs.SetOrder(uint64(ib.GetOrder()))
+		bs.SetWeight(opb.GetWeight())
+		if opb.status.KnownInvalid() {
+			bs.Invalid()
+		} else {
+			bs.Valid()
 		}
-		if ib.HasParents() {
-			parentsSet := NewIdSet()
-			for k := range ib.GetParents().GetMap() {
-				parent := getBlockById(k)
-				parentsSet.AddPair(k, parent)
-				parent.AddChild(ib)
-			}
-			ib.GetParents().Clean()
-			ib.GetParents().AddSet(parentsSet)
-		}
-		blocks[ib.GetID()] = ib
-		if !ib.IsOrdered() {
-			diffAnticone.AddPair(ib.GetID(), ib)
-		}
-		if fortips {
-			updateTips(ib)
-			if ib.GetHash().IsEqual(mainTip) {
-				mainTipBlock = ib
-			}
-		}
-	}
-	bar = progressbar.Default(int64(len(blocks)), "MeerDAG:")
-	for _, ib := range blocks {
-		bar.Add(1)
-		if system.InterruptRequested(interrupt) {
-			return fmt.Errorf("interrupt upgrade database")
-		}
-		block := ib.(*OldPhantomBlock).toPhantomBlock()
-		err := DBPutDAGBlock(dbTx, block)
-		if err != nil {
-			return err
-		}
-	}
-	blocks = nil
-	if !diffAnticone.IsEmpty() {
-		for id := range diffAnticone.GetMap() {
-			err := DBPutDiffAnticone(dbTx, id)
+		// evm
+		if i == 0 ||
+			forks.IsBeforeMeerEVMForkHeight(int64(ib.GetHeight())) {
+			curEVM = evmGenesis
+			bs.SetEVM(curEVM)
+		} else {
+			// dups
+			var block *types.SerializedBlock
+			err := db.View(func(dbTx database.Tx) error {
+				var e error
+				block, e = dbFetchBlockByHash(dbTx, ib.GetHash())
+				return e
+			})
 			if err != nil {
 				return err
 			}
-		}
-		log.Info(fmt.Sprintf("Upgrade diffAnticone size:%d", diffAnticone.Size()))
-		diffAnticone.Clean()
-	}
-	if fortips {
-		if mainTipBlock == nil || tips == nil || tips.IsEmpty() || !tips.Has(mainTipBlock.GetID()) {
-			return fmt.Errorf("Main chain tip error")
+			txs := block.Transactions()
+			for _, tx := range txs {
+				db.View(func(dbTx database.Tx) error {
+					tx.IsDuplicate = isDuplicateTx(dbTx, tx.Hash(), block.Hash())
+					return nil
+				})
+			}
+			//
+			number := getBlockNumber(edb, block.Hash())
+			if number != 0 {
+				header := evmbc.GetHeaderByNumber(number)
+				if header == nil {
+					return fmt.Errorf("No block in number:%d", number)
+				}
+				curEVM = header
+			}
+			bs.Update(block, prev, curEVM)
 		}
 
-		for k := range tips.GetMap() {
-			err := DBPutDAGTip(dbTx, k, k == mainTipBlock.GetID())
-			if err != nil {
-				return err
-			}
+		//
+		npb := opb.toPhantomBlock()
+		err := db.Update(func(dbTx database.Tx) error {
+			return DBPutDAGBlock(dbTx, npb)
+		})
+		if err != nil {
+			return err
 		}
-		log.Info(fmt.Sprintf("End upgrade MeerDAG.tips🛠:bridging tips num(%d)", tips.Size()))
-		tips.Clean()
+		//
+		prev = bs
 	}
+	log.Info("End upgrade MeerDAG🛠", "state root", mainTipBlock.GetState().Root().String(), "mainTip", mainTipBlock.GetHash().String(), "mainOrder", mainTipBlock.GetOrder())
 	return nil
 }
 
@@ -285,11 +264,49 @@ func (pb *OldPhantomBlock) Decode(r io.Reader) error {
 	return nil
 }
 
+// GetBlueNum
+func (pb *OldPhantomBlock) GetBlueNum() uint {
+	return pb.blueNum
+}
+
+func (pb *OldPhantomBlock) GetBlueDiffAnticone() *IdSet {
+	return pb.blueDiffAnticone
+}
+
+func (pb *OldPhantomBlock) GetRedDiffAnticone() *IdSet {
+	return pb.redDiffAnticone
+}
+
 func (pb *OldPhantomBlock) GetBlueDiffAnticoneSize() int {
 	if pb.blueDiffAnticone == nil {
 		return 0
 	}
 	return pb.blueDiffAnticone.Size()
+}
+
+func (pb *OldPhantomBlock) GetRedDiffAnticoneSize() int {
+	if pb.redDiffAnticone == nil {
+		return 0
+	}
+	return pb.redDiffAnticone.Size()
+}
+
+func (pb *OldPhantomBlock) GetDiffAnticoneSize() int {
+	return pb.GetBlueDiffAnticoneSize() + pb.GetRedDiffAnticoneSize()
+}
+
+func (pb *OldPhantomBlock) AddBlueDiffAnticone(id uint) {
+	if pb.blueDiffAnticone == nil {
+		pb.blueDiffAnticone = NewIdSet()
+	}
+	pb.blueDiffAnticone.Add(id)
+}
+
+func (pb *OldPhantomBlock) AddRedDiffAnticone(id uint) {
+	if pb.redDiffAnticone == nil {
+		pb.redDiffAnticone = NewIdSet()
+	}
+	pb.redDiffAnticone.Add(id)
 }
 
 func (pb *OldPhantomBlock) AddPairBlueDiffAnticone(id uint, order uint) {
@@ -306,17 +323,36 @@ func (pb *OldPhantomBlock) AddPairRedDiffAnticone(id uint, order uint) {
 	pb.redDiffAnticone.AddPair(id, order)
 }
 
+func (pb *OldPhantomBlock) HasBlueDiffAnticone(id uint) bool {
+	if pb.blueDiffAnticone == nil {
+		return false
+	}
+	return pb.blueDiffAnticone.Has(id)
+}
+
+func (pb *OldPhantomBlock) HasRedDiffAnticone(id uint) bool {
+	if pb.redDiffAnticone == nil {
+		return false
+	}
+	return pb.redDiffAnticone.Has(id)
+}
+
+func (pb *OldPhantomBlock) CleanDiffAnticone() {
+	if pb.blueDiffAnticone != nil {
+		pb.blueDiffAnticone.Clean()
+	}
+	if pb.redDiffAnticone != nil {
+		pb.redDiffAnticone.Clean()
+	}
+}
+
 func (pb *OldPhantomBlock) toPhantomBlock() *PhantomBlock {
 	return &PhantomBlock{
-		Block:            &Block{id: pb.id, hash: pb.hash, parents: pb.parents, children: pb.children, mainParent: pb.mainParent, weight: pb.weight, order: pb.order, layer: pb.layer, height: pb.height, status: pb.status, data: pb.data},
+		Block:            &Block{id: pb.id, hash: pb.hash, parents: pb.parents, children: pb.children, mainParent: pb.mainParent, layer: pb.layer, height: pb.height, data: pb.data, state: pb.state},
 		blueNum:          pb.blueNum,
 		blueDiffAnticone: pb.blueDiffAnticone,
 		redDiffAnticone:  pb.redDiffAnticone,
 	}
-}
-
-func (pb *OldPhantomBlock) Bytes() []byte {
-	return nil
 }
 
 type OldBlock struct {
@@ -332,7 +368,8 @@ type OldBlock struct {
 	height     uint
 	status     model.BlockStatus
 
-	data IBlockData
+	data  IBlockData
+	state model.BlockState
 }
 
 // Return block ID
@@ -344,6 +381,7 @@ func (b *OldBlock) SetID(id uint) {
 	b.id = id
 }
 
+// Return the hash of block. It will be a pointer.
 func (b *OldBlock) GetHash() *hash.Hash {
 	return &b.hash
 }
@@ -355,6 +393,14 @@ func (b *OldBlock) AddParent(parent IBlock) {
 	b.parents.AddPair(parent.GetID(), parent)
 }
 
+func (b *OldBlock) RemoveParent(id uint) {
+	if !b.HasParents() {
+		return
+	}
+	b.parents.Remove(id)
+}
+
+// Get all parents set,the dag block has more than one parent
 func (b *OldBlock) GetParents() *IdSet {
 	return b.parents
 }
@@ -363,6 +409,7 @@ func (b *OldBlock) GetMainParent() uint {
 	return b.mainParent
 }
 
+// Testing whether it has parents
 func (b *OldBlock) HasParents() bool {
 	if b.parents == nil {
 		return false
@@ -373,34 +420,7 @@ func (b *OldBlock) HasParents() bool {
 	return true
 }
 
-func (b *OldBlock) GetForwardParent() *Block {
-	if b.parents == nil || b.parents.IsEmpty() {
-		return nil
-	}
-	var result *Block = nil
-	for _, v := range b.parents.GetMap() {
-		parent := v.(*Block)
-		if result == nil || parent.GetOrder() < result.GetOrder() {
-			result = parent
-		}
-	}
-	return result
-}
-
-func (b *OldBlock) GetBackParent() *Block {
-	if b == nil || b.parents == nil || b.parents.IsEmpty() {
-		return nil
-	}
-	var result *Block = nil
-	for _, v := range b.parents.GetMap() {
-		parent := v.(*Block)
-		if result == nil || parent.GetOrder() > result.GetOrder() {
-			result = parent
-		}
-	}
-	return result
-}
-
+// Add child nodes to block
 func (b *OldBlock) AddChild(child IBlock) {
 	if b.children == nil {
 		b.children = NewIdSet()
@@ -408,10 +428,12 @@ func (b *OldBlock) AddChild(child IBlock) {
 	b.children.AddPair(child.GetID(), child)
 }
 
+// Get all the children of block
 func (b *OldBlock) GetChildren() *IdSet {
 	return b.children
 }
 
+// Detecting the presence of child nodes
 func (b *OldBlock) HasChildren() bool {
 	if b.children == nil {
 		return false
@@ -429,10 +451,15 @@ func (b *OldBlock) RemoveChild(child uint) {
 	b.children.Remove(child)
 }
 
+// Setting the weight of block
 func (b *OldBlock) SetWeight(weight uint64) {
 	b.weight = weight
+	if b.state != nil {
+		b.state.SetWeight(b.weight)
+	}
 }
 
+// Acquire the weight of blue blocks
 func (b *OldBlock) GetWeight() uint64 {
 	return b.weight
 }
@@ -450,6 +477,9 @@ func (b *OldBlock) GetLayer() uint {
 // Setting the order of block
 func (b *OldBlock) SetOrder(o uint) {
 	b.order = o
+	if b.state != nil {
+		b.state.SetOrder(uint64(o))
+	}
 }
 
 // Acquire the order of block
@@ -494,6 +524,22 @@ func (b *OldBlock) Encode(w io.Writer) error {
 	}
 	for i := 0; i < parentsSize; i++ {
 		err = s.WriteElements(w, uint32(parents[i]))
+		if err != nil {
+			return err
+		}
+	}
+	// children
+	children := []uint{}
+	if b.HasChildren() {
+		children = b.children.List()
+	}
+	childrenSize := len(children)
+	err = s.WriteElements(w, uint32(childrenSize))
+	if err != nil {
+		return err
+	}
+	for i := 0; i < childrenSize; i++ {
+		err = s.WriteElements(w, uint32(children[i]))
 		if err != nil {
 			return err
 		}
@@ -555,6 +601,23 @@ func (b *OldBlock) Decode(r io.Reader) error {
 				return err
 			}
 			b.parents.Add(uint(parent))
+		}
+	}
+	// children
+	var childrenSize uint32
+	err = s.ReadElements(r, &childrenSize)
+	if err != nil {
+		return err
+	}
+	if childrenSize > 0 {
+		b.children = NewIdSet()
+		for i := uint32(0); i < childrenSize; i++ {
+			var children uint32
+			err := s.ReadElements(r, &children)
+			if err != nil {
+				return err
+			}
+			b.children.Add(uint(children))
 		}
 	}
 	// mainParent
@@ -633,13 +696,22 @@ func (b *OldBlock) IsLoaded() bool {
 
 func (b *OldBlock) Valid() {
 	b.UnsetStatusFlags(model.StatusInvalid)
+	if b.state != nil {
+		b.state.Valid()
+	}
 }
 
 func (b *OldBlock) Invalid() {
 	b.SetStatusFlags(model.StatusInvalid)
+	if b.state != nil {
+		b.state.Invalid()
+	}
 }
 
 func (b *OldBlock) AttachParent(ib IBlock) {
+	if ib == nil {
+		return
+	}
 	if !b.HasParents() {
 		return
 	}
@@ -650,6 +722,9 @@ func (b *OldBlock) AttachParent(ib IBlock) {
 }
 
 func (b *OldBlock) DetachParent(ib IBlock) {
+	if ib == nil {
+		return
+	}
 	if !b.HasParents() {
 		return
 	}
@@ -660,6 +735,9 @@ func (b *OldBlock) DetachParent(ib IBlock) {
 }
 
 func (b *OldBlock) AttachChild(ib IBlock) {
+	if ib == nil {
+		return
+	}
 	if !b.HasChildren() {
 		return
 	}
@@ -670,6 +748,9 @@ func (b *OldBlock) AttachChild(ib IBlock) {
 }
 
 func (b *OldBlock) DetachChild(ib IBlock) {
+	if ib == nil {
+		return
+	}
 	if !b.HasChildren() {
 		return
 	}
@@ -679,7 +760,106 @@ func (b *OldBlock) DetachChild(ib IBlock) {
 	b.children.Add(ib.GetID())
 }
 
+func (b *OldBlock) Bytes() []byte {
+	var buff bytes.Buffer
+	err := b.Encode(&buff)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return buff.Bytes()
+}
+
 // GetState
-func (b *OldBlock) GetState() *state.BlockState {
-	return nil
+func (b *OldBlock) GetState() model.BlockState {
+	return b.state
+}
+
+func getOldBlockId(db database.DB, h *hash.Hash) uint {
+	if h == nil {
+		return MaxId
+	}
+	id := MaxId
+	err := db.View(func(dbTx database.Tx) error {
+		bid, er := DBGetBlockIdByHash(dbTx, h)
+		if er == nil {
+			id = uint(bid)
+		}
+		return er
+	})
+	if err != nil {
+		log.Error(err.Error())
+		return MaxId
+	}
+	return id
+}
+
+func getOldBlockById(db database.DB, id uint) IBlock {
+	block := OldBlock{id: id}
+	ib := &OldPhantomBlock{&block, 0, nil, nil}
+	err := db.View(func(dbTx database.Tx) error {
+		return DBGetDAGBlock(dbTx, ib)
+	})
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	if id == 0 && !ib.GetHash().IsEqual(params.ActiveNetParams.GenesisHash) {
+		log.Error("genesis data mismatch", "cur", ib.GetHash().String(), "genesis", params.ActiveNetParams.GenesisHash.String())
+		return nil
+	}
+	return ib
+}
+
+func getOldBlock(db database.DB, h *hash.Hash) IBlock {
+	return getOldBlockById(db, getOldBlockId(db, h))
+}
+
+func getOldBlockByOrder(db database.DB, order uint) IBlock {
+	if order >= MaxBlockOrder {
+		return nil
+	}
+	bid := uint(MaxId)
+	err := db.View(func(dbTx database.Tx) error {
+		id, er := DBGetBlockIdByOrder(dbTx, order)
+		if er == nil {
+			bid = uint(id)
+		}
+		return er
+	})
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return getOldBlockById(db, bid)
+}
+
+func makeConfigNode(cfg *config.Config) (*node.Node, *cli.Context, *eth.Config) {
+	eth.InitLog(cfg.DebugLevel, cfg.DebugPrintOrigins)
+	//
+	var ecfg *eth.Config
+	var args []string
+	var err error
+
+	ecfg, args, err = meer.MakeParams(cfg)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, nil, nil
+	}
+	var n *node.Node
+	var ctx *cli.Context
+	n, ctx, err = eth.MakeNakedNode(ecfg, args)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, nil, nil
+	}
+	return n, ctx, ecfg
+}
+
+func getBlockNumber(db ethdb.Database, bh *hash.Hash) uint64 {
+	bn := meer.ReadBlockNumber(db, qcommon.ToEVMHash(bh))
+	if bn == nil {
+		return 0
+	}
+	return *bn
 }

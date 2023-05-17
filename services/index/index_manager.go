@@ -23,7 +23,6 @@ type Manager struct {
 	cfg            *Config
 	db             database.DB
 	enabledIndexes []Indexer
-	vmblockIndex   *VMBlockIndex
 	invalidtxIndex *InvalidTxIndex
 }
 
@@ -57,9 +56,6 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 		enabledIndexes: indexers,
 		consensus:      consensus,
 	}
-	if cfg.VMBlockIndex {
-		im.vmblockIndex = NewVMBlockIndex(consensus)
-	}
 	if cfg.InvalidTxIndex {
 		im.invalidtxIndex = NewInvalidTxIndex(consensus)
 	}
@@ -77,12 +73,6 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 func (m *Manager) Init() error {
 	interrupt := m.consensus.Interrupt()
 	chain := m.consensus.BlockChain()
-	if m.vmblockIndex != nil {
-		err := m.vmblockIndex.Init()
-		if err != nil {
-			return err
-		}
-	}
 	if m.invalidtxIndex != nil {
 		err := m.invalidtxIndex.Init()
 		if err != nil {
@@ -378,7 +368,7 @@ func (m *Manager) maybeCreateIndexes(dbTx database.Tx) error {
 // checks, and invokes each indexer.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block, vmbid uint64) error {
+func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
 	// Call each of the currently active optional indexes with the block
 	// being connected so they can update accordingly.
 	err := m.db.Update(func(dbTx database.Tx) error {
@@ -393,10 +383,7 @@ func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk
 	if err != nil {
 		return err
 	}
-	if m.vmblockIndex != nil {
-		return m.vmblockIndex.ConnectBlock(block.Hash(), vmbid)
-	}
-	if blk.GetStatus().KnownInvalid() {
+	if blk.GetState().GetStatus().KnownInvalid() {
 		if m.invalidtxIndex != nil {
 			return m.invalidtxIndex.ConnectBlock(uint64(blk.GetID()), block)
 		}
@@ -410,7 +397,7 @@ func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk
 // the index entries associated with the block.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block, vmbid uint64) error {
+func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
 	// Call each of the currently active optional indexes with the block
 	// being disconnected so they can update accordingly.
 	err := m.db.Update(func(dbTx database.Tx) error {
@@ -425,9 +412,6 @@ func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, 
 	if err != nil {
 		return err
 	}
-	if m.vmblockIndex != nil {
-		return m.vmblockIndex.DisconnectBlock(block.Hash(), vmbid)
-	}
 	if m.invalidtxIndex != nil {
 		return m.invalidtxIndex.DisconnectBlock(uint64(blk.GetID()), block)
 	}
@@ -435,9 +419,6 @@ func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, 
 }
 
 func (m *Manager) UpdateMainTip(bh *hash.Hash, order uint64) error {
-	if m.vmblockIndex != nil {
-		return m.vmblockIndex.UpdateMainTip(bh, order)
-	}
 	if m.invalidtxIndex != nil {
 		return m.invalidtxIndex.UpdateMainTip(bh, order)
 	}
@@ -446,17 +427,7 @@ func (m *Manager) UpdateMainTip(bh *hash.Hash, order uint64) error {
 
 // HasTransaction
 func (m *Manager) IsDuplicateTx(dbTx database.Tx, txid *hash.Hash, blockHash *hash.Hash) bool {
-	blockRegion, err := dbFetchTxIndexEntry(dbTx, txid)
-	if err != nil {
-		return false
-	}
-	if blockRegion == nil {
-		return false
-	}
-	if blockRegion.Hash.IsEqual(blockHash) {
-		return false
-	}
-	return true
+	return IsDuplicateTx(dbTx, txid, blockHash)
 }
 
 func (m *Manager) HasTx(txid *hash.Hash) bool {
@@ -597,10 +568,6 @@ func (m *Manager) AddrIndex() *AddrIndex {
 		return indexer.(*AddrIndex)
 	}
 	return nil
-}
-
-func (m *Manager) VMBlockIndex() *VMBlockIndex {
-	return m.vmblockIndex
 }
 
 func (m *Manager) InvalidTxIndex() *InvalidTxIndex {
@@ -913,4 +880,18 @@ func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan s
 
 	log.Info(fmt.Sprintf("Dropped %s", idxName))
 	return nil
+}
+
+func IsDuplicateTx(dbTx database.Tx, txid *hash.Hash, blockHash *hash.Hash) bool {
+	blockRegion, err := dbFetchTxIndexEntry(dbTx, txid)
+	if err != nil {
+		return false
+	}
+	if blockRegion == nil {
+		return false
+	}
+	if blockRegion.Hash.IsEqual(blockHash) {
+		return false
+	}
+	return true
 }

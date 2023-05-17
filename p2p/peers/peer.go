@@ -282,6 +282,7 @@ func (p *Peer) SetChainState(chainState *pb.ChainState) {
 	p.chainStateLastUpdated = time.Now()
 	p.timeOffset = int64(p.chainState.Timestamp) - roughtime.Now().Unix()
 	p.graphStateTime = time.Now()
+	p.stateRootOrder = uint64(chainState.GraphState.MainOrder)
 	log.Trace(fmt.Sprintf("SetChainState(%s) : MainHeight=%d", p.pid.ShortString(), chainState.GraphState.MainHeight))
 }
 
@@ -355,6 +356,7 @@ func (p *Peer) StatsSnapshot() (*StatsSnap, error) {
 		IsCircuit:  p.isCircuit(),
 		Bads:       p.badResponseStrs(),
 		ReConnect:  p.reconnect,
+		StateRoot:  p.stateRootAndOrder(),
 	}
 	n := p.node()
 	if n != nil {
@@ -407,6 +409,21 @@ func (p *Peer) genesis() *hash.Hash {
 		return nil
 	}
 	return genesisHash
+}
+
+func (p *Peer) SetStateRoot(stateRoot *hash.Hash, order uint64) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.stateRoot = stateRoot
+	p.stateRootOrder = order
+}
+
+func (p *Peer) stateRootAndOrder() string {
+	if p.stateRoot == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s (order:%d)", p.stateRoot.String(), p.stateRootOrder)
 }
 
 func (p *Peer) Services() protocol.ServiceFlag {

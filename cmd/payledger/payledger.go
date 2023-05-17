@@ -213,7 +213,7 @@ func buildLedger(node INode, config *Config) error {
 		if ib.GetOrder() == meerdag.MaxBlockOrder {
 			continue
 		}
-		if ib.GetStatus().KnownInvalid() {
+		if ib.GetState().GetStatus().KnownInvalid() {
 			continue
 		}
 		if entry.IsCoinBase() {

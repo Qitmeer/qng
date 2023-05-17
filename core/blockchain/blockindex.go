@@ -45,7 +45,7 @@ func (b *BlockChain) getBlockData(hash *hash.Hash) meerdag.IBlockData {
 		log.Error(err.Error())
 		return nil
 	}
-	return NewBlockNode(block, block.Block().Parents)
+	return NewBlockNode(block)
 }
 
 func (b *BlockChain) GetBlock(h *hash.Hash) meerdag.IBlock {
@@ -192,28 +192,58 @@ func (b *BlockChain) HasTx(txid *hash.Hash) bool {
 	return b.indexManager.HasTx(txid)
 }
 
-func (b *BlockChain) GetMeerBlock(order uint) (interface{}, error) {
-	if b.VMService() == nil {
-		return nil, nil
+// Get Meer DAG block through the EVM block number
+// TODO: Will continue to optimize in the future due to insufficient performance
+func (b *BlockChain) GetBlockByNumber(number uint64) meerdag.IBlock {
+	if number == 0 {
+		return b.BlockDAG().GetBlockByOrder(0)
 	}
-	number := uint64(0)
-	for i := uint(order); i > 0; i-- {
-		ib := b.bd.GetBlockByOrder(i)
-		if ib == nil {
-			return nil, fmt.Errorf("No meer block number:%d", i)
-		}
-		if forks.IsBeforeMeerEVMForkHeight(int64(ib.GetHeight())) {
-			break
-		}
-		num := b.VMService().GetBlockID(ib.GetHash())
-		if num != 0 {
-			number = num
-			break
+	b.ChainRLock()
+	defer b.ChainRUnlock()
+
+	mainTip := b.BlockDAG().GetMainChainTip()
+	var section meerdag.IBlock
+	if number > uint64(mainTip.GetOrder()) ||
+		number > mainTip.GetState().GetEVMNumber() {
+		return nil
+	} else if number == uint64(mainTip.GetOrder()) ||
+		number == mainTip.GetState().GetEVMNumber() {
+		section = mainTip
+	} else {
+		start := number
+		end := uint64(mainTip.GetOrder())
+		mid := uint64(0)
+		for start <= end {
+			mid = start + (end-start)/2
+			cur := b.BlockDAG().GetBlockByOrder(uint(mid))
+			if cur == nil {
+				return nil
+			}
+			if cur.GetState().GetEVMNumber() == number {
+				section = cur
+				break
+			} else if cur.GetState().GetEVMNumber() > number {
+				end = mid - 1
+			} else {
+				start = mid + 1
+			}
 		}
 	}
-	eb, err := b.VMService().GetBlockByNumber(number)
-	if err != nil {
-		return nil, err
+	if section == nil {
+		return nil
 	}
-	return eb, nil
+	if section.GetOrder() == 0 {
+		return section
+	}
+	for i := section.GetOrder() - 1; i >= 0; i-- {
+		prev := b.BlockDAG().GetBlockByOrder(i)
+		if prev == nil {
+			return nil
+		}
+		if prev.GetState().GetEVMNumber()+1 == number {
+			return section
+		}
+		section = prev
+	}
+	return nil
 }

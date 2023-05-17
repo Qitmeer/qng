@@ -108,7 +108,6 @@ func (s *Sync) validateChainStateMessage(msg *pb.ChainState, pe *peers.Peer) *co
 	if msg.GraphState.Total <= 0 {
 		return common.NewErrorStr(common.ErrDAGConsensus, "invalid graph state")
 	}
-
 	if pe.Direction() == network.DirInbound {
 		// Reject outbound peers that are not full nodes.
 		wantServices := protocol.Full

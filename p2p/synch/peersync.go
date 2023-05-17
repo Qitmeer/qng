@@ -526,6 +526,9 @@ func (ps *PeerSync) RelayInventory(nds []*notify.NotifyData) {
 	for _, pe := range ps.sy.Peers().CanSyncPeers() {
 		invs := []*pb.InvVect{}
 		for _, nd := range nds {
+			if !ps.IsRunning() {
+				return
+			}
 			if nd.IsFilter(pe.GetID()) {
 				continue
 			}

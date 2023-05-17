@@ -1,6 +1,7 @@
 package peers
 
 import (
+	"github.com/Qitmeer/qng/common/hash"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnr"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -62,4 +63,6 @@ type peerStatus struct {
 	chainState            *pb.ChainState
 	chainStateLastUpdated time.Time
 	badResponses          []*BadResponse
+	stateRootOrder        uint64
+	stateRoot             *hash.Hash
 }

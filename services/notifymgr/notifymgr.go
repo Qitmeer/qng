@@ -46,6 +46,9 @@ type NotifyMgr struct {
 // transactions.  This function should be called whenever new transactions
 // are added to the mempool.
 func (ntmgr *NotifyMgr) AnnounceNewTransactions(newTxs []*types.TxDesc, filters []peer.ID) {
+	if ntmgr.IsShutdown() {
+		return
+	}
 	if len(newTxs) <= 0 {
 		return
 	}
@@ -63,6 +66,9 @@ func (ntmgr *NotifyMgr) AnnounceNewTransactions(newTxs []*types.TxDesc, filters 
 // RelayInventory relays the passed inventory vector to all connected peers
 // that are not already known to have it.
 func (ntmgr *NotifyMgr) RelayInventory(data interface{}, filters []peer.ID) {
+	if ntmgr.IsShutdown() {
+		return
+	}
 	_, ok := data.(types.BlockHeader)
 	if !ok {
 		log.Warn(fmt.Sprintf("No support relay data:%v", data))
@@ -76,6 +82,9 @@ func (ntmgr *NotifyMgr) BroadcastMessage(data interface{}) {
 }
 
 func (ntmgr *NotifyMgr) AddRebroadcastInventory(newTxs []*types.TxDesc) {
+	if ntmgr.IsShutdown() {
+		return
+	}
 	for _, tx := range newTxs {
 		ntmgr.Server.Rebroadcast().AddInventory(tx.Tx.Hash(), tx)
 	}
@@ -107,13 +116,13 @@ func (ntmgr *NotifyMgr) Stop() error {
 	}
 	log.Info("Stop NotifyMgr...")
 
+	close(ntmgr.quit)
+	ntmgr.wg.Wait()
+
 	if ntmgr.ticker != nil {
 		ntmgr.ticker.Stop()
 		ntmgr.ticker = nil
 	}
-
-	close(ntmgr.quit)
-	ntmgr.wg.Wait()
 
 	ntmgr.zmqNotify.Shutdown()
 	return nil
@@ -139,7 +148,8 @@ func (ntmgr *NotifyMgr) handleStallSample() {
 	ntmgr.Lock()
 	defer ntmgr.Unlock()
 
-	if len(ntmgr.nds) <= 0 {
+	if len(ntmgr.nds) <= 0 ||
+		ntmgr.IsShutdown() {
 		return
 	}
 
@@ -170,11 +180,17 @@ func (ntmgr *NotifyMgr) IsTimeout() bool {
 
 func (ntmgr *NotifyMgr) Reset() {
 	if !ntmgr.IsTimeout() {
+		if ntmgr.ticker == nil {
+			return
+		}
 		ntmgr.ticker.Reset(NotifyTickerDur)
 	}
 }
 
 func (ntmgr *NotifyMgr) handleNotifyMsg(notification *blockchain.Notification) {
+	if ntmgr.IsShutdown() {
+		return
+	}
 	switch notification.Type {
 	case blockchain.BlockAccepted:
 		band, ok := notification.Data.(*blockchain.BlockAcceptedNotifyData)
@@ -219,14 +235,14 @@ func (ntmgr *NotifyMgr) handleNotifyMsg(notification *blockchain.Notification) {
 	}
 }
 
-func New(p2pServer *p2p.Service,consensus model.Consensus) *NotifyMgr {
+func New(p2pServer *p2p.Service, consensus model.Consensus) *NotifyMgr {
 	ntmgr := &NotifyMgr{
 		quit:        make(chan struct{}),
 		ticker:      time.NewTicker(time.Second),
 		nds:         []*notify.NotifyData{},
 		Server:      p2pServer,
 		lastProTime: time.Now(),
-		zmqNotify: zmq.NewZMQNotification(consensus.Config()),
+		zmqNotify:   zmq.NewZMQNotification(consensus.Config()),
 	}
 	consensus.BlockChain().(*blockchain.BlockChain).Subscribe(ntmgr.handleNotifyMsg)
 	return ntmgr

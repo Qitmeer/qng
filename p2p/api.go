@@ -80,6 +80,9 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, pid *string) (interface{}, e
 		if p.Genesis != nil {
 			info.Genesis = p.Genesis.String()
 		}
+		if len(p.StateRoot) > 0 {
+			info.StateRoot = p.StateRoot
+		}
 		if p.IsTheSameNetwork() {
 			info.State = p.State
 		}
@@ -313,4 +316,13 @@ func (api *PrivateP2PAPI) RemoveBan(id *string) (interface{}, error) {
 	}
 	api.s.RemoveBan(ho)
 	return true, nil
+}
+
+func (api *PrivateP2PAPI) CheckConsistency(hashOrNumber string) (interface{}, error) {
+	hn, err := protocol.NewHashOrNumber(hashOrNumber)
+	if err != nil {
+		log.Warn("Will use the default block", "error", err.Error())
+		return api.s.sy.CheckConsistency(nil)
+	}
+	return api.s.sy.CheckConsistency(hn)
 }

@@ -88,3 +88,7 @@ func (b *Block) StateRoot() common.Hash {
 func (b *Block) Number() uint64 {
 	return b.ethBlock.NumberU64()
 }
+
+func (b *Block) ParentState() model.BlockState {
+	return nil
+}

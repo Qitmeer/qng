@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
+	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/database"
@@ -34,16 +35,41 @@ import (
 // best chain.
 //
 // This function is safe for concurrent access.
-// return IsOrphan,IsTipsExpired,error
-func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, bool, error) {
-	if flags.Has(BFRPCAdd) {
-		err := b.BlockDAG().CheckSubMainChainTip(block.Block().Parents)
-		if err != nil {
-			return false, true, fmt.Errorf("The tips of block is expired:%s (error:%s)\n", block.Hash().String(), err.Error())
+// return IsOrphan,error
+func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
+	if b.IsShutdown() {
+		return false, fmt.Errorf("block chain is shutdown")
+	}
+	msg := processMsg{block: block, flags: flags, result: make(chan *processResult)}
+	b.msgChan <- &msg
+	result := <-msg.result
+	return result.isOrphan, result.err
+}
+
+func (b *BlockChain) handler() {
+	log.Trace("BlockChain handler")
+out:
+	for {
+		select {
+		case msg := <-b.msgChan:
+			isOrphan, err := b.processBlock(msg.block, msg.flags)
+			msg.result <- &processResult{isOrphan: isOrphan, err: err}
+		case <-b.quit:
+			break out
 		}
 	}
-	isOrphan, err := b.processBlock(block, flags)
-	return isOrphan, false, err
+
+cleanup:
+	for {
+		select {
+		case <-b.msgChan:
+		default:
+			break cleanup
+		}
+	}
+
+	b.wg.Done()
+	log.Trace("BlockChain handler done")
 }
 
 func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
@@ -175,14 +201,14 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		b.flushNotifications()
 	}()
 
-	newNode := NewBlockNode(block, block.Block().Parents)
+	newNode := NewBlockNode(block)
 
 	fastAdd := flags&BFFastAdd == BFFastAdd
 	if !fastAdd {
-		mainParent := b.bd.GetMainParentByHashs(block.Block().Parents)
+		mainParent := b.bd.GetBlock(newNode.GetMainParent())
 		if mainParent == nil {
 			b.ChainUnlock()
-			return fmt.Errorf("Can't find main parent\n")
+			return fmt.Errorf("Can't find main parent")
 		}
 		// The block must pass all of the validation rules which depend on the
 		// position of the block within the block chain.
@@ -201,7 +227,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	newOrders, oldOrders, ib, isMainChainTipChange := b.bd.AddBlock(newNode)
 	if ib == nil {
 		b.ChainUnlock()
-		return fmt.Errorf("Irreparable error![%s]\n", newNode.GetHash().String())
+		return fmt.Errorf("Irreparable error![%s]", newNode.GetHash().String())
 	}
 	block.SetOrder(uint64(ib.GetOrder()))
 	block.SetHeight(ib.GetHeight())
@@ -313,26 +339,30 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 			newOr = append(newOr, nodeBlock)
 		}
 		if len(newOr) <= 0 {
-			newOr=append(newOr,ib)
+			newOr = append(newOr, ib)
 		}
 		var sb *types.SerializedBlock
 		var err error
-		for _,nodeBlock:=range newOr {
+		for _, nodeBlock := range newOr {
 			if nodeBlock.GetID() == ib.GetID() {
 				sb = block
 			} else {
 				sb, err = b.FetchBlockByHash(nodeBlock.GetHash())
 				if err != nil {
-					return false,err
+					return false, err
 				}
 				sb.SetOrder(uint64(nodeBlock.GetOrder()))
 				sb.SetHeight(nodeBlock.GetHeight())
 			}
 			if !nodeBlock.IsOrdered() {
+				er := b.updateDefaultBlockState(nodeBlock)
+				if er != nil {
+					log.Error(er.Error())
+				}
 				continue
 			}
 			if sb == nil {
-				return false,fmt.Errorf("No block:%s,id:%d\n",nodeBlock.GetHash().String(),nodeBlock.GetID())
+				return false, fmt.Errorf("No block:%s,id:%d\n", nodeBlock.GetHash().String(), nodeBlock.GetID())
 			}
 			view := utxo.NewUtxoViewpoint()
 			view.SetViewpoints([]*hash.Hash{nodeBlock.GetHash()})
@@ -342,17 +372,25 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 				b.bd.InvalidBlock(nodeBlock)
 				stxos = []utxo.SpentTxOut{}
 				view.Clean()
+				log.Warn(err.Error(), "block", nodeBlock.GetHash().String(), "order", nodeBlock.GetOrder())
 			}
 			err = b.connectBlock(nodeBlock, sb, view, stxos, connectedBlocks)
 			if err != nil {
 				b.bd.InvalidBlock(nodeBlock)
-				return false,err
+				er := b.updateDefaultBlockState(nodeBlock)
+				if er != nil {
+					log.Error(er.Error())
+				}
+				return false, err
 			}
-			if !nodeBlock.GetStatus().KnownInvalid() {
+			if !nodeBlock.GetState().GetStatus().KnownInvalid() {
 				b.bd.ValidBlock(nodeBlock)
 			}
 			b.bd.UpdateWeight(nodeBlock)
-			b.updateBlockState(nodeBlock, sb)
+			er := b.updateBlockState(nodeBlock, sb)
+			if er != nil {
+				log.Error(er.Error())
+			}
 			log.Debug("Block connected to the main chain", "hash", nodeBlock.GetHash(), "order", nodeBlock.GetOrder())
 		}
 		return true, nil
@@ -392,8 +430,9 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 	for _, stxo := range stxos {
 		pkss = append(pkss, stxo.PkScript)
 	}
-	if !node.GetStatus().KnownInvalid() {
-		vmbid, err := b.VMService().ConnectBlock(block)
+	if !node.GetState().GetStatus().KnownInvalid() {
+		prevState := b.bd.GetBlockByOrder(node.GetOrder() - 1).GetState()
+		_, err := b.VMService().ConnectBlock(block, prevState)
 		if err != nil {
 			return err
 		}
@@ -424,7 +463,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		// optional indexes with the block being connected so they can
 		// update themselves accordingly.
 		if b.indexManager != nil {
-			err := b.indexManager.ConnectBlock(block, pkss, node, vmbid)
+			err := b.indexManager.ConnectBlock(block, pkss, node)
 			if err != nil {
 				return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 			}
@@ -441,7 +480,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 	} else {
 		// Atomically insert info into the database.
 		if b.indexManager != nil {
-			err := b.indexManager.ConnectBlock(block, pkss, node, 0)
+			err := b.indexManager.ConnectBlock(block, pkss, node)
 			if err != nil {
 				return err
 			}
@@ -456,12 +495,8 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, view *utxo.UtxoViewpoint, stxos []utxo.SpentTxOut) error {
-	vmbid, err := b.VMService().DisconnectBlock(block)
-	if err != nil {
-		return err
-	}
 	// Calculate the exact subsidy produced by adding the block.
-	err = b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx database.Tx) error {
 		// Update the utxo set using the state of the utxo view.  This
 		// entails restoring all of the utxos spent and removing the new
 		// ones created by the block.
@@ -488,7 +523,7 @@ func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedB
 		for _, stxo := range stxos {
 			pkss = append(pkss, stxo.PkScript)
 		}
-		err := b.indexManager.DisconnectBlock(block, pkss, ib, vmbid)
+		err := b.indexManager.DisconnectBlock(block, pkss, ib)
 		if err != nil {
 			return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 		}
@@ -681,7 +716,7 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 		return fmt.Errorf("No main tip node\n")
 	}
 	state := newBestState(mainTip.GetHash(), mainTipNode.Difficulty(), blockSize, numTxns, b.CalcPastMedianTime(mainTip), lastState.TotalTxns+numTxns,
-		b.bd.GetMainChainTip().GetWeight(), b.bd.GetGraphState(), b.GetTokenTipHash())
+		b.bd.GetMainChainTip().GetState().GetWeight(), b.bd.GetGraphState(), b.GetTokenTipHash(), *mainTip.GetState().Root())
 
 	// Atomically insert info into the database.
 	err := b.db.Update(func(dbTx database.Tx) error {
@@ -714,9 +749,51 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 	return b.bd.Commit()
 }
 
-func (b *BlockChain) updateBlockState(ib meerdag.IBlock, block *types.SerializedBlock) {
-	if ib.GetState() == nil {
-		return
+func (b *BlockChain) updateBlockState(ib meerdag.IBlock, block *types.SerializedBlock) error {
+	if !ib.IsOrdered() {
+		return b.updateDefaultBlockState(ib)
 	}
-	ib.GetState().Update(block, b.VMService().GetCurStateRoot())
+	if ib.GetState() == nil ||
+		ib.GetOrder() <= 0 {
+		return fmt.Errorf("block state is nill:%d %s", ib.GetID(), ib.GetHash().String())
+	}
+	bs, ok := ib.GetState().(*state.BlockState)
+	if !ok {
+		return fmt.Errorf("block state is nill:%d %s", ib.GetID(), ib.GetHash().String())
+	}
+	prev := b.bd.GetBlockByOrder(ib.GetOrder() - 1)
+	if prev == nil {
+		return fmt.Errorf("No prev block:%d %s", ib.GetID(), ib.GetHash().String())
+	}
+	bs.Update(block, prev.GetState().(*state.BlockState), b.VMService().GetCurHeader())
+	b.BlockDAG().AddToCommit(ib)
+	return nil
+}
+
+func (b *BlockChain) updateDefaultBlockState(ib meerdag.IBlock) error {
+	if ib.GetState() == nil {
+		return fmt.Errorf("block state is nill:%d %s", ib.GetID(), ib.GetHash().String())
+	}
+	bs, ok := ib.GetState().(*state.BlockState)
+	if !ok {
+		return fmt.Errorf("block state is nill:%d %s", ib.GetID(), ib.GetHash().String())
+	}
+	mp := b.bd.GetBlockById(ib.GetMainParent())
+	if mp == nil {
+		return fmt.Errorf("No main parent:%d %s", ib.GetID(), ib.GetHash().String())
+	}
+	bs.SetDefault(mp.GetState().(*state.BlockState))
+	b.BlockDAG().AddToCommit(ib)
+	return nil
+}
+
+type processMsg struct {
+	block  *types.SerializedBlock
+	flags  BehaviorFlags
+	result chan *processResult
+}
+
+type processResult struct {
+	isOrphan bool
+	err      error
 }

@@ -18,1043 +18,6 @@ var (
 	errSize                = fmt.Errorf("incorrect size")
 )
 
-// MarshalSSZ ssz marshals the MemPoolRequest object
-func (m *MemPoolRequest) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, m.SizeSSZ())
-	return m.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the MemPoolRequest object to a target array
-func (m *MemPoolRequest) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-
-	// Field (0) 'TxsNum'
-	dst = ssz.MarshalUint64(dst, m.TxsNum)
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the MemPoolRequest object
-func (m *MemPoolRequest) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 8 {
-		return errSize
-	}
-
-	// Field (0) 'TxsNum'
-	m.TxsNum = ssz.UnmarshallUint64(buf[0:8])
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the MemPoolRequest object
-func (m *MemPoolRequest) SizeSSZ() (size int) {
-	size = 8
-	return
-}
-
-// MarshalSSZ ssz marshals the MemPoolRespond object
-func (m *MemPoolRespond) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, m.SizeSSZ())
-	return m.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the MemPoolRespond object to a target array
-func (m *MemPoolRespond) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-
-	// Field (0) 'TxsNum'
-	dst = ssz.MarshalUint64(dst, m.TxsNum)
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the MemPoolRespond object
-func (m *MemPoolRespond) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 8 {
-		return errSize
-	}
-
-	// Field (0) 'TxsNum'
-	m.TxsNum = ssz.UnmarshallUint64(buf[0:8])
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the MemPoolRespond object
-func (m *MemPoolRespond) SizeSSZ() (size int) {
-	size = 8
-	return
-}
-
-// MarshalSSZ ssz marshals the GetBlocks object
-func (g *GetBlocks) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, g.SizeSSZ())
-	return g.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the GetBlocks object to a target array
-func (g *GetBlocks) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(4)
-
-	// Offset (0) 'Locator'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(g.Locator) * 32
-
-	// Field (0) 'Locator'
-	if len(g.Locator) > 2000 {
-		return nil, errMarshalList
-	}
-	for ii := 0; ii < len(g.Locator); ii++ {
-		if dst, err = g.Locator[ii].MarshalSSZTo(dst); err != nil {
-			return nil, err
-		}
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the GetBlocks object
-func (g *GetBlocks) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 4 {
-		return errSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'Locator'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return errOffset
-	}
-
-	// Field (0) 'Locator'
-	{
-		buf = tail[o0:]
-		num, ok := ssz.DivideInt(len(buf), 32)
-		if !ok {
-			return errDivideInt
-		}
-		if num > 2000 {
-			return errListTooBig
-		}
-		g.Locator = make([]*Hash, num)
-		for ii := 0; ii < num; ii++ {
-			if g.Locator[ii] == nil {
-				g.Locator[ii] = new(Hash)
-			}
-			if err = g.Locator[ii].UnmarshalSSZ(buf[ii*32 : (ii+1)*32]); err != nil {
-				return err
-			}
-		}
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the GetBlocks object
-func (g *GetBlocks) SizeSSZ() (size int) {
-	size = 4
-
-	// Field (0) 'Locator'
-	size += len(g.Locator) * 32
-
-	return
-}
-
-// MarshalSSZ ssz marshals the DagBlocks object
-func (d *DagBlocks) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, d.SizeSSZ())
-	return d.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the DagBlocks object to a target array
-func (d *DagBlocks) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(4)
-
-	// Offset (0) 'Blocks'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(d.Blocks) * 32
-
-	// Field (0) 'Blocks'
-	if len(d.Blocks) > 2000 {
-		return nil, errMarshalList
-	}
-	for ii := 0; ii < len(d.Blocks); ii++ {
-		if dst, err = d.Blocks[ii].MarshalSSZTo(dst); err != nil {
-			return nil, err
-		}
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the DagBlocks object
-func (d *DagBlocks) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 4 {
-		return errSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'Blocks'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return errOffset
-	}
-
-	// Field (0) 'Blocks'
-	{
-		buf = tail[o0:]
-		num, ok := ssz.DivideInt(len(buf), 32)
-		if !ok {
-			return errDivideInt
-		}
-		if num > 2000 {
-			return errListTooBig
-		}
-		d.Blocks = make([]*Hash, num)
-		for ii := 0; ii < num; ii++ {
-			if d.Blocks[ii] == nil {
-				d.Blocks[ii] = new(Hash)
-			}
-			if err = d.Blocks[ii].UnmarshalSSZ(buf[ii*32 : (ii+1)*32]); err != nil {
-				return err
-			}
-		}
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the DagBlocks object
-func (d *DagBlocks) SizeSSZ() (size int) {
-	size = 4
-
-	// Field (0) 'Blocks'
-	size += len(d.Blocks) * 32
-
-	return
-}
-
-// MarshalSSZ ssz marshals the ChainState object
-func (c *ChainState) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, c.SizeSSZ())
-	return c.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the ChainState object to a target array
-func (c *ChainState) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(61)
-
-	// Field (0) 'GenesisHash'
-	if c.GenesisHash == nil {
-		c.GenesisHash = new(Hash)
-	}
-	if dst, err = c.GenesisHash.MarshalSSZTo(dst); err != nil {
-		return nil, err
-	}
-
-	// Field (1) 'ProtocolVersion'
-	dst = ssz.MarshalUint32(dst, c.ProtocolVersion)
-
-	// Field (2) 'Timestamp'
-	dst = ssz.MarshalUint64(dst, c.Timestamp)
-
-	// Field (3) 'Services'
-	dst = ssz.MarshalUint64(dst, c.Services)
-
-	// Field (4) 'DisableRelayTx'
-	dst = ssz.MarshalBool(dst, c.DisableRelayTx)
-
-	// Offset (5) 'GraphState'
-	dst = ssz.WriteOffset(dst, offset)
-	if c.GraphState == nil {
-		c.GraphState = new(GraphState)
-	}
-	offset += c.GraphState.SizeSSZ()
-
-	// Offset (6) 'UserAgent'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(c.UserAgent)
-
-	// Field (5) 'GraphState'
-	if dst, err = c.GraphState.MarshalSSZTo(dst); err != nil {
-		return nil, err
-	}
-
-	// Field (6) 'UserAgent'
-	if len(c.UserAgent) > 256 {
-		return nil, errMarshalDynamicBytes
-	}
-	dst = append(dst, c.UserAgent...)
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the ChainState object
-func (c *ChainState) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 61 {
-		return errSize
-	}
-
-	tail := buf
-	var o5, o6 uint64
-
-	// Field (0) 'GenesisHash'
-	if c.GenesisHash == nil {
-		c.GenesisHash = new(Hash)
-	}
-	if err = c.GenesisHash.UnmarshalSSZ(buf[0:32]); err != nil {
-		return err
-	}
-
-	// Field (1) 'ProtocolVersion'
-	c.ProtocolVersion = ssz.UnmarshallUint32(buf[32:36])
-
-	// Field (2) 'Timestamp'
-	c.Timestamp = ssz.UnmarshallUint64(buf[36:44])
-
-	// Field (3) 'Services'
-	c.Services = ssz.UnmarshallUint64(buf[44:52])
-
-	// Field (4) 'DisableRelayTx'
-	c.DisableRelayTx = ssz.UnmarshalBool(buf[52:53])
-
-	// Offset (5) 'GraphState'
-	if o5 = ssz.ReadOffset(buf[53:57]); o5 > size {
-		return errOffset
-	}
-
-	// Offset (6) 'UserAgent'
-	if o6 = ssz.ReadOffset(buf[57:61]); o6 > size || o5 > o6 {
-		return errOffset
-	}
-
-	// Field (5) 'GraphState'
-	{
-		buf = tail[o5:o6]
-		if c.GraphState == nil {
-			c.GraphState = new(GraphState)
-		}
-		if err = c.GraphState.UnmarshalSSZ(buf); err != nil {
-			return err
-		}
-	}
-
-	// Field (6) 'UserAgent'
-	{
-		buf = tail[o6:]
-		c.UserAgent = append(c.UserAgent, buf...)
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the ChainState object
-func (c *ChainState) SizeSSZ() (size int) {
-	size = 61
-
-	// Field (5) 'GraphState'
-	if c.GraphState == nil {
-		c.GraphState = new(GraphState)
-	}
-	size += c.GraphState.SizeSSZ()
-
-	// Field (6) 'UserAgent'
-	size += len(c.UserAgent)
-
-	return
-}
-
-// MarshalSSZ ssz marshals the GetTxs object
-func (g *GetTxs) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, g.SizeSSZ())
-	return g.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the GetTxs object to a target array
-func (g *GetTxs) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(4)
-
-	// Offset (0) 'Txs'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(g.Txs) * 32
-
-	// Field (0) 'Txs'
-	if len(g.Txs) > 20000 {
-		return nil, errMarshalList
-	}
-	for ii := 0; ii < len(g.Txs); ii++ {
-		if dst, err = g.Txs[ii].MarshalSSZTo(dst); err != nil {
-			return nil, err
-		}
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the GetTxs object
-func (g *GetTxs) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 4 {
-		return errSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'Txs'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return errOffset
-	}
-
-	// Field (0) 'Txs'
-	{
-		buf = tail[o0:]
-		num, ok := ssz.DivideInt(len(buf), 32)
-		if !ok {
-			return errDivideInt
-		}
-		if num > 20000 {
-			return errListTooBig
-		}
-		g.Txs = make([]*Hash, num)
-		for ii := 0; ii < num; ii++ {
-			if g.Txs[ii] == nil {
-				g.Txs[ii] = new(Hash)
-			}
-			if err = g.Txs[ii].UnmarshalSSZ(buf[ii*32 : (ii+1)*32]); err != nil {
-				return err
-			}
-		}
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the GetTxs object
-func (g *GetTxs) SizeSSZ() (size int) {
-	size = 4
-
-	// Field (0) 'Txs'
-	size += len(g.Txs) * 32
-
-	return
-}
-
-// MarshalSSZ ssz marshals the Transaction object
-func (t *Transaction) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, t.SizeSSZ())
-	return t.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the Transaction object to a target array
-func (t *Transaction) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(4)
-
-	// Offset (0) 'TxBytes'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(t.TxBytes)
-
-	// Field (0) 'TxBytes'
-	if len(t.TxBytes) > 1048576 {
-		return nil, errMarshalDynamicBytes
-	}
-	dst = append(dst, t.TxBytes...)
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the Transaction object
-func (t *Transaction) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 4 {
-		return errSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'TxBytes'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return errOffset
-	}
-
-	// Field (0) 'TxBytes'
-	{
-		buf = tail[o0:]
-		t.TxBytes = append(t.TxBytes, buf...)
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the Transaction object
-func (t *Transaction) SizeSSZ() (size int) {
-	size = 4
-
-	// Field (0) 'TxBytes'
-	size += len(t.TxBytes)
-
-	return
-}
-
-// MarshalSSZ ssz marshals the Transactions object
-func (t *Transactions) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, t.SizeSSZ())
-	return t.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the Transactions object to a target array
-func (t *Transactions) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(4)
-
-	// Offset (0) 'Txs'
-	dst = ssz.WriteOffset(dst, offset)
-	for ii := 0; ii < len(t.Txs); ii++ {
-		offset += 4
-		offset += t.Txs[ii].SizeSSZ()
-	}
-
-	// Field (0) 'Txs'
-	if len(t.Txs) > 20000 {
-		return nil, errMarshalList
-	}
-	{
-		offset = 4 * len(t.Txs)
-		for ii := 0; ii < len(t.Txs); ii++ {
-			dst = ssz.WriteOffset(dst, offset)
-			offset += t.Txs[ii].SizeSSZ()
-		}
-	}
-	for ii := 0; ii < len(t.Txs); ii++ {
-		if dst, err = t.Txs[ii].MarshalSSZTo(dst); err != nil {
-			return nil, err
-		}
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the Transactions object
-func (t *Transactions) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 4 {
-		return errSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'Txs'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return errOffset
-	}
-
-	// Field (0) 'Txs'
-	{
-		buf = tail[o0:]
-		num, err := ssz.DecodeDynamicLength(buf, 20000)
-		if err != nil {
-			return err
-		}
-		t.Txs = make([]*Transaction, num)
-		err = ssz.UnmarshalDynamic(buf, num, func(indx int, buf []byte) (err error) {
-			if t.Txs[indx] == nil {
-				t.Txs[indx] = new(Transaction)
-			}
-			if err = t.Txs[indx].UnmarshalSSZ(buf); err != nil {
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the Transactions object
-func (t *Transactions) SizeSSZ() (size int) {
-	size = 4
-
-	// Field (0) 'Txs'
-	for ii := 0; ii < len(t.Txs); ii++ {
-		size += 4
-		size += t.Txs[ii].SizeSSZ()
-	}
-
-	return
-}
-
-// MarshalSSZ ssz marshals the Inventory object
-func (i *Inventory) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, i.SizeSSZ())
-	return i.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the Inventory object to a target array
-func (i *Inventory) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(4)
-
-	// Offset (0) 'Invs'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(i.Invs) * 36
-
-	// Field (0) 'Invs'
-	if len(i.Invs) > 20000 {
-		return nil, errMarshalList
-	}
-	for ii := 0; ii < len(i.Invs); ii++ {
-		if dst, err = i.Invs[ii].MarshalSSZTo(dst); err != nil {
-			return nil, err
-		}
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the Inventory object
-func (i *Inventory) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 4 {
-		return errSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'Invs'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return errOffset
-	}
-
-	// Field (0) 'Invs'
-	{
-		buf = tail[o0:]
-		num, ok := ssz.DivideInt(len(buf), 36)
-		if !ok {
-			return errDivideInt
-		}
-		if num > 20000 {
-			return errListTooBig
-		}
-		i.Invs = make([]*InvVect, num)
-		for ii := 0; ii < num; ii++ {
-			if i.Invs[ii] == nil {
-				i.Invs[ii] = new(InvVect)
-			}
-			if err = i.Invs[ii].UnmarshalSSZ(buf[ii*36 : (ii+1)*36]); err != nil {
-				return err
-			}
-		}
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the Inventory object
-func (i *Inventory) SizeSSZ() (size int) {
-	size = 4
-
-	// Field (0) 'Invs'
-	size += len(i.Invs) * 36
-
-	return
-}
-
-// MarshalSSZ ssz marshals the InvVect object
-func (i *InvVect) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, i.SizeSSZ())
-	return i.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the InvVect object to a target array
-func (i *InvVect) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-
-	// Field (0) 'Type'
-	dst = ssz.MarshalUint32(dst, i.Type)
-
-	// Field (1) 'Hash'
-	if i.Hash == nil {
-		i.Hash = new(Hash)
-	}
-	if dst, err = i.Hash.MarshalSSZTo(dst); err != nil {
-		return nil, err
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the InvVect object
-func (i *InvVect) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 36 {
-		return errSize
-	}
-
-	// Field (0) 'Type'
-	i.Type = ssz.UnmarshallUint32(buf[0:4])
-
-	// Field (1) 'Hash'
-	if i.Hash == nil {
-		i.Hash = new(Hash)
-	}
-	if err = i.Hash.UnmarshalSSZ(buf[4:36]); err != nil {
-		return err
-	}
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the InvVect object
-func (i *InvVect) SizeSSZ() (size int) {
-	size = 36
-	return
-}
-
-// MarshalSSZ ssz marshals the StateRootReq object
-func (s *StateRootReq) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, s.SizeSSZ())
-	return s.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the StateRootReq object to a target array
-func (s *StateRootReq) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-
-	// Field (0) 'Block'
-	if s.Block == nil {
-		s.Block = new(Hash)
-	}
-	if dst, err = s.Block.MarshalSSZTo(dst); err != nil {
-		return nil, err
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the StateRootReq object
-func (s *StateRootReq) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 32 {
-		return errSize
-	}
-
-	// Field (0) 'Block'
-	if s.Block == nil {
-		s.Block = new(Hash)
-	}
-	if err = s.Block.UnmarshalSSZ(buf[0:32]); err != nil {
-		return err
-	}
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the StateRootReq object
-func (s *StateRootReq) SizeSSZ() (size int) {
-	size = 32
-	return
-}
-
-// MarshalSSZ ssz marshals the StateRootRsp object
-func (s *StateRootRsp) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, s.SizeSSZ())
-	return s.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the StateRootRsp object to a target array
-func (s *StateRootRsp) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-
-	// Field (0) 'Root'
-	if s.Root == nil {
-		s.Root = new(Hash)
-	}
-	if dst, err = s.Root.MarshalSSZTo(dst); err != nil {
-		return nil, err
-	}
-
-	// Field (1) 'Has'
-	dst = ssz.MarshalBool(dst, s.Has)
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the StateRootRsp object
-func (s *StateRootRsp) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 33 {
-		return errSize
-	}
-
-	// Field (0) 'Root'
-	if s.Root == nil {
-		s.Root = new(Hash)
-	}
-	if err = s.Root.UnmarshalSSZ(buf[0:32]); err != nil {
-		return err
-	}
-
-	// Field (1) 'Has'
-	s.Has = ssz.UnmarshalBool(buf[32:33])
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the StateRootRsp object
-func (s *StateRootRsp) SizeSSZ() (size int) {
-	size = 33
-	return
-}
-
-// MarshalSSZ ssz marshals the GetBlockDatas object
-func (g *GetBlockDatas) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, g.SizeSSZ())
-	return g.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the GetBlockDatas object to a target array
-func (g *GetBlockDatas) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(4)
-
-	// Offset (0) 'Locator'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(g.Locator) * 32
-
-	// Field (0) 'Locator'
-	if len(g.Locator) > 2000 {
-		return nil, errMarshalList
-	}
-	for ii := 0; ii < len(g.Locator); ii++ {
-		if dst, err = g.Locator[ii].MarshalSSZTo(dst); err != nil {
-			return nil, err
-		}
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the GetBlockDatas object
-func (g *GetBlockDatas) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 4 {
-		return errSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'Locator'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return errOffset
-	}
-
-	// Field (0) 'Locator'
-	{
-		buf = tail[o0:]
-		num, ok := ssz.DivideInt(len(buf), 32)
-		if !ok {
-			return errDivideInt
-		}
-		if num > 2000 {
-			return errListTooBig
-		}
-		g.Locator = make([]*Hash, num)
-		for ii := 0; ii < num; ii++ {
-			if g.Locator[ii] == nil {
-				g.Locator[ii] = new(Hash)
-			}
-			if err = g.Locator[ii].UnmarshalSSZ(buf[ii*32 : (ii+1)*32]); err != nil {
-				return err
-			}
-		}
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the GetBlockDatas object
-func (g *GetBlockDatas) SizeSSZ() (size int) {
-	size = 4
-
-	// Field (0) 'Locator'
-	size += len(g.Locator) * 32
-
-	return
-}
-
-// MarshalSSZ ssz marshals the BlockDatas object
-func (b *BlockDatas) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, b.SizeSSZ())
-	return b.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the BlockDatas object to a target array
-func (b *BlockDatas) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(4)
-
-	// Offset (0) 'Locator'
-	dst = ssz.WriteOffset(dst, offset)
-	for ii := 0; ii < len(b.Locator); ii++ {
-		offset += 4
-		offset += b.Locator[ii].SizeSSZ()
-	}
-
-	// Field (0) 'Locator'
-	if len(b.Locator) > 2000 {
-		return nil, errMarshalList
-	}
-	{
-		offset = 4 * len(b.Locator)
-		for ii := 0; ii < len(b.Locator); ii++ {
-			dst = ssz.WriteOffset(dst, offset)
-			offset += b.Locator[ii].SizeSSZ()
-		}
-	}
-	for ii := 0; ii < len(b.Locator); ii++ {
-		if dst, err = b.Locator[ii].MarshalSSZTo(dst); err != nil {
-			return nil, err
-		}
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the BlockDatas object
-func (b *BlockDatas) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 4 {
-		return errSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'Locator'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return errOffset
-	}
-
-	// Field (0) 'Locator'
-	{
-		buf = tail[o0:]
-		num, err := ssz.DecodeDynamicLength(buf, 2000)
-		if err != nil {
-			return err
-		}
-		b.Locator = make([]*BlockData, num)
-		err = ssz.UnmarshalDynamic(buf, num, func(indx int, buf []byte) (err error) {
-			if b.Locator[indx] == nil {
-				b.Locator[indx] = new(BlockData)
-			}
-			if err = b.Locator[indx].UnmarshalSSZ(buf); err != nil {
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the BlockDatas object
-func (b *BlockDatas) SizeSSZ() (size int) {
-	size = 4
-
-	// Field (0) 'Locator'
-	for ii := 0; ii < len(b.Locator); ii++ {
-		size += 4
-		size += b.Locator[ii].SizeSSZ()
-	}
-
-	return
-}
-
-// MarshalSSZ ssz marshals the BlockData object
-func (b *BlockData) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, b.SizeSSZ())
-	return b.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the BlockData object to a target array
-func (b *BlockData) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(4)
-
-	// Offset (0) 'BlockBytes'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.BlockBytes)
-
-	// Field (0) 'BlockBytes'
-	if len(b.BlockBytes) > 1048576 {
-		return nil, errMarshalDynamicBytes
-	}
-	dst = append(dst, b.BlockBytes...)
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the BlockData object
-func (b *BlockData) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 4 {
-		return errSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'BlockBytes'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return errOffset
-	}
-
-	// Field (0) 'BlockBytes'
-	{
-		buf = tail[o0:]
-		b.BlockBytes = append(b.BlockBytes, buf...)
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the BlockData object
-func (b *BlockData) SizeSSZ() (size int) {
-	size = 4
-
-	// Field (0) 'BlockBytes'
-	size += len(b.BlockBytes)
-
-	return
-}
-
 // MarshalSSZ ssz marshals the SyncQNR object
 func (s *SyncQNR) MarshalSSZ() ([]byte, error) {
 	buf := make([]byte, s.SizeSSZ())
@@ -1412,6 +375,289 @@ func (m *MerkleBlockResponse) SizeSSZ() (size int) {
 	return
 }
 
+// MarshalSSZ ssz marshals the GetBlocks object
+func (g *GetBlocks) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, g.SizeSSZ())
+	return g.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the GetBlocks object to a target array
+func (g *GetBlocks) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := int(4)
+
+	// Offset (0) 'Locator'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(g.Locator) * 32
+
+	// Field (0) 'Locator'
+	if len(g.Locator) > 2000 {
+		return nil, errMarshalList
+	}
+	for ii := 0; ii < len(g.Locator); ii++ {
+		if dst, err = g.Locator[ii].MarshalSSZTo(dst); err != nil {
+			return nil, err
+		}
+	}
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the GetBlocks object
+func (g *GetBlocks) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 4 {
+		return errSize
+	}
+
+	tail := buf
+	var o0 uint64
+
+	// Offset (0) 'Locator'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return errOffset
+	}
+
+	// Field (0) 'Locator'
+	{
+		buf = tail[o0:]
+		num, ok := ssz.DivideInt(len(buf), 32)
+		if !ok {
+			return errDivideInt
+		}
+		if num > 2000 {
+			return errListTooBig
+		}
+		g.Locator = make([]*Hash, num)
+		for ii := 0; ii < num; ii++ {
+			if g.Locator[ii] == nil {
+				g.Locator[ii] = new(Hash)
+			}
+			if err = g.Locator[ii].UnmarshalSSZ(buf[ii*32 : (ii+1)*32]); err != nil {
+				return err
+			}
+		}
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the GetBlocks object
+func (g *GetBlocks) SizeSSZ() (size int) {
+	size = 4
+
+	// Field (0) 'Locator'
+	size += len(g.Locator) * 32
+
+	return
+}
+
+// MarshalSSZ ssz marshals the DagBlocks object
+func (d *DagBlocks) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, d.SizeSSZ())
+	return d.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the DagBlocks object to a target array
+func (d *DagBlocks) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := int(4)
+
+	// Offset (0) 'Blocks'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(d.Blocks) * 32
+
+	// Field (0) 'Blocks'
+	if len(d.Blocks) > 2000 {
+		return nil, errMarshalList
+	}
+	for ii := 0; ii < len(d.Blocks); ii++ {
+		if dst, err = d.Blocks[ii].MarshalSSZTo(dst); err != nil {
+			return nil, err
+		}
+	}
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the DagBlocks object
+func (d *DagBlocks) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 4 {
+		return errSize
+	}
+
+	tail := buf
+	var o0 uint64
+
+	// Offset (0) 'Blocks'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return errOffset
+	}
+
+	// Field (0) 'Blocks'
+	{
+		buf = tail[o0:]
+		num, ok := ssz.DivideInt(len(buf), 32)
+		if !ok {
+			return errDivideInt
+		}
+		if num > 2000 {
+			return errListTooBig
+		}
+		d.Blocks = make([]*Hash, num)
+		for ii := 0; ii < num; ii++ {
+			if d.Blocks[ii] == nil {
+				d.Blocks[ii] = new(Hash)
+			}
+			if err = d.Blocks[ii].UnmarshalSSZ(buf[ii*32 : (ii+1)*32]); err != nil {
+				return err
+			}
+		}
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the DagBlocks object
+func (d *DagBlocks) SizeSSZ() (size int) {
+	size = 4
+
+	// Field (0) 'Blocks'
+	size += len(d.Blocks) * 32
+
+	return
+}
+
+// MarshalSSZ ssz marshals the Inventory object
+func (i *Inventory) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, i.SizeSSZ())
+	return i.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the Inventory object to a target array
+func (i *Inventory) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := int(4)
+
+	// Offset (0) 'Invs'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(i.Invs) * 36
+
+	// Field (0) 'Invs'
+	if len(i.Invs) > 20000 {
+		return nil, errMarshalList
+	}
+	for ii := 0; ii < len(i.Invs); ii++ {
+		if dst, err = i.Invs[ii].MarshalSSZTo(dst); err != nil {
+			return nil, err
+		}
+	}
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the Inventory object
+func (i *Inventory) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 4 {
+		return errSize
+	}
+
+	tail := buf
+	var o0 uint64
+
+	// Offset (0) 'Invs'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return errOffset
+	}
+
+	// Field (0) 'Invs'
+	{
+		buf = tail[o0:]
+		num, ok := ssz.DivideInt(len(buf), 36)
+		if !ok {
+			return errDivideInt
+		}
+		if num > 20000 {
+			return errListTooBig
+		}
+		i.Invs = make([]*InvVect, num)
+		for ii := 0; ii < num; ii++ {
+			if i.Invs[ii] == nil {
+				i.Invs[ii] = new(InvVect)
+			}
+			if err = i.Invs[ii].UnmarshalSSZ(buf[ii*36 : (ii+1)*36]); err != nil {
+				return err
+			}
+		}
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the Inventory object
+func (i *Inventory) SizeSSZ() (size int) {
+	size = 4
+
+	// Field (0) 'Invs'
+	size += len(i.Invs) * 36
+
+	return
+}
+
+// MarshalSSZ ssz marshals the InvVect object
+func (i *InvVect) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, i.SizeSSZ())
+	return i.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the InvVect object to a target array
+func (i *InvVect) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+
+	// Field (0) 'Type'
+	dst = ssz.MarshalUint32(dst, i.Type)
+
+	// Field (1) 'Hash'
+	if i.Hash == nil {
+		i.Hash = new(Hash)
+	}
+	if dst, err = i.Hash.MarshalSSZTo(dst); err != nil {
+		return nil, err
+	}
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the InvVect object
+func (i *InvVect) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 36 {
+		return errSize
+	}
+
+	// Field (0) 'Type'
+	i.Type = ssz.UnmarshallUint32(buf[0:4])
+
+	// Field (1) 'Hash'
+	if i.Hash == nil {
+		i.Hash = new(Hash)
+	}
+	if err = i.Hash.UnmarshalSSZ(buf[4:36]); err != nil {
+		return err
+	}
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the InvVect object
+func (i *InvVect) SizeSSZ() (size int) {
+	size = 36
+	return
+}
+
 // MarshalSSZ ssz marshals the FilterAddRequest object
 func (f *FilterAddRequest) MarshalSSZ() ([]byte, error) {
 	buf := make([]byte, f.SizeSSZ())
@@ -1572,6 +818,703 @@ func (f *FilterLoadRequest) SizeSSZ() (size int) {
 
 	// Field (0) 'Filter'
 	size += len(f.Filter)
+
+	return
+}
+
+// MarshalSSZ ssz marshals the StateRootReq object
+func (s *StateRootReq) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, s.SizeSSZ())
+	return s.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the StateRootReq object to a target array
+func (s *StateRootReq) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+
+	// Field (0) 'Block'
+	if s.Block == nil {
+		s.Block = new(Hash)
+	}
+	if dst, err = s.Block.MarshalSSZTo(dst); err != nil {
+		return nil, err
+	}
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the StateRootReq object
+func (s *StateRootReq) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 32 {
+		return errSize
+	}
+
+	// Field (0) 'Block'
+	if s.Block == nil {
+		s.Block = new(Hash)
+	}
+	if err = s.Block.UnmarshalSSZ(buf[0:32]); err != nil {
+		return err
+	}
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the StateRootReq object
+func (s *StateRootReq) SizeSSZ() (size int) {
+	size = 32
+	return
+}
+
+// MarshalSSZ ssz marshals the StateRootRsp object
+func (s *StateRootRsp) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, s.SizeSSZ())
+	return s.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the StateRootRsp object to a target array
+func (s *StateRootRsp) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+
+	// Field (0) 'Root'
+	if s.Root == nil {
+		s.Root = new(Hash)
+	}
+	if dst, err = s.Root.MarshalSSZTo(dst); err != nil {
+		return nil, err
+	}
+
+	// Field (1) 'Has'
+	dst = ssz.MarshalBool(dst, s.Has)
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the StateRootRsp object
+func (s *StateRootRsp) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 33 {
+		return errSize
+	}
+
+	// Field (0) 'Root'
+	if s.Root == nil {
+		s.Root = new(Hash)
+	}
+	if err = s.Root.UnmarshalSSZ(buf[0:32]); err != nil {
+		return err
+	}
+
+	// Field (1) 'Has'
+	s.Has = ssz.UnmarshalBool(buf[32:33])
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the StateRootRsp object
+func (s *StateRootRsp) SizeSSZ() (size int) {
+	size = 33
+	return
+}
+
+// MarshalSSZ ssz marshals the GetBlockDatas object
+func (g *GetBlockDatas) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, g.SizeSSZ())
+	return g.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the GetBlockDatas object to a target array
+func (g *GetBlockDatas) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := int(4)
+
+	// Offset (0) 'Locator'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(g.Locator) * 32
+
+	// Field (0) 'Locator'
+	if len(g.Locator) > 2000 {
+		return nil, errMarshalList
+	}
+	for ii := 0; ii < len(g.Locator); ii++ {
+		if dst, err = g.Locator[ii].MarshalSSZTo(dst); err != nil {
+			return nil, err
+		}
+	}
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the GetBlockDatas object
+func (g *GetBlockDatas) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 4 {
+		return errSize
+	}
+
+	tail := buf
+	var o0 uint64
+
+	// Offset (0) 'Locator'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return errOffset
+	}
+
+	// Field (0) 'Locator'
+	{
+		buf = tail[o0:]
+		num, ok := ssz.DivideInt(len(buf), 32)
+		if !ok {
+			return errDivideInt
+		}
+		if num > 2000 {
+			return errListTooBig
+		}
+		g.Locator = make([]*Hash, num)
+		for ii := 0; ii < num; ii++ {
+			if g.Locator[ii] == nil {
+				g.Locator[ii] = new(Hash)
+			}
+			if err = g.Locator[ii].UnmarshalSSZ(buf[ii*32 : (ii+1)*32]); err != nil {
+				return err
+			}
+		}
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the GetBlockDatas object
+func (g *GetBlockDatas) SizeSSZ() (size int) {
+	size = 4
+
+	// Field (0) 'Locator'
+	size += len(g.Locator) * 32
+
+	return
+}
+
+// MarshalSSZ ssz marshals the BlockDatas object
+func (b *BlockDatas) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, b.SizeSSZ())
+	return b.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the BlockDatas object to a target array
+func (b *BlockDatas) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := int(4)
+
+	// Offset (0) 'Locator'
+	dst = ssz.WriteOffset(dst, offset)
+	for ii := 0; ii < len(b.Locator); ii++ {
+		offset += 4
+		offset += b.Locator[ii].SizeSSZ()
+	}
+
+	// Field (0) 'Locator'
+	if len(b.Locator) > 2000 {
+		return nil, errMarshalList
+	}
+	{
+		offset = 4 * len(b.Locator)
+		for ii := 0; ii < len(b.Locator); ii++ {
+			dst = ssz.WriteOffset(dst, offset)
+			offset += b.Locator[ii].SizeSSZ()
+		}
+	}
+	for ii := 0; ii < len(b.Locator); ii++ {
+		if dst, err = b.Locator[ii].MarshalSSZTo(dst); err != nil {
+			return nil, err
+		}
+	}
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the BlockDatas object
+func (b *BlockDatas) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 4 {
+		return errSize
+	}
+
+	tail := buf
+	var o0 uint64
+
+	// Offset (0) 'Locator'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return errOffset
+	}
+
+	// Field (0) 'Locator'
+	{
+		buf = tail[o0:]
+		num, err := ssz.DecodeDynamicLength(buf, 2000)
+		if err != nil {
+			return err
+		}
+		b.Locator = make([]*BlockData, num)
+		err = ssz.UnmarshalDynamic(buf, num, func(indx int, buf []byte) (err error) {
+			if b.Locator[indx] == nil {
+				b.Locator[indx] = new(BlockData)
+			}
+			if err = b.Locator[indx].UnmarshalSSZ(buf); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the BlockDatas object
+func (b *BlockDatas) SizeSSZ() (size int) {
+	size = 4
+
+	// Field (0) 'Locator'
+	for ii := 0; ii < len(b.Locator); ii++ {
+		size += 4
+		size += b.Locator[ii].SizeSSZ()
+	}
+
+	return
+}
+
+// MarshalSSZ ssz marshals the BlockData object
+func (b *BlockData) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, b.SizeSSZ())
+	return b.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the BlockData object to a target array
+func (b *BlockData) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := int(4)
+
+	// Offset (0) 'BlockBytes'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(b.BlockBytes)
+
+	// Field (0) 'BlockBytes'
+	if len(b.BlockBytes) > 1048576 {
+		return nil, errMarshalDynamicBytes
+	}
+	dst = append(dst, b.BlockBytes...)
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the BlockData object
+func (b *BlockData) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 4 {
+		return errSize
+	}
+
+	tail := buf
+	var o0 uint64
+
+	// Offset (0) 'BlockBytes'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return errOffset
+	}
+
+	// Field (0) 'BlockBytes'
+	{
+		buf = tail[o0:]
+		b.BlockBytes = append(b.BlockBytes, buf...)
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the BlockData object
+func (b *BlockData) SizeSSZ() (size int) {
+	size = 4
+
+	// Field (0) 'BlockBytes'
+	size += len(b.BlockBytes)
+
+	return
+}
+
+// MarshalSSZ ssz marshals the ErrorResponse object
+func (e *ErrorResponse) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, e.SizeSSZ())
+	return e.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the ErrorResponse object to a target array
+func (e *ErrorResponse) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := int(4)
+
+	// Offset (0) 'Message'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(e.Message)
+
+	// Field (0) 'Message'
+	if len(e.Message) > 256 {
+		return nil, errMarshalDynamicBytes
+	}
+	dst = append(dst, e.Message...)
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the ErrorResponse object
+func (e *ErrorResponse) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 4 {
+		return errSize
+	}
+
+	tail := buf
+	var o0 uint64
+
+	// Offset (0) 'Message'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return errOffset
+	}
+
+	// Field (0) 'Message'
+	{
+		buf = tail[o0:]
+		e.Message = append(e.Message, buf...)
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the ErrorResponse object
+func (e *ErrorResponse) SizeSSZ() (size int) {
+	size = 4
+
+	// Field (0) 'Message'
+	size += len(e.Message)
+
+	return
+}
+
+// MarshalSSZ ssz marshals the MetaData object
+func (m *MetaData) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, m.SizeSSZ())
+	return m.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the MetaData object to a target array
+func (m *MetaData) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+
+	// Field (0) 'SeqNumber'
+	dst = ssz.MarshalUint64(dst, m.SeqNumber)
+
+	// Field (1) 'Subnets'
+	if dst, err = ssz.MarshalFixedBytes(dst, m.Subnets, 8); err != nil {
+		return nil, errMarshalFixedBytes
+	}
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the MetaData object
+func (m *MetaData) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 16 {
+		return errSize
+	}
+
+	// Field (0) 'SeqNumber'
+	m.SeqNumber = ssz.UnmarshallUint64(buf[0:8])
+
+	// Field (1) 'Subnets'
+	m.Subnets = append(m.Subnets, buf[8:16]...)
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the MetaData object
+func (m *MetaData) SizeSSZ() (size int) {
+	size = 16
+	return
+}
+
+// MarshalSSZ ssz marshals the Hash object
+func (h *Hash) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, h.SizeSSZ())
+	return h.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the Hash object to a target array
+func (h *Hash) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+
+	// Field (0) 'Hash'
+	if dst, err = ssz.MarshalFixedBytes(dst, h.Hash, 32); err != nil {
+		return nil, errMarshalFixedBytes
+	}
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the Hash object
+func (h *Hash) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 32 {
+		return errSize
+	}
+
+	// Field (0) 'Hash'
+	h.Hash = append(h.Hash, buf[0:32]...)
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the Hash object
+func (h *Hash) SizeSSZ() (size int) {
+	size = 32
+	return
+}
+
+// MarshalSSZ ssz marshals the GraphState object
+func (g *GraphState) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, g.SizeSSZ())
+	return g.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the GraphState object to a target array
+func (g *GraphState) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := int(20)
+
+	// Field (0) 'Total'
+	dst = ssz.MarshalUint32(dst, g.Total)
+
+	// Field (1) 'Layer'
+	dst = ssz.MarshalUint32(dst, g.Layer)
+
+	// Field (2) 'MainHeight'
+	dst = ssz.MarshalUint32(dst, g.MainHeight)
+
+	// Field (3) 'MainOrder'
+	dst = ssz.MarshalUint32(dst, g.MainOrder)
+
+	// Offset (4) 'Tips'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(g.Tips) * 32
+
+	// Field (4) 'Tips'
+	if len(g.Tips) > 100 {
+		return nil, errMarshalList
+	}
+	for ii := 0; ii < len(g.Tips); ii++ {
+		if dst, err = g.Tips[ii].MarshalSSZTo(dst); err != nil {
+			return nil, err
+		}
+	}
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the GraphState object
+func (g *GraphState) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 20 {
+		return errSize
+	}
+
+	tail := buf
+	var o4 uint64
+
+	// Field (0) 'Total'
+	g.Total = ssz.UnmarshallUint32(buf[0:4])
+
+	// Field (1) 'Layer'
+	g.Layer = ssz.UnmarshallUint32(buf[4:8])
+
+	// Field (2) 'MainHeight'
+	g.MainHeight = ssz.UnmarshallUint32(buf[8:12])
+
+	// Field (3) 'MainOrder'
+	g.MainOrder = ssz.UnmarshallUint32(buf[12:16])
+
+	// Offset (4) 'Tips'
+	if o4 = ssz.ReadOffset(buf[16:20]); o4 > size {
+		return errOffset
+	}
+
+	// Field (4) 'Tips'
+	{
+		buf = tail[o4:]
+		num, ok := ssz.DivideInt(len(buf), 32)
+		if !ok {
+			return errDivideInt
+		}
+		if num > 100 {
+			return errListTooBig
+		}
+		g.Tips = make([]*Hash, num)
+		for ii := 0; ii < num; ii++ {
+			if g.Tips[ii] == nil {
+				g.Tips[ii] = new(Hash)
+			}
+			if err = g.Tips[ii].UnmarshalSSZ(buf[ii*32 : (ii+1)*32]); err != nil {
+				return err
+			}
+		}
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the GraphState object
+func (g *GraphState) SizeSSZ() (size int) {
+	size = 20
+
+	// Field (4) 'Tips'
+	size += len(g.Tips) * 32
+
+	return
+}
+
+// MarshalSSZ ssz marshals the ChainState object
+func (c *ChainState) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, c.SizeSSZ())
+	return c.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the ChainState object to a target array
+func (c *ChainState) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := int(61)
+
+	// Field (0) 'GenesisHash'
+	if c.GenesisHash == nil {
+		c.GenesisHash = new(Hash)
+	}
+	if dst, err = c.GenesisHash.MarshalSSZTo(dst); err != nil {
+		return nil, err
+	}
+
+	// Field (1) 'ProtocolVersion'
+	dst = ssz.MarshalUint32(dst, c.ProtocolVersion)
+
+	// Field (2) 'Timestamp'
+	dst = ssz.MarshalUint64(dst, c.Timestamp)
+
+	// Field (3) 'Services'
+	dst = ssz.MarshalUint64(dst, c.Services)
+
+	// Field (4) 'DisableRelayTx'
+	dst = ssz.MarshalBool(dst, c.DisableRelayTx)
+
+	// Offset (5) 'GraphState'
+	dst = ssz.WriteOffset(dst, offset)
+	if c.GraphState == nil {
+		c.GraphState = new(GraphState)
+	}
+	offset += c.GraphState.SizeSSZ()
+
+	// Offset (6) 'UserAgent'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(c.UserAgent)
+
+	// Field (5) 'GraphState'
+	if dst, err = c.GraphState.MarshalSSZTo(dst); err != nil {
+		return nil, err
+	}
+
+	// Field (6) 'UserAgent'
+	if len(c.UserAgent) > 256 {
+		return nil, errMarshalDynamicBytes
+	}
+	dst = append(dst, c.UserAgent...)
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the ChainState object
+func (c *ChainState) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 61 {
+		return errSize
+	}
+
+	tail := buf
+	var o5, o6 uint64
+
+	// Field (0) 'GenesisHash'
+	if c.GenesisHash == nil {
+		c.GenesisHash = new(Hash)
+	}
+	if err = c.GenesisHash.UnmarshalSSZ(buf[0:32]); err != nil {
+		return err
+	}
+
+	// Field (1) 'ProtocolVersion'
+	c.ProtocolVersion = ssz.UnmarshallUint32(buf[32:36])
+
+	// Field (2) 'Timestamp'
+	c.Timestamp = ssz.UnmarshallUint64(buf[36:44])
+
+	// Field (3) 'Services'
+	c.Services = ssz.UnmarshallUint64(buf[44:52])
+
+	// Field (4) 'DisableRelayTx'
+	c.DisableRelayTx = ssz.UnmarshalBool(buf[52:53])
+
+	// Offset (5) 'GraphState'
+	if o5 = ssz.ReadOffset(buf[53:57]); o5 > size {
+		return errOffset
+	}
+
+	// Offset (6) 'UserAgent'
+	if o6 = ssz.ReadOffset(buf[57:61]); o6 > size || o5 > o6 {
+		return errOffset
+	}
+
+	// Field (5) 'GraphState'
+	{
+		buf = tail[o5:o6]
+		if c.GraphState == nil {
+			c.GraphState = new(GraphState)
+		}
+		if err = c.GraphState.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+	}
+
+	// Field (6) 'UserAgent'
+	{
+		buf = tail[o6:]
+		c.UserAgent = append(c.UserAgent, buf...)
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the ChainState object
+func (c *ChainState) SizeSSZ() (size int) {
+	size = 61
+
+	// Field (5) 'GraphState'
+	if c.GraphState == nil {
+		c.GraphState = new(GraphState)
+	}
+	size += c.GraphState.SizeSSZ()
+
+	// Field (6) 'UserAgent'
+	size += len(c.UserAgent)
 
 	return
 }
@@ -1814,39 +1757,27 @@ func (s *SubDAG) SizeSSZ() (size int) {
 	return
 }
 
-// MarshalSSZ ssz marshals the GraphState object
-func (g *GraphState) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the GetTxs object
+func (g *GetTxs) MarshalSSZ() ([]byte, error) {
 	buf := make([]byte, g.SizeSSZ())
 	return g.MarshalSSZTo(buf[:0])
 }
 
-// MarshalSSZTo ssz marshals the GraphState object to a target array
-func (g *GraphState) MarshalSSZTo(dst []byte) ([]byte, error) {
+// MarshalSSZTo ssz marshals the GetTxs object to a target array
+func (g *GetTxs) MarshalSSZTo(dst []byte) ([]byte, error) {
 	var err error
-	offset := int(20)
+	offset := int(4)
 
-	// Field (0) 'Total'
-	dst = ssz.MarshalUint32(dst, g.Total)
-
-	// Field (1) 'Layer'
-	dst = ssz.MarshalUint32(dst, g.Layer)
-
-	// Field (2) 'MainHeight'
-	dst = ssz.MarshalUint32(dst, g.MainHeight)
-
-	// Field (3) 'MainOrder'
-	dst = ssz.MarshalUint32(dst, g.MainOrder)
-
-	// Offset (4) 'Tips'
+	// Offset (0) 'Txs'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(g.Tips) * 32
+	offset += len(g.Txs) * 32
 
-	// Field (4) 'Tips'
-	if len(g.Tips) > 100 {
+	// Field (0) 'Txs'
+	if len(g.Txs) > 20000 {
 		return nil, errMarshalList
 	}
-	for ii := 0; ii < len(g.Tips); ii++ {
-		if dst, err = g.Tips[ii].MarshalSSZTo(dst); err != nil {
+	for ii := 0; ii < len(g.Txs); ii++ {
+		if dst, err = g.Txs[ii].MarshalSSZTo(dst); err != nil {
 			return nil, err
 		}
 	}
@@ -1854,93 +1785,8 @@ func (g *GraphState) MarshalSSZTo(dst []byte) ([]byte, error) {
 	return dst, err
 }
 
-// UnmarshalSSZ ssz unmarshals the GraphState object
-func (g *GraphState) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 20 {
-		return errSize
-	}
-
-	tail := buf
-	var o4 uint64
-
-	// Field (0) 'Total'
-	g.Total = ssz.UnmarshallUint32(buf[0:4])
-
-	// Field (1) 'Layer'
-	g.Layer = ssz.UnmarshallUint32(buf[4:8])
-
-	// Field (2) 'MainHeight'
-	g.MainHeight = ssz.UnmarshallUint32(buf[8:12])
-
-	// Field (3) 'MainOrder'
-	g.MainOrder = ssz.UnmarshallUint32(buf[12:16])
-
-	// Offset (4) 'Tips'
-	if o4 = ssz.ReadOffset(buf[16:20]); o4 > size {
-		return errOffset
-	}
-
-	// Field (4) 'Tips'
-	{
-		buf = tail[o4:]
-		num, ok := ssz.DivideInt(len(buf), 32)
-		if !ok {
-			return errDivideInt
-		}
-		if num > 100 {
-			return errListTooBig
-		}
-		g.Tips = make([]*Hash, num)
-		for ii := 0; ii < num; ii++ {
-			if g.Tips[ii] == nil {
-				g.Tips[ii] = new(Hash)
-			}
-			if err = g.Tips[ii].UnmarshalSSZ(buf[ii*32 : (ii+1)*32]); err != nil {
-				return err
-			}
-		}
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the GraphState object
-func (g *GraphState) SizeSSZ() (size int) {
-	size = 20
-
-	// Field (4) 'Tips'
-	size += len(g.Tips) * 32
-
-	return
-}
-
-// MarshalSSZ ssz marshals the ErrorResponse object
-func (e *ErrorResponse) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, e.SizeSSZ())
-	return e.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the ErrorResponse object to a target array
-func (e *ErrorResponse) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(4)
-
-	// Offset (0) 'Message'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(e.Message)
-
-	// Field (0) 'Message'
-	if len(e.Message) > 256 {
-		return nil, errMarshalDynamicBytes
-	}
-	dst = append(dst, e.Message...)
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the ErrorResponse object
-func (e *ErrorResponse) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the GetTxs object
+func (g *GetTxs) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size < 4 {
@@ -1950,107 +1796,261 @@ func (e *ErrorResponse) UnmarshalSSZ(buf []byte) error {
 	tail := buf
 	var o0 uint64
 
-	// Offset (0) 'Message'
+	// Offset (0) 'Txs'
 	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
 		return errOffset
 	}
 
-	// Field (0) 'Message'
+	// Field (0) 'Txs'
 	{
 		buf = tail[o0:]
-		e.Message = append(e.Message, buf...)
+		num, ok := ssz.DivideInt(len(buf), 32)
+		if !ok {
+			return errDivideInt
+		}
+		if num > 20000 {
+			return errListTooBig
+		}
+		g.Txs = make([]*Hash, num)
+		for ii := 0; ii < num; ii++ {
+			if g.Txs[ii] == nil {
+				g.Txs[ii] = new(Hash)
+			}
+			if err = g.Txs[ii].UnmarshalSSZ(buf[ii*32 : (ii+1)*32]); err != nil {
+				return err
+			}
+		}
 	}
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the ErrorResponse object
-func (e *ErrorResponse) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the GetTxs object
+func (g *GetTxs) SizeSSZ() (size int) {
 	size = 4
 
-	// Field (0) 'Message'
-	size += len(e.Message)
+	// Field (0) 'Txs'
+	size += len(g.Txs) * 32
 
 	return
 }
 
-// MarshalSSZ ssz marshals the MetaData object
-func (m *MetaData) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the Transaction object
+func (t *Transaction) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, t.SizeSSZ())
+	return t.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the Transaction object to a target array
+func (t *Transaction) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := int(4)
+
+	// Offset (0) 'TxBytes'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(t.TxBytes)
+
+	// Field (0) 'TxBytes'
+	if len(t.TxBytes) > 1048576 {
+		return nil, errMarshalDynamicBytes
+	}
+	dst = append(dst, t.TxBytes...)
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the Transaction object
+func (t *Transaction) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 4 {
+		return errSize
+	}
+
+	tail := buf
+	var o0 uint64
+
+	// Offset (0) 'TxBytes'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return errOffset
+	}
+
+	// Field (0) 'TxBytes'
+	{
+		buf = tail[o0:]
+		t.TxBytes = append(t.TxBytes, buf...)
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the Transaction object
+func (t *Transaction) SizeSSZ() (size int) {
+	size = 4
+
+	// Field (0) 'TxBytes'
+	size += len(t.TxBytes)
+
+	return
+}
+
+// MarshalSSZ ssz marshals the Transactions object
+func (t *Transactions) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, t.SizeSSZ())
+	return t.MarshalSSZTo(buf[:0])
+}
+
+// MarshalSSZTo ssz marshals the Transactions object to a target array
+func (t *Transactions) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := int(4)
+
+	// Offset (0) 'Txs'
+	dst = ssz.WriteOffset(dst, offset)
+	for ii := 0; ii < len(t.Txs); ii++ {
+		offset += 4
+		offset += t.Txs[ii].SizeSSZ()
+	}
+
+	// Field (0) 'Txs'
+	if len(t.Txs) > 20000 {
+		return nil, errMarshalList
+	}
+	{
+		offset = 4 * len(t.Txs)
+		for ii := 0; ii < len(t.Txs); ii++ {
+			dst = ssz.WriteOffset(dst, offset)
+			offset += t.Txs[ii].SizeSSZ()
+		}
+	}
+	for ii := 0; ii < len(t.Txs); ii++ {
+		if dst, err = t.Txs[ii].MarshalSSZTo(dst); err != nil {
+			return nil, err
+		}
+	}
+
+	return dst, err
+}
+
+// UnmarshalSSZ ssz unmarshals the Transactions object
+func (t *Transactions) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 4 {
+		return errSize
+	}
+
+	tail := buf
+	var o0 uint64
+
+	// Offset (0) 'Txs'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return errOffset
+	}
+
+	// Field (0) 'Txs'
+	{
+		buf = tail[o0:]
+		num, err := ssz.DecodeDynamicLength(buf, 20000)
+		if err != nil {
+			return err
+		}
+		t.Txs = make([]*Transaction, num)
+		err = ssz.UnmarshalDynamic(buf, num, func(indx int, buf []byte) (err error) {
+			if t.Txs[indx] == nil {
+				t.Txs[indx] = new(Transaction)
+			}
+			if err = t.Txs[indx].UnmarshalSSZ(buf); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the Transactions object
+func (t *Transactions) SizeSSZ() (size int) {
+	size = 4
+
+	// Field (0) 'Txs'
+	for ii := 0; ii < len(t.Txs); ii++ {
+		size += 4
+		size += t.Txs[ii].SizeSSZ()
+	}
+
+	return
+}
+
+// MarshalSSZ ssz marshals the MemPoolRequest object
+func (m *MemPoolRequest) MarshalSSZ() ([]byte, error) {
 	buf := make([]byte, m.SizeSSZ())
 	return m.MarshalSSZTo(buf[:0])
 }
 
-// MarshalSSZTo ssz marshals the MetaData object to a target array
-func (m *MetaData) MarshalSSZTo(dst []byte) ([]byte, error) {
+// MarshalSSZTo ssz marshals the MemPoolRequest object to a target array
+func (m *MemPoolRequest) MarshalSSZTo(dst []byte) ([]byte, error) {
 	var err error
 
-	// Field (0) 'SeqNumber'
-	dst = ssz.MarshalUint64(dst, m.SeqNumber)
-
-	// Field (1) 'Subnets'
-	if dst, err = ssz.MarshalFixedBytes(dst, m.Subnets, 8); err != nil {
-		return nil, errMarshalFixedBytes
-	}
+	// Field (0) 'TxsNum'
+	dst = ssz.MarshalUint64(dst, m.TxsNum)
 
 	return dst, err
 }
 
-// UnmarshalSSZ ssz unmarshals the MetaData object
-func (m *MetaData) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the MemPoolRequest object
+func (m *MemPoolRequest) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 16 {
+	if size != 8 {
 		return errSize
 	}
 
-	// Field (0) 'SeqNumber'
-	m.SeqNumber = ssz.UnmarshallUint64(buf[0:8])
-
-	// Field (1) 'Subnets'
-	m.Subnets = append(m.Subnets, buf[8:16]...)
+	// Field (0) 'TxsNum'
+	m.TxsNum = ssz.UnmarshallUint64(buf[0:8])
 
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the MetaData object
-func (m *MetaData) SizeSSZ() (size int) {
-	size = 16
+// SizeSSZ returns the ssz encoded size in bytes for the MemPoolRequest object
+func (m *MemPoolRequest) SizeSSZ() (size int) {
+	size = 8
 	return
 }
 
-// MarshalSSZ ssz marshals the Hash object
-func (h *Hash) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, h.SizeSSZ())
-	return h.MarshalSSZTo(buf[:0])
+// MarshalSSZ ssz marshals the MemPoolRespond object
+func (m *MemPoolRespond) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, m.SizeSSZ())
+	return m.MarshalSSZTo(buf[:0])
 }
 
-// MarshalSSZTo ssz marshals the Hash object to a target array
-func (h *Hash) MarshalSSZTo(dst []byte) ([]byte, error) {
+// MarshalSSZTo ssz marshals the MemPoolRespond object to a target array
+func (m *MemPoolRespond) MarshalSSZTo(dst []byte) ([]byte, error) {
 	var err error
 
-	// Field (0) 'Hash'
-	if dst, err = ssz.MarshalFixedBytes(dst, h.Hash, 32); err != nil {
-		return nil, errMarshalFixedBytes
-	}
+	// Field (0) 'TxsNum'
+	dst = ssz.MarshalUint64(dst, m.TxsNum)
 
 	return dst, err
 }
 
-// UnmarshalSSZ ssz unmarshals the Hash object
-func (h *Hash) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the MemPoolRespond object
+func (m *MemPoolRespond) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 32 {
+	if size != 8 {
 		return errSize
 	}
 
-	// Field (0) 'Hash'
-	h.Hash = append(h.Hash, buf[0:32]...)
+	// Field (0) 'TxsNum'
+	m.TxsNum = ssz.UnmarshallUint64(buf[0:8])
 
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the Hash object
-func (h *Hash) SizeSSZ() (size int) {
-	size = 32
+// SizeSSZ returns the ssz encoded size in bytes for the MemPoolRespond object
+func (m *MemPoolRespond) SizeSSZ() (size int) {
+	size = 8
 	return
 }

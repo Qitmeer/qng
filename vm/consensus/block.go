@@ -18,6 +18,7 @@ type Block interface {
 	Height() uint64
 	Timestamp() time.Time
 	Transactions() []model.Tx
+	ParentState() model.BlockState
 }
 
 type BlockHeader interface {

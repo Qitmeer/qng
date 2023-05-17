@@ -148,18 +148,22 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 		return &ProcessResult{act: ProcessResultActionContinue, orphan: false}
 	}
 	readys := len(blocksReady)
-	if readys > 0 {
-		packageNumber := 0
-		for index := 0; index < readys; packageNumber++ {
+	packageNumber := 0
+	index := 0
+	getBlockDatas := func() bool {
+		if readys > 0 && index < readys {
+			packageNumber++
 			sendBlocks := blocksReady[index:]
 			log.Trace(fmt.Sprintf("processGetBlockDatas::sendGetBlockDataRequest peer=%v, blocks=%d [%s -> %s] ", pe.GetID(), len(sendBlocks), sendBlocks[0], sendBlocks[len(sendBlocks)-1]), "processID", ps.processID, "package number", packageNumber)
 			ret, err := ps.sy.Send(pe, RPCGetBlockDatas, &pb.GetBlockDatas{Locator: changeHashsToPBHashs(sendBlocks)})
 			if err != nil {
 				log.Warn(fmt.Sprintf("getBlocks send:%v", err), "processID", ps.processID)
 				if index == 0 {
-					return &ProcessResult{act: ProcessResultActionTryAgain}
+					index++
+					return false
 				} else {
-					break
+					index = readys
+					return true
 				}
 			}
 			bd := ret.(*pb.BlockDatas)
@@ -185,30 +189,40 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 				for i := 0; i < readys; i++ {
 					if lastBlockHash.IsEqual(blocksReady[i]) {
 						index = i + 1
-						break
+						return true
 					}
 				}
 			} else {
-				break
+				index = readys
 			}
+			return true
 		}
+		return true
 	}
 
 	behaviorFlags := blockchain.BFP2PAdd
 	add := 0
 	hasOrphan := false
 
-	for _, b := range blockDatas {
-		if ps.IsInterrupt() {
+	for i, b := range blockDatas {
+		if ps.IsInterrupt() ||
+			!ps.IsRunning() {
 			return nil
 		}
 		block := b.Block
 		if block == nil {
-			//log.Trace(fmt.Sprintf("No block bytes:%d : %s", i, b.Hash.String()), "processID", ps.processID)
-			continue
+			ret := getBlockDatas()
+			if !ret {
+				return &ProcessResult{act: ProcessResultActionTryAgain}
+			}
+			if b.Block == nil {
+				log.Trace(fmt.Sprintf("No block bytes:%d : %s", i, b.Hash.String()), "processID", ps.processID)
+				continue
+			}
+			block = b.Block
 		}
 		//
-		IsOrphan, _, err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags)
+		IsOrphan, err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags)
 		if err != nil {
 			log.Error(fmt.Sprintf("Failed to process block:hash=%s err=%s", block.Hash(), err), "processID", ps.processID)
 			continue

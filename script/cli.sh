@@ -169,6 +169,24 @@ function get_block_by_hash(){
   get_result "$data"
 }
 
+function get_block_by_number(){
+  local block_number=$1
+  local verbose=$2
+  if [ "$verbose" == "" ]; then
+    verbose="true"
+  fi
+  local inclTx=$3
+  if [ "$inclTx" == "" ]; then
+    inclTx="true"
+  fi
+  local fullTx=$4
+  if [ "$fullTx" == "" ]; then
+    fullTx="true"
+  fi
+  local data='{"jsonrpc":"2.0","method":"getBlockByNumber","params":['$block_number','$verbose','$inclTx','$fullTx'],"id":1}'
+  get_result "$data"
+}
+
 function get_blockheader_by_hash(){
   local block_hash=$1
   local verbose=$2
@@ -464,6 +482,12 @@ function ban_list(){
 function remove_ban(){
   local bhost=$1
   local data='{"jsonrpc":"2.0","method":"p2p_removeBan","params":["'$bhost'"],"id":1}'
+  get_result "$data"
+}
+
+function check_consistency() {
+  local hashOrOrder=$1
+  local data='{"jsonrpc":"2.0","method":"p2p_checkConsistency","params":["'$hashOrOrder'"],"id":1}'
   get_result "$data"
 }
 
@@ -765,6 +789,7 @@ function usage(){
   echo "block  :"
   echo "  block <order|hash>"
   echo "  blockbyhash <hash>"
+  echo "  blockbynumber <evm number>"
   echo "  blockid <id>"
   echo "  blockhash <order>"
   echo "  block_count"
@@ -821,6 +846,7 @@ function usage(){
   echo "  removeban"
   echo "  libp2ploglevel"
   echo "  iscurrent"
+  echo "  consistency <hashOrOrder>"
 }
 
 # -------------------
@@ -1083,6 +1109,10 @@ elif [ "$1" == "blockbyhash" ]; then
   shift
   get_block_by_hash $@
 
+elif [ "$1" == "blockbynumber" ]; then
+  shift
+  get_block_by_number $@
+
 elif [ "$1" == "header" ]; then
   shift
   get_blockheader_by_hash $@
@@ -1217,6 +1247,9 @@ elif [ "$1" == "banlist" ]; then
 elif [ "$1" == "removeban" ]; then
   shift
   remove_ban $@
+elif [ "$1" == "consistency" ]; then
+  shift
+  check_consistency $@
 
 ## Tx
 elif [ "$1" == "tx" ]; then

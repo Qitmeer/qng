@@ -14,6 +14,7 @@ type InfoNodeResult struct {
 	BuildVersion        string                              `json:"buildversion"`
 	ProtocolVersion     int32                               `json:"protocolversion"`
 	TotalSubsidy        uint64                              `json:"totalsubsidy,omitempty"`
+	StateRoot           string                              `json:"stateroot,omitempty"`
 	GraphState          *GetGraphStateResult                `json:"graphstate,omitempty"`
 	TimeOffset          int64                               `json:"timeoffset,omitempty"`
 	PowDiff             *PowDiff                            `json:"pow_diff,omitempty"`
@@ -39,6 +40,7 @@ type GetPeerInfoResult struct {
 	Services   string               `json:"services,omitempty"`
 	Name       string               `json:"name,omitempty"`
 	Direction  string               `json:"direction,omitempty"`
+	StateRoot  string               `json:"stateroot,omitempty"`
 	GraphState *GetGraphStateResult `json:"graphstate,omitempty"`
 	GSUpdate   string               `json:"gsupdate,omitempty"`
 	SyncNode   bool                 `json:"syncnode,omitempty"`

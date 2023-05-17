@@ -4,13 +4,16 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 type VMI interface {
 	VerifyTx(tx Tx) (int64, error)
 	VerifyTxSanity(tx Tx) error
-	CheckConnectBlock(block *types.SerializedBlock) error
-	ConnectBlock(block *types.SerializedBlock) (uint64, error)
+	CheckConnectBlock(block *types.SerializedBlock, state BlockState) error
+	ConnectBlock(block *types.SerializedBlock, state BlockState) (uint64, error)
 	DisconnectBlock(block *types.SerializedBlock) (uint64, error)
 	AddTxToMempool(tx *types.Transaction, local bool) (int64, error)
 	RemoveTxFromMempool(tx *types.Transaction) error
@@ -18,10 +21,14 @@ type VMI interface {
 	GetMempoolSize() int64
 	ResetTemplate() error
 	Genesis(txs []*types.Tx) *hash.Hash
-	GetBlockID(bh *hash.Hash) uint64
 	GetBlockIDByTxHash(txhash *hash.Hash) uint64
 	GetBalance(addr string) (int64, error)
 	SetLogLevel(level string)
 	GetBlockByNumber(num uint64) (interface{}, error)
 	GetCurStateRoot() common.Hash
+	GetCurHeader() *etypes.Header
+	IsShutdown() bool
+	RewindTo(state BlockState) error
+	BlockChain() *core.BlockChain
+	ChainDatabase() ethdb.Database
 }

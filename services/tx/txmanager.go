@@ -157,6 +157,9 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 		block := blockSlice[0].(*types.SerializedBlock)
 		txds := []*types.TxDesc{}
 		for _, tx := range block.Transactions()[1:] {
+			if tm.IsShutdown() {
+				return
+			}
 			tm.MemPool().RemoveTransaction(tx, false)
 			tm.MemPool().RemoveDoubleSpends(tx)
 			tm.MemPool().RemoveOrphan(tx.Hash())
@@ -196,7 +199,7 @@ func (tm *TxManager) GetChain() *blockchain.BlockChain {
 func NewTxManager(consensus model.Consensus, ntmgr vmconsensus.Notify) (*TxManager, error) {
 	cfg := consensus.Config()
 	sigCache := consensus.SigCache()
-	bc:=consensus.BlockChain().(*blockchain.BlockChain)
+	bc := consensus.BlockChain().(*blockchain.BlockChain)
 	// mem-pool
 	amt, _ := types.NewMeer(uint64(cfg.MinTxFee))
 	txC := mempool.Config{
@@ -215,7 +218,7 @@ func NewTxManager(consensus model.Consensus, ntmgr vmconsensus.Notify) (*TxManag
 				return common.StandardScriptVerifyFlags()
 			},
 		},
-		ChainParams:     consensus.Params(),
+		ChainParams:      consensus.Params(),
 		FetchUtxoView:    bc.FetchUtxoView, //TODO, duplicated dependence of miner
 		BlockByHash:      bc.FetchBlockByHash,
 		BestHash:         func() *hash.Hash { return &bc.BestSnapshot().Hash },
@@ -225,7 +228,6 @@ func NewTxManager(consensus model.Consensus, ntmgr vmconsensus.Notify) (*TxManag
 		SigCache:         sigCache,
 		PastMedianTime:   func() time.Time { return bc.BestSnapshot().MedianTime },
 		IndexManager:     consensus.IndexManager().(*index.Manager),
-		BD:               bc.BlockDAG(),
 		BC:               bc,
 		DataDir:          cfg.DataDir,
 		Expiry:           time.Duration(cfg.MempoolExpiry),
@@ -235,14 +237,14 @@ func NewTxManager(consensus model.Consensus, ntmgr vmconsensus.Notify) (*TxManag
 	}
 	txMemPool := mempool.New(&txC)
 	invalidTx := make(map[hash.Hash]*meerdag.HashSet)
-	tm:= &TxManager{
-		consensus: consensus,
+	tm := &TxManager{
+		consensus:    consensus,
 		indexManager: consensus.IndexManager().(*index.Manager),
-		txMemPool: txMemPool,
-		ntmgr: ntmgr,
-		db: consensus.DatabaseContext(),
-		invalidTx: invalidTx,
+		txMemPool:    txMemPool,
+		ntmgr:        ntmgr,
+		db:           consensus.DatabaseContext(),
+		invalidTx:    invalidTx,
 		enableFeeEst: cfg.Estimatefee}
 	consensus.BlockChain().(*blockchain.BlockChain).Subscribe(tm.handleNotifyMsg)
-	return tm,nil
+	return tm, nil
 }
