@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"runtime"
 )
 
@@ -350,6 +351,14 @@ func (vm *VM) GetCurStateRoot() common.Hash {
 
 func (vm *VM) GetCurHeader() *types.Header {
 	return vm.chain.Ether().BlockChain().CurrentBlock()
+}
+
+func (vm *VM) BlockChain() *core.BlockChain {
+	return vm.chain.Ether().BlockChain()
+}
+
+func (vm *VM) ChainDatabase() ethdb.Database {
+	return vm.chain.Ether().ChainDb()
 }
 
 func New() *VM {

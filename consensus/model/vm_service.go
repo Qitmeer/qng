@@ -4,7 +4,9 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 type VMI interface {
@@ -27,4 +29,6 @@ type VMI interface {
 	GetCurHeader() *etypes.Header
 	IsShutdown() bool
 	RewindTo(state BlockState) error
+	BlockChain() *core.BlockChain
+	ChainDatabase() ethdb.Database
 }

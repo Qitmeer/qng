@@ -45,7 +45,7 @@ func (b *BlockChain) upgradeDB(interrupt <-chan struct{}) error {
 		bs = &state
 		return nil
 	})
-	err = b.bd.UpgradeDB(b.db, &bs.hash, bs.total, b.params.GenesisHash, interrupt, dbFetchBlockByHash, b.indexManager.IsDuplicateTx)
+	err = b.bd.UpgradeDB(b.db, &bs.hash, bs.total, b.params.GenesisHash, interrupt, dbFetchBlockByHash, b.indexManager.IsDuplicateTx, b.VMService().BlockChain(), b.VMService().ChainDatabase())
 	if err != nil {
 		return err
 	}

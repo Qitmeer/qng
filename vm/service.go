@@ -16,7 +16,9 @@ import (
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 type Factory interface {
@@ -362,6 +364,22 @@ func (s *Service) GetCurHeader() *etypes.Header {
 		return nil
 	}
 	return vm.GetCurHeader()
+}
+
+func (s *Service) BlockChain() *core.BlockChain {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil
+	}
+	return vm.BlockChain()
+}
+
+func (s *Service) ChainDatabase() ethdb.Database {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil
+	}
+	return vm.ChainDatabase()
 }
 
 func NewService(cons model.Consensus) (*Service, error) {

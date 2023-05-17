@@ -16,10 +16,7 @@ import (
 	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/schollz/progressbar/v3"
@@ -28,21 +25,9 @@ import (
 )
 
 // update db to new version
-func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, genesis *hash.Hash, interrupt <-chan struct{}, dbFetchBlockByHash func(dbTx database.Tx, hash *hash.Hash) (*types.SerializedBlock, error), isDuplicateTx func(dbTx database.Tx, txid *hash.Hash, blockHash *hash.Hash) bool) error {
+func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, genesis *hash.Hash, interrupt <-chan struct{}, dbFetchBlockByHash func(dbTx database.Tx, hash *hash.Hash) (*types.SerializedBlock, error), isDuplicateTx func(dbTx database.Tx, txid *hash.Hash, blockHash *hash.Hash) bool, evmbc *core.BlockChain, edb ethdb.Database) error {
 	log.Info(fmt.Sprintf("Start upgrade MeerDAG🛠 (total=%d mainTip=%s)", total, mainTip.String()))
 	//
-	stack, ctx, _ := makeConfigNode(config.Cfg)
-	defer func() {
-		stack.Close()
-		log.Info("Close evm stack")
-	}()
-
-	edb := utils.MakeChainDatabase(ctx, stack, true)
-	defer func() {
-		defer edb.Close()
-		log.Info("Close evm database")
-	}()
-
 	mainTipBlock := getOldBlock(db, mainTip)
 	//
 	var bar *progressbar.ProgressBar
@@ -54,7 +39,7 @@ func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, g
 		l.Glogger().Verbosity(logLvl)
 	}()
 	//
-	evmGenesis := getHeaderByNumber(edb, 0)
+	evmGenesis := evmbc.GetHeaderByNumber(0)
 	if evmGenesis == nil {
 		return fmt.Errorf("No evm data")
 	} else {
@@ -67,7 +52,13 @@ func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, g
 		if system.InterruptRequested(interrupt) {
 			return fmt.Errorf("interrupt upgrade database:Data corruption caused by exiting midway")
 		}
-		ib := getOldBlockByOrder(db, i)
+		var ib IBlock
+		if i == mainTipBlock.GetOrder() {
+			ib = mainTipBlock
+		} else {
+			ib = getOldBlockByOrder(db, i)
+		}
+
 		bs := createBlockState(uint64(ib.GetID()))
 		opb := ib.(*OldPhantomBlock)
 		opb.state = bs
@@ -105,7 +96,7 @@ func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, g
 			//
 			number := getBlockNumber(edb, block.Hash())
 			if number != 0 {
-				header := getHeaderByNumber(edb, number)
+				header := evmbc.GetHeaderByNumber(number)
 				if header == nil {
 					return fmt.Errorf("No block in number:%d", number)
 				}
@@ -116,7 +107,7 @@ func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, g
 
 		//
 		npb := opb.toPhantomBlock()
-		err := db.View(func(dbTx database.Tx) error {
+		err := db.Update(func(dbTx database.Tx) error {
 			return DBPutDAGBlock(dbTx, npb)
 		})
 		if err != nil {
@@ -871,16 +862,4 @@ func getBlockNumber(db ethdb.Database, bh *hash.Hash) uint64 {
 		return 0
 	}
 	return *bn
-}
-
-func getHeaderByNumber(db ethdb.Database, number uint64) *etypes.Header {
-	hash := rawdb.ReadCanonicalHash(db, number)
-	if hash == (common.Hash{}) {
-		return nil
-	}
-	header := rawdb.ReadHeader(db, hash, number)
-	if header == nil {
-		return nil
-	}
-	return header
 }
