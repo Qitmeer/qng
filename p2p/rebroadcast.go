@@ -171,7 +171,7 @@ func (r *Rebroadcast) onRegainMempool() {
 	if len(canPeers) <= 0 {
 		return
 	}
-	index := rand.Int() % len(canPeers)
+	index := rand.Intn(len(canPeers))
 	pe := canPeers[index]
 	go r.s.sy.Send(pe, synch.RPCMemPool, &pb.MemPoolRequest{TxsNum: uint64(mptxCount)})
 }
