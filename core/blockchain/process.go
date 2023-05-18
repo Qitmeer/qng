@@ -73,12 +73,14 @@ cleanup:
 }
 
 func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
+	log.Info("startpreProcessBlock", "hash", block.Hash().String())
 	isorphan, err := b.preProcessBlock(block, flags)
 	if err != nil || isorphan {
 		return isorphan, err
 	}
 	// The block has passed all context independent checks and appears sane
 	// enough to potentially accept it into the block chain.
+	log.Info("startmaybeAcceptBlock", "hash", block.Hash().String())
 	err = b.maybeAcceptBlock(block, flags)
 	if err != nil {
 		return false, err
@@ -86,12 +88,14 @@ func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFl
 	// Accept any orphan blocks that depend on this block (they are no
 	// longer orphans) and repeat for those accepted blocks until there are
 	// no more.
+	// enough to potentially accept it into the block chain.
+	log.Info("startRefreshOrphans", "hash", block.Hash().String())
 	err = b.RefreshOrphans()
 	if err != nil {
 		return false, err
 	}
 
-	log.Debug("Accepted block", "hash", block.Hash().String())
+	log.Info("Accepted block", "hash", block.Hash().String())
 	return false, nil
 }
 

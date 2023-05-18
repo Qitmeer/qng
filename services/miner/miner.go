@@ -592,57 +592,77 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	m.submitLocker.Lock()
 	defer m.submitLocker.Unlock()
 	m.totalSubmit++
-
+	log.Info("startCheckSubMainChainTip", "hash", block.Hash())
 	err := m.consensus.BlockChain().(*blockchain.BlockChain).BlockDAG().CheckSubMainChainTip(block.Block().Parents)
 	if err != nil {
 		go m.BlockChainChange()
 		return nil, fmt.Errorf("The tips of block is expired:%s (error:%s)\n", block.Hash().String(), err.Error())
 	}
-	// Process this block using the same rules as blocks coming from other
-	// nodes. This will in turn relay it to the network like normal.
-	IsOrphan, err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd)
-	if err != nil {
-		// Anything other than a rule violation is an unexpected error,
-		// so log that error as an internal error.
-		rErr, ok := err.(blockchain.RuleError)
-		if !ok {
-			return nil, fmt.Errorf(fmt.Sprintf("Unexpected error while processing block submitted miner: %v (%s)", err, m.worker.GetType()))
+	log.Info("startProcessBlock", "hash", block.Hash())
+	done := make(chan error, 1)
+	go func() {
+		// Process this block using the same rules as blocks coming from other
+		// nodes. This will in turn relay it to the network like normal.
+		IsOrphan, err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd)
+		if err != nil {
+			// Anything other than a rule violation is an unexpected error,
+			// so log that error as an internal error.
+			rErr, ok := err.(blockchain.RuleError)
+			if !ok {
+				done <- fmt.Errorf(fmt.Sprintf("Unexpected error while processing block submitted miner: %v (%s)", err, m.worker.GetType()))
+				return
+			}
+			// Occasionally errors are given out for timing errors with
+			// ReduceMinDifficulty and high block works that is above
+			// the target. Feed these to debug.
+			if params.ActiveNetParams.Params.ReduceMinDifficulty &&
+				rErr.ErrorCode == blockchain.ErrHighHash {
+				done <- fmt.Errorf(fmt.Sprintf("Block submitted via miner rejected "+
+					"because of ReduceMinDifficulty time sync failure: %v (%s)",
+					err, m.worker.GetType()))
+				return
+			}
+			done <- fmt.Errorf(fmt.Sprintf("Block submitted via %s rejected: %v ", m.worker.GetType(), err))
+			// Other rule errors should be reported.
+			return
 		}
-		// Occasionally errors are given out for timing errors with
-		// ReduceMinDifficulty and high block works that is above
-		// the target. Feed these to debug.
-		if params.ActiveNetParams.Params.ReduceMinDifficulty &&
-			rErr.ErrorCode == blockchain.ErrHighHash {
-			return nil, fmt.Errorf(fmt.Sprintf("Block submitted via miner rejected "+
-				"because of ReduceMinDifficulty time sync failure: %v (%s)",
-				err, m.worker.GetType()))
+		if IsOrphan {
+			done <- fmt.Errorf(fmt.Sprintf("Block submitted via %s is an orphan building "+
+				"on parent %v", m.worker.GetType(), block.Block().Header.ParentRoot))
+			return
+		} else {
+			log.Info("startPruneExpiredTx", "hash", block.Hash())
+			m.txpool.PruneExpiredTx()
+			log.Info("endPruneExpiredTx", "hash", block.Hash())
 		}
-		// Other rule errors should be reported.
-		return nil, fmt.Errorf(fmt.Sprintf("Block submitted via %s rejected: %v ", m.worker.GetType(), err))
-	}
-	if IsOrphan {
-		return nil, fmt.Errorf(fmt.Sprintf("Block submitted via %s is an orphan building "+
-			"on parent %v", m.worker.GetType(), block.Block().Header.ParentRoot))
-	} else {
-		m.txpool.PruneExpiredTx()
+		log.Info("endPruneExpiredTx", "hash", block.Hash())
+		m.successSubmit++
+		done <- nil
+	}()
+	select {
+	case err = <-done:
+		if err != nil {
+			return nil, err
+		}
+		// The block was accepted.
+		coinbaseTxOuts := block.Block().Transactions[0].TxOut
+		coinbaseTxGenerated := uint64(0)
+		for _, out := range coinbaseTxOuts {
+			coinbaseTxGenerated += uint64(out.Amount.Value)
+		}
+		return json.SubmitBlockResult{
+			BlockHash:      block.Hash().String(),
+			CoinbaseTxID:   block.Transactions()[0].Hash().String(),
+			Order:          meerdag.GetOrderLogStr(uint(block.Order())),
+			Height:         int64(block.Height()),
+			CoinbaseAmount: coinbaseTxGenerated,
+			MinerType:      m.worker.GetType(),
+		}, nil
+	case <-time.After(params.ActiveNetParams.TargetTimePerBlock):
+		log.Info("submit timeout", "hash", block.Hash().String())
+		return nil, fmt.Errorf("submit timeout %s", block.Hash().String())
 	}
 
-	m.successSubmit++
-
-	// The block was accepted.
-	coinbaseTxOuts := block.Block().Transactions[0].TxOut
-	coinbaseTxGenerated := uint64(0)
-	for _, out := range coinbaseTxOuts {
-		coinbaseTxGenerated += uint64(out.Amount.Value)
-	}
-	return json.SubmitBlockResult{
-		BlockHash:      block.Hash().String(),
-		CoinbaseTxID:   block.Transactions()[0].Hash().String(),
-		Order:          meerdag.GetOrderLogStr(uint(block.Order())),
-		Height:         int64(block.Height()),
-		CoinbaseAmount: coinbaseTxGenerated,
-		MinerType:      m.worker.GetType(),
-	}, nil
 }
 
 func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) (interface{}, error) {
