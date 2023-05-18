@@ -16,6 +16,9 @@ func (s *Sync) tryToSendInventoryRequest(pe *peers.Peer, invs []*pb.InvVect) err
 	if s.PeerSync().pause {
 		return fmt.Errorf("P2P is pause")
 	}
+	if !s.PeerSync().IsRunning() {
+		return fmt.Errorf("P2P is not running")
+	}
 	if len(invs) > 0 {
 		var invMsg *pb.Inventory
 		for i := 0; i < len(invs); i++ {

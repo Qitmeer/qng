@@ -3,10 +3,12 @@ package p2p
 import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/synch"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/notifymgr/notify"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -66,6 +68,7 @@ func (r *Rebroadcast) Stop() error {
 
 func (r *Rebroadcast) handler() {
 	timer := time.NewTimer(params.ActiveNetParams.TargetTimePerBlock)
+	timerMP := time.NewTimer(params.ActiveNetParams.TargetTimePerBlock)
 	pendingInvs := make(map[hash.Hash]interface{})
 
 out:
@@ -108,8 +111,8 @@ out:
 
 			r.s.sy.Peers().UpdateBroadcasts()
 
+		case <-timerMP.C:
 			r.onRegainMempool()
-
 		case <-r.quit:
 			break out
 		}
@@ -153,21 +156,24 @@ func (r *Rebroadcast) RegainMempool() {
 }
 
 func (r *Rebroadcast) onRegainMempool() {
-	mptxCount := r.s.TxMemPool().Count()
-	if !r.regainMP {
-		if mptxCount > 0 {
-			return
-		}
-	}
 	if !r.s.PeerSync().IsCurrent() {
 		return
 	}
+	mptxCount := r.s.TxMemPool().Count()
 
-	r.regainMP = false
-
+	canPeers := []*peers.Peer{}
 	for _, pe := range r.s.Peers().CanSyncPeers() {
-		go r.s.sy.Send(pe, synch.RPCMemPool, &pb.MemPoolRequest{TxsNum: uint64(mptxCount)})
+		if time.Since(pe.GetMempoolReqTime()) <= params.ActiveNetParams.TargetTimePerBlock {
+			continue
+		}
+		canPeers = append(canPeers, pe)
 	}
+	if len(canPeers) <= 0 {
+		return
+	}
+	index := rand.Int() % len(canPeers)
+	pe := canPeers[index]
+	go r.s.sy.Send(pe, synch.RPCMemPool, &pb.MemPoolRequest{TxsNum: uint64(mptxCount)})
 }
 
 func NewRebroadcast(s *Service) *Rebroadcast {
