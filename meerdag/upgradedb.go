@@ -71,8 +71,7 @@ func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, g
 			bs.Valid()
 		}
 		// evm
-		if i == 0 ||
-			forks.IsBeforeMeerEVMForkHeight(int64(ib.GetHeight())) {
+		if i == 0 {
 			curEVM = evmGenesis
 			bs.SetEVM(curEVM)
 		} else {
@@ -94,14 +93,19 @@ func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, g
 				})
 			}
 			//
-			number := getBlockNumber(edb, block.Hash())
-			if number != 0 {
-				header := evmbc.GetHeaderByNumber(number)
-				if header == nil {
-					return fmt.Errorf("No block in number:%d", number)
+			if forks.IsBeforeMeerEVMForkHeight(int64(ib.GetHeight())) {
+				curEVM = evmGenesis
+			} else {
+				number := getBlockNumber(edb, block.Hash())
+				if number != 0 {
+					header := evmbc.GetHeaderByNumber(number)
+					if header == nil {
+						return fmt.Errorf("No block in number:%d", number)
+					}
+					curEVM = header
 				}
-				curEVM = header
 			}
+
 			bs.Update(block, prev, curEVM)
 		}
 
