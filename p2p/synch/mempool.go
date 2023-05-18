@@ -13,9 +13,11 @@ import (
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
+	"time"
 )
 
 func (s *Sync) SendMempoolRequest(stream network.Stream, pe *peers.Peer) *common.Error {
+	pe.SetMempoolReqTime(time.Now())
 	e := ReadRspCode(stream, s.p2p)
 	if !e.Code.IsSuccess() {
 		e.Add("mempool request rsp")

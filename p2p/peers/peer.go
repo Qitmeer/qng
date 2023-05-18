@@ -59,6 +59,8 @@ type Peer struct {
 	broadcast map[string]interface{}
 
 	reconnect uint64
+
+	mempoolreq time.Time
 }
 
 func (p *Peer) GetID() peer.ID {
@@ -338,25 +340,26 @@ func (p *Peer) StatsSnapshot() (*StatsSnap, error) {
 	defer p.lock.RUnlock()
 
 	ss := &StatsSnap{
-		PeerID:     p.pid,
-		Protocol:   p.protocolVersion(),
-		Genesis:    p.genesis(),
-		Services:   p.services(),
-		Name:       p.getName(),
-		Version:    p.getVersion(),
-		Network:    p.getNetwork(),
-		State:      p.peerState.IsConnected(),
-		Direction:  p.direction,
-		TimeOffset: p.timeOffset,
-		ConnTime:   time.Since(p.conTime),
-		LastSend:   p.lastSend,
-		LastRecv:   p.lastRecv,
-		BytesSent:  p.bytesSent,
-		BytesRecv:  p.bytesRecv,
-		IsCircuit:  p.isCircuit(),
-		Bads:       p.badResponseStrs(),
-		ReConnect:  p.reconnect,
-		StateRoot:  p.stateRootAndOrder(),
+		PeerID:         p.pid,
+		Protocol:       p.protocolVersion(),
+		Genesis:        p.genesis(),
+		Services:       p.services(),
+		Name:           p.getName(),
+		Version:        p.getVersion(),
+		Network:        p.getNetwork(),
+		State:          p.peerState.IsConnected(),
+		Direction:      p.direction,
+		TimeOffset:     p.timeOffset,
+		ConnTime:       time.Since(p.conTime),
+		LastSend:       p.lastSend,
+		LastRecv:       p.lastRecv,
+		BytesSent:      p.bytesSent,
+		BytesRecv:      p.bytesRecv,
+		IsCircuit:      p.isCircuit(),
+		Bads:           p.badResponseStrs(),
+		ReConnect:      p.reconnect,
+		StateRoot:      p.stateRootAndOrder(),
+		MempoolReqTime: p.mempoolreq,
 	}
 	n := p.node()
 	if n != nil {
@@ -720,6 +723,20 @@ func (p *Peer) IncreaseReConnect() {
 	defer p.lock.Unlock()
 
 	p.reconnect++
+}
+
+func (p *Peer) GetMempoolReqTime() time.Time {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	return p.mempoolreq
+}
+
+func (p *Peer) SetMempoolReqTime(t time.Time) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.mempoolreq = t
 }
 
 func NewPeer(pid peer.ID, point *hash.Hash) *Peer {
