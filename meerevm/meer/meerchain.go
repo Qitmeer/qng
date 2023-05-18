@@ -35,11 +35,8 @@ type MeerChain struct {
 }
 
 func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
-	parent, err := b.prepareEnvironment(block.ParentState())
-	if err != nil {
-		return err
-	}
-	_, _, _, err = b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
+	parent := b.chain.Ether().BlockChain().CurrentBlock()
+	_, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
 		return err
 	}
@@ -47,10 +44,7 @@ func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
 }
 
 func (b *MeerChain) ConnectBlock(block qconsensus.Block) (uint64, error) {
-	parent, err := b.prepareEnvironment(block.ParentState())
-	if err != nil {
-		return 0, err
-	}
+	parent := b.chain.Ether().BlockChain().CurrentBlock()
 	mblock, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
 		return 0, err
@@ -313,10 +307,6 @@ func (b *MeerChain) prepareEnvironment(state model.BlockState) (*types.Header, e
 			if err != nil {
 				return nil, getError(err.Error())
 			}
-			parentState := curBlockState
-			if i != len(list)-1 {
-				parentState = list[i+1]
-			}
 			dtxs := list[i].GetDuplicateTxs()
 			if len(dtxs) > 0 {
 				for _, index := range dtxs {
@@ -324,7 +314,7 @@ func (b *MeerChain) prepareEnvironment(state model.BlockState) (*types.Header, e
 				}
 			}
 
-			eb, err := vm.BuildEVMBlock(sb, parentState)
+			eb, err := vm.BuildEVMBlock(sb)
 			if err != nil {
 				return nil, getError(err.Error())
 			}
@@ -350,6 +340,10 @@ func (b *MeerChain) prepareEnvironment(state model.BlockState) (*types.Header, e
 		return cur, nil
 	}
 	return nil, getError("prepare environment")
+}
+
+func (b *MeerChain) PrepareEnvironment(state model.BlockState) (*types.Header, error) {
+	return b.prepareEnvironment(state)
 }
 
 func (b *MeerChain) RewindTo(state model.BlockState) error {

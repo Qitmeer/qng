@@ -415,6 +415,14 @@ func (b *BlockChain) Start() error {
 	}
 	b.wg.Add(1)
 	go b.handler()
+
+	// prepare evm env
+	mainTip := b.bd.GetMainChainTip()
+	evmHead, err := b.VMService().PrepareEnvironment(mainTip.GetState())
+	if err != nil {
+		return err
+	}
+	log.Info("prepare evm environment", "mainTipOrder", mainTip.GetOrder(), "mainTipHash", mainTip.GetHash().String(), "hash", evmHead.Hash().String(), "number", evmHead.Number.Uint64(), "root", evmHead.Root.String())
 	return nil
 }
 
@@ -718,7 +726,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		}
 		break
 	}
-
+	isEVMInit := false
 	for e := attachNodes.Front(); e != nil; e = e.Next() {
 		nodeBlock := e.Value.(meerdag.IBlock)
 		if nodeBlock.GetID() == ib.GetID() {
@@ -740,6 +748,13 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 				log.Error(er.Error())
 			}
 			continue
+		}
+		if !isEVMInit {
+			isEVMInit = true
+			err = b.prepareEVMEnvironment(nodeBlock)
+			if err != nil {
+				return err
+			}
 		}
 		view := utxo.NewUtxoViewpoint()
 		view.SetViewpoints([]*hash.Hash{nodeBlock.GetHash()})

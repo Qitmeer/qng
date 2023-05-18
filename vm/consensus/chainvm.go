@@ -52,4 +52,5 @@ type ChainVM interface {
 
 	GetCurStateRoot() common.Hash
 	GetCurHeader() *etypes.Header
+	PrepareEnvironment(state model.BlockState) (*etypes.Header, error)
 }

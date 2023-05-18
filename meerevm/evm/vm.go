@@ -352,6 +352,10 @@ func (vm *VM) GetCurHeader() *types.Header {
 	return vm.chain.Ether().BlockChain().CurrentBlock()
 }
 
+func (vm *VM) PrepareEnvironment(state model.BlockState) (*types.Header, error) {
+	return vm.mchain.PrepareEnvironment(state)
+}
+
 func New() *VM {
 	return &VM{}
 }
