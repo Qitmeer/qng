@@ -12,8 +12,8 @@ import (
 type VMI interface {
 	VerifyTx(tx Tx) (int64, error)
 	VerifyTxSanity(tx Tx) error
-	CheckConnectBlock(block *types.SerializedBlock, state BlockState) error
-	ConnectBlock(block *types.SerializedBlock, state BlockState) (uint64, error)
+	CheckConnectBlock(block *types.SerializedBlock) error
+	ConnectBlock(block *types.SerializedBlock) (uint64, error)
 	DisconnectBlock(block *types.SerializedBlock) (uint64, error)
 	AddTxToMempool(tx *types.Transaction, local bool) (int64, error)
 	RemoveTxFromMempool(tx *types.Transaction) error
@@ -31,4 +31,5 @@ type VMI interface {
 	RewindTo(state BlockState) error
 	BlockChain() *core.BlockChain
 	ChainDatabase() ethdb.Database
+	PrepareEnvironment(state BlockState) (*etypes.Header, error)
 }
