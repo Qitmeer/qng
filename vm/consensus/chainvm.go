@@ -56,4 +56,5 @@ type ChainVM interface {
 	GetCurHeader() *etypes.Header
 	BlockChain() *core.BlockChain
 	ChainDatabase() ethdb.Database
+	PrepareEnvironment(state model.BlockState) (*etypes.Header, error)
 }

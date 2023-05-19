@@ -229,12 +229,12 @@ func (s *Service) GetMempoolSize() int64 {
 	return v.GetMempoolSize()
 }
 
-func (s *Service) CheckConnectBlock(block *types.SerializedBlock, state model.BlockState) error {
+func (s *Service) CheckConnectBlock(block *types.SerializedBlock) error {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
 		return err
 	}
-	b, err := vmc.BuildEVMBlock(block, state)
+	b, err := vmc.BuildEVMBlock(block)
 	if err != nil {
 		return err
 	}
@@ -245,12 +245,12 @@ func (s *Service) CheckConnectBlock(block *types.SerializedBlock, state model.Bl
 	return vm.CheckConnectBlock(b)
 }
 
-func (s *Service) ConnectBlock(block *types.SerializedBlock, state model.BlockState) (uint64, error) {
+func (s *Service) ConnectBlock(block *types.SerializedBlock) (uint64, error) {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
 		return 0, err
 	}
-	b, err := vmc.BuildEVMBlock(block, state)
+	b, err := vmc.BuildEVMBlock(block)
 	if err != nil {
 		return 0, err
 	}
@@ -380,6 +380,14 @@ func (s *Service) ChainDatabase() ethdb.Database {
 		return nil
 	}
 	return vm.ChainDatabase()
+}
+
+func (s *Service) PrepareEnvironment(state model.BlockState) (*etypes.Header, error) {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil, nil
+	}
+	return vm.PrepareEnvironment(state)
 }
 
 func NewService(cons model.Consensus) (*Service, error) {

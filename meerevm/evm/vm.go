@@ -361,6 +361,10 @@ func (vm *VM) ChainDatabase() ethdb.Database {
 	return vm.chain.Ether().ChainDb()
 }
 
+func (vm *VM) PrepareEnvironment(state model.BlockState) (*types.Header, error) {
+	return vm.mchain.PrepareEnvironment(state)
+}
+
 func New() *VM {
 	return &VM{}
 }
