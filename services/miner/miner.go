@@ -658,7 +658,7 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 			CoinbaseAmount: coinbaseTxGenerated,
 			MinerType:      m.worker.GetType(),
 		}, nil
-	case <-time.After(params.ActiveNetParams.TargetTimePerBlock):
+	case <-time.After(time.Minute * 10):
 		log.Info("submit timeout", "hash", block.Hash().String())
 		return nil, fmt.Errorf("submit timeout %s", block.Hash().String())
 	}
