@@ -206,8 +206,8 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	}()
 
 	newNode := NewBlockNode(block)
-
 	fastAdd := flags&BFFastAdd == BFFastAdd
+	log.Info("startcheckBlockContext", "fastAdd", fastAdd, "hash", block.Hash().String())
 	if !fastAdd {
 		mainParent := b.bd.GetBlock(newNode.GetMainParent())
 		if mainParent == nil {
@@ -223,10 +223,11 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		}
 	}
 
+	log.Info("startpruneChainIfNeeded", "hash", block.Hash().String())
 	// Prune stake nodes which are no longer needed before creating a new
 	// node.
 	b.pruner.pruneChainIfNeeded()
-
+	log.Info("b.bd.AddBlock", "hash", block.Hash().String())
 	//dag
 	newOrders, oldOrders, ib, isMainChainTipChange := b.bd.AddBlock(newNode)
 	if ib == nil {
@@ -246,6 +247,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	// blocks that fail to connect available for further analysis.
 	//
 	// Also, store the associated block index entry.
+	log.Info("startdb.Update", "hash", block.Hash().String())
 	err := b.db.Update(func(dbTx database.Tx) error {
 		exists, err := dbTx.HasBlock(block.Hash())
 		if err != nil {
@@ -266,6 +268,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	if err != nil {
 		panic(err.Error())
 	}
+	log.Info("startshutdownTracker.Wait", "hash", block.Hash().String())
 	err = b.shutdownTracker.Wait(ib.GetHash())
 	if err != nil {
 		panic(err.Error())
@@ -274,10 +277,12 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	// Connect the passed block to the chain while respecting proper chain
 	// selection according to the chain with the most proof of work.  This
 	// also handles validation of the transaction scripts.
+	log.Info("startconnectDagChain", "hash", block.Hash().String())
 	_, err = b.connectDagChain(ib, block, newOrders, oldOrders, connectedBlocks)
 	if err != nil {
 		panic(err.Error())
 	}
+	log.Info("startupdateBestState", "hash", block.Hash().String())
 	err = b.updateBestState(ib, block, newOrders)
 	if err != nil {
 		panic(err.Error())
@@ -296,7 +301,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	if flags&BFP2PAdd == BFP2PAdd {
 		b.progressLogger.LogBlockHeight(block)
 	}
-
+	log.Info("start sendNotification", block.Hash().String())
 	// Notify the caller that the new block was accepted into the block
 	// chain.  The caller would typically want to react by relaying the
 	// inventory to other peers.
@@ -305,6 +310,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		Block:                block,
 		Flags:                flags,
 	})
+	log.Info("start b.Acct", "acct", b.Acct, "hash", block.Hash().String())
 	if b.Acct != nil {
 		err = b.Acct.Commit()
 		if err != nil {
