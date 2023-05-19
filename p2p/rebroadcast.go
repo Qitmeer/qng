@@ -46,8 +46,9 @@ func (r *Rebroadcast) Start() {
 
 	log.Info("Starting Rebroadcast")
 
-	r.wg.Add(1)
+	r.wg.Add(2)
 	go r.handler()
+	go r.mempoolHandler()
 }
 
 func (r *Rebroadcast) Stop() error {
@@ -66,9 +67,23 @@ func (r *Rebroadcast) Stop() error {
 
 }
 
+func (r *Rebroadcast) mempoolHandler() {
+	timer := time.NewTimer(params.ActiveNetParams.TargetTimePerBlock)
+out:
+	for {
+		select {
+		case <-timer.C:
+			r.onRegainMempool()
+		case <-r.quit:
+			break out
+		}
+	}
+	timer.Stop()
+	r.wg.Done()
+}
+
 func (r *Rebroadcast) handler() {
 	timer := time.NewTimer(params.ActiveNetParams.TargetTimePerBlock)
-	timerMP := time.NewTimer(params.ActiveNetParams.TargetTimePerBlock)
 	pendingInvs := make(map[hash.Hash]interface{})
 
 out:
@@ -110,9 +125,6 @@ out:
 			timer.Reset(time.Duration(rt))
 
 			r.s.sy.Peers().UpdateBroadcasts()
-
-		case <-timerMP.C:
-			r.onRegainMempool()
 		case <-r.quit:
 			break out
 		}
