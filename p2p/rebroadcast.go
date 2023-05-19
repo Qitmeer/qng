@@ -68,7 +68,7 @@ func (r *Rebroadcast) Stop() error {
 }
 
 func (r *Rebroadcast) mempoolHandler() {
-	timer := time.NewTimer(params.ActiveNetParams.TargetTimePerBlock)
+	timer := time.NewTicker(params.ActiveNetParams.TargetTimePerBlock)
 out:
 	for {
 		select {
