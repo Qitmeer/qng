@@ -7,10 +7,14 @@
 package blockchain
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	ejson "encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
+	"time"
 )
 
 // NotificationType represents the type of a notification message.
@@ -97,15 +101,22 @@ type NotificationCallback func(*Notification)
 // caller requested notifications by providing a callback function in the call
 // to New.
 func (b *BlockChain) sendNotification(typ NotificationType, data interface{}) {
-
+	b1, _ := ejson.Marshal(data)
+	uniqueKey := md5.Sum(b1)
+	key := hex.EncodeToString(uniqueKey[:])
 	// Generate and send the notification.
 	n := &Notification{Type: typ, Data: data}
+	start := time.Now()
+	log.Info("bnotificationsLockRLock", "type", notificationTypeStrings[typ], "key", key)
 	b.notificationsLock.RLock()
 	for _, callback := range b.notifications {
+		start1 := time.Now()
+		log.Info("bnotificationscallbackstart", "type", notificationTypeStrings[typ], "key", key)
 		callback(n)
+		log.Info("bnotificationscallbackend", "type", notificationTypeStrings[typ], "key", key, "spent", time.Now().Sub(start1))
 	}
 	b.notificationsLock.RUnlock()
-
+	log.Info("bnotificationsLockRUnLock", "type", notificationTypeStrings[typ], "key", key, "spent", time.Now().Sub(start))
 	// Ignore it if the caller didn't request notifications.
 	if b.events == nil {
 		return

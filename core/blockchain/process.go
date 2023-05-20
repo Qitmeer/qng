@@ -292,7 +292,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		panic(err.Error())
 	}
 	b.ChainUnlock()
-	log.Info("start connectedBlocks sendNotification", "hash", block.Hash().String())
+	log.Info("startconnectedBlockssendNotification", "hash", block.Hash().String(), "connectedBlocks.Len()", connectedBlocks.Len())
 	if connectedBlocks.Len() > 0 {
 		for e := connectedBlocks.Front(); e != nil; e = e.Next() {
 			b.sendNotification(BlockConnected, e.Value)
@@ -302,7 +302,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	if flags&BFP2PAdd == BFP2PAdd {
 		b.progressLogger.LogBlockHeight(block)
 	}
-	log.Info("start internal sendNotification", "hash", block.Hash().String())
+	log.Info("startinternalsendNotification", "hash", block.Hash().String())
 	// Notify the caller that the new block was accepted into the block
 	// chain.  The caller would typically want to react by relaying the
 	// inventory to other peers.
