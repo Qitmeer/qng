@@ -6,8 +6,8 @@ import (
 	"github.com/Qitmeer/qng/vm/consensus"
 )
 
-func BuildEVMBlock(block *types.SerializedBlock, prevState model.BlockState) (consensus.Block, error) {
-	result := &Block{Id: block.Hash(), Txs: []model.Tx{}, Time: block.Block().Header.Timestamp, ParentBlockState: prevState}
+func BuildEVMBlock(block *types.SerializedBlock) (consensus.Block, error) {
+	result := &Block{Id: block.Hash(), Txs: []model.Tx{}, Time: block.Block().Header.Timestamp}
 
 	for idx, tx := range block.Transactions() {
 		if idx == 0 {

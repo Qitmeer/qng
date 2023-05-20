@@ -354,6 +354,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 		}
 		var sb *types.SerializedBlock
 		var err error
+		isEVMInit := false
 		for _, nodeBlock := range newOr {
 			if nodeBlock.GetID() == ib.GetID() {
 				sb = block
@@ -365,6 +366,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 				sb.SetOrder(uint64(nodeBlock.GetOrder()))
 				sb.SetHeight(nodeBlock.GetHeight())
 			}
+
 			if !nodeBlock.IsOrdered() {
 				er := b.updateDefaultBlockState(nodeBlock)
 				if er != nil {
@@ -374,6 +376,13 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 			}
 			if sb == nil {
 				return false, fmt.Errorf("No block:%s,id:%d\n", nodeBlock.GetHash().String(), nodeBlock.GetID())
+			}
+			if !isEVMInit {
+				isEVMInit = true
+				err = b.prepareEVMEnvironment(nodeBlock)
+				if err != nil {
+					return false, err
+				}
 			}
 			view := utxo.NewUtxoViewpoint()
 			view.SetViewpoints([]*hash.Hash{nodeBlock.GetHash()})
@@ -442,8 +451,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		pkss = append(pkss, stxo.PkScript)
 	}
 	if !node.GetState().GetStatus().KnownInvalid() {
-		prevState := b.bd.GetBlockByOrder(node.GetOrder() - 1).GetState()
-		_, err := b.VMService().ConnectBlock(block, prevState)
+		_, err := b.VMService().ConnectBlock(block)
 		if err != nil {
 			return err
 		}
@@ -795,6 +803,18 @@ func (b *BlockChain) updateDefaultBlockState(ib meerdag.IBlock) error {
 	}
 	bs.SetDefault(mp.GetState().(*state.BlockState))
 	b.BlockDAG().AddToCommit(ib)
+	return nil
+}
+
+func (b *BlockChain) prepareEVMEnvironment(block meerdag.IBlock) error {
+	prev := b.bd.GetBlockByOrder(block.GetOrder() - 1)
+	if prev == nil {
+		return fmt.Errorf("No dag block:%s,id:%d\n", block.GetHash().String(), block.GetID())
+	}
+	_, err := b.VMService().PrepareEnvironment(prev.GetState())
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

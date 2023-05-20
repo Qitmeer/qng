@@ -4,12 +4,6 @@
 
 package consensus
 
-import (
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/meerdag"
-)
-
 type BlockDAG interface {
 	DAG
-	GetBlock(h *hash.Hash) meerdag.IBlock
 }

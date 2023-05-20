@@ -9,7 +9,9 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 type ChainVM interface {
@@ -52,4 +54,7 @@ type ChainVM interface {
 
 	GetCurStateRoot() common.Hash
 	GetCurHeader() *etypes.Header
+	BlockChain() *core.BlockChain
+	ChainDatabase() ethdb.Database
+	PrepareEnvironment(state model.BlockState) (*etypes.Header, error)
 }

@@ -405,7 +405,6 @@ func (node *Node) getChainState() *pb.ChainState {
 		GraphState:      gs,
 		UserAgent:       []byte(p2p.BuildUserAgent("Qitmeer-relay")),
 		DisableRelayTx:  true,
-		StateRoot:       &pb.Hash{Hash: hash.ZeroHash.Bytes()},
 	}
 }
 

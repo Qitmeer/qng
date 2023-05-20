@@ -16,7 +16,9 @@ import (
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 type Factory interface {
@@ -227,12 +229,12 @@ func (s *Service) GetMempoolSize() int64 {
 	return v.GetMempoolSize()
 }
 
-func (s *Service) CheckConnectBlock(block *types.SerializedBlock, state model.BlockState) error {
+func (s *Service) CheckConnectBlock(block *types.SerializedBlock) error {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
 		return err
 	}
-	b, err := vmc.BuildEVMBlock(block, state)
+	b, err := vmc.BuildEVMBlock(block)
 	if err != nil {
 		return err
 	}
@@ -243,12 +245,12 @@ func (s *Service) CheckConnectBlock(block *types.SerializedBlock, state model.Bl
 	return vm.CheckConnectBlock(b)
 }
 
-func (s *Service) ConnectBlock(block *types.SerializedBlock, state model.BlockState) (uint64, error) {
+func (s *Service) ConnectBlock(block *types.SerializedBlock) (uint64, error) {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
 		return 0, err
 	}
-	b, err := vmc.BuildEVMBlock(block, state)
+	b, err := vmc.BuildEVMBlock(block)
 	if err != nil {
 		return 0, err
 	}
@@ -362,6 +364,30 @@ func (s *Service) GetCurHeader() *etypes.Header {
 		return nil
 	}
 	return vm.GetCurHeader()
+}
+
+func (s *Service) BlockChain() *core.BlockChain {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil
+	}
+	return vm.BlockChain()
+}
+
+func (s *Service) ChainDatabase() ethdb.Database {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil
+	}
+	return vm.ChainDatabase()
+}
+
+func (s *Service) PrepareEnvironment(state model.BlockState) (*etypes.Header, error) {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil, nil
+	}
+	return vm.PrepareEnvironment(state)
 }
 
 func NewService(cons model.Consensus) (*Service, error) {

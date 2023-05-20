@@ -477,7 +477,7 @@ func filterConfig(ctx *cli.Context, cfg *Config) {
 	}
 }
 
-func MakeNakedNode(config *Config, args []string) (*node.Node, error) {
+func MakeNakedNode(config *Config, args []string) (*node.Node, *cli.Context, error) {
 	app := cli.NewApp()
 	app.Name = config.Node.Name
 	app.Authors = []*cli.Author{
@@ -491,8 +491,10 @@ func MakeNakedNode(config *Config, args []string) (*node.Node, error) {
 	utils.CacheFlag.Value = 4096
 
 	var n *node.Node
+	var context *cli.Context
 	app.Action = func(ctx *cli.Context) error {
 		n = makeConfigNode(ctx, config)
+		context = ctx
 		return nil
 	}
 	app.HideVersion = true
@@ -502,8 +504,8 @@ func MakeNakedNode(config *Config, args []string) (*node.Node, error) {
 
 	err := app.Run(args)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return n, nil
+	return n, context, nil
 }

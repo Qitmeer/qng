@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -132,6 +133,10 @@ func (b *mockBlockState) SetEVM(header *etypes.Header) {
 }
 func (b *mockBlockState) GetDuplicateTxs() []int {
 	return nil
+}
+
+func (b *mockBlockState) Update(block *types.SerializedBlock, prev model.BlockState, header *etypes.Header) {
+
 }
 
 func createMockBlockState(id uint64) model.BlockState {

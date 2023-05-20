@@ -941,8 +941,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 	if err != nil {
 		return err
 	}
-	prevState := b.bd.GetBlockByOrder(ib.GetOrder() - 1).GetState()
-	return b.VMService().CheckConnectBlock(block, prevState)
+	return b.VMService().CheckConnectBlock(block)
 }
 
 // consensusScriptVerifyFlags returns the script flags that must be used when

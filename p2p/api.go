@@ -116,6 +116,9 @@ func (api *PublicP2PAPI) GetPeerInfo(verbose *bool, pid *string) (interface{}, e
 		if !p.LastRecv.IsZero() {
 			info.LastRecv = p.LastRecv.String()
 		}
+		if !p.MempoolReqTime.IsZero() {
+			info.MempoolReqTime = p.MempoolReqTime.String()
+		}
 		if len(p.QNR) > 0 {
 			info.QNR = p.QNR
 		}
