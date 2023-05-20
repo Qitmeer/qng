@@ -107,16 +107,31 @@ func (b *BlockChain) sendNotification(typ NotificationType, data interface{}) {
 	// Generate and send the notification.
 	n := &Notification{Type: typ, Data: data}
 	start := time.Now()
-	log.Info("bnotificationsLockRLock", "type", notificationTypeStrings[typ], "key", key)
+
+	if typ == BlockConnected {
+		blockSlice, ok := data.([]interface{})
+		if !ok {
+			log.Warn("Chain connected notification is not a block slice.")
+			return
+		}
+		if len(blockSlice) != 2 {
+			log.Warn("Chain connected notification is wrong size slice.")
+			return
+		}
+		block := blockSlice[0].(*types.SerializedBlock)
+		key = block.Hash().String()
+	}
+
+	log.Info("bnotificationsLockRLock", "type", notificationTypeStrings[typ], "hash", key)
 	b.notificationsLock.RLock()
 	for _, callback := range b.notifications {
 		start1 := time.Now()
-		log.Info("bnotificationscallbackstart", "type", notificationTypeStrings[typ], "key", key)
+		log.Info("bnotificationscallbackstart", "type", notificationTypeStrings[typ], "hash", key)
 		callback(n)
-		log.Info("bnotificationscallbackend", "type", notificationTypeStrings[typ], "key", key, "spent", time.Now().Sub(start1))
+		log.Info("bnotificationscallbackend", "type", notificationTypeStrings[typ], "hash", key, "spent", time.Now().Sub(start1))
 	}
 	b.notificationsLock.RUnlock()
-	log.Info("bnotificationsLockRUnLock", "type", notificationTypeStrings[typ], "key", key, "spent", time.Now().Sub(start))
+	log.Info("bnotificationsLockRUnLock", "type", notificationTypeStrings[typ], "hash", key, "spent", time.Now().Sub(start))
 	// Ignore it if the caller didn't request notifications.
 	if b.events == nil {
 		return

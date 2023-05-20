@@ -143,6 +143,7 @@ func (tm *TxManager) InitDefaultFeeEstimator() {
 func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 	switch notification.Type {
 	case blockchain.BlockConnected:
+		start := time.Now()
 		blockSlice, ok := notification.Data.([]interface{})
 		if !ok {
 			log.Warn("Chain connected notification is not a block slice.")
@@ -153,8 +154,8 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 			log.Warn("Chain connected notification is wrong size slice.")
 			break
 		}
-
 		block := blockSlice[0].(*types.SerializedBlock)
+		log.Info("starthandleNotifyMsgtxManager", "hash", block.Hash().String(), "txs", len(block.Transactions()))
 		txds := []*types.TxDesc{}
 		for _, tx := range block.Transactions()[1:] {
 			if tm.IsShutdown() {
@@ -167,7 +168,9 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 			acceptedTxs := tm.MemPool().ProcessOrphans(tx.Hash())
 			txds = append(txds, acceptedTxs...)
 		}
+		log.Info("startAnnounceNewTransactionstxManager", "hash", block.Hash().String())
 		tm.ntmgr.AnnounceNewTransactions(txds, nil)
+		log.Info("startRegisterBlocktxManager", "hash", block.Hash().String())
 		// Register block with the fee estimator, if it exists.
 		if tm.FeeEstimator() != nil && blockSlice[1].(bool) {
 			err := tm.FeeEstimator().RegisterBlock(block)
@@ -179,6 +182,7 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 				tm.InitDefaultFeeEstimator()
 			}
 		}
+		log.Info("endhandleNotifyMsgtxManager", "hash", block.Hash().String(), "spent", time.Now().Sub(start))
 	case blockchain.BlockDisconnected:
 		block, ok := notification.Data.(*types.SerializedBlock)
 		if !ok {

@@ -211,6 +211,7 @@ func (ntmgr *NotifyMgr) handleNotifyMsg(notification *blockchain.Notification) {
 
 	// A block has been connected to the main block chain.
 	case blockchain.BlockConnected:
+		start := time.Now()
 		blockSlice, ok := notification.Data.([]interface{})
 		if !ok {
 			log.Warn("Chain connected notification is not a block slice.")
@@ -221,7 +222,9 @@ func (ntmgr *NotifyMgr) handleNotifyMsg(notification *blockchain.Notification) {
 			break
 		}
 		block := blockSlice[0].(*types.SerializedBlock)
+		log.Info("starthandleNotifyMsgzmqNotify", "hash", block.Hash().String())
 		ntmgr.zmqNotify.BlockConnected(block)
+		log.Info("endhandleNotifyMsgzmqNotify", "hash", block.Hash().String(), "spent", time.Now().Sub(start))
 
 	// A block has been disconnected from the main block chain.
 	case blockchain.BlockDisconnected:
