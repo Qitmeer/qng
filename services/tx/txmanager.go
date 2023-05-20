@@ -161,11 +161,31 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 			if tm.IsShutdown() {
 				return
 			}
+			start1 := time.Now()
 			tm.MemPool().RemoveTransaction(tx, false)
+			if time.Now().Unix()-start1.Unix() >= 1 {
+				log.Info("RemoveTransaction", "hash", block.Hash().String(), "spent", time.Now().Sub(start1))
+			}
+			start1 = time.Now()
 			tm.MemPool().RemoveDoubleSpends(tx)
+			if time.Now().Unix()-start1.Unix() >= 1 {
+				log.Info("RemoveDoubleSpends", "hash", block.Hash().String(), "spent", time.Now().Sub(start1))
+			}
+			start1 = time.Now()
 			tm.MemPool().RemoveOrphan(tx.Hash())
+			if time.Now().Unix()-start1.Unix() >= 1 {
+				log.Info("RemoveOrphan", "hash", block.Hash().String(), "spent", time.Now().Sub(start1))
+			}
+			start1 = time.Now()
 			tm.ntmgr.TransactionConfirmed(tx)
+			if time.Now().Unix()-start1.Unix() >= 1 {
+				log.Info("TransactionConfirmed", "hash", block.Hash().String(), "spent", time.Now().Sub(start1))
+			}
+			start1 = time.Now()
 			acceptedTxs := tm.MemPool().ProcessOrphans(tx.Hash())
+			if time.Now().Unix()-start1.Unix() >= 1 {
+				log.Info("ProcessOrphans", "hash", block.Hash().String(), "spent", time.Now().Sub(start1))
+			}
 			txds = append(txds, acceptedTxs...)
 		}
 		log.Info("startAnnounceNewTransactionstxManager", "hash", block.Hash().String())
