@@ -143,7 +143,7 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 	// Protect concurrent access.
 	start := time.Now()
 	mp.mtx.Lock()
-	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+	if time.Now().UnixNano()/1e6-start.UnixNano()/1e6 > 100 {
 		log.Info("startRemoveTransactionWaitLock", "txhash", tx.Hash().String(), "spent", time.Now().Sub(start))
 	}
 	if opreturn.IsMeerEVMTx(tx.Tx) {
@@ -158,7 +158,7 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 		mp.removeTransaction(tx, removeRedeemers)
 	}
 	mp.mtx.Unlock()
-	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+	if time.Now().UnixNano()/1e6-start.UnixNano()/1e6 > 100 {
 		log.Info("startRemoveTransactionEnd", "txhash", tx.Hash().String(), "spent", time.Now().Sub(start))
 	}
 }
@@ -174,7 +174,7 @@ func (mp *TxPool) RemoveDoubleSpends(tx *types.Tx) {
 	// Protect concurrent access.
 	start := time.Now()
 	mp.mtx.Lock()
-	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+	if time.Now().UnixNano()/1e6-start.UnixNano()/1e6 > 100 {
 		log.Info("startRemoveDoubleSpendsWaitLock", "txhash", tx.Hash().String(), "spent", time.Now().Sub(start))
 	}
 	for _, txIn := range tx.Transaction().TxIn {
@@ -185,7 +185,7 @@ func (mp *TxPool) RemoveDoubleSpends(tx *types.Tx) {
 		}
 	}
 	mp.mtx.Unlock()
-	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+	if time.Now().UnixNano()/1e6-start.UnixNano()/1e6 > 100 {
 		log.Info("startRemoveDoubleSpendsEnd", "txhash", tx.Hash().String(), "spent", time.Now().Sub(start))
 	}
 }
@@ -887,12 +887,12 @@ func (mp *TxPool) removeOrphan(txHash *hash.Hash) {
 func (mp *TxPool) RemoveOrphan(txHash *hash.Hash) {
 	start := time.Now()
 	mp.mtx.Lock()
-	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+	if time.Now().UnixNano()/1e6-start.UnixNano()/1e6 > 100 {
 		log.Info("startRemoveOrphanWaitLock", "txhash", txHash.String(), "spent", time.Now().Sub(start))
 	}
 	mp.removeOrphan(txHash)
 	mp.mtx.Unlock()
-	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+	if time.Now().UnixNano()/1e6-start.UnixNano()/1e6 > 100 {
 		log.Info("startRemoveOrphanEnd", "txhash", txHash.String(), "spent", time.Now().Sub(start))
 	}
 }
@@ -1015,7 +1015,7 @@ func (mp *TxPool) addOrphan(tx *types.Tx) {
 func (mp *TxPool) ProcessOrphans(hash *hash.Hash) []*types.TxDesc {
 	start := time.Now()
 	mp.mtx.Lock()
-	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+	if time.Now().UnixNano()/1e6-start.UnixNano()/1e6 > 100 {
 		log.Info("startProcessOrphansWaitLock", "txhash", hash.String(), "spent", time.Now().Sub(start))
 	}
 	acceptedTxns := mp.processOrphans(hash)
@@ -1024,7 +1024,7 @@ func (mp *TxPool) ProcessOrphans(hash *hash.Hash) []*types.TxDesc {
 	for _, td := range acceptedTxns {
 		acceptedTxnsT = append(acceptedTxnsT, &td.TxDesc)
 	}
-	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+	if time.Now().UnixNano()/1e6-start.UnixNano()/1e6 > 100 {
 		log.Info("startProcessOrphansEnd", "txhash", hash.String(), "spent", time.Now().Sub(start))
 	}
 	return acceptedTxnsT
