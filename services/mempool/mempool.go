@@ -141,7 +141,11 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 // This function is safe for concurrent access.
 func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 	// Protect concurrent access.
+	start := time.Now()
 	mp.mtx.Lock()
+	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+		log.Info("startRemoveTransactionWaitLock", "txhash", tx.Hash().String(), "spent", time.Now().Sub(start))
+	}
 	if opreturn.IsMeerEVMTx(tx.Tx) {
 		if mp.cfg.BC.VMService().IsShutdown() {
 			return
@@ -154,6 +158,9 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 		mp.removeTransaction(tx, removeRedeemers)
 	}
 	mp.mtx.Unlock()
+	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+		log.Info("startRemoveTransactionEnd", "txhash", tx.Hash().String(), "spent", time.Now().Sub(start))
+	}
 }
 
 // RemoveDoubleSpends removes all transactions which spend outputs spent by the
@@ -165,7 +172,11 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 // This function is safe for concurrent access.
 func (mp *TxPool) RemoveDoubleSpends(tx *types.Tx) {
 	// Protect concurrent access.
+	start := time.Now()
 	mp.mtx.Lock()
+	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+		log.Info("startRemoveDoubleSpendsWaitLock", "txhash", tx.Hash().String(), "spent", time.Now().Sub(start))
+	}
 	for _, txIn := range tx.Transaction().TxIn {
 		if txRedeemer, ok := mp.outpoints[txIn.PreviousOut]; ok {
 			if !txRedeemer.Hash().IsEqual(tx.Hash()) {
@@ -174,6 +185,9 @@ func (mp *TxPool) RemoveDoubleSpends(tx *types.Tx) {
 		}
 	}
 	mp.mtx.Unlock()
+	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+		log.Info("startRemoveDoubleSpendsEnd", "txhash", tx.Hash().String(), "spent", time.Now().Sub(start))
+	}
 }
 
 // addTransaction adds the passed transaction to the memory pool.  It should
@@ -871,9 +885,16 @@ func (mp *TxPool) removeOrphan(txHash *hash.Hash) {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) RemoveOrphan(txHash *hash.Hash) {
+	start := time.Now()
 	mp.mtx.Lock()
+	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+		log.Info("startRemoveOrphanWaitLock", "txhash", txHash.String(), "spent", time.Now().Sub(start))
+	}
 	mp.removeOrphan(txHash)
 	mp.mtx.Unlock()
+	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+		log.Info("startRemoveOrphanEnd", "txhash", txHash.String(), "spent", time.Now().Sub(start))
+	}
 }
 
 // processOrphans is the internal function which implements the public
@@ -992,12 +1013,19 @@ func (mp *TxPool) addOrphan(tx *types.Tx) {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) ProcessOrphans(hash *hash.Hash) []*types.TxDesc {
+	start := time.Now()
 	mp.mtx.Lock()
+	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+		log.Info("startProcessOrphansWaitLock", "txhash", hash.String(), "spent", time.Now().Sub(start))
+	}
 	acceptedTxns := mp.processOrphans(hash)
 	mp.mtx.Unlock()
 	acceptedTxnsT := []*types.TxDesc{}
 	for _, td := range acceptedTxns {
 		acceptedTxnsT = append(acceptedTxnsT, &td.TxDesc)
+	}
+	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+		log.Info("startProcessOrphansEnd", "txhash", hash.String(), "spent", time.Now().Sub(start))
 	}
 	return acceptedTxnsT
 }

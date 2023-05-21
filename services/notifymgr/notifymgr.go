@@ -93,7 +93,11 @@ func (ntmgr *NotifyMgr) AddRebroadcastInventory(newTxs []*types.TxDesc) {
 // Transaction has one confirmation on the main chain. Now we can mark it as no
 // longer needing rebroadcasting.
 func (ntmgr *NotifyMgr) TransactionConfirmed(tx *types.Tx) {
+	start := time.Now()
 	ntmgr.Server.Rebroadcast().RemoveInventory(tx.Hash())
+	if time.Now().UnixNano()/1e6-start.Unix()/1e6 > 100 {
+		log.Info("startTransactionConfirmed", "txhash", tx.Hash().String(), "spent", time.Now().Sub(start))
+	}
 }
 
 func (ntmgr *NotifyMgr) Start() error {
