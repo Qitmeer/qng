@@ -561,6 +561,7 @@ func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
 }
 
 func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
+	start := time.Now()
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -612,7 +613,9 @@ func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
 	//
 	m.ctx.GetNotify().AnnounceNewTransactions(localTxs, nil)
 	go m.ctx.GetNotify().AddRebroadcastInventory(localTxs)
-
+	if time.Now().UnixNano()/1000-start.UnixNano()/1000 > 500 {
+		log.Info("AnnounceNewTransactionsEnd", "txscount", len(txs), "spent", time.Now().Sub(start))
+	}
 	return nil
 }
 
