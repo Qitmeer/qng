@@ -619,7 +619,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	if txFee.Value < minFee {
 		str := fmt.Sprintf("transaction %v has %v fees which "+
 			"is under the required amount of %v, tx size is %v bytes, policy-rate is %v/byte.", txHash,
-			txFee, minFee, serializedSize, mp.cfg.Policy.MinRelayTxFee.Value/1000)
+			txFee, minFee, serializedSize, mp.cfg.Policy.MinRelayTxFee.Value/1e6)
 		return nil, nil, txRuleError(message.RejectInsufficientFee, str)
 	}
 
@@ -763,7 +763,7 @@ func (mp *TxPool) ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allow
 	if err != nil {
 		return nil, err
 	}
-	if time.Now().UnixNano()/1000-start.UnixNano()/1000 > 500 {
+	if time.Now().UnixNano()/1e6-start.UnixNano()/1e6 > 500 {
 		log.Info("maybeAcceptTransactionEnd", "txHash", tx.Hash().String(), "spent", time.Now().Sub(start))
 	}
 
@@ -806,7 +806,7 @@ func (mp *TxPool) ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allow
 
 	// Potentially add the orphan transaction to the orphan pool.
 	err = mp.maybeAddOrphan(tx)
-	if time.Now().UnixNano()/1000-start.UnixNano()/1000 > 500 {
+	if time.Now().UnixNano()/1e6-start.UnixNano()/1e6 > 500 {
 		log.Info("ProcessTransactionEnd", "txHash", tx.Hash().String(), "spent", time.Now().Sub(start))
 	}
 	return nil, err
