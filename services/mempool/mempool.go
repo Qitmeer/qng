@@ -782,7 +782,9 @@ func (mp *TxPool) ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allow
 		for _, td := range newTxs {
 			acceptedTxs = append(acceptedTxs, &td.TxDesc)
 		}
-
+		if time.Now().UnixNano()/1e6-start.UnixNano()/1e6 > 500 {
+			log.Info("ProcessTransactionEnd", "txHash", tx.Hash().String(), "spent", time.Now().Sub(start))
+		}
 		return acceptedTxs, nil
 	}
 
