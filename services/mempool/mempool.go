@@ -746,6 +746,7 @@ func (mp *TxPool) fetchInputUtxos(tx *types.Tx) (*utxo.UtxoViewpoint, error) {
 // This function is safe for concurrent access.
 func (mp *TxPool) ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allowHighFees bool) ([]*types.TxDesc, error) {
 	// Protect concurrent access.
+	start := time.Now()
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
 	var err error
@@ -761,6 +762,9 @@ func (mp *TxPool) ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allow
 		allowHighFees)
 	if err != nil {
 		return nil, err
+	}
+	if time.Now().UnixNano()/1000-start.UnixNano()/1000 > 500 {
+		log.Info("maybeAcceptTransactionEnd", "txHash", tx.Hash().String(), "spent", time.Now().Sub(start))
 	}
 
 	// If len(missingParents) == 0 then we know the tx is NOT an orphan.
@@ -802,6 +806,9 @@ func (mp *TxPool) ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allow
 
 	// Potentially add the orphan transaction to the orphan pool.
 	err = mp.maybeAddOrphan(tx)
+	if time.Now().UnixNano()/1000-start.UnixNano()/1000 > 500 {
+		log.Info("ProcessTransactionEnd", "txHash", tx.Hash().String(), "spent", time.Now().Sub(start))
+	}
 	return nil, err
 }
 
@@ -1277,6 +1284,10 @@ func (mp *TxPool) PruneExpiredTx() {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) Count() int {
+	start := time.Now()
+	defer func() {
+		log.Info("countend", "spent", time.Now().Sub(start))
+	}()
 	mp.mtx.RLock()
 	count := len(mp.pool)
 	mp.mtx.RUnlock()
