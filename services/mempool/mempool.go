@@ -907,7 +907,7 @@ func (mp *TxPool) processOrphans(h *hash.Hash) []*TxDesc {
 	// Start with processing at least the passed hash.
 	processHashes := list.New()
 	processHashes.PushBack(h)
-	log.Info("processOrphans", "len", processHashes.Len())
+	log.Info("processOrphans", "len", processHashes.Len(), "hash", h.String())
 	for processHashes.Len() > 0 {
 		// Pop the first hash to process.
 		firstElement := processHashes.Remove(processHashes.Front())
@@ -922,7 +922,7 @@ func (mp *TxPool) processOrphans(h *hash.Hash) []*TxDesc {
 		if !exists || orphans == nil {
 			continue
 		}
-		log.Info("mp.orphansByPrev", "len", len(mp.orphansByPrev))
+		log.Info("mp.orphansByPrev", "len", len(mp.orphansByPrev), "hash", h.String())
 
 		for _, tx := range orphans {
 			// Remove the orphan from the orphan pool.  Current
