@@ -749,6 +749,9 @@ func (mp *TxPool) ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allow
 	start := time.Now()
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
+	if time.Now().UnixNano()/1e6-start.UnixNano()/1e6 > 500 {
+		log.Info("maybeAcceptTransactionWaitLock", "txHash", tx.Hash().String(), "spent", time.Now().Sub(start))
+	}
 	var err error
 	defer func() {
 		if err != nil {
