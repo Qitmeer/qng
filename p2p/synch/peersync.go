@@ -331,7 +331,7 @@ func (ps *PeerSync) startSync() {
 			} else if ret.act.IsContinue() {
 				refresh = ret.orphan
 				add += ret.add
-				if !ps.checkContinueSync() {
+				if !ps.checkContinueSync() || ret.add <= 0 {
 					break
 				}
 			} else if ret.act.IsTryAgain() {
@@ -340,7 +340,6 @@ func (ps *PeerSync) startSync() {
 			}
 		}
 		//
-		ps.SetSyncPeer(nil)
 		log.Info("The sync of graph state has ended", "spend", time.Since(startTime).Truncate(time.Second).String(), "processID", ps.processID)
 		if add > 0 {
 			if longSyncMod && !ps.IsInterrupt() {
@@ -353,6 +352,7 @@ func (ps *PeerSync) startSync() {
 				}
 			}
 		}
+		ps.SetSyncPeer(nil)
 		ps.wg.Done()
 	} else {
 		log.Trace("You're already up to date, no synchronization is required.")
