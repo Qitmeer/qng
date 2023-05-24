@@ -144,6 +144,11 @@ function save_mempool(){
   get_result "$data"
 }
 
+function clean_mempool(){
+  local data='{"jsonrpc":"2.0","method":"cleanMempool","params":[],"id":1}'
+  get_result "$data"
+}
+
 function miner_info(){
   local data='{"jsonrpc":"2.0","method":"getMinerInfo","params":[],"id":1}'
   get_result "$data"
@@ -491,6 +496,12 @@ function check_consistency() {
   get_result "$data"
 }
 
+function disable_relay_tx() {
+  local disable=$1
+  local data='{"jsonrpc":"2.0","method":"p2p_disableRelayTx","params":['$disable'],"id":1}'
+  get_result "$data"
+}
+
 function get_balance() {
   local address=$1
   local coinID=$2
@@ -829,6 +840,7 @@ function usage(){
   echo "  mempool"
   echo "  mempool_count"
   echo "  savemempool"
+  echo "  cleanmempool"
   echo "  minerinfo"
   echo "  submitblock"
   echo "  submitblockheader"
@@ -847,6 +859,7 @@ function usage(){
   echo "  libp2ploglevel"
   echo "  iscurrent"
   echo "  consistency <hashOrOrder>"
+  echo "  disablerelaytx <bool>"
 }
 
 # -------------------
@@ -1251,6 +1264,10 @@ elif [ "$1" == "consistency" ]; then
   shift
   check_consistency $@
 
+elif [ "$1" == "disablerelaytx" ]; then
+  shift
+  disable_relay_tx $@
+
 ## Tx
 elif [ "$1" == "tx" ]; then
   shift
@@ -1319,6 +1336,10 @@ elif [ "$1" == "mempool_count" ]; then
 elif [ "$1" == "savemempool" ]; then
   shift
   save_mempool $@
+
+elif [ "$1" == "cleanmempool" ]; then
+  shift
+  clean_mempool $@
 
 elif [ "$1" == "minerinfo" ]; then
   shift
