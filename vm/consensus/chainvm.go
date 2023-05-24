@@ -57,4 +57,6 @@ type ChainVM interface {
 	BlockChain() *core.BlockChain
 	ChainDatabase() ethdb.Database
 	PrepareEnvironment(state model.BlockState) (*etypes.Header, error)
+
+	HasTx(h *hash.Hash) bool
 }

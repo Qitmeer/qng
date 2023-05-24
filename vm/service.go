@@ -221,6 +221,15 @@ func (s *Service) GetTxsFromMempool() ([]*types.Transaction, []*hash.Hash, error
 	return v.GetTxsFromMempool()
 }
 
+func (s *Service) HasTx(h *hash.Hash) bool {
+	v, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		log.Error(err.Error())
+		return false
+	}
+	return v.HasTx(h)
+}
+
 func (s *Service) GetMempoolSize() int64 {
 	v, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {

@@ -1127,18 +1127,7 @@ func (mp *TxPool) isTransactionInPool(hash *hash.Hash) bool {
 	if _, exists := mp.pool[*hash]; exists {
 		return true
 	}
-	etxs, _, err := mp.cfg.BC.VMService().GetTxsFromMempool()
-	if err != nil {
-		return false
-	}
-
-	for _, tx := range etxs {
-		th := tx.TxHash()
-		if hash.IsEqual(&th) {
-			return true
-		}
-	}
-	return false
+	return mp.cfg.BC.VMService().HasTx(hash)
 }
 
 // IsTransactionInPool returns whether or not the passed transaction already
