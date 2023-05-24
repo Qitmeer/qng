@@ -520,6 +520,36 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, []*hash.Hash, error) {
 	return result, mtxhs, nil
 }
 
+func (m *MeerPool) HasTx(h *hash.Hash) bool {
+	var txs types.Transactions
+	m.snapshotMu.RLock()
+	if m.snapshotBlock != nil && len(m.snapshotBlock.Transactions()) > 0 {
+		txs = m.snapshotBlock.Transactions()
+	}
+	m.snapshotMu.RUnlock()
+
+	if len(txs) > 0 {
+		for _, tx := range txs {
+			var timestamp int64
+			m.mu.RLock()
+			qtx, ok := m.remoteTxsM[tx.Hash().String()]
+			m.mu.RUnlock()
+			if ok {
+				timestamp = qtx.Timestamp.Unix()
+			}
+			//
+			mtx := qcommon.ToQNGTx(tx, timestamp)
+			if mtx == nil {
+				continue
+			}
+			if mtx.CachedTxHash().IsEqual(h) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (m *MeerPool) GetSize() int64 {
 	m.snapshotMu.Lock()
 	defer m.snapshotMu.Unlock()
