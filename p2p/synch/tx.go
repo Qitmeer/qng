@@ -130,7 +130,7 @@ func (ps *PeerSync) processGetTxs(pe *peers.Peer, otxs []*hash.Hash) error {
 			}
 			_, err := ps.sy.handleTxMsg(tx, pe.GetID())
 			if err != nil {
-				log.Debug(err.Error())
+				log.Debug(err.Error(), "peer", pe.GetID().String())
 			}
 		}
 	}
