@@ -134,6 +134,9 @@ func (ps *PeerSync) processGetTxs(pe *peers.Peer, otxs []*hash.Hash) error {
 				return err
 			}
 			ptxs := ret.(*pb.Transactions)
+			if len(ptxs.Txs) == 0 {
+				return nil
+			}
 			for _, tx := range ptxs.Txs {
 				if !ps.IsRunning() {
 					return fmt.Errorf("No run PeerSync\n")
