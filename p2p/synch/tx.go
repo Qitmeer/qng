@@ -88,69 +88,51 @@ func (ps *PeerSync) processGetTxs(pe *peers.Peer, otxs []*hash.Hash) error {
 	if len(otxs) <= 0 {
 		return nil
 	}
-	txs := []*hash.Hash{}
-	for _, txh := range otxs {
-		if !ps.sy.p2p.TxMemPool().HaveTransaction(txh) {
-			txs = append(txs, txh)
-		}
-	}
-
 	txsM := map[string]struct{}{}
-	for i := 0; i < len(txs); i++ {
-		txsM[txs[i].String()] = struct{}{}
-	}
-
-	total := len(txsM)
-	txsM = map[string]struct{}{}
 	var gtxs *pb.GetTxs
-
-	for len(txsM) < total {
-		needSend := false
-		gtxs = &pb.GetTxs{Txs: []*pb.Hash{}}
-		for i := 0; i < len(txs); i++ {
-			_, ok := txsM[txs[i].String()]
-			if ok {
-				continue
-			}
-			gtxs.Txs = append(gtxs.Txs, &pb.Hash{Hash: txs[i].Bytes()})
-
-			if len(gtxs.Txs) >= MaxInvPerMsg {
-				needSend = true
-				break
-			}
+	for i, txh := range otxs {
+		if !ps.IsRunning() {
+			return fmt.Errorf("No run PeerSync\n")
 		}
-
-		if !needSend {
-			if len(gtxs.Txs) > 0 {
-				needSend = true
-			} else {
-				break
-			}
+		_, ok := txsM[txh.String()]
+		if ok {
+			continue
 		}
+		if ps.sy.p2p.TxMemPool().HaveTransaction(txh) {
+			continue
+		}
+		//
+		txsM[txh.String()] = struct{}{}
 
-		if needSend {
-			ret, err := ps.sy.Send(pe, RPCTransaction, gtxs)
+		if gtxs == nil {
+			gtxs = &pb.GetTxs{Txs: []*pb.Hash{}}
+		}
+		gtxs.Txs = append(gtxs.Txs, &pb.Hash{Hash: txh.Bytes()})
+		if len(gtxs.Txs) < MaxInvPerMsg && i < (len(otxs)-1) {
+			continue
+		}
+		if len(gtxs.Txs) <= 0 {
+			continue
+		}
+		ret, err := ps.sy.Send(pe, RPCTransaction, gtxs)
+		if err != nil {
+			return err
+		}
+		gtxs = nil
+		//
+		ptxs := ret.(*pb.Transactions)
+		if len(ptxs.Txs) <= 0 {
+			continue
+		}
+		for _, tx := range ptxs.Txs {
+			if !ps.IsRunning() {
+				return fmt.Errorf("No run PeerSync\n")
+			}
+			_, err := ps.sy.handleTxMsg(tx, pe.GetID())
 			if err != nil {
-				return err
-			}
-			ptxs := ret.(*pb.Transactions)
-			if len(ptxs.Txs) == 0 {
-				return nil
-			}
-			for _, tx := range ptxs.Txs {
-				if !ps.IsRunning() {
-					return fmt.Errorf("No run PeerSync\n")
-				}
-				txh, err := ps.sy.handleTxMsg(tx, pe.GetID())
-				txsM[txh.String()] = struct{}{}
-
-				if err != nil {
-					log.Debug(err.Error())
-					continue
-				}
+				log.Debug(err.Error())
 			}
 		}
-
 	}
 	return nil
 }
