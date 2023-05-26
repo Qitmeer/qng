@@ -539,6 +539,12 @@ func (m *MeerPool) HasTx(h *hash.Hash) bool {
 	m.snapshotMu.RLock()
 	_, ok := m.snapshotQTxsM[h.String()]
 	m.snapshotMu.RUnlock()
+	if ok {
+		return true
+	}
+	m.remoteMu.RLock()
+	_, ok = m.remoteTxsQM[h.String()]
+	m.remoteMu.RUnlock()
 	return ok
 }
 
