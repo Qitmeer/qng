@@ -1103,7 +1103,7 @@ func (mp *TxPool) HaveAllTransactions(hashes []hash.Hash) bool {
 //
 // This function MUST be called with the mempool lock held (for reads).
 func (mp *TxPool) haveTransaction(hash *hash.Hash) bool {
-	return mp.isTransactionInPool(hash) || mp.isOrphanInPool(hash)
+	return mp.isTransactionInPool(hash, true) || mp.isOrphanInPool(hash)
 }
 
 // HaveTransaction returns whether or not the passed transaction already exists
@@ -1119,13 +1119,26 @@ func (mp *TxPool) HaveTransaction(hash *hash.Hash) bool {
 	return haveTx
 }
 
+func (mp *TxPool) HaveTransactionUTXO(hash *hash.Hash) bool {
+	// Protect concurrent access.
+	mp.mtx.RLock()
+	haveTx := mp.isTransactionInPool(hash, false) || mp.isOrphanInPool(hash)
+	mp.mtx.RUnlock()
+
+	return haveTx
+}
+
 // isTransactionInPool returns whether or not the passed transaction already
 // exists in the main pool.
 //
 // This function MUST be called with the mempool lock held (for reads).
-func (mp *TxPool) isTransactionInPool(hash *hash.Hash) bool {
+// all: include evm tx
+func (mp *TxPool) isTransactionInPool(hash *hash.Hash, all bool) bool {
 	if _, exists := mp.pool[*hash]; exists {
 		return true
+	}
+	if !all {
+		return false
 	}
 	return mp.cfg.BC.VMService().HasTx(hash)
 }
@@ -1134,10 +1147,10 @@ func (mp *TxPool) isTransactionInPool(hash *hash.Hash) bool {
 // exists in the main pool.
 //
 // This function is safe for concurrent access.
-func (mp *TxPool) IsTransactionInPool(hash *hash.Hash) bool {
+func (mp *TxPool) IsTransactionInPool(hash *hash.Hash, all bool) bool {
 	// Protect concurrent access.
 	mp.mtx.RLock()
-	inPool := mp.isTransactionInPool(hash)
+	inPool := mp.isTransactionInPool(hash, all)
 	mp.mtx.RUnlock()
 
 	return inPool

@@ -89,6 +89,7 @@ func FromEVMHash(h common.Hash) *hash.Hash {
 func ToQNGTx(tx *types.Transaction, timestamp int64) *qtypes.Transaction {
 	txmb, err := tx.MarshalBinary()
 	if err != nil {
+		log.Error(err.Error())
 		return nil
 	}
 	txmbHex := hexutil.Encode(txmb)

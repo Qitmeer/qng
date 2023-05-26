@@ -66,6 +66,7 @@ type MeerPool struct {
 
 	remoteTxsQM map[string]*qtypes.Transaction
 	remoteTxsM  map[string]*qtypes.Transaction
+	remoteMu    sync.RWMutex
 
 	config      *miner.Config
 	chainConfig *params.ChainConfig
@@ -88,7 +89,8 @@ type MeerPool struct {
 	snapshotBlock    *types.Block
 	snapshotReceipts types.Receipts
 	snapshotState    *state.StateDB
-
+	snapshotQTxsM    map[string]*qtypes.Transaction
+	snapshotTxsM     map[string]*qtypes.Transaction
 	// Feeds
 	pendingLogsFeed event.Feed
 
@@ -113,7 +115,8 @@ func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, e
 	m.remoteTxsM = map[string]*qtypes.Transaction{}
 	m.txsSub = eth.TxPool().SubscribeNewTxsEvent(m.txsCh)
 	m.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(m.chainHeadCh)
-
+	m.snapshotQTxsM = map[string]*qtypes.Transaction{}
+	m.snapshotTxsM = map[string]*qtypes.Transaction{}
 	return nil
 }
 
@@ -256,6 +259,27 @@ func (m *MeerPool) updateSnapshot() {
 
 	m.snapshotReceipts = qcommon.CopyReceipts(m.current.receipts)
 	m.snapshotState = m.current.state.Copy()
+
+	m.snapshotQTxsM = map[string]*qtypes.Transaction{}
+	m.snapshotTxsM = map[string]*qtypes.Transaction{}
+	if len(m.snapshotBlock.Transactions()) > 0 {
+		for _, tx := range m.snapshotBlock.Transactions() {
+			var mtx *qtypes.Transaction
+			m.remoteMu.RLock()
+			qtx, ok := m.remoteTxsM[tx.Hash().String()]
+			m.remoteMu.RUnlock()
+			if ok {
+				mtx = qtx
+			} else {
+				mtx = qcommon.ToQNGTx(tx, 0)
+			}
+			if mtx == nil {
+				continue
+			}
+			m.snapshotQTxsM[mtx.CachedTxHash().String()] = mtx
+			m.snapshotTxsM[tx.Hash().String()] = mtx
+		}
+	}
 }
 
 func (m *MeerPool) commitTransaction(tx *types.Transaction, coinbase common.Address) ([]*types.Log, error) {
@@ -342,8 +366,8 @@ func (m *MeerPool) commitTransactions(txs *types.TransactionsByPriceAndNonce, co
 }
 
 func (m *MeerPool) updateTemplate(timestamp int64) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	tstart := time.Now()
 	parent := m.chain.CurrentBlock()
@@ -455,8 +479,9 @@ func (m *MeerPool) commit(update bool, start time.Time) error {
 }
 
 func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	if m.HasTx(tx.CachedTxHash()) {
+		return 0, fmt.Errorf("already exists:%s", tx.CachedTxHash().String())
+	}
 
 	if local {
 		log.Warn("This function is not supported for the time being: local meer tx")
@@ -476,8 +501,10 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	m.remoteTxsQM[tx.TxHash().String()] = tx
+	m.remoteMu.Lock()
+	m.remoteTxsQM[tx.CachedTxHash().String()] = tx
 	m.remoteTxsM[txmb.Hash().String()] = tx
+	m.remoteMu.Unlock()
 	log.Debug(fmt.Sprintf("Meer pool:add tx %s(%s)", tx.TxHash(), txmb.Hash()))
 
 	//
@@ -488,31 +515,19 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 }
 
 func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, []*hash.Hash, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.snapshotMu.Lock()
-	defer m.snapshotMu.Unlock()
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
 
 	result := []*qtypes.Transaction{}
 	mtxhs := []*hash.Hash{}
 
 	if m.snapshotBlock != nil && len(m.snapshotBlock.Transactions()) > 0 {
 		for _, tx := range m.snapshotBlock.Transactions() {
-
-			var timestamp int64
-			qtx, ok := m.remoteTxsM[tx.Hash().String()]
-			if ok {
-				timestamp = qtx.Timestamp.Unix()
-			}
-			//
-
-			mtx := qcommon.ToQNGTx(tx, timestamp)
-			if mtx == nil {
+			qtx, ok := m.snapshotTxsM[tx.Hash().String()]
+			if !ok {
 				continue
 			}
-
-			result = append(result, mtx)
+			result = append(result, qtx)
 			mtxhs = append(mtxhs, qcommon.FromEVMHash(tx.Hash()))
 		}
 	}
@@ -521,38 +536,15 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, []*hash.Hash, error) {
 }
 
 func (m *MeerPool) HasTx(h *hash.Hash) bool {
-	var txs types.Transactions
 	m.snapshotMu.RLock()
-	if m.snapshotBlock != nil && len(m.snapshotBlock.Transactions()) > 0 {
-		txs = m.snapshotBlock.Transactions()
-	}
+	_, ok := m.snapshotQTxsM[h.String()]
 	m.snapshotMu.RUnlock()
-
-	if len(txs) > 0 {
-		for _, tx := range txs {
-			var timestamp int64
-			m.mu.RLock()
-			qtx, ok := m.remoteTxsM[tx.Hash().String()]
-			m.mu.RUnlock()
-			if ok {
-				timestamp = qtx.Timestamp.Unix()
-			}
-			//
-			mtx := qcommon.ToQNGTx(tx, timestamp)
-			if mtx == nil {
-				continue
-			}
-			if mtx.CachedTxHash().IsEqual(h) {
-				return true
-			}
-		}
-	}
-	return false
+	return ok
 }
 
 func (m *MeerPool) GetSize() int64 {
-	m.snapshotMu.Lock()
-	defer m.snapshotMu.Unlock()
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
 
 	if m.snapshotBlock != nil {
 		return int64(len(m.snapshotBlock.Transactions()))
@@ -561,17 +553,17 @@ func (m *MeerPool) GetSize() int64 {
 }
 
 func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 	if !m.isRunning() {
 		return fmt.Errorf("meer pool is not running")
 	}
 	if !opreturn.IsMeerEVMTx(tx) {
 		return fmt.Errorf("%s is not %v", tx.TxHash().String(), qtypes.TxTypeCrossChainVM)
 	}
-	_, ok := m.remoteTxsQM[tx.TxHash().String()]
+
+	m.remoteMu.Lock()
+	_, ok := m.remoteTxsQM[tx.CachedTxHash().String()]
 	if ok {
-		delete(m.remoteTxsQM, tx.TxHash().String())
+		delete(m.remoteTxsQM, tx.CachedTxHash().String())
 		log.Debug(fmt.Sprintf("Meer pool:remove tx %s from remote", tx.TxHash()))
 	}
 
@@ -581,6 +573,7 @@ func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
 		delete(m.remoteTxsM, h.String())
 		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from remote", tx.TxHash(), h))
 	}
+	m.remoteMu.Unlock()
 
 	if m.eth.TxPool().Has(h) {
 		m.eth.TxPool().RemoveTx(h, false)
@@ -591,30 +584,21 @@ func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
 }
 
 func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	localTxs := []*qtypes.TxDesc{}
-	blockTxs := map[string]struct{}{}
-
-	m.snapshotMu.Lock()
-	if m.snapshotBlock != nil && len(m.snapshotBlock.Transactions()) > 0 {
-		for _, tx := range m.snapshotBlock.Transactions() {
-			blockTxs[tx.Hash().String()] = struct{}{}
-		}
-	}
-	m.snapshotMu.Unlock()
 
 	for _, tx := range txs {
-		_, ok := blockTxs[tx.Hash().String()]
+		m.snapshotMu.RLock()
+		qtx, ok := m.snapshotTxsM[tx.Hash().String()]
+		m.snapshotMu.RUnlock()
 		if !ok {
 			continue
 		}
+		m.remoteMu.RLock()
 		_, okR := m.remoteTxsM[tx.Hash().String()]
+		m.remoteMu.RUnlock()
 		if okR {
 			continue
 		}
-		qtx := qcommon.ToQNGTx(tx, time.Now().Unix())
 		if qtx == nil {
 			continue
 		}

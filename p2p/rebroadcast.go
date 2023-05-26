@@ -99,21 +99,25 @@ out:
 
 		case <-timer.C:
 			isCurrent := r.s.PeerSync().IsCurrent()
+			if !isCurrent {
+				timer.Reset(params.ActiveNetParams.TargetTimePerBlock)
+				break
+			}
 			nds := []*notify.NotifyData{}
+			startTime := time.Now()
 			for h, data := range pendingInvs {
 				dh := h
+				if time.Since(startTime) > time.Second {
+					break
+				}
 				if _, ok := data.(*types.TxDesc); ok {
 					if !r.s.TxMemPool().HaveTransaction(&dh) {
 						delete(pendingInvs, dh)
 						continue
 					}
-					if !isCurrent {
-						continue
-					}
 				}
 				nds = append(nds, &notify.NotifyData{Data: data})
 			}
-
 			if len(nds) > 0 {
 				r.s.RelayInventory(nds)
 			}
