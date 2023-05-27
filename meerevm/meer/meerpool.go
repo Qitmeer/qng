@@ -184,9 +184,18 @@ func (m *MeerPool) handler() {
 				}
 
 				txs := make(map[common.Address]types.Transactions)
+				localTxs := []*types.Transaction{}
 				for _, tx := range ev.Txs {
 					acc, _ := types.Sender(m.current.signer, tx)
 					txs[acc] = append(txs[acc], tx)
+
+					m.remoteMu.RLock()
+					_, okR := m.remoteTxsM[tx.Hash().String()]
+					m.remoteMu.RUnlock()
+					if okR {
+						continue
+					}
+					localTxs = append(localTxs, tx)
 				}
 				txset := types.NewTransactionsByPriceAndNonce(m.current.signer, txs, m.current.header.BaseFee)
 				tcount := m.current.tcount
@@ -194,7 +203,7 @@ func (m *MeerPool) handler() {
 				if tcount != m.current.tcount {
 					m.updateSnapshot()
 
-					m.AnnounceNewTransactions(ev.Txs)
+					m.AnnounceNewTransactions(localTxs)
 				}
 			}
 
@@ -270,6 +279,10 @@ func (m *MeerPool) updateSnapshot() {
 			m.remoteMu.RUnlock()
 			if ok {
 				mtx = qtx
+				m.remoteMu.Lock()
+				delete(m.remoteTxsM, tx.Hash().String())
+				delete(m.remoteTxsQM, mtx.CachedTxHash().String())
+				m.remoteMu.Unlock()
 			} else {
 				mtx = qcommon.ToQNGTx(tx, 0)
 			}
@@ -597,12 +610,6 @@ func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
 		qtx, ok := m.snapshotTxsM[tx.Hash().String()]
 		m.snapshotMu.RUnlock()
 		if !ok {
-			continue
-		}
-		m.remoteMu.RLock()
-		_, okR := m.remoteTxsM[tx.Hash().String()]
-		m.remoteMu.RUnlock()
-		if okR {
 			continue
 		}
 		if qtx == nil {
