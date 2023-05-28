@@ -7,12 +7,12 @@ package meer
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/vm"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
-	mparams "github.com/Qitmeer/qng/meerevm/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	qconsensus "github.com/Qitmeer/qng/vm/consensus"
 	"github.com/ethereum/go-ethereum/common"
@@ -80,11 +80,9 @@ func (b *MeerChain) buildBlock(parent *types.Header, qtxs []model.Tx, timestamp 
 	}
 	gaslimit := core.CalcGasLimit(parentBlock.GasLimit(), b.meerpool.config.GasCeil)
 
-	// --------Will be discard in the future --------------------
-	if config.ChainID.Int64() == mparams.QngMainnetChainConfig.ChainID.Int64() {
+	if forks.NeedFixedGasLimit(parent.Number.Int64(), config.ChainID.Int64()) {
 		gaslimit = 0x10000000000000
 	}
-	// ----------------------------------------------------------
 
 	header := makeHeader(&b.chain.Config().Eth, parentBlock, statedb, timestamp, gaslimit)
 
