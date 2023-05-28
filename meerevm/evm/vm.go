@@ -227,7 +227,7 @@ func (vm *VM) GetBalance(addre string) (int64, error) {
 
 func (vm *VM) VerifyTx(tx model.Tx) (int64, error) {
 	if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
-		txb := common.FromHex(string(tx.GetData()))
+		txb := tx.GetData()
 		var txe = &types.Transaction{}
 		if err := txe.UnmarshalBinary(txb); err != nil {
 			return 0, fmt.Errorf("rlp decoding failed: %v", err)
@@ -246,7 +246,7 @@ func (vm *VM) VerifyTx(tx model.Tx) (int64, error) {
 
 func (vm *VM) VerifyTxSanity(tx model.Tx) error {
 	if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
-		txb := common.FromHex(string(tx.GetData()))
+		txb := tx.GetData()
 		var txe = &types.Transaction{}
 		if err := txe.UnmarshalBinary(txb); err != nil {
 			return fmt.Errorf("rlp decoding failed: %v", err)

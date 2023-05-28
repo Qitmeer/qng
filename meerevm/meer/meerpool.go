@@ -271,7 +271,7 @@ func (m *MeerPool) updateSnapshot() {
 			if ok {
 				mtx = qtx
 			} else {
-				mtx = qcommon.ToQNGTx(tx, 0)
+				mtx = qcommon.ToQNGTx(tx, 0, false)
 			}
 			if mtx == nil {
 				continue
@@ -490,7 +490,7 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 	if !opreturn.IsMeerEVMTx(tx) {
 		return 0, fmt.Errorf("%s is not %v", tx.TxHash().String(), qtypes.TxTypeCrossChainVM)
 	}
-	txb := common.FromHex(string(tx.TxIn[0].SignScript))
+	txb := qcommon.ToTxHex(tx.TxIn[0].SignScript)
 	var txmb = &types.Transaction{}
 	err := txmb.UnmarshalBinary(txb)
 	if err != nil {

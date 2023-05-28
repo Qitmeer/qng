@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/params"
 )
 
@@ -57,7 +58,7 @@ func NewVMTx(tx *types.Transaction) (*VMTx, error) {
 		return nil, fmt.Errorf("Not MeerVM tx")
 	}
 	return &VMTx{
-		Tx:          &Tx{Type: types.TxTypeCrossChainVM, Data: []byte(tx.TxIn[0].SignScript)},
+		Tx:          &Tx{Type: types.TxTypeCrossChainVM, Data: common.ToTxHex(tx.TxIn[0].SignScript)},
 		Transaction: tx,
 	}, nil
 }
