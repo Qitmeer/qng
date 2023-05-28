@@ -1,8 +1,7 @@
 package forks
 
 import (
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/params"
+	mparams "github.com/Qitmeer/qng/meerevm/params"
 )
 
 const (
@@ -10,9 +9,16 @@ const (
 	GasLimitForkEVMHeight = 606567
 )
 
-func IsGasLimitForkHeight(number int64) bool {
-	if params.ActiveNetParams.Net != protocol.MainNet {
+func IsGasLimitForkHeight(number int64, chainID int64) bool {
+	if chainID != mparams.QngMainnetChainConfig.ChainID.Int64() {
 		return false
 	}
 	return number >= GasLimitForkEVMHeight
+}
+
+func NeedFixedGasLimit(number int64, chainID int64) bool {
+	if chainID != mparams.QngMainnetChainConfig.ChainID.Int64() {
+		return false
+	}
+	return !IsGasLimitForkHeight(number, chainID)
 }
