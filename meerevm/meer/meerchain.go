@@ -7,6 +7,7 @@ package meer
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/vm"
 	qtypes "github.com/Qitmeer/qng/core/types"
@@ -81,7 +82,8 @@ func (b *MeerChain) buildBlock(parent *types.Header, qtxs []model.Tx, timestamp 
 	gaslimit := core.CalcGasLimit(parentBlock.GasLimit(), b.meerpool.config.GasCeil)
 
 	// --------Will be discard in the future --------------------
-	if config.ChainID.Int64() == mparams.QngMainnetChainConfig.ChainID.Int64() {
+	if config.ChainID.Int64() == mparams.QngMainnetChainConfig.ChainID.Int64() &&
+		!forks.IsGasLimitForkHeight(parent.Number.Int64()) {
 		gaslimit = 0x10000000000000
 	}
 	// ----------------------------------------------------------
