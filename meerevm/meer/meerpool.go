@@ -271,7 +271,7 @@ func (m *MeerPool) updateSnapshot() {
 			if ok {
 				mtx = qtx
 			} else {
-				mtx = qcommon.ToQNGTx(tx, 0)
+				mtx = qcommon.ToQNGTx(tx, 0, false)
 			}
 			if mtx == nil {
 				continue
