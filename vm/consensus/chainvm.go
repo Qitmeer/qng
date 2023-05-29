@@ -58,5 +58,5 @@ type ChainVM interface {
 	ChainDatabase() ethdb.Database
 	PrepareEnvironment(state model.BlockState) (*etypes.Header, error)
 
-	HasTx(h *hash.Hash) bool
+	HasTx(h *hash.Hash, all bool) bool
 }

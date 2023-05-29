@@ -63,9 +63,8 @@ type MeerPool struct {
 
 	ctx qconsensus.Context
 
-	remoteTxsQM map[string]*qtypes.Transaction
-	remoteTxsM  map[string]*qtypes.Transaction
-	remoteMu    sync.RWMutex
+	remoteTxsM map[string]*qtypes.Transaction
+	remoteMu   sync.RWMutex
 
 	config      *miner.Config
 	chainConfig *params.ChainConfig
@@ -88,8 +87,8 @@ type MeerPool struct {
 	snapshotBlock    *types.Block
 	snapshotReceipts types.Receipts
 	snapshotState    *state.StateDB
-	snapshotQTxsM    map[string]*qtypes.Transaction
-	snapshotTxsM     map[string]*qtypes.Transaction
+	snapshotQTxsM    map[string]*snapshotTx
+	snapshotTxsM     map[string]*snapshotTx
 	// Feeds
 	pendingLogsFeed event.Feed
 
@@ -110,12 +109,11 @@ func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, e
 	m.chainHeadCh = make(chan core.ChainHeadEvent, chainHeadChanSize)
 	m.quit = make(chan struct{})
 	m.resetTemplate = make(chan struct{})
-	m.remoteTxsQM = map[string]*qtypes.Transaction{}
 	m.remoteTxsM = map[string]*qtypes.Transaction{}
 	m.txsSub = eth.TxPool().SubscribeNewTxsEvent(m.txsCh)
 	m.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(m.chainHeadCh)
-	m.snapshotQTxsM = map[string]*qtypes.Transaction{}
-	m.snapshotTxsM = map[string]*qtypes.Transaction{}
+	m.snapshotQTxsM = map[string]*snapshotTx{}
+	m.snapshotTxsM = map[string]*snapshotTx{}
 	return nil
 }
 
@@ -259,8 +257,8 @@ func (m *MeerPool) updateSnapshot() {
 	m.snapshotReceipts = qcommon.CopyReceipts(m.current.receipts)
 	m.snapshotState = m.current.state.Copy()
 
-	m.snapshotQTxsM = map[string]*qtypes.Transaction{}
-	m.snapshotTxsM = map[string]*qtypes.Transaction{}
+	m.snapshotQTxsM = map[string]*snapshotTx{}
+	m.snapshotTxsM = map[string]*snapshotTx{}
 	if len(m.snapshotBlock.Transactions()) > 0 {
 		for _, tx := range m.snapshotBlock.Transactions() {
 			var mtx *qtypes.Transaction
@@ -275,8 +273,9 @@ func (m *MeerPool) updateSnapshot() {
 			if mtx == nil {
 				continue
 			}
-			m.snapshotQTxsM[mtx.CachedTxHash().String()] = mtx
-			m.snapshotTxsM[tx.Hash().String()] = mtx
+			stx := &snapshotTx{tx: mtx, eHash: tx.Hash()}
+			m.snapshotQTxsM[mtx.CachedTxHash().String()] = stx
+			m.snapshotTxsM[tx.Hash().String()] = stx
 		}
 	}
 }
@@ -472,7 +471,7 @@ func (m *MeerPool) commit(update bool, start time.Time) error {
 }
 
 func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
-	if m.HasTx(tx.CachedTxHash()) {
+	if m.HasTx(tx.CachedTxHash(), true) {
 		return 0, fmt.Errorf("already exists:%s", tx.CachedTxHash().String())
 	}
 
@@ -495,7 +494,6 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 		return 0, err
 	}
 	m.remoteMu.Lock()
-	m.remoteTxsQM[tx.CachedTxHash().String()] = tx
 	m.remoteTxsM[txmb.Hash().String()] = tx
 	m.remoteMu.Unlock()
 	log.Debug(fmt.Sprintf("Meer pool:add tx %s(%s)", tx.TxHash(), txmb.Hash()))
@@ -520,7 +518,7 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, []*hash.Hash, error) {
 			if !ok {
 				continue
 			}
-			result = append(result, qtx)
+			result = append(result, qtx.tx)
 			mtxhs = append(mtxhs, qcommon.FromEVMHash(tx.Hash()))
 		}
 	}
@@ -528,10 +526,15 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, []*hash.Hash, error) {
 	return result, mtxhs, nil
 }
 
-func (m *MeerPool) HasTx(h *hash.Hash) bool {
+// all: contain txs in pending and queue
+func (m *MeerPool) HasTx(h *hash.Hash, all bool) bool {
 	m.snapshotMu.RLock()
-	_, ok := m.snapshotQTxsM[h.String()]
+	stx, ok := m.snapshotQTxsM[h.String()]
 	m.snapshotMu.RUnlock()
+
+	if all && !ok {
+		ok = m.eth.TxPool().Has(stx.eHash)
+	}
 	return ok
 }
 
@@ -554,14 +557,8 @@ func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
 	}
 
 	m.remoteMu.Lock()
-	_, ok := m.remoteTxsQM[tx.CachedTxHash().String()]
-	if ok {
-		delete(m.remoteTxsQM, tx.CachedTxHash().String())
-		log.Debug(fmt.Sprintf("Meer pool:remove tx %s from remote", tx.TxHash()))
-	}
-
 	h := qcommon.ToEVMHash(&tx.TxIn[0].PreviousOut.Hash)
-	_, ok = m.remoteTxsM[h.String()]
+	_, ok := m.remoteTxsM[h.String()]
 	if ok {
 		delete(m.remoteTxsM, h.String())
 		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from remote", tx.TxHash(), h))
@@ -602,11 +599,11 @@ func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
 		fee := cost.Int64()
 
 		td := &qtypes.TxDesc{
-			Tx:       qtypes.NewTx(qtx),
+			Tx:       qtypes.NewTx(qtx.tx),
 			Added:    time.Now(),
 			Height:   m.ctx.GetTxPool().GetMainHeight(),
 			Fee:      fee,
-			FeePerKB: fee * 1000 / int64(qtx.SerializeSize()),
+			FeePerKB: fee * 1000 / int64(qtx.tx.SerializeSize()),
 		}
 
 		localTxs = append(localTxs, td)
@@ -703,4 +700,9 @@ func (m *MeerPool) ResetTemplate() error {
 		m.resetTemplate <- struct{}{}
 	}()
 	return nil
+}
+
+type snapshotTx struct {
+	tx    *qtypes.Transaction
+	eHash common.Hash
 }
