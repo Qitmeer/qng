@@ -278,6 +278,11 @@ func (m *MeerPool) updateSnapshot() {
 			m.snapshotTxsM[tx.Hash().String()] = stx
 		}
 	}
+	//
+	m.remoteMu.RLock()
+	remoteSize := len(m.remoteTxsM)
+	m.remoteMu.RUnlock()
+	log.Debug("update meerpool snapshot", "size", len(m.snapshotBlock.Transactions()), "remoteSize", remoteSize)
 }
 
 func (m *MeerPool) commitTransaction(tx *types.Transaction, coinbase common.Address) ([]*types.Log, error) {
@@ -495,8 +500,9 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 	}
 	m.remoteMu.Lock()
 	m.remoteTxsM[txmb.Hash().String()] = tx
+	remoteSize := len(m.remoteTxsM)
 	m.remoteMu.Unlock()
-	log.Debug(fmt.Sprintf("Meer pool:add tx %s(%s)", tx.TxHash(), txmb.Hash()))
+	log.Debug("Meer pool:add", "hash", tx.TxHash(), "eHash", txmb.Hash(), "size", remoteSize)
 
 	//
 	cost := txmb.Cost()
@@ -561,7 +567,7 @@ func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
 	_, ok := m.remoteTxsM[h.String()]
 	if ok {
 		delete(m.remoteTxsM, h.String())
-		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from remote", tx.TxHash(), h))
+		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from remote, size:%d", tx.TxHash(), h, len(m.remoteTxsM)))
 	}
 	m.remoteMu.Unlock()
 

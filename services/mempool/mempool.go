@@ -1140,7 +1140,7 @@ func (mp *TxPool) isTransactionInPool(hash *hash.Hash, all bool) bool {
 	if !all {
 		return false
 	}
-	return mp.cfg.BC.VMService().HasTx(hash, false)
+	return mp.cfg.BC.VMService().HasTx(hash, true)
 }
 
 // IsTransactionInPool returns whether or not the passed transaction already
