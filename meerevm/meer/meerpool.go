@@ -63,8 +63,9 @@ type MeerPool struct {
 
 	ctx qconsensus.Context
 
-	remoteTxsM map[string]*qtypes.Transaction
-	remoteMu   sync.RWMutex
+	remoteTxsM  map[string]*qtypes.Transaction
+	remoteQTxsM map[string]*snapshotTx
+	remoteMu    sync.RWMutex
 
 	config      *miner.Config
 	chainConfig *params.ChainConfig
@@ -110,6 +111,7 @@ func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, e
 	m.quit = make(chan struct{})
 	m.resetTemplate = make(chan struct{})
 	m.remoteTxsM = map[string]*qtypes.Transaction{}
+	m.remoteQTxsM = map[string]*snapshotTx{}
 	m.txsSub = eth.TxPool().SubscribeNewTxsEvent(m.txsCh)
 	m.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(m.chainHeadCh)
 	m.snapshotQTxsM = map[string]*snapshotTx{}
@@ -500,9 +502,10 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 	}
 	m.remoteMu.Lock()
 	m.remoteTxsM[txmb.Hash().String()] = tx
+	m.remoteQTxsM[tx.CachedTxHash().String()] = &snapshotTx{tx: tx, eHash: txmb.Hash()}
 	remoteSize := len(m.remoteTxsM)
 	m.remoteMu.Unlock()
-	log.Debug("Meer pool:add", "hash", tx.TxHash(), "eHash", txmb.Hash(), "size", remoteSize)
+	log.Debug("Meer pool:add", "hash", tx.CachedTxHash(), "eHash", txmb.Hash(), "size", remoteSize)
 
 	//
 	cost := txmb.Cost()
@@ -535,11 +538,16 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, []*hash.Hash, error) {
 // all: contain txs in pending and queue
 func (m *MeerPool) HasTx(h *hash.Hash, all bool) bool {
 	m.snapshotMu.RLock()
-	stx, ok := m.snapshotQTxsM[h.String()]
+	_, ok := m.snapshotQTxsM[h.String()]
 	m.snapshotMu.RUnlock()
 
 	if all && !ok {
-		ok = m.eth.TxPool().Has(stx.eHash)
+		m.remoteMu.RLock()
+		stx, okR := m.remoteQTxsM[h.String()]
+		m.remoteMu.RUnlock()
+		if okR && stx != nil {
+			ok = m.eth.TxPool().Has(stx.eHash)
+		}
 	}
 	return ok
 }
@@ -567,7 +575,8 @@ func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
 	_, ok := m.remoteTxsM[h.String()]
 	if ok {
 		delete(m.remoteTxsM, h.String())
-		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from remote, size:%d", tx.TxHash(), h, len(m.remoteTxsM)))
+		delete(m.remoteQTxsM, tx.CachedTxHash().String())
+		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from remote, size:%d", tx.CachedTxHash().String(), h, len(m.remoteTxsM)))
 	}
 	m.remoteMu.Unlock()
 
