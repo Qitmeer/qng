@@ -32,5 +32,5 @@ type VMI interface {
 	BlockChain() *core.BlockChain
 	ChainDatabase() ethdb.Database
 	PrepareEnvironment(state BlockState) (*etypes.Header, error)
-	HasTx(h *hash.Hash) bool
+	HasTx(h *hash.Hash, all bool) bool
 }

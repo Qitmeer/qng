@@ -307,8 +307,8 @@ func (vm *VM) GetTxsFromMempool() ([]*qtypes.Transaction, []*hash.Hash, error) {
 	return vm.mchain.MeerPool().GetTxs()
 }
 
-func (vm *VM) HasTx(h *hash.Hash) bool {
-	return vm.mchain.MeerPool().HasTx(h)
+func (vm *VM) HasTx(h *hash.Hash, all bool) bool {
+	return vm.mchain.MeerPool().HasTx(h, all)
 }
 
 func (vm *VM) GetMempoolSize() int64 {
