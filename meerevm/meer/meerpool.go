@@ -270,7 +270,7 @@ func (m *MeerPool) updateSnapshot() {
 			if ok {
 				mtx = qtx
 			} else {
-				mtx = qcommon.ToQNGTx(tx, 0, false)
+				mtx = qcommon.ToQNGTx(tx, 0, true)
 			}
 			if mtx == nil {
 				continue
@@ -487,7 +487,7 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 	}
 	h := qcommon.ToEVMHash(&tx.TxIn[0].PreviousOut.Hash)
 	if m.eth.TxPool().Has(h) {
-		return 0, fmt.Errorf("already exists:%s (evm:%s)", tx.CachedTxHash().String(),h.String())
+		return 0, fmt.Errorf("already exists:%s (evm:%s)", tx.CachedTxHash().String(), h.String())
 	}
 	txb := qcommon.ToTxHex(tx.TxIn[0].SignScript)
 	var txmb = &types.Transaction{}
