@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a
 	github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a
+	github.com/VictoriaMetrics/fastcache v1.6.0
 	github.com/aristanetworks/goarista v0.0.0-20220314170124-2797d9e951fe
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dchest/blake256 v1.1.0
@@ -13,6 +14,7 @@ require (
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/ferranbt/fastssz v0.0.0-20200514094935-99fccaf93472
 	github.com/go-stack/stack v1.8.1
+	github.com/gofrs/flock v0.8.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
 	github.com/golang/protobuf v1.5.3
@@ -54,7 +56,6 @@ require (
 require (
 	github.com/DataDog/zstd v1.5.2 // indirect
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
-	github.com/VictoriaMetrics/fastcache v1.6.0 // indirect
 	github.com/aead/skein v0.0.0-20160722084837-9365ae6e95d2 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -94,7 +95,6 @@ require (
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
-	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/golang-jwt/jwt/v4 v4.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/mock v1.6.0 // indirect
