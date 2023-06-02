@@ -478,16 +478,16 @@ func (m *MeerPool) commit(update bool, start time.Time) error {
 }
 
 func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
-	if m.HasTx(tx.CachedTxHash(), true) {
-		return 0, fmt.Errorf("already exists:%s", tx.CachedTxHash().String())
-	}
-
 	if local {
 		log.Warn("This function is not supported for the time being: local meer tx")
 		return 0, nil
 	}
 	if !opreturn.IsMeerEVMTx(tx) {
 		return 0, fmt.Errorf("%s is not %v", tx.TxHash().String(), qtypes.TxTypeCrossChainVM)
+	}
+	h := qcommon.ToEVMHash(&tx.TxIn[0].PreviousOut.Hash)
+	if m.eth.TxPool().Has(h) {
+		return 0, fmt.Errorf("already exists:%s (evm:%s)", tx.CachedTxHash().String(),h.String())
 	}
 	txb := qcommon.ToTxHex(tx.TxIn[0].SignScript)
 	var txmb = &types.Transaction{}
@@ -496,9 +496,9 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 		return 0, err
 	}
 
-	err = m.eth.TxPool().AddLocal(txmb)
-	if err != nil {
-		return 0, err
+	errs := m.eth.TxPool().AddRemotesSync(types.Transactions{txmb})
+	if len(errs) > 0 && errs[0] != nil {
+		return 0, errs[0]
 	}
 	m.remoteMu.Lock()
 	m.remoteTxsM[txmb.Hash().String()] = tx
@@ -589,22 +589,19 @@ func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
 }
 
 func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
+	if m.eth.TxPool().All().LocalCount() <= 0 {
+		return nil
+	}
 	localTxs := []*qtypes.TxDesc{}
 
 	for _, tx := range txs {
 		m.snapshotMu.RLock()
 		qtx, ok := m.snapshotTxsM[tx.Hash().String()]
 		m.snapshotMu.RUnlock()
-		if !ok {
+		if !ok || qtx == nil {
 			continue
 		}
-		m.remoteMu.RLock()
-		_, okR := m.remoteTxsM[tx.Hash().String()]
-		m.remoteMu.RUnlock()
-		if okR {
-			continue
-		}
-		if qtx == nil {
+		if m.eth.TxPool().All().GetLocal(tx.Hash()) == nil {
 			continue
 		}
 		//
