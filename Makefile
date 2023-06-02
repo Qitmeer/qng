@@ -10,11 +10,14 @@ endif
 RELEASE=release
 LDFLAG_DEV = -X github.com/Qitmeer/qng/version.Build=$(DEV)-$(GITVERSION)
 LDFLAG_RELEASE = -X github.com/Qitmeer/qng/version.Build=$(RELEASE)-$(GITVERSION)
-GOFLAGS_DEV = -ldflags "$(LDFLAG_DEV)"
+GOFLAGS_DEV =  -ldflags "$(LDFLAG_DEV)"
 GOFLAGS_RELEASE = -ldflags "$(LDFLAG_RELEASE)"
 GOFLAGS_RELEASE_QX = -ldflags "$(LDFLAG_RELEASE)"
 VERSION=$(shell ./build/bin/qng --version | grep ^QNG | cut -d' ' -f3|cut -d'+' -f1)
 GOBIN = ./build/bin
+ifeq ($(CGO_ENABLED),)
+	CGO_ENABLED = 0
+endif
 
 UNIX_EXECUTABLES := \
 	build/release/darwin/amd64/bin/$(EXECUTABLE) \
@@ -65,12 +68,12 @@ qng: qng-build
 qng-build:
     ifeq ($(ZMQ),TRUE)
 		@echo "Enalbe ZMQ"
-		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) -tags=zmq "github.com/Qitmeer/qng/cmd/qng"
+		@CGO_ENABLED=$(CGO_ENABLED) go build -o $(GOBIN)/qng $(GOFLAGS_DEV) -tags=zmq "github.com/Qitmeer/qng/cmd/qng"
     else ifeq ($(DEBUG),ON)
 		@echo "Enable DEBUG"
-		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) -gcflags="all=-N -l" "github.com/Qitmeer/qng/cmd/qng"
+		@CGO_ENABLED=$(CGO_ENABLED) go build -o $(GOBIN)/qng $(GOFLAGS_DEV) -gcflags="all=-N -l" "github.com/Qitmeer/qng/cmd/qng"
     else
-		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qng"
+		@CGO_ENABLED=$(CGO_ENABLED) go build -o $(GOBIN)/qng $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qng"
     endif
 qx:
 	@go build -o $(GOBIN)/qx $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qx"
@@ -87,10 +90,10 @@ build/release/%: OS=$(word 3,$(subst /, ,$(@)))
 build/release/%: ARCH=$(word 4,$(subst /, ,$(@)))
 build/release/%/$(EXECUTABLE):
 	@echo Build $(@)
-	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_RELEASE) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
+	@CGO_ENABLED=$(CGO_ENABLED) GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_RELEASE) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
 build/release/%/$(EXECUTABLE).exe:
 	@echo Build $(@)
-	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_RELEASE) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
+	@CGO_ENABLED=$(CGO_ENABLED) GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_RELEASE) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
 build/release/%/$(EXECUTABLE_QX):
 	@echo Build $(@)
 	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_RELEASE_QX) -o $(@) "github.com/Qitmeer/qng/cmd/qx"
@@ -104,10 +107,10 @@ build/dev/%: OS=$(word 3,$(subst /, ,$(@)))
 build/dev/%: ARCH=$(word 4,$(subst /, ,$(@)))
 build/dev/%/$(EXECUTABLE):
 	@echo Build $(@)
-	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_DEV) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
+	@CGO_ENABLED=$(CGO_ENABLED) GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_DEV) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
 build/dev/%/$(EXECUTABLE).exe:
 	@echo Build $(@)
-	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_DEV) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
+	@CGO_ENABLED=$(CGO_ENABLED) GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_DEV) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
 
 
 %.qng.zip: %.exe
