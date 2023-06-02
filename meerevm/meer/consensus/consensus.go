@@ -7,12 +7,8 @@ package consensus
 import (
 	"errors"
 	"fmt"
-	qcommon "github.com/Qitmeer/qng/meerevm/common"
-	"math/big"
-	"runtime"
-	"time"
-
 	qtypes "github.com/Qitmeer/qng/core/types"
+	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
@@ -21,17 +17,11 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 	"golang.org/x/crypto/sha3"
+	"math/big"
+	"runtime"
 )
 
 var (
-	FrontierBlockReward           = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
-	ByzantiumBlockReward          = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
-	ConstantinopleBlockReward     = big.NewInt(2e+18) // Block reward in wei for successfully mining a block upward from Constantinople
-	allowedFutureBlockTimeSeconds = int64(15)         // Max seconds from current time allowed for blocks, before they're considered future blocks
-)
-
-var (
-	errOlderBlockTime    = errors.New("timestamp older than parent")
 	errUnclesUnsupported = errors.New("uncles unsupported")
 )
 
@@ -39,7 +29,7 @@ func (me *MeerEngine) Author(header *types.Header) (common.Address, error) {
 	return header.Coinbase, nil
 }
 
-func (me *MeerEngine) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
+func (me *MeerEngine) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header) error {
 	// Short circuit if the header is known, or its parent not
 	number := header.Number.Uint64()
 	if chain.GetHeader(header.Hash(), number) != nil {
@@ -49,10 +39,10 @@ func (me *MeerEngine) VerifyHeader(chain consensus.ChainHeaderReader, header *ty
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	return me.verifyHeader(chain, header, parent, false, seal, time.Now().Unix())
+	return me.verifyHeader(chain, header, parent)
 }
 
-func (me *MeerEngine) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+func (me *MeerEngine) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header) (chan<- struct{}, <-chan error) {
 	if len(headers) == 0 {
 		abort, results := make(chan struct{}), make(chan error, len(headers))
 		for i := 0; i < len(headers); i++ {
@@ -69,16 +59,15 @@ func (me *MeerEngine) VerifyHeaders(chain consensus.ChainHeaderReader, headers [
 
 	// Create a task channel and spawn the verifiers
 	var (
-		inputs  = make(chan int)
-		done    = make(chan int, workers)
-		errors  = make([]error, len(headers))
-		abort   = make(chan struct{})
-		unixNow = time.Now().Unix()
+		inputs = make(chan int)
+		done   = make(chan int, workers)
+		errors = make([]error, len(headers))
+		abort  = make(chan struct{})
 	)
 	for i := 0; i < workers; i++ {
 		go func() {
 			for index := range inputs {
-				errors[index] = me.verifyHeaderWorker(chain, headers, seals, index, unixNow)
+				errors[index] = me.verifyHeaderWorker(chain, headers, index)
 				done <- index
 			}
 		}()
@@ -114,7 +103,7 @@ func (me *MeerEngine) VerifyHeaders(chain consensus.ChainHeaderReader, headers [
 	return abort, errorsOut
 }
 
-func (me *MeerEngine) verifyHeaderWorker(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool, index int, unixNow int64) error {
+func (me *MeerEngine) verifyHeaderWorker(chain consensus.ChainHeaderReader, headers []*types.Header, index int) error {
 	var parent *types.Header
 	if index == 0 {
 		parent = chain.GetHeader(headers[0].ParentHash, headers[0].Number.Uint64()-1)
@@ -124,7 +113,7 @@ func (me *MeerEngine) verifyHeaderWorker(chain consensus.ChainHeaderReader, head
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	return me.verifyHeader(chain, headers[index], parent, false, seals[index], unixNow)
+	return me.verifyHeader(chain, headers[index], parent)
 }
 
 func (me *MeerEngine) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
@@ -134,7 +123,7 @@ func (me *MeerEngine) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 	return nil
 }
 
-func (me *MeerEngine) verifyHeader(chain consensus.ChainHeaderReader, header, parent *types.Header, uncle bool, seal bool, unixNow int64) error {
+func (me *MeerEngine) verifyHeader(chain consensus.ChainHeaderReader, header, parent *types.Header) error {
 	// Verify that the gas limit is <= 2^63-1
 	cap := uint64(0x7fffffffffffffff)
 	if header.GasLimit > cap {
@@ -157,9 +146,6 @@ func (me *MeerEngine) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 	}
 	// If all checks passed, validate any special fields for hard forks
 	if err := misc.VerifyDAOHeaderExtraData(chain.Config(), header); err != nil {
-		return err
-	}
-	if err := misc.VerifyForkHashes(chain.Config(), header, uncle); err != nil {
 		return err
 	}
 	return nil
@@ -219,7 +205,7 @@ func (me *MeerEngine) Seal(chain consensus.ChainHeaderReader, block *types.Block
 	select {
 	case results <- block.WithSeal(header):
 	default:
-		me.config.Log.Warn("Sealing result is not read by miner", "mode", "fake", "sealhash", me.SealHash(block.Header()))
+		me.log.Warn("Sealing result is not read by miner", "mode", "fake", "sealhash", me.SealHash(block.Header()))
 	}
 	return nil
 }
@@ -232,7 +218,7 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 
 	var tx = &types.Transaction{}
 	if err := tx.UnmarshalBinary(extdata); err != nil {
-		me.config.Log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
+		me.log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
 		return
 	}
 	oldBalance := state.GetBalance(*tx.To())
@@ -242,7 +228,7 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 
 	if tx.Nonce() == uint64(qtypes.TxTypeCrossChainExport) {
 		state.AddBalance(*tx.To(), tx.Value())
-		me.config.Log.Debug(fmt.Sprintf("Cross chain(%s):%s(MEER) => %s(ETH)", tx.To().String(), tx.Value().String(), tx.Value().String()))
+		me.log.Debug(fmt.Sprintf("Cross chain(%s):%s(MEER) => %s(ETH)", tx.To().String(), tx.Value().String(), tx.Value().String()))
 	} else {
 		fee := big.NewInt(0).Sub(oldBalance, tx.Value())
 		if fee.Sign() < 0 {
@@ -265,7 +251,7 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 			feeStr = fmt.Sprintf("fee:%s(MEER)", fee.String())
 		}
 		state.SubBalance(*tx.To(), oldBalance)
-		me.config.Log.Debug(fmt.Sprintf("Cross chain(%s):%s(ETH) => %s(MEER) + %s", tx.To().String(), oldBalance.String(), tx.Value().String(), feeStr))
+		me.log.Debug(fmt.Sprintf("Cross chain(%s):%s(ETH) => %s(MEER) + %s", tx.To().String(), oldBalance.String(), tx.Value().String(), feeStr))
 	}
 
 	newBalance := state.GetBalance(*tx.To())
@@ -273,7 +259,7 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 	changeB := big.NewInt(0)
 	changeB = changeB.Sub(newBalance, oldBalance)
 
-	me.config.Log.Debug(fmt.Sprintf("Balance(%s): %s => %s = %s", tx.To().String(), oldBalance.String(), newBalance.String(), changeB.String()))
+	me.log.Debug(fmt.Sprintf("Balance(%s): %s => %s = %s", tx.To().String(), oldBalance.String(), newBalance.String(), changeB.String()))
 
 	nonce := state.GetNonce(*tx.To())
 	state.SetNonce(*tx.To(), nonce)

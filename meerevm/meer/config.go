@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
@@ -35,8 +34,6 @@ var (
 		utils.SyncTargetFlag,
 		utils.DiscoveryPortFlag,
 		utils.MiningEnabledFlag,
-		utils.MinerThreadsFlag,
-		utils.MinerNotifyFlag,
 		utils.MinerEtherbaseFlag,
 		utils.MinerNewPayloadTimeout,
 		utils.NATFlag,
@@ -58,8 +55,6 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	econfig.NoPruning = false
 	econfig.SkipBcVersionCheck = false
 	econfig.ConsensusEngine = createConsensusEngine
-
-	econfig.Ethash.DatasetDir = "ethash/dataset"
 
 	econfig.Miner.Etherbase = etherbase
 	econfig.Miner.ExtraData = []byte{byte(0)}
@@ -123,20 +118,8 @@ func getDefaultRPCPort() (int, int, int) {
 	}
 }
 
-func createConsensusEngine(stack *node.Node, ethashConfig *ethash.Config, cliqueConfig *params.CliqueConfig, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
-	engine := mconsensus.New(mconsensus.Config{
-		CacheDir:         stack.ResolvePath(ethashConfig.CacheDir),
-		CachesInMem:      ethashConfig.CachesInMem,
-		CachesOnDisk:     ethashConfig.CachesOnDisk,
-		CachesLockMmap:   ethashConfig.CachesLockMmap,
-		DatasetDir:       stack.ResolvePath(ethashConfig.DatasetDir),
-		DatasetsInMem:    ethashConfig.DatasetsInMem,
-		DatasetsOnDisk:   ethashConfig.DatasetsOnDisk,
-		DatasetsLockMmap: ethashConfig.DatasetsLockMmap,
-		NotifyFull:       ethashConfig.NotifyFull,
-	}, notify, noverify)
-	engine.SetThreads(-1) // Disable CPU mining
-	return engine
+func createConsensusEngine(config *params.ChainConfig, db ethdb.Database) (consensus.Engine, error) {
+	return mconsensus.New(), nil
 }
 
 func ChainConfig() *params.ChainConfig {

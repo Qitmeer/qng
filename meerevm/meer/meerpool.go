@@ -221,7 +221,7 @@ func (m *MeerPool) makeCurrent(parent *types.Header, header *types.Header) error
 	state.StartPrefetcher("meerpool")
 
 	env := &environment{
-		signer:    types.MakeSigner(m.chainConfig, header.Number),
+		signer:    types.MakeSigner(m.chainConfig, header.Number, header.Time),
 		state:     state,
 		ancestors: mapset.NewSet(),
 		family:    mapset.NewSet(),

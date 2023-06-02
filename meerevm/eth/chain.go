@@ -138,9 +138,9 @@ func prepare(ctx *cli.Context, cfg *Config) {
 
 func makeFullNode(ctx *cli.Context, cfg *Config) (*node.Node, *eth.EthAPIBackend, *eth.Ethereum) {
 	stack := makeConfigNode(ctx, cfg)
-	if ctx.IsSet(utils.OverrideShanghai.Name) {
-		v := ctx.Uint64(utils.OverrideShanghai.Name)
-		cfg.Eth.OverrideShanghai = &v
+	if ctx.IsSet(utils.OverrideCancun.Name) {
+		v := ctx.Uint64(utils.OverrideCancun.Name)
+		cfg.Eth.OverrideCancun = &v
 	}
 	backend, ethe := utils.RegisterEthService(stack, &cfg.Eth)
 	// Configure log filter RPC API.
@@ -354,8 +354,7 @@ func startNode(ctx *cli.Context, stack *node.Node, backend *eth.EthAPIBackend) e
 
 		gasprice := ethereum.GlobalBig(ctx, utils.MinerGasPriceFlag.Name)
 		backend.TxPool().SetGasPrice(gasprice)
-		threads := ctx.Int(utils.MinerThreadsFlag.Name)
-		if err := backend.StartMining(threads); err != nil {
+		if err := backend.StartMining(); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}
@@ -380,7 +379,12 @@ func unlockAccounts(ctx *cli.Context, stack *node.Node) {
 	if !stack.Config().InsecureUnlockAllowed && stack.Config().ExtRPCEnabled() {
 		utils.Fatalf("Account unlock with HTTP access is forbidden!")
 	}
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	backends := stack.AccountManager().Backends(keystore.KeyStoreType)
+	if len(backends) == 0 {
+		log.Warn("Failed to unlock accounts, keystore is not available")
+		return
+	}
+	ks := backends[0].(*keystore.KeyStore)
 	passwords := utils.MakePasswordList(ctx)
 	for i, account := range unlocks {
 		UnlockAccount(ks, account, i, passwords)
@@ -447,7 +451,7 @@ func filterConfig(ctx *cli.Context, cfg *Config) {
 		modules := utils.SplitAndTrim(hms)
 		nmodules := ""
 		for _, mod := range modules {
-			if mod == "ethash" || mod == "miner" {
+			if mod == "miner" {
 				continue
 			}
 			if len(nmodules) > 0 {
@@ -464,7 +468,7 @@ func filterConfig(ctx *cli.Context, cfg *Config) {
 		modules := utils.SplitAndTrim(wms)
 		nmodules := ""
 		for _, mod := range modules {
-			if mod == "ethash" || mod == "miner" {
+			if mod == "miner" {
 				continue
 			}
 			if len(nmodules) > 0 {
