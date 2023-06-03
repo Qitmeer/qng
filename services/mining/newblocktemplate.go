@@ -198,6 +198,14 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	}
 	hasCrossTx := false
 	// =====
+	checkSpecialSigOpCost := func(tx *types.Tx) (bool, int64) {
+		tokenSOC := int64(blockchain.CountSigOps(tx))
+		if coinbaseSigOpCost+tokenSigOpCost+tokenSOC > blockchain.MaxSigOpsPerBlock {
+			log.Debug("Skipping tx because it would exceed the maximum sigops per block", "hash", tx.Hash().String(), "cur", coinbaseSigOpCost+tokenSigOpCost, "add", tokenSOC)
+			return false, 0
+		}
+		return true, tokenSOC
+	}
 
 	log.Debug("Inclusion to new block", "transactions", len(sourceTxns))
 
@@ -224,10 +232,12 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 					blockSize, len(blockTxns)))
 				break
 			}
-
+			ok, tokenSOC := checkSpecialSigOpCost(tx)
+			if !ok {
+				continue
+			}
 			blockTxns = append(blockTxns, tx)
 			txFees = append(txFees, 0)
-			tokenSOC := int64(blockchain.CountSigOps(tx))
 			txSigOpCosts = append(txSigOpCosts, tokenSOC)
 			tokenSigOpCost += tokenSOC
 			blockSize += txSize
@@ -260,9 +270,12 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 				}
 				hasCrossTx = true
 			}
+			ok, tokenSOC := checkSpecialSigOpCost(tx)
+			if !ok {
+				continue
+			}
 			blockTxns = append(blockTxns, tx)
 			txFees = append(txFees, 0)
-			tokenSOC := int64(blockchain.CountSigOps(tx))
 			txSigOpCosts = append(txSigOpCosts, tokenSOC)
 			tokenSigOpCost += tokenSOC
 			blockSize += txSize
