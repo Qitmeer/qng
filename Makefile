@@ -70,12 +70,12 @@ qng-build:
 		@echo "Enable DEBUG"
 		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) -gcflags="all=-N -l" "github.com/Qitmeer/qng/cmd/qng"
     else
-		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qng"
+		@go build -o $(GOBIN)/qng $(GOFLAGS_RELEASE) "github.com/Qitmeer/qng/cmd/qng"
     endif
 qx:
-	@go build -o $(GOBIN)/qx $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qx"
+	@go build -o $(GOBIN)/qx $(GOFLAGS_RELEASE) "github.com/Qitmeer/qng/cmd/qx"
 relay:
-	@go build -o $(GOBIN)/relaynode $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/relaynode"
+	@go build -o $(GOBIN)/relaynode $(GOFLAGS_RELEASE) "github.com/Qitmeer/qng/cmd/relaynode"
 
 checkversion: qng-build
 #	@echo version $(VERSION)
