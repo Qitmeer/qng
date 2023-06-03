@@ -548,7 +548,9 @@ func isNullOutpoint(outpoint *types.TxOutPoint) bool {
 // txscript.
 func CountSigOps(tx *types.Tx) int {
 	msgTx := tx.Transaction()
-
+	if opreturn.IsMeerEVMTx(msgTx) {
+		return 0
+	}
 	// Accumulate the number of signature operations in all transaction
 	// inputs.
 	totalSigOps := 0
