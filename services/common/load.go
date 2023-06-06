@@ -569,6 +569,16 @@ var (
 			Destination: &cfg.Consistency,
 			Value:       true,
 		},
+		&cli.BoolFlag{
+			Name:     "metrics",
+			Usage:    "Enable metrics collection and reporting",
+			Destination: &cfg.Metrics,
+		},
+		&cli.BoolFlag{
+			Name:     "metrics.expensive",
+			Usage:    "Enable expensive metrics collection and reporting",
+			Destination: &cfg.MetricsExpensive,
+		},
 	}
 )
 

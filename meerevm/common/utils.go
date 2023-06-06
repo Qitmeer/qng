@@ -16,9 +16,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
 	"math/big"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -194,4 +196,26 @@ func ToTxHexStr(data []byte) string {
 		return string(data)
 	}
 	return hexutil.Encode(data)
+}
+
+func init() {
+	// enablerFlags is the CLI flag names to use to enable metrics collections.
+	var enablerFlags = []string{"metrics"}
+	// expensiveEnablerFlags is the CLI flag names to use to enable metrics collections.
+	var expensiveEnablerFlags = []string{"metrics.expensive"}
+	for _, arg := range os.Args {
+		flag := strings.TrimLeft(arg, "-")
+		for _, enabler := range enablerFlags {
+			if !metrics.Enabled && flag == enabler {
+				log.Info("Enabling metrics collection.")
+				metrics.Enabled = true
+			}
+		}
+		for _, enabler := range expensiveEnablerFlags {
+			if !metrics.EnabledExpensive && flag == enabler {
+				log.Info("Enabling expensive metrics collection.")
+				metrics.EnabledExpensive = true
+			}
+		}
+	}
 }
