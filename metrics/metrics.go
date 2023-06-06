@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
+	emetrics "github.com/ethereum/go-ethereum/metrics"
 	"github.com/rcrowley/go-metrics"
-	"github.com/rcrowley/go-metrics/exp"
 )
 
 // MetricsEnabledFlag is the CLI flag name to use to enable metrics collections.
@@ -29,14 +29,27 @@ var Enabled = false
 // Init enables or disables the metrics system. Since we need this to run before
 // any other code gets to create meters and timers, we'll actually do an ugly hack
 // and peek into the command line args for the metrics flag.
+
 func init() {
+	// enablerFlags is the CLI flag names to use to enable metrics collections.
+	var enablerFlags = []string{"metrics"}
+	// expensiveEnablerFlags is the CLI flag names to use to enable metrics collections.
+	var expensiveEnablerFlags = []string{"metrics.expensive"}
 	for _, arg := range os.Args {
-		if strings.TrimLeft(arg, "-") == MetricsEnabledFlag {
-			log.Info("Enabling metrics collection")
-			Enabled = true
+		flag := strings.TrimLeft(arg, "-")
+		for _, enabler := range enablerFlags {
+			if !emetrics.Enabled && flag == enabler {
+				log.Info("Enabling metrics collection.")
+				emetrics.Enabled = true
+			}
+		}
+		for _, enabler := range expensiveEnablerFlags {
+			if !emetrics.EnabledExpensive && flag == enabler {
+				log.Info("Enabling expensive metrics collection.")
+				emetrics.EnabledExpensive = true
+			}
 		}
 	}
-	exp.Exp(metrics.DefaultRegistry)
 }
 
 // NewCounter create a new metrics Counter, either a real one of a NOP stub depending
