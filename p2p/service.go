@@ -287,6 +287,7 @@ func (s *Service) IncreaseBytesSent(pid peer.ID, size int) {
 	if size <= 0 {
 		return
 	}
+	common.EgressTrafficMeter.Mark(int64(size))
 	if s.Peers() != nil {
 		pe := s.Peers().Get(pid)
 		if pe != nil {
@@ -299,6 +300,7 @@ func (s *Service) IncreaseBytesRecv(pid peer.ID, size int) {
 	if size <= 0 {
 		return
 	}
+	common.IngressTrafficMeter.Mark(int64(size))
 	if s.Peers() != nil {
 		pe := s.Peers().Get(pid)
 		if pe != nil {

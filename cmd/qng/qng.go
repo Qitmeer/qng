@@ -12,6 +12,7 @@ import (
 	"github.com/Qitmeer/qng/config"
 	_ "github.com/Qitmeer/qng/database/ffldb"
 	"github.com/Qitmeer/qng/log"
+	_ "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/node"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common"

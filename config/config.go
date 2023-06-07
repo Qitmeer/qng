@@ -116,6 +116,9 @@ type Config struct {
 
 	Amana    bool   `long:"amana" description:"Enable Amana"`
 	AmanaEnv string `long:"amanaenv" description:"Amana environment"`
+
+	Metrics bool `long:"metrics" description:"Enable metrics collection and reporting"`
+	MetricsExpensive bool `long:"metrics.expensive" description:"Enable expensive metrics collection and reporting"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {

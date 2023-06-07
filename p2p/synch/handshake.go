@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/peers"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/multiformats/go-multistream"
@@ -78,6 +79,7 @@ func (ps *PeerSync) Connection(pe *peers.Peer) {
 		return
 	}
 	pe.SetConnectionState(peers.PeerConnected)
+	common.ActivePeerGauge.Inc(1)
 
 	// Go through the handshake process.
 	multiAddr := fmt.Sprintf("%s/p2p/%s", pe.Address().String(), pe.GetID().String())
@@ -105,6 +107,7 @@ func (ps *PeerSync) Disconnect(pe *peers.Peer) {
 		return
 	}
 	pe.SetConnectionState(peers.PeerDisconnected)
+	common.ActivePeerGauge.Dec(1)
 	if !pe.IsConsensus() {
 		if pe.Services() == protocol.Unknown {
 			log.Trace(fmt.Sprintf("Disconnect:%v ", pe.IDWithAddress()))

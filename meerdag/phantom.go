@@ -462,6 +462,7 @@ func (ph *Phantom) UpdateVirtualBlockOrder() *PhantomBlock {
 }
 
 func (ph *Phantom) preUpdateVirtualBlock() *PhantomBlock {
+	unsequencedGauge.Update(int64(ph.diffAnticone.Size()))
 	if ph.diffAnticone.IsEmpty() ||
 		ph.virtualBlock.GetOrder() != MaxBlockOrder {
 		return nil

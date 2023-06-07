@@ -52,7 +52,9 @@ out:
 	for {
 		select {
 		case msg := <-b.msgChan:
+			start:=time.Now()
 			isOrphan, err := b.processBlock(msg.block, msg.flags)
+			blockProcessTimer.Update(time.Since(start))
 			msg.result <- &processResult{isOrphan: isOrphan, err: err}
 		case <-b.quit:
 			break out

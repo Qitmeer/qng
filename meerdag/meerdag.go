@@ -433,7 +433,14 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 	if olds == nil {
 		olds = list.New()
 	}
-	return news, olds, ib, lastMT != bd.instance.GetMainChainTipId()
+	curMT := bd.getMainChainTip()
+
+	mainOrderGauge.Update(int64(curMT.GetOrder()))
+	mainHeightGauge.Update(int64(curMT.GetHeight()))
+	mainLayerGauge.Update(int64(curMT.GetLayer()))
+	tipsTotalGauge.Update(int64(bd.tips.Size()))
+
+	return news, olds, ib, lastMT != curMT.GetID()
 }
 
 // Acquire the genesis block of chain
