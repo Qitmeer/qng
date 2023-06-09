@@ -471,7 +471,6 @@ cleanup:
 }
 
 func (m *Miner) updateBlockTemplate(force bool) error {
-
 	reCreate := false
 	//
 	if force {
@@ -498,12 +497,11 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 			if lastTxUpdate.IsZero() {
 				lastTxUpdate = roughtime.Now()
 			}
-			if lastTxUpdate != m.lastTxUpdate && roughtime.Now().After(m.lastTemplate.Add(time.Second*gbtRegenerateSeconds)) {
+			if lastTxUpdate != m.lastTxUpdate && roughtime.Now().After(m.lastTemplate.Add(params.ActiveNetParams.TargetTimePerBlock*2)) {
 				reCreate = true
 			}
 		}
 	}
-
 	if reCreate {
 		m.stats.TotalGbts++ //gbt generates
 		start := time.Now().UnixMilli()
@@ -517,6 +515,7 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 		m.template = template
 		m.lastTxUpdate = m.txpool.LastUpdated()
 		m.lastTemplate = time.Now()
+		m.txpool.CleanDirty()
 
 		// Get the minimum allowed timestamp for the block based on the
 		// median timestamp of the last several blocks per the chain
@@ -548,9 +547,7 @@ func (m *Miner) subscribe() {
 					case *blockchain.Notification:
 						m.handleNotifyMsg(value)
 					case int:
-						if value == event.MempoolTxAdd {
-							go m.MempoolChange()
-						} else if value == event.Initialized {
+						if value == event.Initialized {
 							if m.cfg.Generate {
 								m.StartCPUMining()
 							}
@@ -735,10 +732,12 @@ func (m *Miner) GetCoinbasePKAddress() *address.SecpPubKeyAddress {
 }
 
 func (m *Miner) handleStallSample() {
-	//if atomic.LoadInt32(&m.shutdown) != 0 {
-	//	return
-	//}
-	//log.Debug("Miner stall sample")
+	if m.IsShutdown() {
+		return
+	}
+	if m.txpool.Dirty() {
+		go m.MempoolChange()
+	}
 }
 
 func (m *Miner) StartCPUMining() {
