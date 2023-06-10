@@ -4,6 +4,7 @@ package node
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/system"
+	"github.com/Qitmeer/qng/common/system/disk"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
@@ -26,7 +27,10 @@ import (
 	"github.com/Qitmeer/qng/services/tx"
 	"github.com/Qitmeer/qng/vm"
 	"github.com/Qitmeer/qng/vm/consensus"
+	ecommon "github.com/ethereum/go-ethereum/common"
+	"path/filepath"
 	"reflect"
+	"time"
 )
 
 // QitmeerFull implements the qitmeer full node service.
@@ -219,6 +223,40 @@ func (qm *QitmeerFull) GetBlockChain() *blockchain.BlockChain {
 	return service
 }
 
+func (qm *QitmeerFull) monitorFreeDiskSpace() error {
+	freeDiskSpaceCritical := qm.node.Config.Minfreedisk * 1024 * 1024
+	if freeDiskSpaceCritical == 0 {
+		return nil
+	}
+	path, err := filepath.Abs(qm.node.Config.DataDir)
+	if err != nil {
+		return err
+	}
+	if path == "" {
+		return fmt.Errorf("monitor disk path is empty")
+	}
+	go func() {
+		log.Info("Start monitor free disk space", "path", path, "critical", ecommon.StorageSize(freeDiskSpaceCritical))
+		for {
+			freeSpace, err := disk.GetFreeDiskSpace(path)
+			if err != nil {
+				log.Warn("Failed to get free disk space", "path", path, "err", err)
+				break
+			}
+			if freeSpace < freeDiskSpaceCritical {
+				log.Error("Low disk space. Gracefully shutting down QNG to prevent database corruption.", "available", ecommon.StorageSize(freeSpace), "path", path)
+				qm.node.consensus.Shutdown()
+				break
+			} else if freeSpace < 2*freeDiskSpaceCritical {
+				log.Warn("Disk space is running low. QNG will shutdown if disk space runs below critical level.", "available", ecommon.StorageSize(freeSpace), "critical_level", ecommon.StorageSize(freeDiskSpaceCritical), "path", path)
+			}
+			time.Sleep(30 * time.Second)
+		}
+	}()
+
+	return nil
+}
+
 func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	qm := QitmeerFull{
 		node: node,
@@ -290,5 +328,5 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	qm.Services().LowestPriority(qm.GetTxManager())
 	qm.Services().LowestPriority(qm.GetPeerServer())
 	qm.Services().LowestPriority(qm.GetBlockChain())
-	return &qm, nil
+	return &qm, qm.monitorFreeDiskSpace()
 }
