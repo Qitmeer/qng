@@ -85,10 +85,6 @@ func (s *consensus) Init() error {
 		if err != nil {
 			return err
 		}
-		err = ser.Upgrade()
-		if err != nil {
-			return err
-		}
 		s.amanaService = ser
 	}
 	//

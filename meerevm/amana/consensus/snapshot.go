@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	IdentifierDeprecated = "qit" // TODO: Just compatible with old data, will be deleted in the future
-	Identifier           = "amana"
+	Identifier = "amana"
 )
 
 // Vote represents a single vote that an authorized signer made to modify the
@@ -80,49 +79,21 @@ func newSnapshot(config *params.CliqueConfig, sigcache *sigLRU, number uint64, h
 func loadSnapshot(config *params.CliqueConfig, sigcache *sigLRU, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
 	var err error
 	var blob []byte
-	var has bool
-	// TODO: Just compatible with old data, will be deleted in the future
-	if has, err = db.Has([]byte(IdentifierDeprecated + "-")); has && err == nil {
-		log.Info("Load old snapshot data")
-		blob, err = db.Get(append([]byte(IdentifierDeprecated+"-"), hash[:]...))
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		blob, err = db.Get(append([]byte(Identifier+"-"), hash[:]...))
-		if err != nil {
-			return nil, err
-		}
+	blob, err = db.Get(append([]byte(Identifier+"-"), hash[:]...))
+	if err != nil {
+		return nil, err
 	}
-
 	snap := new(Snapshot)
 	if err := json.Unmarshal(blob, snap); err != nil {
 		return nil, err
 	}
 	snap.config = config
 	snap.sigcache = sigcache
-
-	if has {
-		log.Info("Delete old snapshot data and create new date")
-		err = db.Delete([]byte(IdentifierDeprecated + "-"))
-		if err != nil {
-			log.Error(err.Error())
-		}
-		return snap, snap.store(db)
-	}
 	return snap, nil
 }
 
 // store inserts the snapshot into the database.
 func (s *Snapshot) store(db ethdb.Database) error {
-	// TODO: Just compatible with old data, will be deleted in the future
-	if has, err := db.Has([]byte(IdentifierDeprecated + "-")); has && err == nil {
-		log.Info("Delete old snapshot data")
-		err = db.Delete([]byte(IdentifierDeprecated + "-"))
-		if err != nil {
-			log.Error(err.Error())
-		}
-	}
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err
