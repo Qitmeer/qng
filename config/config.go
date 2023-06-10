@@ -117,8 +117,10 @@ type Config struct {
 	Amana    bool   `long:"amana" description:"Enable Amana"`
 	AmanaEnv string `long:"amanaenv" description:"Amana environment"`
 
-	Metrics bool `long:"metrics" description:"Enable metrics collection and reporting"`
+	Metrics          bool `long:"metrics" description:"Enable metrics collection and reporting"`
 	MetricsExpensive bool `long:"metrics.expensive" description:"Enable expensive metrics collection and reporting"`
+
+	Minfreedisk uint64 `long:"minfreedisk" description:"Minimum free disk space in MB, once reached triggers auto shut down (default = 512M, 0 = disabled)"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {
