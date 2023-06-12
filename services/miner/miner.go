@@ -505,11 +505,11 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 	if reCreate {
 		m.stats.TotalGbts++ //gbt generates
 		start := time.Now().UnixMilli()
+		m.consensus.VMService().ResetTemplate()
 		template, err := mining.NewBlockTemplate(m.policy, params.ActiveNetParams.Params, m.sigCache, m.txpool, m.timeSource, m.consensus, m.coinbaseAddress, nil, m.powType, m.coinbaseFlags)
 		if err != nil {
 			e := fmt.Errorf("Failed to create new block template: %s", err.Error())
 			log.Warn(e.Error())
-			m.consensus.VMService().ResetTemplate()
 			return e
 		}
 		m.template = template
