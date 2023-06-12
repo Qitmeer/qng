@@ -56,6 +56,10 @@ type environment struct {
 	receipts []*types.Receipt
 }
 
+type resetTemplateMsg struct {
+	reply chan struct{}
+}
+
 type MeerPool struct {
 	wg      sync.WaitGroup
 	quit    chan struct{}
@@ -74,11 +78,10 @@ type MeerPool struct {
 	chain       *core.BlockChain
 
 	// Subscriptions
-	mux          *event.TypeMux
-	txsCh        chan core.NewTxsEvent
-	txsSub       event.Subscription
-	chainHeadCh  chan core.ChainHeadEvent
-	chainHeadSub event.Subscription
+	mux         *event.TypeMux
+	txsCh       chan core.NewTxsEvent
+	txsSub      event.Subscription
+	chainHeadCh chan core.ChainHeadEvent
 
 	current *environment // An environment for current running cycle.
 
@@ -93,7 +96,7 @@ type MeerPool struct {
 	// Feeds
 	pendingLogsFeed event.Feed
 
-	resetTemplate chan struct{}
+	resetTemplate chan *resetTemplateMsg
 }
 
 func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux, ctx qconsensus.Context) error {
@@ -109,11 +112,10 @@ func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, e
 	m.txsCh = make(chan core.NewTxsEvent, txChanSize)
 	m.chainHeadCh = make(chan core.ChainHeadEvent, chainHeadChanSize)
 	m.quit = make(chan struct{})
-	m.resetTemplate = make(chan struct{})
+	m.resetTemplate = make(chan *resetTemplateMsg)
 	m.remoteTxsM = map[string]*qtypes.Transaction{}
 	m.remoteQTxsM = map[string]*snapshotTx{}
 	m.txsSub = eth.TxPool().SubscribeNewTxsEvent(m.txsCh)
-	m.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(m.chainHeadCh)
 	m.snapshotQTxsM = map[string]*snapshotTx{}
 	m.snapshotTxsM = map[string]*snapshotTx{}
 	return nil
@@ -161,7 +163,6 @@ func (m *MeerPool) isRunning() bool {
 
 func (m *MeerPool) handler() {
 	defer m.txsSub.Unsubscribe()
-	defer m.chainHeadSub.Unsubscribe()
 	defer m.wg.Done()
 
 	for {
@@ -197,18 +198,14 @@ func (m *MeerPool) handler() {
 				}
 			}
 
-		case <-m.chainHeadCh:
-			m.updateTemplate(time.Now().Unix())
-
 		// System stopped
 		case <-m.quit:
 			return
 		case <-m.txsSub.Err():
 			return
-		case <-m.chainHeadSub.Err():
-			return
-		case <-m.resetTemplate:
+		case msg := <-m.resetTemplate:
 			m.updateTemplate(time.Now().Unix())
+			msg.reply <- struct{}{}
 		}
 	}
 }
@@ -707,10 +704,10 @@ func (m *MeerPool) BuildPayload(args *miner.BuildPayloadArgs) (*miner.Payload, e
 }
 
 func (m *MeerPool) ResetTemplate() error {
-	go func() {
-		log.Debug("Try to reset meer pool")
-		m.resetTemplate <- struct{}{}
-	}()
+	log.Debug("Try to reset meer pool")
+	msg := &resetTemplateMsg{reply: make(chan struct{})}
+	m.resetTemplate <- msg
+	<-msg.reply
 	return nil
 }
 
