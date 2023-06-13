@@ -78,10 +78,11 @@ type MeerPool struct {
 	chain       *core.BlockChain
 
 	// Subscriptions
-	mux         *event.TypeMux
-	txsCh       chan core.NewTxsEvent
-	txsSub      event.Subscription
-	chainHeadCh chan core.ChainHeadEvent
+	mux          *event.TypeMux
+	txsCh        chan core.NewTxsEvent
+	txsSub       event.Subscription
+	chainHeadCh  chan core.ChainHeadEvent
+	chainHeadSub event.Subscription
 
 	current *environment // An environment for current running cycle.
 
@@ -115,6 +116,7 @@ func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, e
 	m.resetTemplate = make(chan *resetTemplateMsg)
 	m.remoteTxsM = map[string]*qtypes.Transaction{}
 	m.remoteQTxsM = map[string]*snapshotTx{}
+	m.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(m.chainHeadCh)
 	m.txsSub = eth.TxPool().SubscribeNewTxsEvent(m.txsCh)
 	m.snapshotQTxsM = map[string]*snapshotTx{}
 	m.snapshotTxsM = map[string]*snapshotTx{}
@@ -163,6 +165,7 @@ func (m *MeerPool) isRunning() bool {
 
 func (m *MeerPool) handler() {
 	defer m.txsSub.Unsubscribe()
+	defer m.chainHeadSub.Unsubscribe()
 	defer m.wg.Done()
 
 	for {
@@ -202,6 +205,10 @@ func (m *MeerPool) handler() {
 		case <-m.quit:
 			return
 		case <-m.txsSub.Err():
+			return
+		case <-m.chainHeadCh:
+			m.updateTemplate(time.Now().Unix())
+		case <-m.chainHeadSub.Err():
 			return
 		case msg := <-m.resetTemplate:
 			m.updateTemplate(time.Now().Unix())
@@ -368,6 +375,14 @@ func (m *MeerPool) commitTransactions(txs *types.TransactionsByPriceAndNonce, co
 }
 
 func (m *MeerPool) updateTemplate(timestamp int64) {
+	preBlock := m.PendingBlock()
+	if preBlock != nil {
+		if preBlock.ParentHash() == m.chain.CurrentBlock().Hash() {
+			log.Debug("meerpool block template no update required")
+			return
+		}
+	}
+	log.Debug("meerpool update block template")
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
