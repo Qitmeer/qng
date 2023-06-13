@@ -21,3 +21,10 @@ func (status BlockStatus) IsBadSide() bool {
 func (status BlockStatus) KnownInvalid() bool {
 	return status&StatusInvalid != 0
 }
+
+func (status BlockStatus) String() string {
+	if status.KnownInvalid() {
+		return "invalid"
+	}
+	return "valid"
+}

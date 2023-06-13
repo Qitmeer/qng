@@ -6,7 +6,6 @@ package synch
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/meerdag"
@@ -14,62 +13,40 @@ import (
 	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
-	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/network"
 )
 
-func (s *Sync) sendGetBlocksRequest(ctx context.Context, id peer.ID, blocks *pb.GetBlocks) (*pb.DagBlocks, error) {
-	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
-	defer cancel()
-
-	stream, err := s.Send(ctx, blocks, RPCGetBlocks, id)
-	if err != nil {
-		return nil, err
+func (s *Sync) sendGetBlocksRequest(stream network.Stream, pe *peers.Peer) (*pb.DagBlocks, *common.Error) {
+	e := ReadRspCode(stream, s.p2p)
+	if !e.Code.IsSuccess() {
+		e.Add("get blocks request rsp")
+		return nil, e
 	}
-
-	code, errMsg, err := ReadRspCode(stream, s.p2p)
-	if err != nil {
-		return nil, err
-	}
-
-	if !code.IsSuccess() {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "get blocks request rsp")
-		closeStream(stream, s.p2p)
-		return nil, errors.New(errMsg)
-	}
-
 	msg := &pb.DagBlocks{}
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
-		return nil, err
+		return nil, common.NewError(common.ErrStreamRead, err)
 	}
-	closeStream(stream, s.p2p)
-	return msg, err
+	return msg, nil
 }
 
-func (s *Sync) getBlocksHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
-	var err error
-	defer cancel()
-
+func (s *Sync) getBlocksHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
 	m, ok := msg.(*pb.GetBlocks)
 	if !ok {
-		err = fmt.Errorf("message is not type *pb.Hash")
+		err := fmt.Errorf("message is not type *pb.Hash")
 		return ErrMessage(err)
 	}
 	blocks, _ := s.PeerSync().dagSync.CalcSyncBlocks(nil, changePBHashsToHashs(m.Locator), meerdag.DirectMode, MaxBlockLocatorsPerMsg)
 	bd := &pb.DagBlocks{Blocks: changeHashsToPBHashs(blocks)}
-	e := s.EncodeResponseMsg(stream, bd)
-	if e != nil {
-		return e
-	}
-	return nil
+	return s.EncodeResponseMsg(stream, bd)
 }
 
 func (ps *PeerSync) processGetBlocks(pe *peers.Peer, blocks []*hash.Hash) *ProcessResult {
-	db, err := ps.sy.sendGetBlocksRequest(ps.sy.p2p.Context(), pe.GetID(), &pb.GetBlocks{Locator: changeHashsToPBHashs(blocks)})
+	ret, err := ps.sy.Send(pe, RPCGetBlocks, &pb.GetBlocks{Locator: changeHashsToPBHashs(blocks)})
 	if err != nil {
 		log.Warn(err.Error(), "processID", ps.processID)
 		return nil
 	}
+	db := ret.(*pb.DagBlocks)
 	if len(db.Blocks) <= 0 {
 		log.Warn("no block need to get", "processID", ps.processID)
 		return nil
@@ -80,19 +57,10 @@ func (ps *PeerSync) processGetBlocks(pe *peers.Peer, blocks []*hash.Hash) *Proce
 	return ps.processGetBlockDatas(pe, changePBHashsToHashs(db.Blocks))
 }
 
-func (s *Sync) GetDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
-	var err error
-	defer func() {
-		cancel()
-	}()
-	pe := s.peers.Get(stream.Conn().RemotePeer())
-	if pe == nil {
-		return ErrPeerUnknown
-	}
+func (s *Sync) GetDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
 	m, ok := msg.(*pb.Inventory)
 	if !ok {
-		err = fmt.Errorf("message is not type *MsgFilterLoad")
+		err := fmt.Errorf("message is not type *MsgFilterLoad")
 		return ErrMessage(err)
 	}
 	s.peerSync.msgChan <- &GetDatasMsg{pe: pe, data: m}

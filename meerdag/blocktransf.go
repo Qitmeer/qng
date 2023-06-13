@@ -229,7 +229,7 @@ func (bd *MeerDAG) ValidBlock(block IBlock) {
 	bd.stateLock.Lock()
 	defer bd.stateLock.Unlock()
 
-	block.Valid()
+	block.GetState().Valid()
 	bd.commitBlock.AddPair(block.GetID(), block)
 }
 
@@ -237,7 +237,7 @@ func (bd *MeerDAG) InvalidBlock(block IBlock) {
 	bd.stateLock.Lock()
 	defer bd.stateLock.Unlock()
 
-	block.Invalid()
+	block.GetState().Invalid()
 	bd.commitBlock.AddPair(block.GetID(), block)
 }
 

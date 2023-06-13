@@ -35,17 +35,37 @@ const (
 
 	// p2p message error
 	ErrMessage
+
+	// Generic rule error
+	ErrGeneric
+
+	// peer connect frequent
+	ErrConnectFrequent
+
+	// Sequence error
+	ErrSequence
+
+	// revalidate error
+	ErrRevalidate
+
+	// libp2p connect
+	ErrLibp2pConnect
 )
 
 var p2pErrorCodeStrings = map[ErrorCode]string{
-	ErrNone:         "No error and success",
-	ErrStreamWrite:  "ErrStreamWrite",
-	ErrStreamRead:   "ErrStreamRead",
-	ErrStreamBase:   "ErrStreamBase",
-	ErrPeerUnknown:  "ErrPeerUnknown",
-	ErrBadPeer:      "ErrBadPeer",
-	ErrDAGConsensus: "ErrDAGConsensus",
-	ErrMessage:      "ErrMessage",
+	ErrNone:            "No error and success",
+	ErrStreamWrite:     "ErrStreamWrite",
+	ErrStreamRead:      "ErrStreamRead",
+	ErrStreamBase:      "ErrStreamBase",
+	ErrPeerUnknown:     "ErrPeerUnknown",
+	ErrBadPeer:         "ErrBadPeer",
+	ErrDAGConsensus:    "ErrDAGConsensus",
+	ErrMessage:         "ErrMessage",
+	ErrGeneric:         "ErrGeneric",
+	ErrConnectFrequent: "ErrConnectFrequent",
+	ErrSequence:        "ErrSequence",
+	ErrRevalidate:      "ErrRevalidate",
+	ErrLibp2pConnect:   "ErrLibp2pConnect",
 }
 
 func (e ErrorCode) String() string {
@@ -63,11 +83,50 @@ func (e ErrorCode) IsStream() bool {
 	return e == ErrStreamRead || e == ErrStreamWrite || e == ErrStreamBase
 }
 
+func (e ErrorCode) IsDAGConsensus() bool {
+	return e == ErrDAGConsensus
+}
+
 type Error struct {
 	Code  ErrorCode
 	Error error
 }
 
+func (e *Error) String() string {
+	if e.Error == nil {
+		return e.Code.String()
+	}
+	return fmt.Sprintf("%s, %s", e.Code.String(), e.Error.Error())
+}
+
+func (e *Error) Add(err string) {
+	if e.Error == nil {
+		e.Error = fmt.Errorf("%s", err)
+		return
+	}
+	e.Error = fmt.Errorf("%s, %s", e.Error.Error(), err)
+}
+
+func (e *Error) AddError(err error) {
+	if e.Error == nil {
+		e.Error = fmt.Errorf("%s", err.Error())
+		return
+	}
+	e.Error = fmt.Errorf("%s, %s", e.Error.Error(), err.Error())
+}
+
+func (e *Error) ToError() error {
+	return fmt.Errorf(e.String())
+}
+
 func NewError(code ErrorCode, e error) *Error {
 	return &Error{code, e}
+}
+
+func NewErrorStr(code ErrorCode, e string) *Error {
+	return &Error{code, fmt.Errorf(e)}
+}
+
+func NewSuccess() *Error {
+	return &Error{Code: ErrNone}
 }

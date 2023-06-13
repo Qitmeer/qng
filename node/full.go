@@ -53,7 +53,7 @@ func (qm *QitmeerFull) APIs() []api.API {
 }
 
 func (qm *QitmeerFull) RegisterP2PService() error {
-	peerServer, err := p2p.NewService(qm.node.Config, qm.node.consensus.Events(), qm.node.Params)
+	peerServer, err := p2p.NewService(qm.node.Config, qm.node.consensus, qm.node.Params)
 	if err != nil {
 		return err
 	}
@@ -327,6 +327,6 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	}
 	qm.Services().LowestPriority(qm.GetTxManager())
 	qm.Services().LowestPriority(qm.GetPeerServer())
-
+	qm.Services().LowestPriority(qm.GetBlockChain())
 	return &qm, nil
 }

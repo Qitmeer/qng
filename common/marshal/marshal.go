@@ -124,7 +124,7 @@ func MarshJsonVin(tx *types.Transaction) []json.Vin {
 		// disbuf, _ := txscript.DisasmString(sig)  //TODO, the Disasm is not fully work for the cross-chain tx
 		vinList[0].ScriptSig = &json.ScriptSig{
 			// Asm: disbuf,
-			Hex: string(sig),
+			Hex: common.ToTxHexStr(sig),
 		}
 		vinList[0].Txid = "0x" + tx.TxIn[0].PreviousOut.Hash.String()
 		return vinList

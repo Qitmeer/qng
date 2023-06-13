@@ -5,9 +5,9 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/meerevm/cmd"
 	"github.com/Qitmeer/qng/meerevm/meer"
-	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/version"
@@ -36,33 +36,6 @@ func indexCmd() *cli.Command {
 		Usage:       "index manager",
 		Description: "index manager",
 		Subcommands: []*cli.Command{
-			&cli.Command{
-				Name:        "dropvmblockindex",
-				Aliases:     []string{"dv"},
-				Usage:       "Deletes the vm block index from the database on start up and then exits",
-				Description: "Deletes the vm block index from the database on start up and then exits",
-				Action: func(ctx *cli.Context) error {
-					cfg := config.Cfg
-					defer func() {
-						if log.LogWrite() != nil {
-							log.LogWrite().Close()
-						}
-					}()
-					interrupt := system.InterruptListener()
-					log.Info("System info", "QNG Version", version.String(), "Go version", runtime.Version())
-					log.Info("System info", "Home dir", cfg.HomeDir)
-					if cfg.NoFileLogging {
-						log.Info("File logging disabled")
-					}
-					db, err := common.LoadBlockDB(cfg)
-					if err != nil {
-						log.Error("load block database", "error", err)
-						return err
-					}
-					defer db.Close()
-					return index.DropVMBlockIndex(db, interrupt)
-				},
-			},
 			&cli.Command{
 				Name:        "dropinvalidtxindex",
 				Aliases:     []string{"di"},
@@ -135,7 +108,6 @@ func consensusCmd() *cli.Command {
 					amana.Cleanup(cfg)
 					//
 					cfg.InvalidTxIndex = false
-					cfg.VMBlockIndex = false
 					cfg.AddrIndex = false
 					cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
 					err = cons.Init()

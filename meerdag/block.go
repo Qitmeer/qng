@@ -1,19 +1,22 @@
 package meerdag
 
 import (
+	"bytes"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"io"
 )
 
-//The abstract inferface is used to dag block
+// The abstract inferface is used to dag block
 type IBlockData interface {
 	// Get hash of block
 	GetHash() *hash.Hash
 
 	// Get all parents set,the dag block has more than one parent
 	GetParents() []*hash.Hash
+
+	GetMainParent() *hash.Hash
 
 	// Timestamp
 	GetTimestamp() int64
@@ -22,25 +25,13 @@ type IBlockData interface {
 	GetPriority() int
 }
 
-//The interface of block
+// The interface of block
 type IBlock interface {
 	// Return block ID
 	GetID() uint
 
 	// Return the hash of block. It will be a pointer.
 	GetHash() *hash.Hash
-
-	// Acquire the layer of block
-	GetLayer() uint
-
-	// Setting the order of block
-	SetOrder(o uint)
-
-	// Acquire the order of block
-	GetOrder() uint
-
-	// IsOrdered
-	IsOrdered() bool
 
 	AddParent(parent IBlock)
 
@@ -64,20 +55,11 @@ type IBlock interface {
 	// GetMainParent
 	GetMainParent() uint
 
-	// Setting the weight of block
-	SetWeight(weight uint64)
-
-	// Acquire the weight of block
-	GetWeight() uint64
+	// Acquire the layer of block
+	GetLayer() uint
 
 	// Acquire the height of block in main chain
 	GetHeight() uint
-
-	// SetStatus
-	SetStatus(status model.BlockStatus)
-
-	// GetStatus
-	GetStatus() model.BlockStatus
 
 	// encode
 	Encode(w io.Writer) error
@@ -90,17 +72,26 @@ type IBlock interface {
 	SetData(data IBlockData)
 	IsLoaded() bool
 
-	// valid block data
-	Valid()
-
-	// invalid block data
-	Invalid()
-
 	AttachParent(ib IBlock)
 	DetachParent(ib IBlock)
 
 	AttachChild(ib IBlock)
 	DetachChild(ib IBlock)
+
+	// GetState
+	GetState() model.BlockState
+
+	// TODO:
+	Bytes() []byte
+
+	// Setting the order of block
+	SetOrder(o uint)
+
+	// Acquire the order of block
+	GetOrder() uint
+
+	// IsOrdered
+	IsOrdered() bool
 }
 
 // It is the element of a DAG. It is the most basic data unit.
@@ -111,13 +102,11 @@ type Block struct {
 	children *IdSet
 
 	mainParent uint
-	weight     uint64
-	order      uint
 	layer      uint
 	height     uint
-	status     model.BlockStatus
 
-	data IBlockData
+	data  IBlockData
+	state model.BlockState
 }
 
 // Return block ID
@@ -199,16 +188,6 @@ func (b *Block) RemoveChild(child uint) {
 	b.children.Remove(child)
 }
 
-// Setting the weight of block
-func (b *Block) SetWeight(weight uint64) {
-	b.weight = weight
-}
-
-// Acquire the weight of blue blocks
-func (b *Block) GetWeight() uint64 {
-	return b.weight
-}
-
 // Setting the layer of block
 func (b *Block) SetLayer(layer uint) {
 	b.layer = layer
@@ -221,17 +200,17 @@ func (b *Block) GetLayer() uint {
 
 // Setting the order of block
 func (b *Block) SetOrder(o uint) {
-	b.order = o
+	b.state.SetOrder(uint64(o))
 }
 
 // Acquire the order of block
 func (b *Block) GetOrder() uint {
-	return b.order
+	return uint(b.state.GetOrder())
 }
 
 // IsOrdered
 func (b *Block) IsOrdered() bool {
-	return b.GetOrder() != MaxBlockOrder
+	return b.state.IsOrdered()
 }
 
 // Setting the height of block in main chain
@@ -295,15 +274,6 @@ func (b *Block) Encode(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-
-	err = s.WriteElements(w, uint64(b.weight))
-	if err != nil {
-		return err
-	}
-	err = s.WriteElements(w, uint32(b.order))
-	if err != nil {
-		return err
-	}
 	err = s.WriteElements(w, uint32(b.layer))
 	if err != nil {
 		return err
@@ -312,7 +282,17 @@ func (b *Block) Encode(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	return s.WriteElements(w, byte(b.status))
+
+	bs, err := b.state.Bytes()
+	if err != nil {
+		return err
+	}
+	err = s.WriteElements(w, uint64(len(bs)))
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(bs)
+	return err
 }
 
 // decode
@@ -370,20 +350,6 @@ func (b *Block) Decode(r io.Reader) error {
 	}
 	b.mainParent = uint(mainParent)
 
-	var weight uint64
-	err = s.ReadElements(r, &weight)
-	if err != nil {
-		return err
-	}
-	b.weight = uint64(weight)
-
-	var order uint32
-	err = s.ReadElements(r, &order)
-	if err != nil {
-		return err
-	}
-	b.order = uint(order)
-
 	var layer uint32
 	err = s.ReadElements(r, &layer)
 	if err != nil {
@@ -398,30 +364,22 @@ func (b *Block) Decode(r io.Reader) error {
 	}
 	b.height = uint(height)
 
-	var status byte
-	err = s.ReadElements(r, &status)
+	//
+	var bsSize uint64
+	err = s.ReadElements(r, &bsSize)
 	if err != nil {
 		return err
 	}
-	b.status = model.BlockStatus(status)
+	bs := make([]byte, bsSize)
+	_, err = r.Read(bs)
+	if err != nil {
+		return err
+	}
+	b.state, err = createBlockStateFromBytes(bs)
+	if err != nil {
+		return err
+	}
 	return nil
-}
-
-// SetStatus
-func (b *Block) SetStatus(status model.BlockStatus) {
-	b.status = status
-}
-
-func (b *Block) GetStatus() model.BlockStatus {
-	return b.status
-}
-
-func (b *Block) SetStatusFlags(flags model.BlockStatus) {
-	b.status |= flags
-}
-
-func (b *Block) UnsetStatusFlags(flags model.BlockStatus) {
-	b.status &^= flags
 }
 
 func (b *Block) GetData() IBlockData {
@@ -434,14 +392,6 @@ func (b *Block) SetData(data IBlockData) {
 
 func (b *Block) IsLoaded() bool {
 	return b.data != nil
-}
-
-func (b *Block) Valid() {
-	b.UnsetStatusFlags(model.StatusInvalid)
-}
-
-func (b *Block) Invalid() {
-	b.SetStatusFlags(model.StatusInvalid)
 }
 
 func (b *Block) AttachParent(ib IBlock) {
@@ -494,4 +444,19 @@ func (b *Block) DetachChild(ib IBlock) {
 		return
 	}
 	b.children.Add(ib.GetID())
+}
+
+func (b *Block) Bytes() []byte {
+	var buff bytes.Buffer
+	err := b.Encode(&buff)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return buff.Bytes()
+}
+
+// GetState
+func (b *Block) GetState() model.BlockState {
+	return b.state
 }

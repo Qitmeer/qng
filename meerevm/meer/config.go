@@ -65,7 +65,7 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	econfig.Miner.ExtraData = []byte{byte(0)}
 	econfig.Miner.External = &MeerPool{}
 
-	econfig.TxPool.NoLocals = true
+	econfig.TxPool.NoLocals = false
 
 	nodeConf := node.DefaultConfig
 

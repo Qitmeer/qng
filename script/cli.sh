@@ -144,6 +144,11 @@ function save_mempool(){
   get_result "$data"
 }
 
+function clean_mempool(){
+  local data='{"jsonrpc":"2.0","method":"cleanMempool","params":[],"id":1}'
+  get_result "$data"
+}
+
 function miner_info(){
   local data='{"jsonrpc":"2.0","method":"getMinerInfo","params":[],"id":1}'
   get_result "$data"
@@ -166,6 +171,24 @@ function get_block_by_hash(){
     fullTx="true"
   fi
   local data='{"jsonrpc":"2.0","method":"getBlock","params":["'$block_hash'",'$verbose','$inclTx','$fullTx'],"id":1}'
+  get_result "$data"
+}
+
+function get_block_by_number(){
+  local block_number=$1
+  local verbose=$2
+  if [ "$verbose" == "" ]; then
+    verbose="true"
+  fi
+  local inclTx=$3
+  if [ "$inclTx" == "" ]; then
+    inclTx="true"
+  fi
+  local fullTx=$4
+  if [ "$fullTx" == "" ]; then
+    fullTx="true"
+  fi
+  local data='{"jsonrpc":"2.0","method":"getBlockByNumber","params":['$block_number','$verbose','$inclTx','$fullTx'],"id":1}'
   get_result "$data"
 }
 
@@ -361,6 +384,11 @@ function get_block_template(){
   get_result "$data"
 }
 
+function get_mining_stats(){
+  local data='{"jsonrpc":"2.0","method":"miner_getMiningStats","params":[],"id":1}'
+  get_result "$data"
+}
+
 function get_mainchain_height(){
   local data='{"jsonrpc":"2.0","method":"getMainChainHeight","params":[],"id":1}'
   get_result "$data"
@@ -442,6 +470,35 @@ function pause() {
 
 function reset_peers() {
   local data='{"jsonrpc":"2.0","method":"p2p_resetPeers","params":[],"id":null}'
+  get_result "$data"
+}
+
+function set_libp2p_log_level(){
+  local level=$1
+  local data='{"jsonrpc":"2.0","method":"p2p_setLibp2pLogLevel","params":["'$level'"],"id":1}'
+  get_result "$data"
+}
+
+function ban_list(){
+  local data='{"jsonrpc":"2.0","method":"p2p_banlist","params":[],"id":null}'
+  get_result "$data"
+}
+
+function remove_ban(){
+  local bhost=$1
+  local data='{"jsonrpc":"2.0","method":"p2p_removeBan","params":["'$bhost'"],"id":1}'
+  get_result "$data"
+}
+
+function check_consistency() {
+  local hashOrOrder=$1
+  local data='{"jsonrpc":"2.0","method":"p2p_checkConsistency","params":["'$hashOrOrder'"],"id":1}'
+  get_result "$data"
+}
+
+function disable_relay_tx() {
+  local disable=$1
+  local data='{"jsonrpc":"2.0","method":"p2p_disableRelayTx","params":['$disable'],"id":1}'
   get_result "$data"
 }
 
@@ -565,17 +622,6 @@ function get_coinbase(){
     verbose="false"
   fi
   local data='{"jsonrpc":"2.0","method":"getCoinbase","params":["'$block_hash'",'$verbose'],"id":1}'
-  get_result "$data"
-}
-
-function ban_list(){
-  local data='{"jsonrpc":"2.0","method":"test_banlist","params":[],"id":null}'
-  get_result "$data"
-}
-
-function remove_ban(){
-  local bhost=$1
-  local data='{"jsonrpc":"2.0","method":"test_removeBan","params":["'$bhost'"],"id":1}'
   get_result "$data"
 }
 
@@ -758,20 +804,10 @@ function to_base64() {
 function usage(){
   echo "chain  :"
   echo "  nodeinfo"
-  echo "  peerinfo"
-  echo "  reloadpeers"
-  echo "  addpeer <p2p address>"
-  echo "  delpeer <p2p id>"
-  echo "  ping"
-  echo "  pause"
-  echo "  resetpeers"
-  echo "  networkinfo"
   echo "  rpcinfo"
   echo "  rpcmax <max>"
   echo "  main  <hash>"
   echo "  stop"
-  echo "  banlist"
-  echo "  removeban"
   echo "  loglevel [trace, debug, info, warn, error, critical]"
   echo "  timeinfo"
   echo "  subsidy"
@@ -788,6 +824,7 @@ function usage(){
   echo "block  :"
   echo "  block <order|hash>"
   echo "  blockbyhash <hash>"
+  echo "  blockbynumber <evm number>"
   echo "  blockid <id>"
   echo "  blockhash <order>"
   echo "  block_count"
@@ -797,7 +834,6 @@ function usage(){
   echo "  weight <hash>"
   echo "  orphanstotal"
   echo "  isblue <hash>   ;return [0:not blue;  1：blue  2：Cannot confirm]"
-  echo "  iscurrent"
   echo "  tips"
   echo "  coinbase <hash>"
   echo "  fees <hash>"
@@ -823,10 +859,12 @@ function usage(){
   echo "  getutxo <tx_id> <index> <include_mempool,default=true>"
   echo "miner  :"
   echo "  template"
+  echo "  miningstats"
   echo "  generate <num>"
   echo "  mempool"
   echo "  mempool_count"
   echo "  savemempool"
+  echo "  cleanmempool"
   echo "  minerinfo"
   echo "  submitblock"
   echo "  submitblockheader"
@@ -835,6 +873,21 @@ function usage(){
   echo "  unlock (accountIndex) password timeout"
   echo "  lock (address)"
   echo "  sendtoaddress fromAddress addressAmounts({\"RmN6q2ZdNaCtgpq2BE5ZaUbfQxXwRU1yTYf\":{\"amount\":100000000,\"coinid\":0}}) locktime"
+  echo "p2p  :"
+  echo "  peerinfo"
+  echo "  reloadpeers"
+  echo "  addpeer <p2p address>"
+  echo "  delpeer <p2p id>"
+  echo "  ping"
+  echo "  pause"
+  echo "  resetpeers"
+  echo "  networkinfo"
+  echo "  banlist"
+  echo "  removeban"
+  echo "  libp2ploglevel"
+  echo "  iscurrent"
+  echo "  consistency <hashOrOrder>"
+  echo "  disablerelaytx <bool>"
 }
 
 # -------------------
@@ -1064,6 +1117,9 @@ elif [ "$1" == "blockid" ]; then
 elif [ "$1" == "loglevel" ]; then
   shift
   set_log_level $@
+elif [ "$1" == "libp2ploglevel" ]; then
+  shift
+  set_libp2p_log_level $@
 elif [ "$1" == "blockv2" ]; then
   shift
   get_block_v2 $@
@@ -1094,6 +1150,10 @@ elif [ "$1" == "blockbyhash" ]; then
   shift
   get_block_by_hash $@
 
+elif [ "$1" == "blockbynumber" ]; then
+  shift
+  get_block_by_number $@
+
 elif [ "$1" == "header" ]; then
   shift
   get_blockheader_by_hash $@
@@ -1105,6 +1165,10 @@ elif [ "$1" == "main" ]; then
 elif [ "$1" == "template" ]; then
     shift
     get_block_template $@ | jq .
+
+elif [ "$1" == "miningstats" ]; then
+    shift
+    get_mining_stats $@ | jq .
 
 elif [ "$1" == "mainHeight" ]; then
     shift
@@ -1224,6 +1288,13 @@ elif [ "$1" == "banlist" ]; then
 elif [ "$1" == "removeban" ]; then
   shift
   remove_ban $@
+elif [ "$1" == "consistency" ]; then
+  shift
+  check_consistency $@
+
+elif [ "$1" == "disablerelaytx" ]; then
+  shift
+  disable_relay_tx $@
 
 ## Tx
 elif [ "$1" == "tx" ]; then
@@ -1293,6 +1364,10 @@ elif [ "$1" == "mempool_count" ]; then
 elif [ "$1" == "savemempool" ]; then
   shift
   save_mempool $@
+
+elif [ "$1" == "cleanmempool" ]; then
+  shift
+  clean_mempool $@
 
 elif [ "$1" == "minerinfo" ]; then
   shift

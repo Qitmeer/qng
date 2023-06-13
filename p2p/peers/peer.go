@@ -29,6 +29,7 @@ var (
 const (
 	MinBroadcastRecord  = 10
 	BroadcastRecordLife = 30 * time.Minute
+	BadResponseLife     = 30 * time.Second
 )
 
 // Peer represents a connected p2p network remote node.
@@ -56,6 +57,10 @@ type Peer struct {
 	rateTasks map[string]*time.Timer
 
 	broadcast map[string]interface{}
+
+	reconnect uint64
+
+	mempoolreq time.Time
 }
 
 func (p *Peer) GetID() peer.ID {
@@ -71,16 +76,28 @@ func (p *Peer) IDWithAddress() string {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
+	return p.idWithAddress()
+}
+
+func (p *Peer) idWithAddress() string {
 	return fmt.Sprintf("%s %s", p.pid, p.address)
 }
 
 // BadResponses obtains the number of bad responses we have received from the given remote peer.
 // This will error if the peer does not exist.
-func (p *Peer) BadResponses() int {
+func (p *Peer) BadResponses() []*BadResponse {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	return p.badResponses
+}
+
+func (p *Peer) badResponseStrs() []string {
+	brs := []string{}
+	for _, v := range p.badResponses {
+		brs = append(brs, v.String())
+	}
+	return brs
 }
 
 // IsBad states if the peer is to be considered bad.
@@ -92,29 +109,38 @@ func (p *Peer) IsBad() bool {
 }
 
 func (p *Peer) isBad() bool {
-	return p.badResponses >= MaxBadResponses
+	l := len(p.badResponses)
+	if l <= 0 {
+		return false
+	}
+	return time.Since(p.badResponses[l-1].Time) <= BadResponseLife
 }
 
 // IncrementBadResponses increments the number of bad responses we have received from the given remote peer.
-func (p *Peer) IncrementBadResponses(reason string) {
+func (p *Peer) IncrementBadResponses(err *common.Error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	p.badResponses++
-
-	if p.isBad() {
-		log.Info(fmt.Sprintf("I am bad peer:%s reason:%s", p.pid.String(), reason))
-	} else {
-		log.Debug(fmt.Sprintf("Bad responses:%s reason:%s", p.pid.String(), reason))
+	if p.badResponses == nil {
+		p.badResponses = []*BadResponse{}
 	}
-}
+	l := len(p.badResponses)
+	br := &BadResponse{Time: time.Now(), Err: err}
+	if l <= 0 {
+		br.ID = 1
+	} else {
+		br.ID = p.badResponses[l-1].ID + 1
+	}
+	if l > 0 && p.badResponses[l-1].Err.String() == err.String() {
+		p.badResponses[l-1] = br
+	} else {
+		p.badResponses = append(p.badResponses, br)
+	}
 
-func (p *Peer) Decay() {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	if p.badResponses > 0 {
-		p.badResponses--
+	log.Debug("Bad responses", "peer", p.idWithAddress(), "err", err.String())
+	//
+	if len(p.badResponses) > MaxBadResponses {
+		p.badResponses = p.badResponses[1:]
 	}
 }
 
@@ -122,7 +148,9 @@ func (p *Peer) ResetBad() {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	p.badResponses = 0
+	p.badResponses = []*BadResponse{}
+
+	log.Debug(fmt.Sprintf("Bad responses reset:%s", p.pid.String()))
 }
 
 func (p *Peer) UpdateAddrDir(record *qnr.Record, address ma.Multiaddr, direction network.Direction) {
@@ -219,7 +247,13 @@ func (p *Peer) IsActive() bool {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
-	return p.peerState.IsConnected() || p.peerState.IsConnecting()
+	if p.isBad() {
+		return false
+	}
+	if !p.canConnectWithNetwork() {
+		return false
+	}
+	return p.peerState.IsConnected()
 }
 
 func (p *Peer) IsConnected() bool {
@@ -250,6 +284,7 @@ func (p *Peer) SetChainState(chainState *pb.ChainState) {
 	p.chainStateLastUpdated = time.Now()
 	p.timeOffset = int64(p.chainState.Timestamp) - roughtime.Now().Unix()
 	p.graphStateTime = time.Now()
+	p.stateRootOrder = uint64(chainState.GraphState.MainOrder)
 	log.Trace(fmt.Sprintf("SetChainState(%s) : MainHeight=%d", p.pid.ShortString(), chainState.GraphState.MainHeight))
 }
 
@@ -305,23 +340,26 @@ func (p *Peer) StatsSnapshot() (*StatsSnap, error) {
 	defer p.lock.RUnlock()
 
 	ss := &StatsSnap{
-		PeerID:     p.pid.String(),
-		Protocol:   p.protocolVersion(),
-		Genesis:    p.genesis(),
-		Services:   p.services(),
-		Name:       p.getName(),
-		Version:    p.getVersion(),
-		Network:    p.getNetwork(),
-		State:      p.peerState,
-		Direction:  p.direction,
-		TimeOffset: p.timeOffset,
-		ConnTime:   time.Since(p.conTime),
-		LastSend:   p.lastSend,
-		LastRecv:   p.lastRecv,
-		BytesSent:  p.bytesSent,
-		BytesRecv:  p.bytesRecv,
-		IsCircuit:  p.isCircuit(),
-		Bads:       p.badResponses,
+		PeerID:         p.pid,
+		Protocol:       p.protocolVersion(),
+		Genesis:        p.genesis(),
+		Services:       p.services(),
+		Name:           p.getName(),
+		Version:        p.getVersion(),
+		Network:        p.getNetwork(),
+		State:          p.peerState.IsConnected(),
+		Direction:      p.direction,
+		TimeOffset:     p.timeOffset,
+		ConnTime:       time.Since(p.conTime),
+		LastSend:       p.lastSend,
+		LastRecv:       p.lastRecv,
+		BytesSent:      p.bytesSent,
+		BytesRecv:      p.bytesRecv,
+		IsCircuit:      p.isCircuit(),
+		Bads:           p.badResponseStrs(),
+		ReConnect:      p.reconnect,
+		StateRoot:      p.stateRootAndOrder(),
+		MempoolReqTime: p.mempoolreq,
 	}
 	n := p.node()
 	if n != nil {
@@ -374,6 +412,21 @@ func (p *Peer) genesis() *hash.Hash {
 		return nil
 	}
 	return genesisHash
+}
+
+func (p *Peer) SetStateRoot(stateRoot *hash.Hash, order uint64) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.stateRoot = stateRoot
+	p.stateRootOrder = order
+}
+
+func (p *Peer) stateRootAndOrder() string {
+	if p.stateRoot == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s (order:%d)", p.stateRoot.String(), p.stateRootOrder)
 }
 
 func (p *Peer) Services() protocol.ServiceFlag {
@@ -585,6 +638,10 @@ func (p *Peer) getNetwork() string {
 func (p *Peer) CanConnectWithNetwork() bool {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+	return p.canConnectWithNetwork()
+}
+
+func (p *Peer) canConnectWithNetwork() bool {
 	network := p.getNetwork()
 	if len(network) <= 0 {
 		return true
@@ -659,6 +716,27 @@ func (p *Peer) UpdateBroadcast() {
 			}
 		}
 	}
+}
+
+func (p *Peer) IncreaseReConnect() {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.reconnect++
+}
+
+func (p *Peer) GetMempoolReqTime() time.Time {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	return p.mempoolreq
+}
+
+func (p *Peer) SetMempoolReqTime(t time.Time) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.mempoolreq = t
 }
 
 func NewPeer(pid peer.ID, point *hash.Hash) *Peer {

@@ -66,3 +66,11 @@ func (api *PublicMempoolAPI) EstimateFee(numBlocks int64) (interface{}, error) {
 	}
 	return float64(feeRate), nil
 }
+
+func (api *PublicMempoolAPI) CleanMempool() (interface{}, error) {
+	descs := api.txPool.TxDescs()
+	for i := range descs {
+		api.txPool.RemoveTransaction(descs[i].Tx,true)
+	}
+	return len(descs), nil
+}

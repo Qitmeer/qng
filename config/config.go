@@ -10,6 +10,7 @@ type Config struct {
 	ConfigFile         string   `short:"C" long:"configfile" description:"Path to configuration file"`
 	DataDir            string   `short:"b" long:"datadir" description:"Directory to store data"`
 	LogDir             string   `long:"logdir" description:"Directory to log output."`
+	LogRotatorSize     int64    `long:"logrotatorsize" description:"unit KB."`
 	NoFileLogging      bool     `long:"nofilelogging" description:"Disable file logging."`
 	Listener           string   `long:"listen" description:"Add an IP to listen for connections"`
 	DefaultPort        string   `long:"port" description:"Default p2p port."`
@@ -83,7 +84,6 @@ type Config struct {
 
 	// index
 	AddrIndex      bool `long:"addrindex" description:"Maintain a full address-based transaction index which makes the getrawtransactions RPC available"`
-	VMBlockIndex   bool `long:"vmblockindex" description:"Maintain a full vm block index which makes the GetTxIDByMeerEVMTxHash RPC available"`
 	InvalidTxIndex bool `long:"invalidtxindex" description:"Cache invalid transactions."`
 	DropAddrIndex  bool `long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
 	DropTxIndex    bool `long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
@@ -103,7 +103,7 @@ type Config struct {
 	Blacklist      []string `long:"blacklist" description:"Add some IP network or IP that will be banned. (eg. 192.168.1.0/24 or ::1)"`
 	MaxBadResp     int      `long:"maxbadresp" description:"maxbadresp is the maximum number of bad responses from a peer before we stop talking to it."`
 	Circuit        bool     `long:"circuit" description:"All peers will ignore dual channel mode detection"`
-
+	Consistency    bool     `long:"consistency" description:"Detect data consistency through P2P"`
 	// meerevm environment
 	EVMEnv string `long:"evmenv" description:"meer EVM environment"`
 

@@ -146,6 +146,9 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 	// Protect concurrent access.
 	mp.mtx.Lock()
 	if opreturn.IsMeerEVMTx(tx.Tx) {
+		if mp.cfg.BC.VMService().IsShutdown() {
+			return
+		}
 		err := mp.cfg.BC.VMService().RemoveTxFromMempool(tx.Tx)
 		if err != nil {
 			log.Error(err.Error())
@@ -197,7 +200,7 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 	}
 
 	if utxoView != nil {
-		txD.StartingPriority = CalcPriority(msgTx, utxoView, height, mp.cfg.BD)
+		txD.StartingPriority = CalcPriority(msgTx, utxoView, height, mp.cfg.BC)
 	}
 
 	if !types.IsCrossChainVMTx(tx.Tx) {
@@ -253,7 +256,7 @@ func (mp *TxPool) notify() {
 	}
 }
 
-//Call addTransaction
+// Call addTransaction
 func (mp *TxPool) AddTransaction(tx *types.Tx, height uint64, fee int64) {
 	mp.addTransaction(nil, tx, height, fee)
 }
@@ -618,7 +621,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	if isNew && !mp.cfg.Policy.DisableRelayPriority && txFee.Value < minFee {
 
 		currentPriority := CalcPriority(msgTx, utxoView,
-			nextBlockHeight, mp.cfg.BD)
+			nextBlockHeight, mp.cfg.BC)
 
 		if currentPriority <= MinHighPriority {
 			str := fmt.Sprintf("transaction %v has insufficient "+
@@ -841,8 +844,6 @@ func (mp *TxPool) MaybeAcceptTransaction(tx *types.Tx, isNew, rateLimit bool) ([
 //
 // This function MUST be called with the mempool lock held (for writes).
 func (mp *TxPool) removeOrphan(txHash *hash.Hash) {
-	log.Trace(fmt.Sprintf("Removing orphan transaction %v", txHash))
-
 	// Nothing to do if passed tx is not an orphan.
 	tx, exists := mp.orphans[*txHash]
 	if !exists {
@@ -865,6 +866,7 @@ func (mp *TxPool) removeOrphan(txHash *hash.Hash) {
 
 	// Remove the transaction from the orphan pool.
 	delete(mp.orphans, *txHash)
+	log.Trace(fmt.Sprintf("Removing orphan transaction %v", txHash))
 }
 
 // RemoveOrphan removes the passed orphan transaction from the orphan pool and
@@ -1104,7 +1106,7 @@ func (mp *TxPool) HaveAllTransactions(hashes []hash.Hash) bool {
 //
 // This function MUST be called with the mempool lock held (for reads).
 func (mp *TxPool) haveTransaction(hash *hash.Hash) bool {
-	return mp.isTransactionInPool(hash) || mp.isOrphanInPool(hash)
+	return mp.isTransactionInPool(hash, true) || mp.isOrphanInPool(hash)
 }
 
 // HaveTransaction returns whether or not the passed transaction already exists
@@ -1120,36 +1122,38 @@ func (mp *TxPool) HaveTransaction(hash *hash.Hash) bool {
 	return haveTx
 }
 
+func (mp *TxPool) HaveTransactionUTXO(hash *hash.Hash) bool {
+	// Protect concurrent access.
+	mp.mtx.RLock()
+	haveTx := mp.isTransactionInPool(hash, false) || mp.isOrphanInPool(hash)
+	mp.mtx.RUnlock()
+
+	return haveTx
+}
+
 // isTransactionInPool returns whether or not the passed transaction already
 // exists in the main pool.
 //
 // This function MUST be called with the mempool lock held (for reads).
-func (mp *TxPool) isTransactionInPool(hash *hash.Hash) bool {
+// all: include evm tx
+func (mp *TxPool) isTransactionInPool(hash *hash.Hash, all bool) bool {
 	if _, exists := mp.pool[*hash]; exists {
 		return true
 	}
-	etxs, _, err := mp.cfg.BC.VMService().GetTxsFromMempool()
-	if err != nil {
+	if !all {
 		return false
 	}
-
-	for _, tx := range etxs {
-		th := tx.TxHash()
-		if hash.IsEqual(&th) {
-			return true
-		}
-	}
-	return false
+	return mp.cfg.BC.VMService().HasTx(hash)
 }
 
 // IsTransactionInPool returns whether or not the passed transaction already
 // exists in the main pool.
 //
 // This function is safe for concurrent access.
-func (mp *TxPool) IsTransactionInPool(hash *hash.Hash) bool {
+func (mp *TxPool) IsTransactionInPool(hash *hash.Hash, all bool) bool {
 	// Protect concurrent access.
 	mp.mtx.RLock()
-	inPool := mp.isTransactionInPool(hash)
+	inPool := mp.isTransactionInPool(hash, all)
 	mp.mtx.RUnlock()
 
 	return inPool

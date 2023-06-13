@@ -48,4 +48,5 @@ type Config struct {
 	DisableListen  bool
 	LANPeers       []string
 	IsCircuit      bool
+	Consistency    bool
 }

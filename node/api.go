@@ -8,7 +8,6 @@ package node
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/marshal"
-	"github.com/Qitmeer/qng/common/math"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/core/json"
@@ -65,7 +64,7 @@ func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 		ProtocolVersion: int32(protocol.ProtocolVersion),
 		TotalSubsidy:    best.TotalSubsidy,
 		TimeOffset:      int64(api.node.GetBlockChain().TimeSource().Offset().Seconds()),
-		Connections:     int32(len(api.node.GetPeerServer().Peers().Connected())),
+		Connections:     int32(len(api.node.GetPeerServer().Peers().Active())),
 		PowDiff: &json.PowDiff{
 			CurrentDiff: getDifficultyRatio(powNodes, api.node.node.Params, pow.MEERXKECCAKV1),
 		},
@@ -75,6 +74,7 @@ func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 		Modules:          []string{cmds.DefaultServiceNameSpace, cmds.MinerNameSpace, cmds.TestNameSpace, cmds.LogNameSpace, cmds.P2PNameSpace, cmds.WalletNameSpace},
 	}
 	ret.GraphState = marshal.GetGraphStateResult(best.GraphState)
+	ret.StateRoot = best.StateRoot.String()
 	hostdns := api.node.GetPeerServer().HostDNS()
 	if hostdns != nil {
 		ret.DNS = hostdns.String()
@@ -152,77 +152,6 @@ func (api *PublicBlockChainAPI) GetRpcInfo() (interface{}, error) {
 
 func (api *PublicBlockChainAPI) GetTimeInfo() (interface{}, error) {
 	return fmt.Sprintf("Now:%s offset:%s", roughtime.Now(), roughtime.Offset()), nil
-}
-
-func (api *PublicBlockChainAPI) GetNetworkInfo() (interface{}, error) {
-	ps := api.node.GetPeerServer()
-	peers := ps.Peers().StatsSnapshots()
-	nstat := &json.NetworkStat{MaxConnected: ps.Config().MaxPeers,
-		MaxInbound: ps.Config().MaxInbound, Infos: []*json.NetworkInfo{}}
-	infos := map[string]*json.NetworkInfo{}
-	gsups := map[string][]time.Duration{}
-
-	for _, p := range peers {
-		nstat.TotalPeers++
-
-		if p.Services&protocol.Relay > 0 {
-			nstat.TotalRelays++
-		}
-		//
-		if len(p.Network) <= 0 {
-			continue
-		}
-
-		info, ok := infos[p.Network]
-		if !ok {
-			info = &json.NetworkInfo{Name: p.Network}
-			infos[p.Network] = info
-			nstat.Infos = append(nstat.Infos, info)
-
-			gsups[p.Network] = []time.Duration{0, 0, math.MaxInt64}
-		}
-		info.Peers++
-		if p.State.IsConnected() {
-			info.Connecteds++
-			nstat.TotalConnected++
-
-			gsups[p.Network][0] = gsups[p.Network][0] + p.GraphStateDur
-			if p.GraphStateDur > gsups[p.Network][1] {
-				gsups[p.Network][1] = p.GraphStateDur
-			}
-			if p.GraphStateDur < gsups[p.Network][2] {
-				gsups[p.Network][2] = p.GraphStateDur
-			}
-		}
-		if p.Services&protocol.Relay > 0 {
-			info.Relays++
-		}
-	}
-	for k, gu := range gsups {
-		info, ok := infos[k]
-		if !ok {
-			continue
-		}
-		if info.Connecteds > 0 {
-			avegs := time.Duration(0)
-			if info.Connecteds > 2 {
-				avegs = gu[0] - gu[1] - gu[2]
-				if avegs < 0 {
-					avegs = 0
-				}
-				cons := info.Connecteds - 2
-				avegs = time.Duration(int64(avegs) / int64(cons))
-
-			} else {
-				avegs = time.Duration(int64(gu[0]) / int64(info.Connecteds))
-			}
-
-			info.AverageGS = avegs.Truncate(time.Second).String()
-			info.MaxGS = gu[1].Truncate(time.Second).String()
-			info.MinGS = gu[2].Truncate(time.Second).String()
-		}
-	}
-	return nstat, nil
 }
 
 func (api *PublicBlockChainAPI) GetSubsidy() (interface{}, error) {
@@ -306,26 +235,6 @@ func (api *PrivateBlockChainAPI) Stop() (interface{}, error) {
 	default:
 	}
 	return "Qitmeer stopping.", nil
-}
-
-// Banlist
-func (api *PrivateBlockChainAPI) Banlist() (interface{}, error) {
-	bl := api.node.GetPeerServer().GetBanlist()
-	bls := []*json.GetBanlistResult{}
-	for k, v := range bl {
-		bls = append(bls, &json.GetBanlistResult{ID: k, Bads: v})
-	}
-	return bls, nil
-}
-
-// RemoveBan
-func (api *PrivateBlockChainAPI) RemoveBan(id *string) (interface{}, error) {
-	ho := ""
-	if id != nil {
-		ho = *id
-	}
-	api.node.GetPeerServer().RemoveBan(ho)
-	return true, nil
 }
 
 // SetRpcMaxClients

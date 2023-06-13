@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-//LL
+// LL
 // gbtNonceRange is two 32-bit big-endian hexadecimal integers which
 // represent the valid ranges of nonces returned by the getblocktemplate
 // RPC.
@@ -202,7 +202,6 @@ func (w *GBTWorker) getResult(useCoinbaseValue bool, submitOld *bool) (*json.Get
 		}
 		transactions = append(transactions, resultTx)
 	}
-
 	//parents
 	parents := []json.GetBlockTemplateResultPt{}
 	for _, v := range template.Block.Parents {
@@ -294,7 +293,8 @@ func (w *GBTWorker) getResult(useCoinbaseValue bool, submitOld *bool) (*json.Get
 
 		reply.CoinbaseTxn = &resultTx
 	}
-
+	log.Debug("gbtdetail", "txcount", len(reply.Transactions), "parents", parents, "prehash",
+		reply.PreviousHash, "longpollid", reply.LongPollID)
 	return &reply, nil
 }
 
@@ -317,7 +317,7 @@ func builderScript(builder *txscript.ScriptBuilder) []byte {
 	return script
 }
 
-//LL
+// LL
 // encodeTemplateID encodes the passed details into an ID that can be used to
 // uniquely identify a block template.
 func encodeTemplateID(prevHash hash.Hash, lastGenerated time.Time) string {

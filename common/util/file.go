@@ -3,6 +3,7 @@ package util
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 // FilesExists reports whether the named file or directory exists.
@@ -28,4 +29,18 @@ func ReadFile(path string) ([]byte, error) {
 		return nil, err
 	}
 	return ba, nil
+}
+
+func GetPathByBrother(name string, brother string) (string, error) {
+	bp, err := filepath.Abs(brother)
+	if err != nil {
+		return "", err
+	}
+	retPath := filepath.Join(bp, "../")
+	var retPathAbs string
+	retPathAbs, err = filepath.Abs(retPath)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(retPathAbs, name), nil
 }

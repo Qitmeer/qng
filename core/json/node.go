@@ -14,6 +14,7 @@ type InfoNodeResult struct {
 	BuildVersion        string                              `json:"buildversion"`
 	ProtocolVersion     int32                               `json:"protocolversion"`
 	TotalSubsidy        uint64                              `json:"totalsubsidy,omitempty"`
+	StateRoot           string                              `json:"stateroot,omitempty"`
 	GraphState          *GetGraphStateResult                `json:"graphstate,omitempty"`
 	TimeOffset          int64                               `json:"timeoffset,omitempty"`
 	PowDiff             *PowDiff                            `json:"pow_diff,omitempty"`
@@ -29,28 +30,32 @@ type InfoNodeResult struct {
 
 // GetPeerInfoResult models the data returned from the getpeerinfo command.
 type GetPeerInfoResult struct {
-	ID         string               `json:"id"`
-	QNR        string               `json:"qnr,omitempty"`
-	Address    string               `json:"address"`
-	State      string               `json:"state,omitempty"`
-	Protocol   uint32               `json:"protocol,omitempty"`
-	Genesis    string               `json:"genesis,omitempty"`
-	Services   string               `json:"services,omitempty"`
-	Name       string               `json:"name,omitempty"`
-	Direction  string               `json:"direction,omitempty"`
-	GraphState *GetGraphStateResult `json:"graphstate,omitempty"`
-	GSUpdate   string               `json:"gsupdate,omitempty"`
-	SyncNode   bool                 `json:"syncnode,omitempty"`
-	TimeOffset int64                `json:"timeoffset"`
-	LastSend   string               `json:"lastsend,omitempty"`
-	LastRecv   string               `json:"lastrecv,omitempty"`
-	BytesSent  uint64               `json:"bytessent,omitempty"`
-	BytesRecv  uint64               `json:"bytesrecv,omitempty"`
-	ConnTime   string               `json:"conntime,omitempty"`
-	Version    string               `json:"version,omitempty"`
-	Network    string               `json:"network,omitempty"`
-	Circuit    bool                 `json:"circuit,omitempty"`
-	Bads       int                  `json:"bads,omitempty"`
+	ID             string               `json:"id"`
+	QNR            string               `json:"qnr,omitempty"`
+	Address        string               `json:"address"`
+	State          bool                 `json:"state,omitempty"`
+	Active         bool                 `json:"active,omitempty"`
+	Protocol       uint32               `json:"protocol,omitempty"`
+	Genesis        string               `json:"genesis,omitempty"`
+	Services       string               `json:"services,omitempty"`
+	Name           string               `json:"name,omitempty"`
+	Direction      string               `json:"direction,omitempty"`
+	StateRoot      string               `json:"stateroot,omitempty"`
+	GraphState     *GetGraphStateResult `json:"graphstate,omitempty"`
+	GSUpdate       string               `json:"gsupdate,omitempty"`
+	SyncNode       bool                 `json:"syncnode,omitempty"`
+	TimeOffset     int64                `json:"timeoffset"`
+	LastSend       string               `json:"lastsend,omitempty"`
+	LastRecv       string               `json:"lastrecv,omitempty"`
+	BytesSent      uint64               `json:"bytessent,omitempty"`
+	BytesRecv      uint64               `json:"bytesrecv,omitempty"`
+	ConnTime       string               `json:"conntime,omitempty"`
+	Version        string               `json:"version,omitempty"`
+	Network        string               `json:"network,omitempty"`
+	Circuit        bool                 `json:"circuit,omitempty"`
+	ReConnect      uint64               `json:"reconnect,omitempty"`
+	Bads           []string             `json:"bads,omitempty"`
+	MempoolReqTime string               `json:"mempoolreqtime,omitempty"`
 }
 
 // GetGraphStateResult data
@@ -62,8 +67,14 @@ type GetGraphStateResult struct {
 }
 
 type GetBanlistResult struct {
-	ID   string `json:"id"`
-	Bads int    `json:"bads"`
+	PeerID string         `json:"peerid"`
+	Bads   []*BadResponse `json:"bads"`
+}
+
+type BadResponse struct {
+	ID    uint64 `json:"id"`
+	Time  string `json:"time"`
+	Error string `json:"error"`
 }
 
 type ConsensusDeploymentDesc struct {

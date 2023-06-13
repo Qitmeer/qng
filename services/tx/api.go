@@ -8,7 +8,6 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/common/math"
-	"github.com/Qitmeer/qng/consensus/model"
 	qconsensus "github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain/token"
@@ -224,7 +223,7 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 		ib := api.txManager.GetChain().BlockDAG().GetBlock(blkHash)
 		if ib != nil {
 			confirmations = int64(api.txManager.GetChain().BlockDAG().GetConfirmations(ib.GetID()))
-			txsvalid = !ib.GetStatus().KnownInvalid()
+			txsvalid = !ib.GetState().GetStatus().KnownInvalid()
 		}
 
 		if mtx.Tx.IsCoinBase() {
@@ -248,20 +247,22 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 // 2. vout           (numeric, required)               The index of the output
 // 3. includemempool (boolean, optional, default=true) Include the mempool when true
 //
-//Result:
-//{
+// Result:
+// {
 // "bestblock": "value",        (string)          The block hash that contains the transaction output
 // "confirmations": n,          (numeric)         The number of confirmations
 // "amount": n.nnn,             (numeric)         The transaction amount
 // "scriptPubKey": {            (object)          The public key script used to pay coins as a JSON object
-//  "asm": "value",             (string)          Disassembly of the script
-//  "hex": "value",             (string)          Hex-encoded bytes of the script
-//  "reqSigs": n,               (numeric)         The number of required signatures
-//  "type": "value",            (string)          The type of the script (e.g. 'pubkeyhash')
-//  "addresses": ["value",...], (array of string) The qitmeer addresses associated with this script
-// },
+//
+//	 "asm": "value",             (string)          Disassembly of the script
+//	 "hex": "value",             (string)          Hex-encoded bytes of the script
+//	 "reqSigs": n,               (numeric)         The number of required signatures
+//	 "type": "value",            (string)          The type of the script (e.g. 'pubkeyhash')
+//	 "addresses": ["value",...], (array of string) The qitmeer addresses associated with this script
+//	},
+//
 // "coinbase": true|false,      (boolean)         Whether or not the transaction is a coinbase
-//}
+// }
 func (api *PublicTxAPI) GetUtxo(txHash hash.Hash, vout uint32, includeMempool *bool) (interface{}, error) {
 
 	// If requested and the tx is available in the mempool try to fetch it
@@ -871,15 +872,11 @@ func (api *PublicTxAPI) GetTxIDByMeerEVMTxHash(etxh hash.Hash) (interface{}, err
 	if bid == 0 {
 		return nil, fmt.Errorf("No meerevm tx:%s", etxh.String())
 	}
-	vmbiStore := api.txManager.consensus.VMBlockIndexStore()
-	if vmbiStore == nil {
-		return nil, fmt.Errorf("You must be enable by --vmblockindex")
+	b := api.txManager.GetChain().GetBlockByNumber(bid)
+	if b == nil {
+		return nil, fmt.Errorf("Can't find block: number=%d  evm tx hash=%s", bid, etxh.String())
 	}
-	bh, err := vmbiStore.Get(model.NewStagingArea(), bid)
-	if err != nil {
-		return nil, err
-	}
-	block, err := api.txManager.GetChain().FetchBlockByHash(bh)
+	block, err := api.txManager.GetChain().FetchBlockByHash(b.GetHash())
 	if err != nil {
 		return nil, err
 	}
@@ -1026,7 +1023,7 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 				return nil, fmt.Errorf("Can't find block %s", blockRegion.Hash)
 			}
 
-			if blockNode.GetStatus().KnownInvalid() {
+			if blockNode.GetState().GetStatus().KnownInvalid() {
 				return nil, fmt.Errorf("Vin is  illegal %s", blockRegion.Hash)
 			}
 

@@ -93,7 +93,7 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	if onEnd := log.LogAndMeasureExecutionTime(log.Root(), "NewBlockTemplate"); onEnd != nil {
 		defer onEnd()
 	}
-	bc:=consensus.BlockChain().(*blockchain.BlockChain)
+	bc := consensus.BlockChain().(*blockchain.BlockChain)
 	subsidyCache := bc.FetchSubsidyCache()
 	bd := bc.BlockDAG()
 	best := bc.BestSnapshot()
@@ -198,6 +198,14 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	}
 	hasCrossTx := false
 	// =====
+	checkSpecialSigOpCost := func(tx *types.Tx) (bool, int64) {
+		tokenSOC := int64(blockchain.CountSigOps(tx))
+		if coinbaseSigOpCost+tokenSigOpCost+tokenSOC > blockchain.MaxSigOpsPerBlock {
+			log.Debug("Skipping tx because it would exceed the maximum sigops per block", "hash", tx.Hash().String(), "cur", coinbaseSigOpCost+tokenSigOpCost, "add", tokenSOC)
+			return false, 0
+		}
+		return true, tokenSOC
+	}
 
 	log.Debug("Inclusion to new block", "transactions", len(sourceTxns))
 
@@ -224,10 +232,12 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 					blockSize, len(blockTxns)))
 				break
 			}
-
+			ok, tokenSOC := checkSpecialSigOpCost(tx)
+			if !ok {
+				continue
+			}
 			blockTxns = append(blockTxns, tx)
 			txFees = append(txFees, 0)
-			tokenSOC := int64(blockchain.CountSigOps(tx))
 			txSigOpCosts = append(txSigOpCosts, tokenSOC)
 			tokenSigOpCost += tokenSOC
 			blockSize += txSize
@@ -260,9 +270,12 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 				}
 				hasCrossTx = true
 			}
+			ok, tokenSOC := checkSpecialSigOpCost(tx)
+			if !ok {
+				continue
+			}
 			blockTxns = append(blockTxns, tx)
 			txFees = append(txFees, 0)
-			tokenSOC := int64(blockchain.CountSigOps(tx))
 			txSigOpCosts = append(txSigOpCosts, tokenSOC)
 			tokenSigOpCost += tokenSOC
 			blockSize += txSize
@@ -332,7 +345,7 @@ mempool:
 				originHash := &txIn.PreviousOut.Hash
 				entry := utxos.LookupEntry(txIn.PreviousOut)
 				if entry == nil || entry.IsSpent() {
-					if !txpool.HaveTransaction(originHash) {
+					if !txpool.HaveTransactionUTXO(originHash) {
 						log.Trace(fmt.Sprintf("Skipping tx %s because it "+
 							"references unspent output %v "+
 							"which is not available",

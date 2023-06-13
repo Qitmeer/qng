@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"runtime"
 )
 
@@ -177,7 +178,11 @@ func (vm *VM) ConnectBlock(block consensus.Block) (uint64, error) {
 }
 
 func (vm *VM) DisconnectBlock(block consensus.Block) (uint64, error) {
-	return vm.mchain.DisconnectBlock(block)
+	return 0, nil
+}
+
+func (vm *VM) RewindTo(state model.BlockState) error {
+	return vm.mchain.RewindTo(state)
 }
 
 func (vm *VM) ParseBlock([]byte) (consensus.Block, error) {
@@ -226,7 +231,7 @@ func (vm *VM) GetBalance(addre string) (int64, error) {
 
 func (vm *VM) VerifyTx(tx model.Tx) (int64, error) {
 	if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
-		txb := common.FromHex(string(tx.GetData()))
+		txb := tx.GetData()
 		var txe = &types.Transaction{}
 		if err := txe.UnmarshalBinary(txb); err != nil {
 			return 0, fmt.Errorf("rlp decoding failed: %v", err)
@@ -245,7 +250,7 @@ func (vm *VM) VerifyTx(tx model.Tx) (int64, error) {
 
 func (vm *VM) VerifyTxSanity(tx model.Tx) error {
 	if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
-		txb := common.FromHex(string(tx.GetData()))
+		txb := tx.GetData()
 		var txe = &types.Transaction{}
 		if err := txe.UnmarshalBinary(txb); err != nil {
 			return fmt.Errorf("rlp decoding failed: %v", err)
@@ -306,6 +311,10 @@ func (vm *VM) GetTxsFromMempool() ([]*qtypes.Transaction, []*hash.Hash, error) {
 	return vm.mchain.MeerPool().GetTxs()
 }
 
+func (vm *VM) HasTx(h *hash.Hash) bool {
+	return vm.mchain.MeerPool().HasTx(h)
+}
+
 func (vm *VM) GetMempoolSize() int64 {
 	return vm.mchain.MeerPool().GetSize()
 }
@@ -336,20 +345,32 @@ func (vm *VM) Genesis() *hash.Hash {
 	return nmbb
 }
 
-func (vm *VM) GetBlockID(bh *hash.Hash) uint64 {
-	bn := meer.ReadBlockNumber(vm.chain.Ether().ChainDb(), qcommon.ToEVMHash(bh))
-	if bn == nil {
-		return 0
-	}
-	return *bn
-}
-
 func (vm *VM) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
 	tx, _, blockNumber, _, _ := vm.chain.Backend().GetTransaction(nil, qcommon.ToEVMHash(txhash))
 	if tx == nil {
 		return 0
 	}
 	return blockNumber
+}
+
+func (vm *VM) GetCurStateRoot() common.Hash {
+	return vm.chain.Ether().BlockChain().CurrentBlock().Root
+}
+
+func (vm *VM) GetCurHeader() *types.Header {
+	return vm.chain.Ether().BlockChain().CurrentBlock()
+}
+
+func (vm *VM) BlockChain() *core.BlockChain {
+	return vm.chain.Ether().BlockChain()
+}
+
+func (vm *VM) ChainDatabase() ethdb.Database {
+	return vm.chain.Ether().ChainDb()
+}
+
+func (vm *VM) PrepareEnvironment(state model.BlockState) (*types.Header, error) {
+	return vm.mchain.PrepareEnvironment(state)
 }
 
 func New() *VM {

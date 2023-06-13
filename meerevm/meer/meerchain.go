@@ -7,7 +7,9 @@ package meer
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/consensus/vm"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
@@ -26,15 +28,15 @@ import (
 	"reflect"
 )
 
-const BLOCK_GASLIMIT = 0x10000000000000
-
 type MeerChain struct {
-	chain    *eth.ETHChain
-	meerpool *MeerPool
+	chain     *eth.ETHChain
+	meerpool  *MeerPool
+	consensus model.Consensus
 }
 
 func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
-	_, _, _, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
+	parent := b.chain.Ether().BlockChain().CurrentBlock()
+	_, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
 		return err
 	}
@@ -42,8 +44,8 @@ func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
 }
 
 func (b *MeerChain) ConnectBlock(block qconsensus.Block) (uint64, error) {
-	var err error
-	mblock, _, _, err := b.buildBlock(block.Transactions(), block.Timestamp().Unix())
+	parent := b.chain.Ether().BlockChain().CurrentBlock()
+	mblock, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
 		return 0, err
 	}
@@ -58,63 +60,31 @@ func (b *MeerChain) ConnectBlock(block qconsensus.Block) (uint64, error) {
 	//
 	mbh := qcommon.ToEVMHash(block.ID())
 	//
-	WriteBlockNumber(b.chain.Ether().ChainDb(), mbh, mblock.NumberU64())
-	//
 	log.Debug(fmt.Sprintf("MeerEVM Block:number=%d hash=%s txs=%d  => blockHash(%s) txs=%d", mblock.Number().Uint64(), mblock.Hash().String(), len(mblock.Transactions()), mbh.String(), len(block.Transactions())))
 
 	return mblock.NumberU64(), nil
 }
 
-func (b *MeerChain) DisconnectBlock(block qconsensus.Block) (uint64, error) {
-	curBlock := b.chain.Ether().BlockChain().CurrentBlock()
-	if curBlock == nil {
-		log.Error("Can't find current block")
-		return 0, nil
-	}
-
-	mbh := qcommon.ToEVMHash(block.ID())
-
-	bn := ReadBlockNumber(b.chain.Ether().ChainDb(), mbh)
-	if bn == nil {
-		return 0, nil
-	}
-	defer func() {
-		DeleteBlockNumber(b.chain.Ether().ChainDb(), mbh)
-	}()
-
-	if *bn > curBlock.Number.Uint64() {
-		return *bn, nil
-	}
-	parentNumber := *bn - 1
-	err := b.chain.Ether().BlockChain().SetHead(parentNumber)
-	if err != nil {
-		log.Error(err.Error())
-		return *bn, nil
-	}
-	newParent := b.chain.Ether().BlockChain().CurrentBlock()
-	if newParent == nil {
-		log.Error("Can't find current block")
-		return *bn, nil
-	}
-	log.Debug(fmt.Sprintf("Reorganize:%s(%d) => %s(%d)", curBlock.Hash().String(), curBlock.Number.Uint64(), newParent.Hash().String(), newParent.Number.Uint64()))
-	return *bn, nil
-}
-
-func (b *MeerChain) buildBlock(qtxs []model.Tx, timestamp int64) (*types.Block, types.Receipts, *state.StateDB, error) {
+func (b *MeerChain) buildBlock(parent *types.Header, qtxs []model.Tx, timestamp int64) (*types.Block, types.Receipts, *state.StateDB, error) {
 	config := b.chain.Config().Eth.Genesis.Config
 	engine := b.chain.Ether().Engine()
-	parent := types.NewBlockWithHeader(b.chain.Ether().BlockChain().CurrentBlock())
+	parentBlock := types.NewBlockWithHeader(parent)
 
 	uncles := []*types.Header{}
 
 	chainreader := &fakeChainReader{config: config}
 
-	statedb, err := b.chain.Ether().BlockChain().StateAt(parent.Root())
+	statedb, err := b.chain.Ether().BlockChain().StateAt(parentBlock.Root())
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	gaslimit := core.CalcGasLimit(parentBlock.GasLimit(), b.meerpool.config.GasCeil)
 
-	header := makeHeader(&b.chain.Config().Eth, parent, statedb, timestamp, 0)
+	if forks.NeedFixedGasLimit(parent.Number.Int64(), config.ChainID.Int64()) {
+		gaslimit = 0x10000000000000
+	}
+
+	header := makeHeader(&b.chain.Config().Eth, parentBlock, statedb, timestamp, gaslimit)
 
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(statedb)
@@ -212,7 +182,7 @@ func (b *MeerChain) fillBlock(qtxs []model.Tx, header *types.Header, statedb *st
 			}
 			header.Extra = txmb
 		} else if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
-			txb := common.FromHex(string(tx.GetData()))
+			txb := tx.GetData()
 			var txmb = &types.Transaction{}
 			if err := txmb.UnmarshalBinary(txb); err != nil {
 				return nil, nil, err
@@ -280,6 +250,118 @@ func (b *MeerChain) ETHChain() *eth.ETHChain {
 	return b.chain
 }
 
+func (b *MeerChain) prepareEnvironment(state model.BlockState) (*types.Header, error) {
+	curBlockHeader := b.chain.Ether().BlockChain().CurrentBlock()
+	if curBlockHeader.Number.Uint64() > state.GetEVMNumber() {
+		err := b.RewindTo(state)
+		if err != nil {
+			return nil, err
+		}
+		curBlockHeader = b.chain.Ether().BlockChain().CurrentBlock()
+	}
+	if curBlockHeader.Hash() == state.GetEVMHash() &&
+		curBlockHeader.Number.Uint64() == state.GetEVMNumber() {
+		return curBlockHeader, nil
+	}
+	getError := func(msg string) error {
+		return fmt.Errorf("meer chain env error:targetEVM.number=%d, targetEVM.hash=%s, targetState.order=%d, cur.number=%d, cur.hash=%s, %s", state.GetEVMNumber(), state.GetEVMHash().String(), state.GetOrder(), curBlockHeader.Number, curBlockHeader.Hash().String(), msg)
+	}
+	if state.GetOrder() <= 0 {
+		return nil, getError("reach genesis")
+	}
+	log.Info("Start to find cur block state", "state.order", state.GetOrder(), "evm.Number", state.GetEVMNumber(), "cur.number", curBlockHeader.Number.Uint64())
+	var curBlockState model.BlockState
+	list := []model.BlockState{state}
+	startState := b.consensus.BlockChain().GetBlockState(state.GetOrder() - 1)
+	for startState != nil && startState.GetEVMNumber() >= curBlockHeader.Number.Uint64() {
+		if startState.GetEVMNumber() == curBlockHeader.Number.Uint64() &&
+			startState.GetEVMHash() == curBlockHeader.Hash() {
+			curBlockState = startState
+			break
+		}
+		list = append(list, startState)
+		if startState.GetOrder() <= 0 {
+			break
+		}
+		startState = b.consensus.BlockChain().GetBlockState(startState.GetOrder() - 1)
+	}
+	if curBlockState == nil {
+		return nil, getError("Can't find cur block state")
+	}
+	log.Info("Find cur block state", "state.order", curBlockState.GetOrder(), "evm.Number", curBlockState.GetEVMNumber())
+	for i := len(list) - 1; i >= 0; i-- {
+		if list[i].GetStatus().KnownInvalid() {
+			continue
+		}
+		cur := b.chain.Ether().BlockChain().CurrentBlock()
+		if list[i].GetEVMNumber() == cur.Number.Uint64() {
+			continue
+		}
+		log.Info("Try to restore block state for EVM", "evm.hash", list[i].GetEVMHash().String(), "evm.number", list[i].GetEVMNumber(), "state.order", list[i].GetOrder())
+		block := b.chain.Ether().BlockChain().GetBlock(list[i].GetEVMHash(), list[i].GetEVMNumber())
+		if block != nil {
+			log.Info("Try to rebuild evm block", "state.order", list[i].GetOrder())
+			sb, err := b.consensus.BlockChain().BlockByOrder(list[i].GetOrder())
+			if err != nil {
+				return nil, getError(err.Error())
+			}
+			dtxs := list[i].GetDuplicateTxs()
+			if len(dtxs) > 0 {
+				for _, index := range dtxs {
+					sb.Transactions()[index].IsDuplicate = true
+				}
+			}
+
+			eb, err := vm.BuildEVMBlock(sb)
+			if err != nil {
+				return nil, getError(err.Error())
+			}
+			if len(eb.Transactions()) <= 0 {
+				return nil, getError("transactions is empty")
+			}
+			block, _, _, err = b.buildBlock(cur, eb.Transactions(), eb.Timestamp().Unix())
+			if err != nil {
+				return nil, getError(err.Error())
+			}
+		}
+		st, err := b.chain.Ether().BlockChain().InsertChain(types.Blocks{block})
+		if err != nil {
+			return nil, err
+		}
+		if st != 1 {
+			return nil, getError("insert chain")
+		}
+	}
+	cur := b.chain.Ether().BlockChain().CurrentBlock()
+	if cur.Hash() == state.GetEVMHash() &&
+		cur.Number.Uint64() == state.GetEVMNumber() {
+		return cur, nil
+	}
+	return nil, getError("prepare environment")
+}
+
+func (b *MeerChain) PrepareEnvironment(state model.BlockState) (*types.Header, error) {
+	return b.prepareEnvironment(state)
+}
+
+func (b *MeerChain) RewindTo(state model.BlockState) error {
+	curBlockHeader := b.chain.Ether().BlockChain().CurrentBlock()
+	if curBlockHeader.Number.Uint64() <= state.GetEVMNumber() {
+		return nil
+	}
+	log.Info("Try to rewind", "cur.number", curBlockHeader.Number.Uint64(), "cur.hash", curBlockHeader.Hash().String(), "target.evm.root", state.GetEVMRoot(), "target.evm.number", state.GetEVMNumber(), "target.evm.hash", state.GetEVMHash())
+	err := b.chain.Ether().BlockChain().SetHead(state.GetEVMNumber())
+	if err != nil {
+		return err
+	}
+	cur := b.chain.Ether().BlockChain().CurrentBlock()
+	if cur.Number.Uint64() <= state.GetEVMNumber() {
+		log.Info("Rewound", "cur.number", cur.Number.Uint64(), "cur.hash", cur.Hash().String(), "target.evm.root", state.GetEVMRoot(), "target.evm.number", state.GetEVMNumber(), "target.evm.hash", state.GetEVMHash())
+		return nil
+	}
+	return fmt.Errorf("Rewind fail:cur.number=%d, cur.hash=%s, target.evm.root=%s, target.evm.number=%d, target.evm.hash=%s", cur.Number.Uint64(), cur.Hash().String(), state.GetEVMRoot(), state.GetEVMNumber(), state.GetEVMHash())
+}
+
 func NewMeerChain(ctx qconsensus.Context) (*MeerChain, error) {
 	cfg := ctx.GetConfig()
 	eth.InitLog(cfg.DebugLevel, cfg.DebugPrintOrigins)
@@ -296,8 +378,9 @@ func NewMeerChain(ctx qconsensus.Context) (*MeerChain, error) {
 	}
 
 	mc := &MeerChain{
-		chain:    chain,
-		meerpool: chain.Config().Eth.Miner.External.(*MeerPool),
+		chain:     chain,
+		meerpool:  chain.Config().Eth.Miner.External.(*MeerPool),
+		consensus: ctx.GetConsensus(),
 	}
 	mc.meerpool.init(&chain.Config().Eth.Miner, chain.Config().Eth.Genesis.Config, chain.Ether().Engine(), chain.Ether(), chain.Ether().EventMux(), ctx)
 	return mc, nil
@@ -308,9 +391,7 @@ func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB
 	if timestamp <= ptt {
 		timestamp = ptt + 1
 	}
-	if gaslimit <= 0 {
-		gaslimit = BLOCK_GASLIMIT
-	}
+
 	header := &types.Header{
 		Root:       state.IntermediateRoot(cfg.Genesis.Config.IsEIP158(parent.Number())),
 		ParentHash: parent.Hash(),

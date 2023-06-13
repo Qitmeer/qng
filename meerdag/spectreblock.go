@@ -29,6 +29,10 @@ func (sd *SpectreBlockData) GetParents() []*hash.Hash {
 	return sd.parents
 }
 
+func (sd *SpectreBlockData) GetMainParent() *hash.Hash {
+	return sd.parents[0]
+}
+
 func (sd *SpectreBlockData) GetTimestamp() int64 {
 	return sd.timestamp
 }

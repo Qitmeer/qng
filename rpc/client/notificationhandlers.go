@@ -110,7 +110,7 @@ func parseReorganizationNtfnParams(params []json.RawMessage) (*hash.Hash, int64,
 
 	// Unmarshal second parameter as an integer.
 	var blockOrder int64
-	err = json.Unmarshal(params[1], &blockOrder)
+	err = json.Unmarshal(params[2], &blockOrder)
 	if err != nil {
 		return nil, 0, nil, err
 	}

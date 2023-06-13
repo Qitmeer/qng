@@ -13,9 +13,9 @@ import (
 )
 
 type Block struct {
-	Id   *hash.Hash
-	Txs  []model.Tx
-	Time time.Time
+	Id               *hash.Hash
+	Txs              []model.Tx
+	Time             time.Time
 }
 
 func (b *Block) ID() *hash.Hash {

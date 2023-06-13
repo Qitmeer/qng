@@ -8,6 +8,10 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 type ChainVM interface {
@@ -40,11 +44,19 @@ type ChainVM interface {
 	ConnectBlock(block Block) (uint64, error)
 
 	DisconnectBlock(block Block) (uint64, error)
+	RewindTo(state model.BlockState) error
 
 	ResetTemplate() error
 
 	Genesis() *hash.Hash
 
-	GetBlockID(bh *hash.Hash) uint64
 	GetBlockIDByTxHash(txhash *hash.Hash) uint64
+
+	GetCurStateRoot() common.Hash
+	GetCurHeader() *etypes.Header
+	BlockChain() *core.BlockChain
+	ChainDatabase() ethdb.Database
+	PrepareEnvironment(state model.BlockState) (*etypes.Header, error)
+
+	HasTx(h *hash.Hash) bool
 }

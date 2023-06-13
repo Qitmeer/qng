@@ -19,6 +19,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
@@ -81,7 +82,7 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource m
 	}
 
 	if block.Hash().String() == forks.BadBlockHashHex {
-		return fmt.Errorf("Bad block:%s\n", block.Hash().String())
+		return fmt.Errorf("Bad block:%s", block.Hash().String())
 	}
 
 	err = checkBlockHeaderSanity(header, timeSource, flags, chainParams, uint(height))
@@ -281,8 +282,8 @@ func checkBlockHeaderSanity(header *types.BlockHeader, timeSource model.MedianTi
 // target difficulty as claimed.
 //
 // The flags modify the behavior of this function as follows:
-//  - BFNoPoWCheck: The check to ensure the block hash is less than the target
-//    difficulty is not performed.
+//   - BFNoPoWCheck: The check to ensure the block hash is less than the target
+//     difficulty is not performed.
 func checkProofOfWork(header *types.BlockHeader, powConfig *pow.PowConfig, flags BehaviorFlags, mHeight uint) error {
 
 	// The block hash must be less than the claimed target unless the flag
@@ -547,7 +548,9 @@ func isNullOutpoint(outpoint *types.TxOutPoint) bool {
 // txscript.
 func CountSigOps(tx *types.Tx) int {
 	msgTx := tx.Transaction()
-
+	if opreturn.IsMeerEVMTx(msgTx) {
+		return 0
+	}
 	// Accumulate the number of signature operations in all transaction
 	// inputs.
 	totalSigOps := 0
@@ -570,8 +573,8 @@ func CountSigOps(tx *types.Tx) int {
 // on its position within the block chain.
 //
 // The flags modify the behavior of this function as follows:
-//  - BFFastAdd: The transactions are not checked to see if they are finalized
-//    and the somewhat expensive duplication transaction check is not performed.
+//   - BFFastAdd: The transactions are not checked to see if they are finalized
+//     and the somewhat expensive duplication transaction check is not performed.
 //
 // The flags are also passed to checkBlockHeaderContext.  See its documentation
 // for how the flags modify its behavior.
@@ -741,8 +744,8 @@ func (b *BlockChain) checkBlockSubsidy(block *types.SerializedBlock) error {
 // header which depend on its position within the block chain.
 //
 // The flags modify the behavior of this function as follows:
-//  - BFFastAdd: All checks except those involving comparing the header against
-//    the checkpoints are not performed.
+//   - BFFastAdd: All checks except those involving comparing the header against
+//     the checkpoints are not performed.
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) checkBlockHeaderContext(block *types.SerializedBlock, prevNode meerdag.IBlock, flags BehaviorFlags) error {
@@ -1356,12 +1359,11 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) err
 		return err
 	}
 
-	newNode := NewBlockNode(block, block.Block().Parents)
+	newNode := NewBlockNode(block)
 	virBlock := b.bd.CreateVirtualBlock(newNode)
 	if virBlock == nil {
 		return ruleError(ErrPrevBlockNotBest, "tipsNode")
 	}
-	virBlock.SetOrder(uint(block.Order()))
 	if virBlock.GetHeight() != block.Height() {
 		return ruleError(ErrPrevBlockNotBest, "tipsNode height")
 	}
@@ -1369,7 +1371,9 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) err
 	if mainParent == nil {
 		return ruleError(ErrPrevBlockNotBest, "main parent")
 	}
-
+	block.SetOrder(uint64(mainParent.GetOrder() + 1))
+	virBlock.SetOrder(uint(block.Order()))
+	virBlock.GetState().(*state.BlockState).SetDefault(mainParent.GetState().(*state.BlockState))
 	err = b.checkBlockContext(block, mainParent, flags)
 	if err != nil {
 		return err

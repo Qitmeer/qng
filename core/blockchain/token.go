@@ -140,7 +140,7 @@ func (b *BlockChain) updateTokenState(node meerdag.IBlock, block *types.Serializ
 	updates := []token.ITokenUpdate{}
 	for _, tx := range block.Transactions() {
 		if tx.IsDuplicate {
-			log.Trace(fmt.Sprintf("updateTokenBalance skip duplicate tx %v", tx.Hash()))
+			//log.Trace(fmt.Sprintf("updateTokenBalance skip duplicate tx %v", tx.Hash()))
 			continue
 		}
 
@@ -219,7 +219,7 @@ func (b *BlockChain) CheckTokenState(block *types.SerializedBlock) error {
 	updates := []token.ITokenUpdate{}
 	for _, tx := range block.Transactions() {
 		if tx.IsDuplicate {
-			log.Trace(fmt.Sprintf("updateTokenBalance skip duplicate tx %v", tx.Hash()))
+			//log.Trace(fmt.Sprintf("updateTokenBalance skip duplicate tx %v", tx.Hash()))
 			continue
 		}
 

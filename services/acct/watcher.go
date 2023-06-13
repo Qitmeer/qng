@@ -125,7 +125,7 @@ func BuildUTXOWatcher(op []byte, au *AcctUTXO, entry *utxo.UtxoEntry, am *Accoun
 	if ib == nil {
 		return nil
 	}
-	if ib.GetStatus().KnownInvalid() {
+	if ib.GetState().GetStatus().KnownInvalid() {
 		return nil
 	}
 	if au.IsCoinbase() {

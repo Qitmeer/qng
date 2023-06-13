@@ -163,6 +163,9 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 		block := blockSlice[0].(*types.SerializedBlock)
 		txds := []*types.TxDesc{}
 		for _, tx := range block.Transactions()[1:] {
+			if tm.IsShutdown() {
+				return
+			}
 			tm.MemPool().RemoveTransaction(tx, false)
 			tm.MemPool().RemoveDoubleSpends(tx)
 			tm.MemPool().RemoveOrphan(tx.Hash())
@@ -231,7 +234,6 @@ func NewTxManager(consensus model.Consensus, ntmgr vmconsensus.Notify) (*TxManag
 		SigCache:         sigCache,
 		PastMedianTime:   func() time.Time { return bc.BestSnapshot().MedianTime },
 		IndexManager:     consensus.IndexManager().(*index.Manager),
-		BD:               bc.BlockDAG(),
 		BC:               bc,
 		DataDir:          cfg.DataDir,
 		Expiry:           time.Duration(cfg.MempoolExpiry),

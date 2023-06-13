@@ -6,7 +6,6 @@ package synch
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
@@ -14,50 +13,31 @@ import (
 	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"sync/atomic"
 )
 
 const TXDATA_SSZ_HEAD_SIZE = 4
 
-func (s *Sync) sendTxRequest(ctx context.Context, id peer.ID, gtxs *pb.GetTxs) (*pb.Transactions, error) {
-	ctx, cancel := context.WithTimeout(ctx, ReqTimeout)
-	defer cancel()
-
-	stream, err := s.Send(ctx, gtxs, RPCTransaction, id)
-	if err != nil {
-		return nil, err
+func (s *Sync) sendTxRequest(stream network.Stream, pe *peers.Peer) (*pb.Transactions, *common.Error) {
+	e := ReadRspCode(stream, s.p2p)
+	if !e.Code.IsSuccess() {
+		e.Add("tx request rsp")
+		return nil, e
 	}
-
-	code, errMsg, err := ReadRspCode(stream, s.p2p)
-	if err != nil {
-		return nil, err
-	}
-
-	if !code.IsSuccess() {
-		s.Peers().IncrementBadResponses(stream.Conn().RemotePeer(), "tx request rsp")
-		closeStream(stream, s.p2p)
-		return nil, errors.New(errMsg)
-	}
-
 	msg := &pb.Transactions{}
 	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
-		return nil, err
+		return nil, common.NewError(common.ErrStreamRead, err)
 	}
-	closeStream(stream, s.p2p)
-	return msg, err
+	return msg, nil
 }
 
-func (s *Sync) txHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) *common.Error {
-	ctx, cancel := context.WithTimeout(ctx, HandleTimeout)
-	var err error
-	defer func() {
-		cancel()
-	}()
+func (s *Sync) txHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
 
 	m, ok := msg.(*pb.GetTxs)
 	if !ok {
-		err = fmt.Errorf("message is not type *pb.Transaction")
+		err := fmt.Errorf("message is not type *pb.Transaction")
 		return ErrMessage(err)
 	}
 
@@ -83,12 +63,7 @@ func (s *Sync) txHandler(ctx context.Context, msg interface{}, stream libp2pcore
 		}
 		pbtxs.Txs = append(pbtxs.Txs, pbtx)
 	}
-
-	e := s.EncodeResponseMsg(stream, pbtxs)
-	if e != nil {
-		return e
-	}
-	return nil
+	return s.EncodeResponseMsg(stream, pbtxs)
 }
 
 func (s *Sync) handleTxMsg(msg *pb.Transaction, pid peer.ID) (*hash.Hash, error) {
@@ -113,62 +88,51 @@ func (ps *PeerSync) processGetTxs(pe *peers.Peer, otxs []*hash.Hash) error {
 	if len(otxs) <= 0 {
 		return nil
 	}
-	txs := []*hash.Hash{}
-	for _, txh := range otxs {
-		if !ps.sy.p2p.TxMemPool().HaveTransaction(txh) {
-			txs = append(txs, txh)
-		}
-	}
-
 	txsM := map[string]struct{}{}
-	for i := 0; i < len(txs); i++ {
-		txsM[txs[i].String()] = struct{}{}
-	}
-
-	total := len(txsM)
-	txsM = map[string]struct{}{}
 	var gtxs *pb.GetTxs
-
-	for len(txsM) < total {
-		needSend := false
-		gtxs = &pb.GetTxs{Txs: []*pb.Hash{}}
-		for i := 0; i < len(txs); i++ {
-			_, ok := txsM[txs[i].String()]
-			if ok {
-				continue
-			}
-			gtxs.Txs = append(gtxs.Txs, &pb.Hash{Hash: txs[i].Bytes()})
-
-			if len(gtxs.Txs) >= MaxInvPerMsg {
-				needSend = true
-				break
-			}
+	for i, txh := range otxs {
+		if !ps.IsRunning() {
+			return fmt.Errorf("No run PeerSync\n")
 		}
-
-		if !needSend {
-			if len(gtxs.Txs) > 0 {
-				needSend = true
-			} else {
-				break
-			}
+		_, ok := txsM[txh.String()]
+		if ok {
+			continue
 		}
+		if ps.sy.p2p.TxMemPool().HaveTransaction(txh) {
+			continue
+		}
+		//
+		txsM[txh.String()] = struct{}{}
 
-		if needSend {
-			txs, err := ps.sy.sendTxRequest(ps.sy.p2p.Context(), pe.GetID(), gtxs)
+		if gtxs == nil {
+			gtxs = &pb.GetTxs{Txs: []*pb.Hash{}}
+		}
+		gtxs.Txs = append(gtxs.Txs, &pb.Hash{Hash: txh.Bytes()})
+		if len(gtxs.Txs) < MaxInvPerMsg && i < (len(otxs)-1) {
+			continue
+		}
+		if len(gtxs.Txs) <= 0 {
+			continue
+		}
+		ret, err := ps.sy.Send(pe, RPCTransaction, gtxs)
+		if err != nil {
+			return err
+		}
+		gtxs = nil
+		//
+		ptxs := ret.(*pb.Transactions)
+		if len(ptxs.Txs) <= 0 {
+			continue
+		}
+		for _, tx := range ptxs.Txs {
+			if !ps.IsRunning() {
+				return fmt.Errorf("No run PeerSync\n")
+			}
+			_, err := ps.sy.handleTxMsg(tx, pe.GetID())
 			if err != nil {
-				return err
-			}
-			for _, tx := range txs.Txs {
-				txh, err := ps.sy.handleTxMsg(tx, pe.GetID())
-				txsM[txh.String()] = struct{}{}
-
-				if err != nil {
-					log.Debug(err.Error())
-					continue
-				}
+				log.Debug(err.Error())
 			}
 		}
-
 	}
 	return nil
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/shutdown"
+	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/database"
@@ -132,6 +133,10 @@ type BlockChain struct {
 	consensus model.Consensus
 
 	progressLogger *progresslog.BlockProgressLogger
+
+	msgChan chan *processMsg
+	wg      sync.WaitGroup
+	quit    chan struct{}
 }
 
 func (b *BlockChain) Init() error {
@@ -276,7 +281,7 @@ func (b *BlockChain) initChainState() error {
 	mainTip := b.bd.GetMainChainTip()
 	mainTipNode := b.GetBlockNode(mainTip)
 	if mainTipNode == nil {
-		return fmt.Errorf("No main tip\n")
+		return fmt.Errorf("No main tip")
 	}
 
 	var block *types.SerializedBlock
@@ -297,8 +302,8 @@ func (b *BlockChain) initChainState() error {
 
 	b.TokenTipID = uint32(b.bd.GetBlockId(&state.tokenTipHash))
 	b.stateSnapshot = newBestState(mainTip.GetHash(), mainTipNode.Difficulty(), blockSize, numTxns,
-		b.CalcPastMedianTime(mainTip), state.totalTxns, b.bd.GetMainChainTip().GetWeight(),
-		b.bd.GetGraphState(), &state.tokenTipHash)
+		b.CalcPastMedianTime(mainTip), state.totalTxns, b.bd.GetMainChainTip().GetState().GetWeight(),
+		b.bd.GetGraphState(), &state.tokenTipHash, *mainTip.GetState().Root())
 	ts := b.GetTokenState(b.TokenTipID)
 	if ts == nil {
 		return fmt.Errorf("token state error")
@@ -314,15 +319,16 @@ func (b *BlockChain) createChainState() error {
 	genesisBlock := types.NewBlock(b.params.GenesisBlock)
 	genesisBlock.SetOrder(0)
 	header := &genesisBlock.Block().Header
-	node := NewBlockNode(genesisBlock, genesisBlock.Block().Parents)
+	node := NewBlockNode(genesisBlock)
 	_, _, ib, _ := b.bd.AddBlock(node)
+	ib.GetState().SetEVM(b.VMService().GetCurHeader())
 	//node.FlushToDB(b)
 	// Initialize the state related to the best block.  Since it is the
 	// genesis block, use its timestamp for the median time.
 	numTxns := uint64(len(genesisBlock.Block().Transactions))
 	blockSize := uint64(genesisBlock.Block().SerializeSize())
 	b.stateSnapshot = newBestState(node.GetHash(), node.Difficulty(), blockSize, numTxns,
-		time.Unix(node.GetTimestamp(), 0), numTxns, 0, b.bd.GetGraphState(), node.GetHash())
+		time.Unix(node.GetTimestamp(), 0), numTxns, 0, b.bd.GetGraphState(), node.GetHash(), *ib.GetState().Root())
 	b.TokenTipID = 0
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
@@ -407,6 +413,16 @@ func (b *BlockChain) Start() error {
 	if err := b.Service.Start(); err != nil {
 		return err
 	}
+	b.wg.Add(1)
+	go b.handler()
+
+	// prepare evm env
+	mainTip := b.bd.GetMainChainTip()
+	evmHead, err := b.VMService().PrepareEnvironment(mainTip.GetState())
+	if err != nil {
+		return err
+	}
+	log.Info("prepare evm environment", "mainTipOrder", mainTip.GetOrder(), "mainTipHash", mainTip.GetHash().String(), "hash", evmHead.Hash().String(), "number", evmHead.Number.Uint64(), "root", evmHead.Root.String())
 	return nil
 }
 
@@ -414,6 +430,8 @@ func (b *BlockChain) Stop() error {
 	if err := b.Service.Stop(); err != nil {
 		return err
 	}
+	close(b.quit)
+	b.wg.Wait()
 	return nil
 }
 
@@ -443,8 +461,8 @@ func (b *BlockChain) HasBlockInDB(h *hash.Hash) bool {
 // IsCurrent returns whether or not the chain believes it is current.  Several
 // factors are used to guess, but the key factors that allow the chain to
 // believe it is current are:
-//  - Latest block height is after the latest checkpoint (if enabled)
-//  - Latest block has a timestamp newer than 24 hours ago
+//   - Latest block height is after the latest checkpoint (if enabled)
+//   - Latest block has a timestamp newer than 24 hours ago
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) IsCurrent() bool {
@@ -456,8 +474,8 @@ func (b *BlockChain) IsCurrent() bool {
 // isCurrent returns whether or not the chain believes it is current.  Several
 // factors are used to guess, but the key factors that allow the chain to
 // believe it is current are:
-//  - Latest block height is after the latest checkpoint (if enabled)
-//  - Latest block has a timestamp newer than 24 hours ago
+//   - Latest block height is after the latest checkpoint (if enabled)
+//   - Latest block has a timestamp newer than 24 hours ago
 //
 // This function MUST be called with the chain state lock held (for reads).
 func (b *BlockChain) isCurrent() bool {
@@ -647,19 +665,23 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			panic(fmt.Errorf("No BlockOrderHelp"))
 		}
 		b.updateTokenState(n.Block, nil, true)
+		er := b.updateDefaultBlockState(n.Block)
+		if er != nil {
+			log.Error(er.Error())
+		}
 		//
 		block, err = b.fetchBlockByHash(n.Block.GetHash())
 		if err != nil {
 			panic(err)
 		}
-
+		log.Debug("detach block", "hash", n.Block.GetHash().String(), "old order", n.OldOrder, "status", n.Block.GetState().GetStatus().String())
 		block.SetOrder(uint64(n.OldOrder))
 		// Load all of the utxos referenced by the block that aren't
 		// already in the view.
 		var stxos []utxo.SpentTxOut
 		view := utxo.NewUtxoViewpoint()
 		view.SetViewpoints([]*hash.Hash{block.Hash()})
-		if !n.Block.GetStatus().KnownInvalid() {
+		if !n.Block.GetState().GetStatus().KnownInvalid() {
 			b.CalculateDAGDuplicateTxs(block)
 			err = b.fetchInputUtxos(b.db, block, view)
 			if err != nil {
@@ -692,7 +714,19 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			return err
 		}
 	}
-
+	for e := attachNodes.Front(); e != nil; e = e.Next() {
+		nodeBlock := e.Value.(meerdag.IBlock)
+		if !nodeBlock.IsOrdered() {
+			continue
+		}
+		startState := b.bd.GetBlockByOrder(nodeBlock.GetOrder() - 1).GetState()
+		err = b.VMService().RewindTo(startState)
+		if err != nil {
+			return err
+		}
+		break
+	}
+	isEVMInit := false
 	for e := attachNodes.Front(); e != nil; e = e.Next() {
 		nodeBlock := e.Value.(meerdag.IBlock)
 		if nodeBlock.GetID() == ib.GetID() {
@@ -709,7 +743,18 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			block.SetHeight(nodeBlock.GetHeight())
 		}
 		if !nodeBlock.IsOrdered() {
+			er := b.updateDefaultBlockState(nodeBlock)
+			if er != nil {
+				log.Error(er.Error())
+			}
 			continue
+		}
+		if !isEVMInit {
+			isEVMInit = true
+			err = b.prepareEVMEnvironment(nodeBlock)
+			if err != nil {
+				return err
+			}
 		}
 		view := utxo.NewUtxoViewpoint()
 		view.SetViewpoints([]*hash.Hash{nodeBlock.GetHash()})
@@ -719,22 +764,31 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			b.bd.InvalidBlock(nodeBlock)
 			stxos = []utxo.SpentTxOut{}
 			view.Clean()
-			log.Info(fmt.Sprintf("%s", err))
+			log.Warn(err.Error(), "block", nodeBlock.GetHash().String(), "order", nodeBlock.GetOrder())
 		}
 		err = b.connectBlock(nodeBlock, block, view, stxos, connectedBlocks)
 		if err != nil {
 			b.bd.InvalidBlock(nodeBlock)
+			er := b.updateDefaultBlockState(nodeBlock)
+			if er != nil {
+				log.Error(er.Error())
+			}
 			return err
 		}
-		if !nodeBlock.GetStatus().KnownInvalid() {
+		if !nodeBlock.GetState().GetStatus().KnownInvalid() {
 			b.bd.ValidBlock(nodeBlock)
 		}
-
+		b.bd.UpdateWeight(nodeBlock)
+		er := b.updateBlockState(nodeBlock, block)
+		if er != nil {
+			log.Error(er.Error())
+		}
+		log.Debug("attach block", "hash", nodeBlock.GetHash().String(), "order", nodeBlock.GetOrder(), "status", nodeBlock.GetState().GetStatus().String())
 	}
 
 	// Log the point where the chain forked and old and new best chain
 	// heads.
-	log.Debug(fmt.Sprintf("End DAG REORGANIZE: Old Len= %d;New Len= %d", attachNodes.Len(), detachNodes.Len()))
+	log.Info(fmt.Sprintf("End DAG REORGANIZE: Old Len= %d;New Len= %d", detachNodes.Len(), attachNodes.Len()))
 
 	return nil
 }
@@ -883,7 +937,7 @@ func (b *BlockChain) GetFees(h *hash.Hash) types.AmountMap {
 	if ib == nil {
 		return nil
 	}
-	if ib.GetStatus().KnownInvalid() {
+	if ib.GetState().GetStatus().KnownInvalid() {
 		return nil
 	}
 	block, err := b.FetchBlockByHash(h)
@@ -904,7 +958,7 @@ func (b *BlockChain) GetFeeByCoinID(h *hash.Hash, coinId types.CoinID) int64 {
 }
 
 func (b *BlockChain) CalcWeight(ib meerdag.IBlock, bi *meerdag.BlueInfo) int64 {
-	if ib.GetStatus().KnownInvalid() {
+	if ib.GetState().GetStatus().KnownInvalid() {
 		return 0
 	}
 	block, err := b.FetchBlockByHash(ib.GetHash())
@@ -1113,7 +1167,7 @@ func (b *BlockChain) Rebuild() error {
 
 		if i == 0 {
 			if b.indexManager != nil {
-				err = b.indexManager.ConnectBlock(block, nil, ib, 0)
+				err = b.indexManager.ConnectBlock(block, nil, ib)
 				if err != nil {
 					return err
 				}
@@ -1136,7 +1190,7 @@ func (b *BlockChain) Rebuild() error {
 			b.bd.InvalidBlock(ib)
 			return err
 		}
-		if !ib.GetStatus().KnownInvalid() {
+		if !ib.GetState().GetStatus().KnownInvalid() {
 			b.bd.ValidBlock(ib)
 		}
 		b.bd.UpdateWeight(ib)
@@ -1146,6 +1200,14 @@ func (b *BlockChain) Rebuild() error {
 		}
 	}
 	return nil
+}
+
+func (b *BlockChain) GetBlockState(order uint64) model.BlockState {
+	block := b.BlockDAG().GetBlockByOrder(uint(order))
+	if block == nil {
+		return nil
+	}
+	return block.GetState()
 }
 
 // New returns a BlockChain instance using the provided configuration details.
@@ -1190,11 +1252,14 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		shutdownTracker:    shutdown.NewTracker(config.DataDir),
 		headerList:         list.New(),
 		progressLogger:     progresslog.NewBlockProgressLogger("Processed", log),
+		msgChan:            make(chan *processMsg),
+		quit:               make(chan struct{}),
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
 	b.bd = meerdag.New(config.DAGType, b.CalcWeight,
-		1.0/float64(par.TargetTimePerBlock/time.Second), b.db, b.getBlockData)
+		1.0/float64(par.TargetTimePerBlock/time.Second),
+		b.db, b.getBlockData, state.CreateBlockState, state.CreateBlockStateFromBytes)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
 	b.bd.SetCacheSize(config.DAGCacheSize, config.BlockDataCacheSize)
 

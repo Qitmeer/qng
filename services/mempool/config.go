@@ -14,7 +14,6 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/index"
-	"github.com/Qitmeer/qng/vm/consensus"
 	"time"
 )
 
@@ -67,9 +66,6 @@ type Config struct {
 	SigCache *txscript.SigCache
 
 	IndexManager *index.Manager
-
-	// block dag
-	BD consensus.BlockDAG
 
 	// block chain
 	BC *blockchain.BlockChain

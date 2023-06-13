@@ -22,7 +22,7 @@ const (
 
 	// currentDatabaseVersion indicates what the current database
 	// version is.
-	currentDatabaseVersion = 12
+	currentDatabaseVersion = 13
 
 	// blockHdrSize is the size of a block header.  This is simply the
 	// constant from wire and is only provided here for convenience since

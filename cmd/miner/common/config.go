@@ -45,7 +45,8 @@ type CommandConfig struct {
 type FileConfig struct {
 	ConfigFile string `short:"C" long:"configfile" description:"Path to configuration file"`
 	// Debugging options
-	MinerLogFile string `long:"minerlog" description:"Write miner log file"`
+	MinerLogFile   string `long:"minerlog" description:"Write miner log file"`
+	LogRotatorSize int64  `long:"logrotatorsize" description:"log rotator size"`
 }
 
 type OptionalConfig struct {
@@ -166,10 +167,10 @@ func cleanAndExpandPath(path string) string {
 // line options.
 //
 // The configuration proceeds as follows:
-// 	1) Start with a default config with sane settings
-// 	2) Pre-parse the command line to check for an alternative config file
-// 	3) Load configuration file overwriting defaults with any specified options
-// 	4) Parse CLI options and overwrite/add any specified options
+//  1. Start with a default config with sane settings
+//  2. Pre-parse the command line to check for an alternative config file
+//  3. Load configuration file overwriting defaults with any specified options
+//  4. Parse CLI options and overwrite/add any specified options
 //
 // The above results in btcd functioning properly without any config settings
 // while still allowing the user to override settings with config files and
@@ -278,7 +279,10 @@ func LoadConfig() (*GlobalConfig, []string, error) {
 		os.Exit(0)
 	}
 	if fileCfg.MinerLogFile != "" {
-		l.InitLogRotator(fileCfg.MinerLogFile)
+		if fileCfg.LogRotatorSize <= 0 {
+			fileCfg.LogRotatorSize = 10 * 1024
+		}
+		l.InitLogRotator(fileCfg.MinerLogFile, fileCfg.LogRotatorSize)
 	}
 	l.Glogger().Verbosity(ConvertLogLevel(optionalCfg.LogLevel))
 	if poolCfg.Pool == "" && soloCfg.MinerAddr == "" {

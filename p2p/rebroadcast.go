@@ -2,11 +2,13 @@ package p2p
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/p2p/peers"
+	pb "github.com/Qitmeer/qng/p2p/proto/v1"
+	"github.com/Qitmeer/qng/p2p/synch"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/notifymgr/notify"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -44,8 +46,9 @@ func (r *Rebroadcast) Start() {
 
 	log.Info("Starting Rebroadcast")
 
-	r.wg.Add(1)
+	r.wg.Add(2)
 	go r.handler()
+	go r.mempoolHandler()
 }
 
 func (r *Rebroadcast) Stop() error {
@@ -62,6 +65,21 @@ func (r *Rebroadcast) Stop() error {
 	r.wg.Wait()
 	return nil
 
+}
+
+func (r *Rebroadcast) mempoolHandler() {
+	timer := time.NewTicker(params.ActiveNetParams.TargetTimePerBlock)
+out:
+	for {
+		select {
+		case <-timer.C:
+			r.onRegainMempool()
+		case <-r.quit:
+			break out
+		}
+	}
+	timer.Stop()
+	r.wg.Done()
 }
 
 func (r *Rebroadcast) handler() {
@@ -81,21 +99,25 @@ out:
 
 		case <-timer.C:
 			isCurrent := r.s.PeerSync().IsCurrent()
+			if !isCurrent {
+				timer.Reset(params.ActiveNetParams.TargetTimePerBlock)
+				break
+			}
 			nds := []*notify.NotifyData{}
+			startTime := time.Now()
 			for h, data := range pendingInvs {
 				dh := h
+				if time.Since(startTime) > time.Second {
+					break
+				}
 				if _, ok := data.(*types.TxDesc); ok {
 					if !r.s.TxMemPool().HaveTransaction(&dh) {
 						delete(pendingInvs, dh)
 						continue
 					}
-					if !isCurrent {
-						continue
-					}
 				}
 				nds = append(nds, &notify.NotifyData{Data: data})
 			}
-
 			if len(nds) > 0 {
 				r.s.RelayInventory(nds)
 			}
@@ -107,9 +129,6 @@ out:
 			timer.Reset(time.Duration(rt))
 
 			r.s.sy.Peers().UpdateBroadcasts()
-
-			r.onRegainMempool()
-
 		case <-r.quit:
 			break out
 		}
@@ -153,24 +172,24 @@ func (r *Rebroadcast) RegainMempool() {
 }
 
 func (r *Rebroadcast) onRegainMempool() {
-	mptxCount := r.s.TxMemPool().Count()
-	if !r.regainMP {
-		if mptxCount > 0 {
-			return
-		}
-	}
 	if !r.s.PeerSync().IsCurrent() {
 		return
 	}
+	mptxCount := r.s.TxMemPool().Count()
 
-	r.regainMP = false
-
-	r.s.sy.Peers().ForPeers(peers.PeerConnected, func(pe *peers.Peer) {
-		if !protocol.HasServices(pe.Services(), protocol.Full) {
-			return
+	canPeers := []*peers.Peer{}
+	for _, pe := range r.s.Peers().CanSyncPeers() {
+		if time.Since(pe.GetMempoolReqTime()) <= params.ActiveNetParams.TargetTimePerBlock {
+			continue
 		}
-		go r.s.sy.SendMempoolRequest(r.s.Context(), pe, uint64(mptxCount))
-	})
+		canPeers = append(canPeers, pe)
+	}
+	if len(canPeers) <= 0 {
+		return
+	}
+	index := rand.Intn(len(canPeers))
+	pe := canPeers[index]
+	go r.s.sy.Send(pe, synch.RPCMemPool, &pb.MemPoolRequest{TxsNum: uint64(mptxCount)})
 }
 
 func NewRebroadcast(s *Service) *Rebroadcast {

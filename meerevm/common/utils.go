@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-func ReverseBytes(bs *[]byte) {
+func ReverseBytes(bs *[]byte) *[]byte {
 	length := len(*bs)
 	for i := 0; i < length/2; i++ {
 		index := length - 1 - i
@@ -32,6 +32,7 @@ func ReverseBytes(bs *[]byte) {
 		(*bs)[index] = (*bs)[i]
 		(*bs)[i] = temp
 	}
+	return bs
 }
 
 func NewMeerEVMAddress(pubkeyHex string) (common.Address, error) {
@@ -85,13 +86,18 @@ func FromEVMHash(h common.Hash) *hash.Hash {
 	return th
 }
 
-func ToQNGTx(tx *types.Transaction, timestamp int64) *qtypes.Transaction {
+func ToQNGTx(tx *types.Transaction, timestamp int64, newEncoding bool) *qtypes.Transaction {
 	txmb, err := tx.MarshalBinary()
 	if err != nil {
+		log.Error(err.Error())
 		return nil
 	}
-	txmbHex := hexutil.Encode(txmb)
-
+	var txData []byte
+	if newEncoding {
+		txData = txmb
+	} else {
+		txData = []byte(hexutil.Encode(txmb))
+	}
 	qtxhb := tx.Hash().Bytes()
 	ReverseBytes(&qtxhb)
 	qtxh := hash.MustBytesToHash(qtxhb)
@@ -106,7 +112,7 @@ func ToQNGTx(tx *types.Transaction, timestamp int64) *qtypes.Transaction {
 		PreviousOut: *qtypes.NewOutPoint(&qtxh, qtypes.SupperPrevOutIndex),
 		Sequence:    uint32(qtypes.TxTypeCrossChainVM),
 		AmountIn:    qtypes.Amount{Id: qtypes.MEERB, Value: 0},
-		SignScript:  []byte(txmbHex),
+		SignScript:  txData,
 	})
 	mtx.AddTxOut(&qtypes.TxOutput{
 		Amount:   qtypes.Amount{Value: 0, Id: qtypes.MEERB},
@@ -151,4 +157,41 @@ func ProcessEnv(env string, identifier string, exclusionFlags []cli.Flag) ([]str
 	result = append(result, args...)
 
 	return result, nil
+}
+
+func DecodeTx(data []byte) (*types.Transaction, error) {
+	if len(data) <= 2 {
+		return nil, fmt.Errorf("No tx data:%v", data)
+	}
+	var txb []byte
+	if data[0] == 48 && data[1] == 120 {
+		txb = common.FromHex(string(data))
+	} else {
+		txb = data
+	}
+	var txmb = &types.Transaction{}
+	if err := txmb.UnmarshalBinary(txb); err != nil {
+		return nil, err
+	}
+	return txmb, nil
+}
+
+func ToTxHex(data []byte) []byte {
+	if len(data) <= 2 {
+		return nil
+	}
+	if data[0] == 48 && data[1] == 120 {
+		return common.FromHex(string(data))
+	}
+	return data
+}
+
+func ToTxHexStr(data []byte) string {
+	if len(data) <= 2 {
+		return ""
+	}
+	if data[0] == 48 && data[1] == 120 {
+		return string(data)
+	}
+	return hexutil.Encode(data)
 }

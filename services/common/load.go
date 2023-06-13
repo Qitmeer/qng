@@ -58,14 +58,15 @@ const (
 )
 
 var (
-	defaultHomeDir     = util.AppDataDir("qng", false)
-	defaultConfigFile  = filepath.Join(defaultHomeDir, defaultConfigFilename)
-	defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
-	defaultDbType      = "ffldb"
-	defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
-	defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
-	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
-	defaultDAGType     = "phantom"
+	defaultHomeDir        = util.AppDataDir("qng", false)
+	defaultConfigFile     = filepath.Join(defaultHomeDir, defaultConfigFilename)
+	defaultDataDir        = filepath.Join(defaultHomeDir, defaultDataDirname)
+	defaultDbType         = "ffldb"
+	defaultLogDir         = filepath.Join(defaultHomeDir, defaultLogDirname)
+	defaultLogRotatorSize = int64(1024 * 10)
+	defaultRPCKeyFile     = filepath.Join(defaultHomeDir, "rpc.key")
+	defaultRPCCertFile    = filepath.Join(defaultHomeDir, "rpc.cert")
+	defaultDAGType        = "phantom"
 )
 
 var (
@@ -116,6 +117,12 @@ var (
 			Usage:       "Directory to log output.",
 			Value:       defaultLogDir,
 			Destination: &cfg.LogDir,
+		},
+		&cli.Int64Flag{
+			Name:        "logrotatorsize",
+			Usage:       "Directory to log output.",
+			Value:       defaultLogRotatorSize,
+			Destination: &cfg.LogRotatorSize,
 		},
 		&cli.BoolFlag{
 			Name:        "nofilelogging",
@@ -214,11 +221,6 @@ var (
 			Name:        "dropaddrindex",
 			Usage:       "Deletes the address-based transaction index from the database on start up and then exits.",
 			Destination: &cfg.DropAddrIndex,
-		},
-		&cli.BoolFlag{
-			Name:        "vmblockindex",
-			Usage:       "Maintain a full vm block index which makes the GetTxIDByMeerEVMTxHash RPC available",
-			Destination: &cfg.VMBlockIndex,
 		},
 		&cli.BoolFlag{
 			Name:        "light",
@@ -576,6 +578,12 @@ var (
 			Usage:       "the min amount of auto collect",
 			Destination: &cfg.MinCollectAmount,
 		},
+		&cli.BoolFlag{
+			Name:        "consistency",
+			Usage:       "Detect data consistency through P2P",
+			Destination: &cfg.Consistency,
+			Value:       true,
+		},
 	}
 )
 
@@ -806,7 +814,7 @@ func LoadConfig(ctx *cli.Context, parsefile bool) (*config.Config, error) {
 
 		// Initialize log rotation.  After log rotation has been initialized, the
 		// logger variables may be used.
-		log.InitLogRotator(filepath.Join(cfg.LogDir, defaultLogFilename))
+		log.InitLogRotator(filepath.Join(cfg.LogDir, defaultLogFilename), cfg.LogRotatorSize)
 	}
 
 	// Parse, validate, and set debug log level(s).

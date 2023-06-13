@@ -5,7 +5,6 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/store/invalid_tx_index"
-	"github.com/Qitmeer/qng/consensus/store/vm_block_index"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
@@ -40,7 +39,6 @@ type consensus struct {
 	// clock time service
 	mediantimeSource model.MedianTimeSource
 
-	vmblockindexStore   model.VMBlockIndexStore
 	invalidtxindexStore model.InvalidTxIndexStore
 
 	blockchain   model.BlockChain
@@ -59,13 +57,6 @@ func (s *consensus) Init() error {
 		defer onEnd()
 	}
 
-	if s.cfg.VMBlockIndex {
-		vmblockindexStore, err := vm_block_index.New(s.databaseContext, defaultCacheSize, defaultPreallocateCaches)
-		if err != nil {
-			return err
-		}
-		s.vmblockindexStore = vmblockindexStore
-	}
 	if s.cfg.InvalidTxIndex {
 		invalidtxindexStore, err := invalid_tx_index.New(s.databaseContext, defaultCacheSize, defaultPreallocateCaches)
 		if err != nil {
@@ -83,7 +74,7 @@ func (s *consensus) Init() error {
 	}
 	s.blockchain = blockchain
 	//
-	vmService, err := vm.NewService(s.Config(), s.Events())
+	vmService, err := vm.NewService(s)
 	if err != nil {
 		return err
 	}
@@ -111,10 +102,6 @@ func (s *consensus) DatabaseContext() database.DB {
 
 func (s *consensus) Config() *config.Config {
 	return s.cfg
-}
-
-func (s *consensus) VMBlockIndexStore() model.VMBlockIndexStore {
-	return s.vmblockindexStore
 }
 
 func (s *consensus) InvalidTxIndexStore() model.InvalidTxIndexStore {
@@ -195,10 +182,6 @@ func (s *consensus) Rebuild() error {
 		return err
 	}
 	//
-	err = index.DropVMBlockIndex(s.databaseContext, s.interrupt)
-	if err != nil {
-		log.Info(err.Error())
-	}
 	err = index.DropInvalidTxIndex(s.databaseContext, s.interrupt)
 	if err != nil {
 		log.Info(err.Error())

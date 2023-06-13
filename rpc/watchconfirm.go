@@ -46,7 +46,7 @@ func (w *WatchTxConfirmServer) Handle(wsc *wsClient, currentHeight uint64) {
 		return
 	}
 	bc := wsc.server.BC
-	indexMgr:=wsc.server.consensus.IndexManager().(*index.Manager)
+	indexMgr := wsc.server.consensus.IndexManager().(*index.Manager)
 	txIndex := indexMgr.TxIndex()
 
 	for tx, txconf := range *w {
@@ -74,13 +74,13 @@ func (w *WatchTxConfirmServer) Handle(wsc *wsClient, currentHeight uint64) {
 				}
 				continue
 			}
-		}else{
+		} else {
 			txBytes, err := indexMgr.GetTxBytes(blockRegion)
 			if err != nil {
 				log.Error("tx not found")
 				continue
 			}
-			msgTx=&types.Transaction{}
+			msgTx = &types.Transaction{}
 			err = msgTx.Deserialize(bytes.NewReader(txBytes))
 			log.Trace("GetRawTx", "hex", hex.EncodeToString(txBytes))
 			if err != nil {
@@ -113,7 +113,7 @@ func (w *WatchTxConfirmServer) Handle(wsc *wsClient, currentHeight uint64) {
 			w.SendTxNotification(tx, 0, wsc, false, false)
 			continue
 		}
-		InValid := ib.GetStatus().KnownInvalid()
+		InValid := ib.GetState().GetStatus().KnownInvalid()
 		if InValid {
 			w.SendTxNotification(tx, 0, wsc, false, false)
 			continue

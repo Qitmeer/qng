@@ -53,6 +53,8 @@ DEV_TARGETS=$(DEV_EXECUTABLES)
 
 ZMQ = FALSE
 
+DEBUG = OFF
+
 .PHONY: qng qx release
 
 qng: qng-build
@@ -64,6 +66,9 @@ qng-build:
     ifeq ($(ZMQ),TRUE)
 		@echo "Enalbe ZMQ"
 		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) -tags=zmq "github.com/Qitmeer/qng/cmd/qng"
+    else ifeq ($(DEBUG),ON)
+		@echo "Enable DEBUG"
+		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) -gcflags="all=-N -l" "github.com/Qitmeer/qng/cmd/qng"
     else
 		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qng"
     endif

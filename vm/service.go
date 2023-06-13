@@ -7,6 +7,7 @@ import (
 	qconfig "github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/vm"
+	vmc "github.com/Qitmeer/qng/consensus/vm"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
@@ -14,6 +15,10 @@ import (
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/vm/consensus"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 type Factory interface {
@@ -216,6 +221,15 @@ func (s *Service) GetTxsFromMempool() ([]*types.Transaction, []*hash.Hash, error
 	return v.GetTxsFromMempool()
 }
 
+func (s *Service) HasTx(h *hash.Hash) bool {
+	v, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		log.Error(err.Error())
+		return false
+	}
+	return v.HasTx(h)
+}
+
 func (s *Service) GetMempoolSize() int64 {
 	v, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
@@ -229,12 +243,12 @@ func (s *Service) CheckConnectBlock(block *types.SerializedBlock) error {
 	if err != nil {
 		return err
 	}
-	b, err := s.normalizeBlock(block, true)
+	b, err := vmc.BuildEVMBlock(block)
 	if err != nil {
 		return err
 	}
 
-	if len(b.Txs) <= 0 {
+	if len(b.Transactions()) <= 0 {
 		return nil
 	}
 	return vm.CheckConnectBlock(b)
@@ -245,12 +259,11 @@ func (s *Service) ConnectBlock(block *types.SerializedBlock) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	b, err := s.normalizeBlock(block, true)
+	b, err := vmc.BuildEVMBlock(block)
 	if err != nil {
 		return 0, err
 	}
-
-	if len(b.Txs) <= 0 {
+	if len(b.Transactions()) <= 0 {
 		return 0, nil
 	}
 	return vm.ConnectBlock(b)
@@ -261,57 +274,15 @@ func (s *Service) DisconnectBlock(block *types.SerializedBlock) (uint64, error) 
 	if err != nil {
 		return 0, err
 	}
-	b, err := s.normalizeBlock(block, false)
-	if err != nil {
-		return 0, err
-	}
-
-	if len(b.Txs) <= 0 {
-		return 0, nil
-	}
-	return vm.DisconnectBlock(b)
+	return vm.DisconnectBlock(nil)
 }
 
-func (s *Service) normalizeBlock(block *types.SerializedBlock, checkDup bool) (*vm.Block, error) {
-	result := &vm.Block{Id: block.Hash(), Txs: []model.Tx{}, Time: block.Block().Header.Timestamp}
-
-	for idx, tx := range block.Transactions() {
-		if idx == 0 {
-			continue
-		}
-		if tx.IsDuplicate && checkDup {
-			continue
-		}
-
-		if types.IsCrossChainExportTx(tx.Tx) {
-			ctx, err := vm.NewExportTx(tx.Tx)
-			if err != nil {
-				return nil, err
-			}
-			result.Txs = append(result.Txs, ctx)
-		} else if types.IsCrossChainImportTx(tx.Tx) {
-			ctx, err := vm.NewImportTx(tx.Tx)
-			if err != nil {
-				return nil, err
-			}
-			err = ctx.SetCoinbaseTx(block.Transactions()[0].Tx)
-			if err != nil {
-				return nil, err
-			}
-			result.Txs = append(result.Txs, ctx)
-		} else if types.IsCrossChainVMTx(tx.Tx) {
-			ctx, err := vm.NewVMTx(tx.Tx)
-			if err != nil {
-				return nil, err
-			}
-			err = ctx.SetCoinbaseTx(block.Transactions()[0].Tx)
-			if err != nil {
-				return nil, err
-			}
-			result.Txs = append(result.Txs, ctx)
-		}
+func (s *Service) RewindTo(state model.BlockState) error {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return err
 	}
-	return result, nil
+	return vm.RewindTo(state)
 }
 
 func (s *Service) RegisterAPIs(apis []api.API) {
@@ -356,14 +327,6 @@ func (s *Service) Genesis(txs []*types.Tx) *hash.Hash {
 	return vm.Genesis()
 }
 
-func (s *Service) GetBlockID(bh *hash.Hash) uint64 {
-	vm, err := s.GetVM(evm.MeerEVMID)
-	if err != nil {
-		return 0
-	}
-	return vm.GetBlockID(bh)
-}
-
 func (s *Service) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
 	vm, err := s.GetVM(evm.MeerEVMID)
 	if err != nil {
@@ -396,9 +359,50 @@ func (s *Service) GetBlockByNumber(num uint64) (interface{}, error) {
 	return vm.GetBlockByNumber(num)
 }
 
-func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
+func (s *Service) GetCurStateRoot() common.Hash {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return common.Hash{}
+	}
+	return vm.GetCurStateRoot()
+}
+
+func (s *Service) GetCurHeader() *etypes.Header {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil
+	}
+	return vm.GetCurHeader()
+}
+
+func (s *Service) BlockChain() *core.BlockChain {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil
+	}
+	return vm.BlockChain()
+}
+
+func (s *Service) ChainDatabase() ethdb.Database {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil
+	}
+	return vm.ChainDatabase()
+}
+
+func (s *Service) PrepareEnvironment(state model.BlockState) (*etypes.Header, error) {
+	vm, err := s.GetVM(evm.MeerEVMID)
+	if err != nil {
+		return nil, nil
+	}
+	return vm.PrepareEnvironment(state)
+}
+
+func NewService(cons model.Consensus) (*Service, error) {
+	cfg := cons.Config()
 	ser := Service{
-		events: events,
+		events: cons.Events(),
 		vms:    make(map[string]consensus.ChainVM),
 		cfg:    cfg,
 		apis:   []api.API{},
@@ -412,6 +416,7 @@ func NewService(cfg *config.Config, events *event.Feed) (*Service, error) {
 			DebugPrintOrigins: cfg.DebugPrintOrigins,
 			EVMEnv:            cfg.EVMEnv,
 		},
+		Consensus: cons,
 	}
 	if err := ser.registerVMs(); err != nil {
 		log.Error(err.Error())

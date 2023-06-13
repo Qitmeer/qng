@@ -3,6 +3,10 @@ package model
 import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 type VMI interface {
@@ -17,9 +21,16 @@ type VMI interface {
 	GetMempoolSize() int64
 	ResetTemplate() error
 	Genesis(txs []*types.Tx) *hash.Hash
-	GetBlockID(bh *hash.Hash) uint64
 	GetBlockIDByTxHash(txhash *hash.Hash) uint64
 	GetBalance(addr string) (int64, error)
 	SetLogLevel(level string)
 	GetBlockByNumber(num uint64) (interface{}, error)
+	GetCurStateRoot() common.Hash
+	GetCurHeader() *etypes.Header
+	IsShutdown() bool
+	RewindTo(state BlockState) error
+	BlockChain() *core.BlockChain
+	ChainDatabase() ethdb.Database
+	PrepareEnvironment(state BlockState) (*etypes.Header, error)
+	HasTx(h *hash.Hash) bool
 }
