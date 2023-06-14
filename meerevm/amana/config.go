@@ -7,7 +7,6 @@ import (
 	mconsensus "github.com/Qitmeer/qng/meerevm/amana/consensus"
 	mcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
-	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
@@ -113,20 +112,6 @@ func getBootstrapNodes(port int) []*enode.Node {
 		}
 	}
 	return bootstrapNodes
-}
-
-func ChainConfig() *params.ChainConfig {
-	switch qparams.ActiveNetParams.Net {
-	case protocol.MainNet:
-		return mparams.AmanaChainConfig
-	case protocol.TestNet:
-		return mparams.AmanaTestnetChainConfig
-	case protocol.MixNet:
-		return mparams.AmanaMixnetChainConfig
-	case protocol.PrivNet:
-		return mparams.AmanaPrivnetChainConfig
-	}
-	return nil
 }
 
 func Genesis() *core.Genesis {
