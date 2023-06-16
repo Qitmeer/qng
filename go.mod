@@ -206,4 +206,4 @@ require (
 	nhooyr.io/websocket v1.8.7 // indirect
 )
 
-replace github.com/ethereum/go-ethereum v1.11.5 => github.com/Qitmeer/go-ethereum v1.11.5-q.3
+replace github.com/ethereum/go-ethereum v1.11.5 => github.com/Qitmeer/go-ethereum v1.11.5-q.4
