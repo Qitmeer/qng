@@ -39,7 +39,7 @@ var (
 		IstanbulBlock:       big.NewInt(0),
 		MuirGlacierBlock:    big.NewInt(0),
 		BerlinBlock:         big.NewInt(0),
-		LondonBlock:         nil,
+		LondonBlock:         big.NewInt(22500),
 		Ethash:              new(eparams.EthashConfig),
 	}
 
