@@ -431,11 +431,13 @@ func (b *BlockChain) Start() error {
 }
 
 func (b *BlockChain) Stop() error {
+	log.Info("Try to stop BlockChain")
+	close(b.quit)
+	b.wg.Wait()
+	//
 	if err := b.Service.Stop(); err != nil {
 		return err
 	}
-	close(b.quit)
-	b.wg.Wait()
 	return nil
 }
 
