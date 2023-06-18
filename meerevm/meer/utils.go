@@ -2,7 +2,7 @@ package meer
 
 import (
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/consensus/vm"
+	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/misc"
@@ -55,8 +55,8 @@ func (cr *fakeChainReader) GetHeader(hash common.Hash, number uint64) *types.Hea
 func (cr *fakeChainReader) GetBlock(hash common.Hash, number uint64) *types.Block   { return nil }
 func (cr *fakeChainReader) GetTd(hash common.Hash, number uint64) *big.Int          { return nil }
 
-func BuildEVMBlock(block *qtypes.SerializedBlock) (*vm.Block, error) {
-	result := &vm.Block{Id: block.Hash(), Txs: []model.Tx{}, Time: block.Block().Header.Timestamp}
+func BuildEVMBlock(block *qtypes.SerializedBlock) (*mmeer.Block, error) {
+	result := &mmeer.Block{Id: block.Hash(), Txs: []model.Tx{}, Time: block.Block().Header.Timestamp}
 
 	for idx, tx := range block.Transactions() {
 		if idx == 0 {
@@ -67,13 +67,13 @@ func BuildEVMBlock(block *qtypes.SerializedBlock) (*vm.Block, error) {
 		}
 
 		if qtypes.IsCrossChainExportTx(tx.Tx) {
-			ctx, err := vm.NewExportTx(tx.Tx)
+			ctx, err := mmeer.NewExportTx(tx.Tx)
 			if err != nil {
 				return nil, err
 			}
 			result.Txs = append(result.Txs, ctx)
 		} else if qtypes.IsCrossChainImportTx(tx.Tx) {
-			ctx, err := vm.NewImportTx(tx.Tx)
+			ctx, err := mmeer.NewImportTx(tx.Tx)
 			if err != nil {
 				return nil, err
 			}
@@ -83,7 +83,7 @@ func BuildEVMBlock(block *qtypes.SerializedBlock) (*vm.Block, error) {
 			}
 			result.Txs = append(result.Txs, ctx)
 		} else if qtypes.IsCrossChainVMTx(tx.Tx) {
-			ctx, err := vm.NewVMTx(tx.Tx)
+			ctx, err := mmeer.NewVMTx(tx.Tx)
 			if err != nil {
 				return nil, err
 			}

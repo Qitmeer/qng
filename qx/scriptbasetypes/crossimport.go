@@ -3,7 +3,7 @@ package scriptbasetypes
 import (
 	"encoding/hex"
 	"fmt"
-	qconsensus "github.com/Qitmeer/qng/consensus/vm"
+	qconsensus "github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"

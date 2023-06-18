@@ -10,7 +10,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/consensus/vm"
+	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	qtypes "github.com/Qitmeer/qng/core/types"
@@ -107,7 +107,7 @@ func (b *MeerChain) Stop() error {
 	return nil
 }
 
-func (b *MeerChain) CheckConnectBlock(block *vm.Block) error {
+func (b *MeerChain) CheckConnectBlock(block *mmeer.Block) error {
 	parent := b.chain.Ether().BlockChain().CurrentBlock()
 	_, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
@@ -116,7 +116,7 @@ func (b *MeerChain) CheckConnectBlock(block *vm.Block) error {
 	return nil
 }
 
-func (b *MeerChain) ConnectBlock(block *vm.Block) (uint64, error) {
+func (b *MeerChain) ConnectBlock(block *mmeer.Block) (uint64, error) {
 	parent := b.chain.Ether().BlockChain().CurrentBlock()
 	mblock, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
@@ -427,7 +427,7 @@ func (b *MeerChain) RewindTo(state model.BlockState) error {
 	return fmt.Errorf("Rewind fail:cur.number=%d, cur.hash=%s, target.evm.root=%s, target.evm.number=%d, target.evm.hash=%s", cur.Number.Uint64(), cur.Hash().String(), state.GetEVMRoot(), state.GetEVMNumber(), state.GetEVMHash())
 }
 
-func (b *MeerChain) CheckSanity(vt *vm.VMTx) error {
+func (b *MeerChain) CheckSanity(vt *mmeer.VMTx) error {
 	if vt.GetTxType() != qtypes.TxTypeCrossChainVM {
 		return fmt.Errorf("Not support")
 	}

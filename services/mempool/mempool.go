@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/consensus/vm"
+	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
@@ -399,7 +399,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		if mp.cfg.BC.HasTx(txHash) {
 			return nil, nil, fmt.Errorf("Already have transaction %v", txHash)
 		}
-		itx, err := vm.NewImportTx(tx.Tx)
+		itx, err := mmeer.NewImportTx(tx.Tx)
 		if err != nil {
 			return nil, nil, err
 		}

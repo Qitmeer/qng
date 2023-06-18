@@ -13,7 +13,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/consensus/vm"
+	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
@@ -327,7 +327,7 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinba
 		}
 		return update.CheckSanity()
 	} else if types.IsCrossChainVMTx(tx) {
-		vtx, err := vm.NewVMTx(tx)
+		vtx, err := mmeer.NewVMTx(tx)
 		if err != nil {
 			return err
 		}
@@ -405,13 +405,13 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinba
 		}
 	}
 	if types.IsCrossChainImportTx(tx) {
-		itx, err := vm.NewImportTx(tx)
+		itx, err := mmeer.NewImportTx(tx)
 		if err != nil {
 			return err
 		}
 		return itx.CheckSanity()
 	} else if types.IsCrossChainExportTx(tx) {
-		etx, err := vm.NewExportTx(tx)
+		etx, err := mmeer.NewExportTx(tx)
 		if err != nil {
 			return err
 		}
@@ -1005,7 +1005,7 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			continue
 		}
 		if types.IsCrossChainImportTx(tx.Tx) {
-			itx, err := vm.NewImportTx(tx.Tx)
+			itx, err := mmeer.NewImportTx(tx.Tx)
 			if err != nil {
 				return err
 			}
@@ -1020,7 +1020,7 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			continue
 		}
 		if types.IsCrossChainVMTx(tx.Tx) {
-			vtx, err := vm.NewVMTx(tx.Tx)
+			vtx, err := mmeer.NewVMTx(tx.Tx)
 			if err != nil {
 				return err
 			}

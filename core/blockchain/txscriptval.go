@@ -9,7 +9,7 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/consensus/forks"
-	"github.com/Qitmeer/qng/consensus/vm"
+	"github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"math"
 	"runtime"
@@ -233,7 +233,7 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *u
 			continue
 		}
 		if types.IsCrossChainImportTx(tx.Tx) {
-			itx, err := vm.NewImportTx(tx.Tx)
+			itx, err := meer.NewImportTx(tx.Tx)
 			if err != nil {
 				return err
 			}

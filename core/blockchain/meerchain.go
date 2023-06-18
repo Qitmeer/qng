@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/consensus/vm"
+	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/meerevm/meer"
 )
@@ -71,7 +71,7 @@ func (b *BlockChain) MeerVerifyTx(tx model.Tx) (int64, error) {
 		return 0, fmt.Errorf("Not support:%s\n", tx.GetTxType().String())
 	}
 
-	itx, ok := tx.(*vm.ImportTx)
+	itx, ok := tx.(*mmeer.ImportTx)
 	if !ok {
 		return 0, fmt.Errorf("Not support tx:%s\n", tx.GetTxType().String())
 	}
