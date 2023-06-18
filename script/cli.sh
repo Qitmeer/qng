@@ -540,8 +540,8 @@ function get_network_info(){
   get_result "$data"
 }
 
-function get_vms_info(){
-  local data='{"jsonrpc":"2.0","method":"getVMsInfo","params":[],"id":null}'
+function get_meer_info(){
+  local data='{"jsonrpc":"2.0","method":"getMeerChainInfo","params":[],"id":null}'
   get_result "$data"
 }
 
@@ -787,7 +787,7 @@ function usage(){
   echo "  loglevel [trace, debug, info, warn, error, critical]"
   echo "  timeinfo"
   echo "  subsidy"
-  echo "  vmsinfo"
+  echo "  meerinfo"
   echo "  amanainfo"
   echo "  amanapeerinfo"
   echo "  acctinfo"
@@ -1344,9 +1344,9 @@ elif [ "$1" == "cleanmempool" ]; then
 elif [ "$1" == "minerinfo" ]; then
   shift
   miner_info $@
-elif [ "$1" == "vmsinfo" ]; then
+elif [ "$1" == "meerinfo" ]; then
   shift
-  get_vms_info $@
+  get_meer_info $@
 elif [ "$1" == "amanainfo" ]; then
     shift
     get_amana_nodeinfo $@

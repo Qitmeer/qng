@@ -7,34 +7,107 @@ package meer
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/vm"
+	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
+	"github.com/Qitmeer/qng/node/service"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
-	qconsensus "github.com/Qitmeer/qng/vm/consensus"
+	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"math/big"
 	"reflect"
 )
 
+const (
+	txSlotSize = 32 * 1024
+	txMaxSize  = 4 * txSlotSize
+)
+
 type MeerChain struct {
+	service.Service
 	chain     *eth.ETHChain
 	meerpool  *MeerPool
 	consensus model.Consensus
 }
 
-func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
+func (b *MeerChain) Start() error {
+	if err := b.Service.Start(); err != nil {
+		return err
+	}
+	//
+	log.Info("Start MeerChain...")
+	err := b.chain.Start()
+	if err != nil {
+		return err
+	}
+	//
+	rpcClient, err := b.chain.Node().Attach()
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed to attach to self: %v", err))
+	}
+	client := ethclient.NewClient(rpcClient)
+
+	blockNum, err := client.BlockNumber(b.Context())
+	if err != nil {
+		log.Error(err.Error())
+	} else {
+		log.Debug(fmt.Sprintf("MeerETH block chain current block number:%d", blockNum))
+	}
+
+	cbh := b.chain.Ether().BlockChain().CurrentBlock()
+	if cbh != nil {
+		log.Debug(fmt.Sprintf("MeerETH block chain current block:number=%d hash=%s", cbh.Number.Uint64(), cbh.Hash().String()))
+	}
+
+	//
+	state, err := b.chain.Ether().BlockChain().State()
+	if err != nil {
+		return nil
+	}
+
+	log.Debug(fmt.Sprintf("Etherbase:%v balance:%v", b.chain.Config().Eth.Miner.Etherbase, state.GetBalance(b.chain.Config().Eth.Miner.Etherbase)))
+
+	//
+	for addr := range b.chain.Config().Eth.Genesis.Alloc {
+		log.Debug(fmt.Sprintf("Alloc address:%v balance:%v", addr.String(), state.GetBalance(addr)))
+	}
+
+	b.meerpool.Start()
+	return nil
+}
+
+func (b *MeerChain) Stop() error {
+	log.Info("try stop MeerChain")
+	if err := b.Service.Stop(); err != nil {
+		return err
+	}
+	log.Info("Stop MeerChain...")
+
+	err := b.chain.Stop()
+	if err != nil {
+		log.Error(err.Error())
+	}
+
+	b.meerpool.Stop()
+	return nil
+}
+
+func (b *MeerChain) CheckConnectBlock(block *vm.Block) error {
 	parent := b.chain.Ether().BlockChain().CurrentBlock()
 	_, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
@@ -43,7 +116,7 @@ func (b *MeerChain) CheckConnectBlock(block qconsensus.Block) error {
 	return nil
 }
 
-func (b *MeerChain) ConnectBlock(block qconsensus.Block) (uint64, error) {
+func (b *MeerChain) ConnectBlock(block *vm.Block) (uint64, error) {
 	parent := b.chain.Ether().BlockChain().CurrentBlock()
 	mblock, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
@@ -234,14 +307,6 @@ func (b *MeerChain) RegisterAPIs(apis []api.API) {
 	b.chain.Node().RegisterAPIs(eapis)
 }
 
-func (b *MeerChain) Start() {
-	b.meerpool.Start()
-}
-
-func (b *MeerChain) Stop() {
-	b.meerpool.Stop()
-}
-
 func (b *MeerChain) MeerPool() *MeerPool {
 	return b.meerpool
 }
@@ -312,7 +377,7 @@ func (b *MeerChain) prepareEnvironment(state model.BlockState) (*types.Header, e
 				}
 			}
 
-			eb, err := vm.BuildEVMBlock(sb)
+			eb, err := BuildEVMBlock(sb)
 			if err != nil {
 				return nil, getError(err.Error())
 			}
@@ -362,8 +427,158 @@ func (b *MeerChain) RewindTo(state model.BlockState) error {
 	return fmt.Errorf("Rewind fail:cur.number=%d, cur.hash=%s, target.evm.root=%s, target.evm.number=%d, target.evm.hash=%s", cur.Number.Uint64(), cur.Hash().String(), state.GetEVMRoot(), state.GetEVMNumber(), state.GetEVMHash())
 }
 
-func NewMeerChain(ctx qconsensus.Context) (*MeerChain, error) {
-	cfg := ctx.GetConfig()
+func (b *MeerChain) CheckSanity(vt *vm.VMTx) error {
+	if vt.GetTxType() != qtypes.TxTypeCrossChainVM {
+		return fmt.Errorf("Not support")
+	}
+	me, err := opreturn.NewOPReturnFrom(vt.TxOut[0].PkScript)
+	if err != nil {
+		return err
+	}
+	err = me.Verify(vt.Transaction)
+	if err != nil {
+		return err
+	}
+	txb := vt.GetData()
+	var txe = &types.Transaction{}
+	if err := txe.UnmarshalBinary(txb); err != nil {
+		return fmt.Errorf("rlp decoding failed: %v", err)
+	}
+	return b.validateTx(txe, false)
+
+}
+
+func (b *MeerChain) validateTx(tx *types.Transaction, checkState bool) error {
+	// Reject transactions over defined size to prevent DOS attacks
+	if tx.Size() > txMaxSize {
+		return txpool.ErrOversizedData
+	}
+	if tx.Value().Sign() < 0 {
+		return txpool.ErrNegativeValue
+	}
+	if tx.GasFeeCap().BitLen() > 256 {
+		return core.ErrFeeCapVeryHigh
+	}
+	if tx.GasTipCap().BitLen() > 256 {
+		return core.ErrTipVeryHigh
+	}
+	if tx.GasFeeCapIntCmp(tx.GasTipCap()) < 0 {
+		return core.ErrTipAboveFeeCap
+	}
+	from, err := types.Sender(types.LatestSigner(b.chain.Ether().BlockChain().Config()), tx)
+	if err != nil {
+		return txpool.ErrInvalidSender
+	}
+	if checkState {
+		currentState, err := b.chain.Ether().BlockChain().State()
+		if err != nil {
+			return err
+		}
+		if currentState.GetNonce(from) > tx.Nonce() {
+			return core.ErrNonceTooLow
+		}
+		if currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+			return core.ErrInsufficientFunds
+		}
+	}
+	intrGas, err := core.IntrinsicGas(tx.Data(), tx.AccessList(), tx.To() == nil, true, true, false)
+	if err != nil {
+		return err
+	}
+	if tx.Gas() < intrGas {
+		return core.ErrIntrinsicGas
+	}
+	return nil
+}
+
+func (b *MeerChain) VerifyTx(tx model.Tx) (int64, error) {
+	if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
+		txb := tx.GetData()
+		var txe = &types.Transaction{}
+		if err := txe.UnmarshalBinary(txb); err != nil {
+			return 0, fmt.Errorf("rlp decoding failed: %v", err)
+		}
+		err := b.validateTx(txe, true)
+		if err != nil {
+			return 0, err
+		}
+		cost := txe.Cost()
+		cost = cost.Sub(cost, txe.Value())
+		cost = cost.Div(cost, qcommon.Precision)
+		return cost.Int64(), nil
+	}
+	return 0, fmt.Errorf("Not support")
+}
+
+func (b *MeerChain) GetCurHeader() *types.Header {
+	return b.chain.Ether().BlockChain().CurrentBlock()
+}
+
+func (b *MeerChain) Genesis() *hash.Hash {
+	mbb := b.chain.Ether().BlockChain().Genesis().Hash().Bytes()
+	qcommon.ReverseBytes(&mbb)
+	nmbb, err := hash.NewHash(mbb)
+	if err != nil {
+		return nil
+	}
+	return nmbb
+}
+
+func (b *MeerChain) GetBalance(addre string) (int64, error) {
+	var eAddr common.Address
+	if common.IsHexAddress(addre) {
+		eAddr = common.HexToAddress(addre)
+	} else {
+		addr, err := address.DecodeAddress(addre)
+		if err != nil {
+			return 0, err
+		}
+		if !addr.IsForNetwork(params.ActiveNetParams.Net) {
+			return 0, fmt.Errorf("network error:%s", addr.String())
+		}
+		secpPksAddr, ok := addr.(*address.SecpPubKeyAddress)
+		if !ok {
+			return 0, fmt.Errorf("Not SecpPubKeyAddress:%s", addr.String())
+		}
+		publicKey, err := crypto.UnmarshalPubkey(secpPksAddr.PubKey().SerializeUncompressed())
+		if err != nil {
+			return 0, err
+		}
+		eAddr = crypto.PubkeyToAddress(*publicKey)
+	}
+	state, err := b.chain.Ether().BlockChain().State()
+	if err != nil {
+		return 0, err
+	}
+	ba := state.GetBalance(eAddr)
+	if ba == nil {
+		return 0, fmt.Errorf("No balance for address %s", eAddr)
+	}
+	ba = ba.Div(ba, qcommon.Precision)
+	return ba.Int64(), nil
+}
+
+func (b *MeerChain) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
+	tx, _, blockNumber, _, _ := b.chain.Backend().GetTransaction(nil, qcommon.ToEVMHash(txhash))
+	if tx == nil {
+		return 0
+	}
+	return blockNumber
+}
+
+func (b *MeerChain) APIs() []api.API {
+	return []api.API{
+		{
+			NameSpace: cmds.DefaultServiceNameSpace,
+			Service:   NewPublicMeerChainAPI(b),
+			Public:    true,
+		},
+	}
+}
+
+func NewMeerChain(consensus model.Consensus) (*MeerChain, error) {
+	log.Info("Meer chain", "version", Version)
+	cfg := consensus.Config()
 	eth.InitLog(cfg.DebugLevel, cfg.DebugPrintOrigins)
 	//
 	ecfg, args, err := MakeParams(cfg)
@@ -380,49 +595,8 @@ func NewMeerChain(ctx qconsensus.Context) (*MeerChain, error) {
 	mc := &MeerChain{
 		chain:     chain,
 		meerpool:  chain.Config().Eth.Miner.External.(*MeerPool),
-		consensus: ctx.GetConsensus(),
+		consensus: consensus,
 	}
-	mc.meerpool.init(&chain.Config().Eth.Miner, chain.Config().Eth.Genesis.Config, chain.Ether().Engine(), chain.Ether(), chain.Ether().EventMux(), ctx)
+	mc.meerpool.init(consensus, &chain.Config().Eth.Miner, chain.Config().Eth.Genesis.Config, chain.Ether().Engine(), chain.Ether(), chain.Ether().EventMux())
 	return mc, nil
 }
-
-func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB, timestamp int64, gaslimit uint64) *types.Header {
-	ptt := int64(parent.Time())
-	if timestamp <= ptt {
-		timestamp = ptt + 1
-	}
-
-	header := &types.Header{
-		Root:       state.IntermediateRoot(cfg.Genesis.Config.IsEIP158(parent.Number())),
-		ParentHash: parent.Hash(),
-		Coinbase:   parent.Coinbase(),
-		Difficulty: common.Big1,
-		GasLimit:   gaslimit,
-		Number:     new(big.Int).Add(parent.Number(), common.Big1),
-		Time:       uint64(timestamp),
-	}
-	if cfg.Genesis.Config.IsLondon(header.Number) {
-		header.BaseFee = misc.CalcBaseFee(cfg.Genesis.Config, parent.Header())
-		if !cfg.Genesis.Config.IsLondon(parent.Number()) {
-			parentGasLimit := parent.GasLimit() * cfg.Genesis.Config.ElasticityMultiplier()
-			header.GasLimit = core.CalcGasLimit(parentGasLimit, parentGasLimit)
-		}
-	}
-	return header
-}
-
-type fakeChainReader struct {
-	config *params.ChainConfig
-}
-
-// Config returns the chain configuration.
-func (cr *fakeChainReader) Config() *params.ChainConfig {
-	return cr.config
-}
-
-func (cr *fakeChainReader) CurrentHeader() *types.Header                            { return nil }
-func (cr *fakeChainReader) GetHeaderByNumber(number uint64) *types.Header           { return nil }
-func (cr *fakeChainReader) GetHeaderByHash(hash common.Hash) *types.Header          { return nil }
-func (cr *fakeChainReader) GetHeader(hash common.Hash, number uint64) *types.Header { return nil }
-func (cr *fakeChainReader) GetBlock(hash common.Hash, number uint64) *types.Block   { return nil }
-func (cr *fakeChainReader) GetTd(hash common.Hash, number uint64) *big.Int          { return nil }

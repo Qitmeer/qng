@@ -13,7 +13,6 @@ import (
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/services/mempool"
-	vmconsensus "github.com/Qitmeer/qng/vm/consensus"
 	"time"
 )
 
@@ -25,7 +24,7 @@ type TxManager struct {
 	txMemPool *mempool.TxPool
 
 	// notify
-	ntmgr vmconsensus.Notify
+	ntmgr model.Notify
 
 	// db
 	db database.DB
@@ -196,7 +195,7 @@ func (tm *TxManager) GetChain() *blockchain.BlockChain {
 	return tm.consensus.BlockChain().(*blockchain.BlockChain)
 }
 
-func NewTxManager(consensus model.Consensus, ntmgr vmconsensus.Notify) (*TxManager, error) {
+func NewTxManager(consensus model.Consensus, ntmgr model.Notify) (*TxManager, error) {
 	cfg := consensus.Config()
 	sigCache := consensus.SigCache()
 	bc := consensus.BlockChain().(*blockchain.BlockChain)

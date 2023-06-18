@@ -8,14 +8,13 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/vm/consensus"
 	"time"
 )
 
 type Block struct {
-	Id               *hash.Hash
-	Txs              []model.Tx
-	Time             time.Time
+	Id   *hash.Hash
+	Txs  []model.Tx
+	Time time.Time
 }
 
 func (b *Block) ID() *hash.Hash {
@@ -28,14 +27,6 @@ func (b *Block) Accept() error {
 
 func (b *Block) Reject() error {
 	return nil
-}
-
-func (b *Block) SetStatus(status consensus.Status) {
-
-}
-
-func (b *Block) Status() consensus.Status {
-	return consensus.Unknown
 }
 
 func (b *Block) Parent() *hash.Hash {

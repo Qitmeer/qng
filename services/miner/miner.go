@@ -17,6 +17,7 @@ import (
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
@@ -505,7 +506,7 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 	if reCreate {
 		m.stats.TotalGbts++ //gbt generates
 		start := time.Now().UnixMilli()
-		m.consensus.VMService().ResetTemplate()
+		m.consensus.BlockChain().MeerChain().(*meer.MeerChain).MeerPool().ResetTemplate()
 		template, err := mining.NewBlockTemplate(m.policy, params.ActiveNetParams.Params, m.sigCache, m.txpool, m.timeSource, m.consensus, m.coinbaseAddress, nil, m.powType, m.coinbaseFlags)
 		if err != nil {
 			e := fmt.Errorf("Failed to create new block template: %s", err.Error())

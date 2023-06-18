@@ -6,12 +6,14 @@ import (
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/common/system/disk"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/amana"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/params"
@@ -25,8 +27,6 @@ import (
 	"github.com/Qitmeer/qng/services/mining"
 	"github.com/Qitmeer/qng/services/notifymgr"
 	"github.com/Qitmeer/qng/services/tx"
-	"github.com/Qitmeer/qng/vm"
-	"github.com/Qitmeer/qng/vm/consensus"
 	ecommon "github.com/ethereum/go-ethereum/common"
 	"path/filepath"
 	"reflect"
@@ -39,7 +39,7 @@ type QitmeerFull struct {
 	// under node
 	node *Node
 	// msg notifier
-	nfManager consensus.Notify
+	nfManager model.Notify
 	// database
 	db database.DB
 	// address service
@@ -61,13 +61,13 @@ func (qm *QitmeerFull) RegisterP2PService() error {
 	return qm.Services().RegisterService(peerServer)
 }
 
-func (qm *QitmeerFull) RegisterRpcService() error {
+func (qm *QitmeerFull) RegisterRpcService() ([]api.API, error) {
 	if qm.node.Config.DisableRPC {
-		return nil
+		return nil, nil
 	}
 	rpcServer, err := rpc.NewRPCServer(qm.node.Config, qm.node.consensus)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	qm.Services().RegisterService(rpcServer)
 
@@ -89,14 +89,13 @@ func (qm *QitmeerFull) RegisterRpcService() error {
 	for _, api := range apis {
 		if whitelist[api.NameSpace] || (len(whitelist) == 0 && api.Public) {
 			if err := rpcServer.RegisterService(api.NameSpace, api.Service); err != nil {
-				return err
+				return nil, err
 			}
 			log.Debug(fmt.Sprintf("RPC Service API registered. NameSpace:%s     %s", api.NameSpace, reflect.TypeOf(api.Service)))
 			retApis = append(retApis, api)
 		}
 	}
-	qm.GetVMService().RegisterAPIs(retApis)
-	return nil
+	return retApis, nil
 }
 
 func (qm *QitmeerFull) RegisterTxManagerService() error {
@@ -195,16 +194,6 @@ func (qm *QitmeerFull) GetTxManager() *tx.TxManager {
 	return service
 }
 
-// return vm service
-func (qm *QitmeerFull) GetVMService() *vm.Service {
-	var service *vm.Service
-	if err := qm.Services().FetchService(&service); err != nil {
-		log.Error(err.Error())
-		return nil
-	}
-	return service
-}
-
 func (qm *QitmeerFull) GetMiner() *miner.Miner {
 	var service *miner.Miner
 	if err := qm.Services().FetchService(&service); err != nil {
@@ -269,7 +258,8 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	if err := node.consensus.Init(); err != nil {
 		return nil, err
 	}
-	if err := qm.Services().RegisterService(node.consensus.BlockChain().(*blockchain.BlockChain)); err != nil {
+	bc := node.consensus.BlockChain().(*blockchain.BlockChain)
+	if err := qm.Services().RegisterService(bc); err != nil {
 		return nil, err
 	}
 	if err := qm.RegisterP2PService(); err != nil {
@@ -290,18 +280,14 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	qm.GetPeerServer().SetNotify(qm.nfManager)
 
 	//
+	bc.MeerChain().(*meer.MeerChain).MeerPool().SetTxPool(txManager.MemPool())
+	bc.MeerChain().(*meer.MeerChain).MeerPool().SetNotify(qm.nfManager)
+	//
 	if err := qm.RegisterMinerService(); err != nil {
 		return nil, err
 	}
 	// init address api
 	qm.addressApi = address.NewAddressApi(cfg, node.Params, qm.GetBlockChain())
-
-	if err := qm.Services().RegisterService(node.consensus.VMService().(*vm.Service)); err != nil {
-		return nil, err
-	}
-	vms := qm.GetVMService()
-	vms.SetTxPool(txManager.MemPool())
-	vms.SetNotify(qm.nfManager)
 
 	if err := qm.RegisterAccountService(cfg); err != nil {
 		return nil, err
@@ -313,9 +299,11 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		}
 	}
 
-	if err := qm.RegisterRpcService(); err != nil {
+	apis, err := qm.RegisterRpcService()
+	if err != nil {
 		return nil, err
 	}
+	bc.MeerChain().RegisterAPIs(apis)
 
 	if qm.GetRpcServer() != nil {
 		qm.GetRpcServer().BC = qm.GetBlockChain()

@@ -115,6 +115,10 @@ func consensusCmd() *cli.Command {
 						log.Error(err.Error())
 						return err
 					}
+					err = cons.BlockChain().Start()
+					if err != nil {
+						return err
+					}
 					return cons.Rebuild()
 				},
 			},

@@ -3,7 +3,6 @@ package vm
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/types"
@@ -15,11 +14,6 @@ import (
 type VMTx struct {
 	*Tx
 	*types.Transaction
-	vmi model.VMI
-}
-
-func (vt *VMTx) SetVMI(vmi model.VMI) {
-	vt.vmi = vmi
 }
 
 func (vt *VMTx) SetCoinbaseTx(tx *types.Transaction) error {
@@ -36,21 +30,6 @@ func (vt *VMTx) SetCoinbaseTx(tx *types.Transaction) error {
 		return nil
 	}
 	return fmt.Errorf("tx format error :TxTypeCrossChainVM")
-}
-
-func (vt *VMTx) CheckSanity() error {
-	me, err := opreturn.NewOPReturnFrom(vt.TxOut[0].PkScript)
-	if err != nil {
-		return err
-	}
-	err = me.Verify(vt.Transaction)
-	if err != nil {
-		return err
-	}
-	if vt.vmi != nil {
-		return vt.vmi.VerifyTxSanity(vt)
-	}
-	return nil
 }
 
 func NewVMTx(tx *types.Transaction) (*VMTx, error) {

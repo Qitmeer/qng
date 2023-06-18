@@ -15,4 +15,7 @@ type BlockChain interface {
 	Rebuild() error
 	GetMiningTips(expectPriority int) []*hash.Hash
 	GetBlockState(order uint64) BlockState
+	MeerChain() MeerChain
+	Start() error
+	Stop() error
 }
