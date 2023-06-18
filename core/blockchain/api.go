@@ -19,13 +19,15 @@ import (
 )
 
 func (b *BlockChain) APIs() []rapi.API {
-	return []rapi.API{
+	apis := b.Service.APIs()
+	apis = append(apis, []rapi.API{
 		rapi.API{
 			NameSpace: cmds.DefaultServiceNameSpace,
 			Service:   NewPublicBlockAPI(b),
 			Public:    true,
 		},
-	}
+	}...)
+	return apis
 }
 
 type PublicBlockAPI struct {
