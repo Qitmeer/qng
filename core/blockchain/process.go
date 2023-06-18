@@ -52,7 +52,7 @@ out:
 	for {
 		select {
 		case msg := <-b.msgChan:
-			start:=time.Now()
+			start := time.Now()
 			isOrphan, err := b.processBlock(msg.block, msg.flags)
 			blockProcessTimer.Update(time.Since(start))
 			msg.result <- &processResult{isOrphan: isOrphan, err: err}
@@ -442,7 +442,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 		pkss = append(pkss, stxo.PkScript)
 	}
 	if !node.GetState().GetStatus().KnownInvalid() {
-		_, err := b.VMService().ConnectBlock(block)
+		_, err := b.meerConnectBlock(block)
 		if err != nil {
 			return err
 		}
@@ -775,7 +775,7 @@ func (b *BlockChain) updateBlockState(ib meerdag.IBlock, block *types.Serialized
 	if prev == nil {
 		return fmt.Errorf("No prev block:%d %s", ib.GetID(), ib.GetHash().String())
 	}
-	bs.Update(block, prev.GetState().(*state.BlockState), b.VMService().GetCurHeader())
+	bs.Update(block, prev.GetState().(*state.BlockState), b.meerChain.GetCurHeader())
 	b.BlockDAG().AddToCommit(ib)
 	return nil
 }
@@ -802,7 +802,7 @@ func (b *BlockChain) prepareEVMEnvironment(block meerdag.IBlock) error {
 	if prev == nil {
 		return fmt.Errorf("No dag block:%s,id:%d\n", block.GetHash().String(), block.GetID())
 	}
-	_, err := b.VMService().PrepareEnvironment(prev.GetState())
+	_, err := b.meerChain.PrepareEnvironment(prev.GetState())
 	if err != nil {
 		return err
 	}

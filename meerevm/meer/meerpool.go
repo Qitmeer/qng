@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/miner"
@@ -19,7 +20,6 @@ import (
 
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
-	qconsensus "github.com/Qitmeer/qng/vm/consensus"
 	"github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -65,7 +65,7 @@ type MeerPool struct {
 	quit    chan struct{}
 	running int32
 
-	ctx qconsensus.Context
+	consensus model.Consensus
 
 	remoteTxsM  map[string]*qtypes.Transaction
 	remoteQTxsM map[string]*snapshotTx
@@ -98,12 +98,15 @@ type MeerPool struct {
 	pendingLogsFeed event.Feed
 
 	resetTemplate chan *resetTemplateMsg
+
+	qTxPool model.TxPool
+	notify  model.Notify
 }
 
-func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux, ctx qconsensus.Context) error {
+func (m *MeerPool) init(consensus model.Consensus, config *miner.Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux) error {
 	log.Info(fmt.Sprintf("Meer pool init..."))
 
-	m.ctx = ctx
+	m.consensus = consensus
 	m.config = config
 	m.chainConfig = chainConfig
 	m.engine = engine
@@ -171,10 +174,10 @@ func (m *MeerPool) handler() {
 	for {
 		select {
 		case ev := <-m.txsCh:
-			if m.ctx.GetTxPool() == nil {
+			if m.qTxPool == nil {
 				continue
 			}
-			if !m.ctx.GetTxPool().IsSupportVMTx() {
+			if !m.qTxPool.IsSupportVMTx() {
 				for _, tx := range ev.Txs {
 					m.eth.TxPool().RemoveTx(tx.Hash(), false)
 				}
@@ -439,7 +442,7 @@ func (m *MeerPool) updateTemplate(timestamp int64) {
 	}
 
 	m.commit(false, tstart)
-	if m.ctx.GetTxPool() != nil && !m.ctx.GetTxPool().IsSupportVMTx() {
+	if m.qTxPool != nil && !m.qTxPool.IsSupportVMTx() {
 		m.updateSnapshot()
 		return
 	}
@@ -625,21 +628,21 @@ func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
 		td := &qtypes.TxDesc{
 			Tx:       qtypes.NewTx(qtx.tx),
 			Added:    time.Now(),
-			Height:   m.ctx.GetTxPool().GetMainHeight(),
+			Height:   m.qTxPool.GetMainHeight(),
 			Fee:      fee,
 			FeePerKB: fee * 1000 / int64(qtx.tx.SerializeSize()),
 		}
 
 		localTxs = append(localTxs, td)
 
-		m.ctx.GetTxPool().AddTransaction(td.Tx, uint64(td.Height), td.Fee)
+		m.qTxPool.AddTransaction(td.Tx, uint64(td.Height), td.Fee)
 	}
 	if len(localTxs) <= 0 {
 		return nil
 	}
 	//
-	m.ctx.GetNotify().AnnounceNewTransactions(localTxs, nil)
-	go m.ctx.GetNotify().AddRebroadcastInventory(localTxs)
+	m.notify.AnnounceNewTransactions(localTxs, nil)
+	go m.notify.AddRebroadcastInventory(localTxs)
 
 	return nil
 }
@@ -724,6 +727,14 @@ func (m *MeerPool) ResetTemplate() error {
 	m.resetTemplate <- msg
 	<-msg.reply
 	return nil
+}
+
+func (m *MeerPool) SetTxPool(tp model.TxPool) {
+	m.qTxPool = tp
+}
+
+func (m *MeerPool) SetNotify(notify model.Notify) {
+	m.notify = notify
 }
 
 type snapshotTx struct {

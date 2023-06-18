@@ -16,7 +16,6 @@ import (
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/index"
-	"github.com/Qitmeer/qng/vm"
 	"math"
 	"sync"
 )
@@ -44,7 +43,6 @@ type consensus struct {
 	blockchain   model.BlockChain
 	indexManager model.IndexManager
 
-	vmService    *vm.Service
 	amanaService *amana.AmanaService
 }
 
@@ -73,12 +71,6 @@ func (s *consensus) Init() error {
 		return err
 	}
 	s.blockchain = blockchain
-	//
-	vmService, err := vm.NewService(s)
-	if err != nil {
-		return err
-	}
-	s.vmService = vmService
 	//
 	if s.cfg.Amana && params.ActiveNetParams.Net != protocol.MainNet {
 		ser, err := amana.New(s.cfg, s)
@@ -140,10 +132,6 @@ func (s *consensus) Params() *params.Params {
 	return params.ActiveNetParams.Params
 }
 
-func (s *consensus) VMService() model.VMI {
-	return s.vmService
-}
-
 func (s *consensus) AmanaService() service.IService {
 	if s.amanaService == nil {
 		return nil
@@ -173,12 +161,7 @@ func (s *consensus) subscribe() {
 }
 
 func (s *consensus) Rebuild() error {
-	err := s.vmService.Start()
-	if err != nil {
-		return err
-	}
-	//
-	err = index.DropInvalidTxIndex(s.databaseContext, s.interrupt)
+	err := index.DropInvalidTxIndex(s.databaseContext, s.interrupt)
 	if err != nil {
 		log.Info(err.Error())
 	}

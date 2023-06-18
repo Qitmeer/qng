@@ -24,6 +24,8 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/eth"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/progresslog"
@@ -137,6 +139,8 @@ type BlockChain struct {
 	msgChan chan *processMsg
 	wg      sync.WaitGroup
 	quit    chan struct{}
+
+	meerChain *meer.MeerChain
 }
 
 func (b *BlockChain) Init() error {
@@ -321,7 +325,7 @@ func (b *BlockChain) createChainState() error {
 	header := &genesisBlock.Block().Header
 	node := NewBlockNode(genesisBlock)
 	_, _, ib, _ := b.bd.AddBlock(node)
-	ib.GetState().SetEVM(b.VMService().GetCurHeader())
+	ib.GetState().SetEVM(b.meerChain.GetCurHeader())
 	//node.FlushToDB(b)
 	// Initialize the state related to the best block.  Since it is the
 	// genesis block, use its timestamp for the median time.
@@ -418,7 +422,7 @@ func (b *BlockChain) Start() error {
 
 	// prepare evm env
 	mainTip := b.bd.GetMainChainTip()
-	evmHead, err := b.VMService().PrepareEnvironment(mainTip.GetState())
+	evmHead, err := b.meerChain.PrepareEnvironment(mainTip.GetState())
 	if err != nil {
 		return err
 	}
@@ -427,11 +431,13 @@ func (b *BlockChain) Start() error {
 }
 
 func (b *BlockChain) Stop() error {
+	log.Info("Try to stop BlockChain")
+	close(b.quit)
+	b.wg.Wait()
+	//
 	if err := b.Service.Stop(); err != nil {
 		return err
 	}
-	close(b.quit)
-	b.wg.Wait()
 	return nil
 }
 
@@ -720,7 +726,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			continue
 		}
 		startState := b.bd.GetBlockByOrder(nodeBlock.GetOrder() - 1).GetState()
-		err = b.VMService().RewindTo(startState)
+		err = b.meerChain.RewindTo(startState)
 		if err != nil {
 			return err
 		}
@@ -997,10 +1003,7 @@ func (b *BlockChain) CalculateTokenStateRoot(txs []*types.Tx) *hash.Hash {
 }
 
 func (b *BlockChain) CalculateStateRoot(txs []*types.Tx) *hash.Hash {
-	var vmGenesis *hash.Hash
-	if b.VMService() != nil {
-		vmGenesis = b.VMService().Genesis(txs)
-	}
+	vmGenesis := b.calcMeerGenesis(txs)
 	tokenStateRoot := b.CalculateTokenStateRoot(txs)
 	if tokenStateRoot.IsEqual(zeroHash) {
 		if vmGenesis == nil || vmGenesis.IsEqual(zeroHash) {
@@ -1082,13 +1085,6 @@ func (b *BlockChain) IndexManager() model.IndexManager {
 	return b.indexManager
 }
 
-func (b *BlockChain) VMService() model.VMI {
-	if b.consensus == nil {
-		return nil
-	}
-	return b.consensus.VMService()
-}
-
 // Return chain params
 func (b *BlockChain) ChainParams() *params.Params {
 	return b.params
@@ -1141,10 +1137,11 @@ func (b *BlockChain) Rebuild() error {
 	logLvl := l.Glogger().GetVerbosity()
 	bar := progressbar.Default(int64(b.GetMainOrder()), fmt.Sprintf("Rebuild:"))
 	l.Glogger().Verbosity(l.LvlCrit)
-	b.VMService().SetLogLevel(l.LvlCrit.String())
+	eth.InitLog(l.LvlCrit.String(), b.consensus.Config().DebugPrintOrigins)
+
 	defer func() {
 		l.Glogger().Verbosity(logLvl)
-		b.VMService().SetLogLevel(logLvl.String())
+		eth.InitLog(logLvl.String(), b.consensus.Config().DebugPrintOrigins)
 	}()
 
 	var block *types.SerializedBlock
@@ -1265,5 +1262,12 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 
 	b.InitServices()
 	b.Services().RegisterService(b.bd)
+
+	mchain, err := meer.NewMeerChain(consensus)
+	if err != nil {
+		return nil, err
+	}
+	b.meerChain = mchain
+	b.Services().RegisterService(b.meerChain)
 	return &b, nil
 }

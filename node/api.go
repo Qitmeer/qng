@@ -14,6 +14,7 @@ import (
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -260,6 +261,6 @@ func (api *PrivateLogAPI) SetLogLevel(level string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	api.node.GetVMService().SetLogLevel(level)
+	eth.InitLog(level, api.node.node.Config.DebugPrintOrigins)
 	return level, nil
 }

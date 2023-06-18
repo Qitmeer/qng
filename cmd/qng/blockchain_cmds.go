@@ -14,10 +14,10 @@ import (
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/version"
-	"github.com/Qitmeer/qng/vm"
 	"github.com/schollz/progressbar/v3"
 	"github.com/urfave/cli/v2"
 	"io"
@@ -102,12 +102,12 @@ func blockchainCmd() *cli.Command {
 						log.Error(err.Error())
 						return err
 					}
-					err = cons.VMService().(*vm.Service).Start()
+					err = cons.BlockChain().Start()
 					if err != nil {
 						return err
 					}
 					defer func() {
-						err = cons.VMService().(*vm.Service).Stop()
+						err = cons.BlockChain().Stop()
 						if err != nil {
 							log.Error(err.Error())
 						}
@@ -164,12 +164,12 @@ func blockchainCmd() *cli.Command {
 						log.Error(err.Error())
 						return err
 					}
-					err = cons.VMService().(*vm.Service).Start()
+					err = cons.BlockChain().Start()
 					if err != nil {
 						return err
 					}
 					defer func() {
-						err = cons.VMService().(*vm.Service).Stop()
+						err = cons.BlockChain().Stop()
 						if err != nil {
 							log.Error(err.Error())
 						}
@@ -448,13 +448,13 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 		log.Error(err.Error())
 		return err
 	}
-	err = newcons.VMService().(*vm.Service).Start()
+	err = newcons.BlockChain().Start()
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if newcons != nil {
-			err = newcons.VMService().(*vm.Service).Stop()
+			err = newcons.BlockChain().Stop()
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -531,8 +531,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 
 		bar := progressbar.Default(int64(endNum-1), "Upgrade:")
 		log.Glogger().Verbosity(log.LvlCrit)
-		newcons.VMService().SetLogLevel(log.LvlCrit.String())
-
+		eth.InitLog(log.LvlCrit.String(), cfg.DebugPrintOrigins)
 		var i uint
 		var blockHash *hash.Hash
 
@@ -597,7 +596,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 		}
 		fmt.Println()
 		log.Glogger().Verbosity(logLvl)
-		newcons.VMService().SetLogLevel(logLvl.String())
+		eth.InitLog(logLvl.String(), cfg.DebugPrintOrigins)
 	} else {
 		cfg.InvalidTxIndex = false
 		cfg.AddrIndex = false
@@ -607,7 +606,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 			log.Error(err.Error())
 			return err
 		}
-		err = cons.VMService().(*vm.Service).Start()
+		err = cons.BlockChain().Start()
 		if err != nil {
 			return err
 		}
@@ -651,7 +650,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 
 		bar := progressbar.Default(int64(endNum-1), "Export:")
 		log.Glogger().Verbosity(log.LvlCrit)
-		newcons.VMService().SetLogLevel(log.LvlCrit.String())
+		eth.InitLog(log.LvlCrit.String(), cfg.DebugPrintOrigins)
 
 		var i uint
 		var blockHash *hash.Hash
@@ -687,9 +686,9 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 		}
 		fmt.Println()
 		log.Glogger().Verbosity(logLvl)
-		newcons.VMService().SetLogLevel(logLvl.String())
+		eth.InitLog(logLvl.String(), cfg.DebugPrintOrigins)
 
-		err = cons.VMService().(*vm.Service).Stop()
+		err = cons.BlockChain().Stop()
 		if err != nil {
 			log.Error(err.Error())
 			return err
@@ -701,7 +700,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 	}
 	total := newbc.BlockDAG().GetBlockTotal()
 	newbc = nil
-	err = newcons.VMService().(*vm.Service).Stop()
+	err = newcons.BlockChain().Stop()
 	if err != nil {
 		log.Error(err.Error())
 	}

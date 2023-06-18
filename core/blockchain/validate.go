@@ -13,7 +13,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/consensus/vm"
+	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
@@ -327,12 +327,9 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinba
 		}
 		return update.CheckSanity()
 	} else if types.IsCrossChainVMTx(tx) {
-		vtx, err := vm.NewVMTx(tx)
+		vtx, err := mmeer.NewVMTx(tx)
 		if err != nil {
 			return err
-		}
-		if bc != nil {
-			vtx.SetVMI(bc.VMService())
 		}
 		if coinbase != nil {
 			err = vtx.SetCoinbaseTx(coinbase)
@@ -340,7 +337,7 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinba
 				return err
 			}
 		}
-		return vtx.CheckSanity()
+		return bc.meerChain.CheckSanity(vtx)
 	}
 
 	// Ensure the transaction amounts are in range.  Each transaction
@@ -408,13 +405,13 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinba
 		}
 	}
 	if types.IsCrossChainImportTx(tx) {
-		itx, err := vm.NewImportTx(tx)
+		itx, err := mmeer.NewImportTx(tx)
 		if err != nil {
 			return err
 		}
 		return itx.CheckSanity()
 	} else if types.IsCrossChainExportTx(tx) {
-		etx, err := vm.NewExportTx(tx)
+		etx, err := mmeer.NewExportTx(tx)
 		if err != nil {
 			return err
 		}
@@ -943,7 +940,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 	if err != nil {
 		return err
 	}
-	return b.VMService().CheckConnectBlock(block)
+	return b.meerCheckConnectBlock(block)
 }
 
 // consensusScriptVerifyFlags returns the script flags that must be used when
@@ -1008,11 +1005,11 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			continue
 		}
 		if types.IsCrossChainImportTx(tx.Tx) {
-			itx, err := vm.NewImportTx(tx.Tx)
+			itx, err := mmeer.NewImportTx(tx.Tx)
 			if err != nil {
 				return err
 			}
-			fee, err := b.VMService().VerifyTx(itx)
+			fee, err := b.MeerVerifyTx(itx)
 			if err != nil {
 				return err
 			}
@@ -1023,11 +1020,11 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			continue
 		}
 		if types.IsCrossChainVMTx(tx.Tx) {
-			vtx, err := vm.NewVMTx(tx.Tx)
+			vtx, err := mmeer.NewVMTx(tx.Tx)
 			if err != nil {
 				return err
 			}
-			_, err = b.VMService().VerifyTx(vtx)
+			_, err = b.MeerVerifyTx(vtx)
 			if err != nil {
 				return err
 			}
