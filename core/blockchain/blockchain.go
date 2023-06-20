@@ -441,6 +441,10 @@ func (b *BlockChain) Stop() error {
 	return nil
 }
 
+func (b *BlockChain) IsShutdown() bool {
+	return b.Service.IsShutdown() || system.InterruptRequested(b.consensus.Interrupt())
+}
+
 // HaveBlock returns whether or not the chain instance has the block represented
 // by the passed hash.  This includes checking the various places a block can
 // be like part of the main chain, on a side chain, or in the orphan pool.

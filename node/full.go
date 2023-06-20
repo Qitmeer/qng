@@ -313,8 +313,8 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 		qm.GetMiner().RpcSer = qm.GetRpcServer()
 	}
 
+	qm.Services().LowestPriority(qm.GetBlockChain())
 	qm.Services().LowestPriority(qm.GetTxManager())
 	qm.Services().LowestPriority(qm.GetPeerServer())
-	qm.Services().LowestPriority(qm.GetBlockChain())
 	return &qm, qm.monitorFreeDiskSpace()
 }
