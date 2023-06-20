@@ -142,6 +142,8 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 	// Protect concurrent access.
 	mp.mtx.Lock()
+	defer mp.mtx.Unlock()
+
 	if opreturn.IsMeerEVMTx(tx.Tx) {
 		if mp.cfg.BC.VMService().IsShutdown() {
 			return
@@ -153,7 +155,6 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 	} else {
 		mp.removeTransaction(tx, removeRedeemers)
 	}
-	mp.mtx.Unlock()
 }
 
 // RemoveDoubleSpends removes all transactions which spend outputs spent by the
