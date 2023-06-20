@@ -137,7 +137,7 @@ func AssertTxMinedUseSerializedBlock(t *testing.T, h *Harness, txId *hash.Hash, 
 	if txHash != *txId {
 		t.Fatalf("txId %v not match vs block.tx[1] %v", txId, txHash)
 	}
-	t.Logf("txId %v minted in block, hash=%v, order=%v, height=%v", txId, blockHash, block.Order(), block.Height())
+	t.Logf("txId %v minted in block, hash=%v", txId, blockHash)
 }
 
 func AssertTxMinedUseNotifierAPI(t *testing.T, h *Harness, txId *hash.Hash, blockHash *hash.Hash) {

@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/rpc/websocket"
@@ -16,8 +17,8 @@ import (
 )
 
 // Notification types
-type notificationBlockConnected types.SerializedBlock
-type notificationBlockDisconnected types.SerializedBlock
+type notificationBlockConnected meerdag.IBlock
+type notificationBlockDisconnected meerdag.IBlock
 type notificationBlockAccepted blockchain.BlockAcceptedNotifyData
 
 type notificationReorganization struct {
@@ -89,18 +90,16 @@ out:
 				break out
 			}
 			switch n := n.(type) {
-			case *notificationBlockConnected:
-				block := (*types.SerializedBlock)(n)
+			case notificationBlockConnected:
+				block := (meerdag.IBlock)(n)
 				if len(blockNotifications) != 0 {
-					m.notifyBlockConnected(blockNotifications,
-						block)
+					m.notifyBlockConnected(blockNotifications, block)
 				}
 
-			case *notificationBlockDisconnected:
-				block := (*types.SerializedBlock)(n)
+			case notificationBlockDisconnected:
+				block := (meerdag.IBlock)(n)
 				if len(blockNotifications) != 0 {
-					m.notifyBlockDisconnected(blockNotifications,
-						block)
+					m.notifyBlockDisconnected(blockNotifications, block)
 				}
 
 			case *notificationBlockAccepted:
@@ -193,20 +192,24 @@ out:
 	m.wg.Done()
 }
 
-func (m *wsNotificationManager) NotifyBlockConnected(block *types.SerializedBlock) {
+func (m *wsNotificationManager) NotifyBlockConnected(block meerdag.IBlock) {
 	select {
-	case m.queueNotification <- (*notificationBlockConnected)(block):
+	case m.queueNotification <- (notificationBlockConnected)(block):
 	case <-m.quit:
 	}
 }
 
-func (m *wsNotificationManager) notifyBlockConnected(clients map[chan struct{}]*wsClient, block *types.SerializedBlock) {
-	txs, err := GetTxsHexFromBlock(block, true)
+func (m *wsNotificationManager) notifyBlockConnected(clients map[chan struct{}]*wsClient, block meerdag.IBlock) {
+	node := m.server.BC.GetBlockNode(block)
+	if node == nil {
+		return
+	}
+	txs, err := GetTxsHexFromBlock(node.GetBody(), true)
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
-	ntfn := cmds.NewBlockConnectedNtfn(block.Hash().String(), int64(block.Height()), int64(block.Order()), block.Block().Header.Timestamp.Unix(), txs)
+	ntfn := cmds.NewBlockConnectedNtfn(block.GetHash().String(), int64(block.GetHeight()), int64(block.GetOrder()), node.GetTimestamp(), txs)
 	marshalledJSON, err := cmds.MarshalCmd(nil, ntfn)
 	for _, wsc := range clients {
 		// Marshal and queue notification.
@@ -214,25 +217,29 @@ func (m *wsNotificationManager) notifyBlockConnected(clients map[chan struct{}]*
 	}
 }
 
-func (m *wsNotificationManager) NotifyBlockDisconnected(block *types.SerializedBlock) {
+func (m *wsNotificationManager) NotifyBlockDisconnected(block meerdag.IBlock) {
 	select {
-	case m.queueNotification <- (*notificationBlockDisconnected)(block):
+	case m.queueNotification <- (notificationBlockDisconnected)(block):
 	case <-m.quit:
 	}
 }
 
-func (*wsNotificationManager) notifyBlockDisconnected(clients map[chan struct{}]*wsClient, block *types.SerializedBlock) {
+func (m *wsNotificationManager) notifyBlockDisconnected(clients map[chan struct{}]*wsClient, block meerdag.IBlock) {
 	if len(clients) == 0 {
 		return
 	}
-	txs, err := GetTxsHexFromBlock(block, false)
+	node := m.server.BC.GetBlockNode(block)
+	if node == nil {
+		return
+	}
+	txs, err := GetTxsHexFromBlock(node.GetBody(), false)
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
 	// Notify interested websocket clients about the disconnected block.
-	ntfn := cmds.NewBlockDisconnectedNtfn(block.Hash().String(),
-		int64(block.Height()), int64(block.Order()), block.Block().Header.Timestamp.Unix(), txs)
+	ntfn := cmds.NewBlockDisconnectedNtfn(block.GetHash().String(),
+		int64(block.GetHeight()), int64(block.GetOrder()), node.GetTimestamp(), txs)
 	marshalledJSON, err := cmds.MarshalCmd(nil, ntfn)
 	if err != nil {
 		log.Error(fmt.Sprintf("Failed to marshal block disconnected "+

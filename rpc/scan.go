@@ -5,8 +5,8 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"math"
 	"time"
@@ -37,10 +37,9 @@ func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock uint64,
 		return hashList, nil
 	}
 
-	blk, err := chain.FetchBlockByHash(&hashList[0])
-	if err != nil {
-		log.Error(fmt.Sprintf("Error looking up possibly reorged block: %v",
-			err))
+	blk := chain.BlockDAG().GetBlock(&hashList[0])
+	if blk == nil {
+		log.Error(fmt.Sprintf("Error looking up possibly reorged block: %v", hashList[0].String()))
 		return nil, cmds.ErrRPCBlockNotFound
 	}
 	jsonErr := descendantBlock(chain, lastBlock, blk)
@@ -52,10 +51,10 @@ func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock uint64,
 
 // descendantBlock returns the appropriate JSON-RPC error if a current block
 // fetched during a reorganize is not a direct child of the parent block hash.
-func descendantBlock(chain *blockchain.BlockChain, lastBlockHash *hash.Hash, curBlock *types.SerializedBlock) error {
-	preHash, err := chain.BlockHashByOrder(curBlock.Order() - 1)
+func descendantBlock(chain *blockchain.BlockChain, lastBlockHash *hash.Hash, curBlock meerdag.IBlock) error {
+	preHash, err := chain.BlockHashByOrder(uint64(curBlock.GetOrder()) - 1)
 	if err != nil {
-		return fmt.Errorf("failed fetch order:%v", curBlock.Order()-1)
+		return fmt.Errorf("failed fetch order:%v", curBlock.GetOrder()-1)
 	}
 	if !preHash.IsEqual(lastBlockHash) {
 		err = fmt.Errorf("stopping rescan for reorged block %v (replaced by block %v)", lastBlockHash, preHash)
@@ -72,12 +71,12 @@ func descendantBlock(chain *blockchain.BlockChain, lastBlockHash *hash.Hash, cur
 // final block and block hash that we've scanned will be returned.
 func scanBlockChunks(wsc *wsClient, cmd *cmds.RescanCmd, lookups *rescanKeys, minBlock,
 	maxBlock uint64, chain *blockchain.BlockChain) (
-	*types.SerializedBlock, *hash.Hash, *hash.Hash, error) {
+	meerdag.IBlock, *hash.Hash, *hash.Hash, error) {
 
 	// lastBlock and lastBlockHash track the previously-rescanned block.
 	// They equal nil when no previous blocks have been rescanned.
 	var (
-		lastBlock     *types.SerializedBlock
+		lastBlock     meerdag.IBlock
 		lastBlockHash *hash.Hash
 		lastTxHash    *hash.Hash
 	)
@@ -142,16 +141,8 @@ fetchRange:
 		}
 	loopHashList:
 		for i := range hashList {
-			blk, err := chain.FetchBlockByHash(&hashList[i])
-			if err != nil {
-				// Only handle reorgs if a block could not be
-				// found for the hash.
-				if dbErr, ok := err.(database.Error); !ok ||
-					dbErr.ErrorCode != database.ErrBlockNotFound {
-					log.Error(fmt.Sprintf("Error looking up "+
-						"block: %v", err))
-					return nil, nil, nil, cmds.ErrRPCDatabase
-				}
+			node := chain.BlockDAG().GetBlock(&hashList[i])
+			if node == nil {
 				// If an absolute max block was specified, don't
 				// attempt to handle the reorg.
 				if maxBlock != math.MaxInt64 {
@@ -183,19 +174,11 @@ fetchRange:
 				}
 				goto loopHashList
 			}
-			h := blk.Block().BlockHash()
-			node := chain.BlockDAG().GetBlock(&h)
-			if node == nil {
-				return nil, nil, nil, cmds.ErrInvalidNode
-			}
-			// Update the source block order
-			blk.SetOrder(uint64(node.GetOrder()))
-			blk.SetHeight(node.GetHeight())
 			if i == 0 && lastBlockHash != nil {
 				// Ensure the new hashList is on the same fork
 				// as the last block from the old hashList.
 				var jsonErr error
-				jsonErr = descendantBlock(chain, lastBlockHash, blk)
+				jsonErr = descendantBlock(chain, lastBlockHash, node)
 				if jsonErr != nil {
 					return nil, nil, nil, jsonErr
 				}
@@ -206,17 +189,18 @@ fetchRange:
 			select {
 			case <-wsc.quit:
 				log.Debug(fmt.Sprintf("Stopped rescan at order %v "+
-					"for disconnected client", blk.Order()))
+					"for disconnected client", node.GetOrder()))
 				return nil, nil, nil, nil
 			default:
-				h := rescanBlock(wsc, lookups, blk)
+				blk := chain.GetBlockNode(node)
+				h := rescanBlock(wsc, lookups, blk.GetBody())
 				if h != nil {
 					lastTxHash = h
 				}
-				lastBlock = blk
-				lastBlockHash = blk.Hash()
+				lastBlock = node
+				lastBlockHash = node.GetHash()
 			}
-			log.Debug("lastBlock", "order", lastBlock.Order())
+			log.Debug("lastBlock", "order", lastBlock.GetOrder())
 			// Periodically notify the client of the progress
 			// completed.  Continue with next block if no progress
 			// notification is needed yet.
@@ -225,8 +209,8 @@ fetchRange:
 			default:
 			}
 			n := cmds.NewRescanProgressNtfn(
-				hashList[i].String(), blk.Order(),
-				blk.Block().Header.Timestamp.Unix(),
+				hashList[i].String(), uint64(node.GetOrder()),
+				chain.GetBlockNode(node).GetTimestamp(),
 			)
 			mn, err := cmds.MarshalCmd(nil, n)
 			if err != nil {
@@ -238,7 +222,7 @@ fetchRange:
 			if err = wsc.QueueNotification(mn); err == ErrClientQuit {
 				// Finished if the client disconnected.
 				log.Debug(fmt.Sprintf("Stopped rescan at order %v "+
-					"for disconnected client", blk.Order()))
+					"for disconnected client", node.GetOrder()))
 				return nil, nil, nil, nil
 			}
 		}

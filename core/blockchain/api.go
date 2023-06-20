@@ -402,21 +402,12 @@ func (api *PublicBlockAPI) makeBlock(h hash.Hash, verbose *bool, inclTx *bool, f
 		fTx = *fullTx
 	}
 
-	// Load the raw block bytes from the database.
-	// Note :
-	// FetchBlockByHash differs from BlockByHash in that this one also returns blocks
-	// that are not part of the main chain (if they are known).
-	blk, err := api.chain.FetchBlockByHash(&h)
-	if err != nil {
-		return nil, err
-	}
-	node := api.chain.BlockDAG().GetBlock(&h)
-	if node == nil {
+	block := api.chain.BlockDAG().GetBlock(&h)
+	if block == nil {
 		return nil, fmt.Errorf("no node")
 	}
-	// Update the source block order
-	blk.SetOrder(uint64(node.GetOrder()))
-	blk.SetHeight(node.GetHeight())
+	node := api.chain.GetBlockNode(block)
+	blk := node.block
 	// When the verbose flag isn't set, simply return the
 	// network-serialized block as a hex-encoded string.
 	if !vb {
@@ -427,7 +418,7 @@ func (api *PublicBlockAPI) makeBlock(h hash.Hash, verbose *bool, inclTx *bool, f
 		}
 		return hex.EncodeToString(blkBytes), nil
 	}
-	confirmations := int64(api.chain.BlockDAG().GetConfirmations(node.GetID()))
+	confirmations := int64(api.chain.BlockDAG().GetConfirmations(block.GetID()))
 	bd := api.chain.BlockDAG()
 	ib := bd.GetBlock(&h)
 	cs := bd.GetChildren(ib)
@@ -454,8 +445,7 @@ func (api *PublicBlockAPI) makeBlock(h hash.Hash, verbose *bool, inclTx *bool, f
 	}
 
 	//TODO, refactor marshal api
-	fields, err := marshal.MarshalJsonBlock(blk, iTx, fTx, api.chain.params, confirmations, children,
-		!node.GetState().GetStatus().KnownInvalid(), node.IsOrdered(), coinbaseAmout, coinbaseFees)
+	fields, err := marshal.MarshalJsonBlock(block, blk, iTx, fTx, api.chain.params, confirmations, children, coinbaseAmout, coinbaseFees)
 	if err != nil {
 		return nil, err
 	}

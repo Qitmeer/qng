@@ -268,7 +268,7 @@ func (m *Manager) Init() error {
 			indexerOrders[i] = order
 		}
 
-		progressLogger.LogBlockHeight(block)
+		progressLogger.LogBlockOrder(blk.GetOrder(), block)
 	}
 
 	log.Info(fmt.Sprintf("Indexes caught up to order %d", bestOrder))
@@ -607,12 +607,12 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *types.Seriali
 	if err != nil {
 		return err
 	}
-	if order != math.MaxUint32 && order+1 != uint32(block.Order()) ||
-		order == math.MaxUint32 && block.Order() != 0 {
+	if order != math.MaxUint32 && order+1 != uint32(blk.GetOrder()) ||
+		order == math.MaxUint32 && blk.GetOrder() != 0 {
 		return fmt.Errorf("dbIndexConnectBlock must be "+
 			"called with a block that extends the current index "+
 			"tip (%s, tip %d, block %d)", indexer.Name(),
-			order, block.Order())
+			order, blk.GetOrder())
 	}
 	// Notify the indexer with the connected block so it can index it.
 	if err := indexer.ConnectBlock(dbTx, block, stxos, blk); err != nil {
@@ -620,7 +620,7 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *types.Seriali
 	}
 
 	// Update the current index tip.
-	return dbPutIndexerTip(dbTx, idxKey, block.Hash(), uint32(block.Order()))
+	return dbPutIndexerTip(dbTx, idxKey, block.Hash(), uint32(blk.GetOrder()))
 }
 
 // dbFetchIndexerTip uses an existing database transaction to retrieve the

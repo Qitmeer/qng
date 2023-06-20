@@ -216,7 +216,7 @@ func (ntmgr *NotifyMgr) handleNotifyMsg(notification *blockchain.Notification) {
 			log.Warn("Chain connected notification is not a block slice.")
 			break
 		}
-		if len(blockSlice) != 2 {
+		if len(blockSlice) != 3 {
 			log.Warn("Chain connected notification is wrong size slice.")
 			break
 		}
@@ -226,12 +226,12 @@ func (ntmgr *NotifyMgr) handleNotifyMsg(notification *blockchain.Notification) {
 	// A block has been disconnected from the main block chain.
 	case blockchain.BlockDisconnected:
 		log.Trace("Chain disconnected notification.")
-		block, ok := notification.Data.(*types.SerializedBlock)
+		blockSlice, ok := notification.Data.([]interface{})
 		if !ok {
 			log.Warn("Chain disconnected notification is not a block slice.")
 			break
 		}
-		ntmgr.zmqNotify.BlockDisconnected(block)
+		ntmgr.zmqNotify.BlockDisconnected(blockSlice[0].(*types.SerializedBlock))
 	}
 }
 

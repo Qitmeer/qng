@@ -38,12 +38,12 @@ func (node *Node) init(cfg *Config, srcnode *SrcNode, endPoint meerdag.IBlock) e
 
 	node.db = db
 	//
-	ccfg:=common.DefaultConfig(node.cfg.HomeDir)
-	ccfg.DataDir=cfg.DataDir
-	ccfg.DbType=cfg.DbType
-	ccfg.DAGType=cfg.DAGType
-	cons:=consensus.NewPure(ccfg,db)
-	err=cons.Init()
+	ccfg := common.DefaultConfig(node.cfg.HomeDir)
+	ccfg.DataDir = cfg.DataDir
+	ccfg.DbType = cfg.DbType
+	ccfg.DAGType = cfg.DAGType
+	cons := consensus.NewPure(ccfg, db)
+	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -117,7 +117,7 @@ func (node *Node) processBlockDAG(srcnode *SrcNode) error {
 		if err != nil {
 			return err
 		}
-		err = node.bc.FastAcceptBlock(block, blockchain.BFFastAdd)
+		_, err = node.bc.FastAcceptBlock(block, blockchain.BFFastAdd)
 		if err != nil {
 			return err
 		}

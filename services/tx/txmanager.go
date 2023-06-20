@@ -148,7 +148,7 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 			break
 		}
 
-		if len(blockSlice) != 2 {
+		if len(blockSlice) != 3 {
 			log.Warn("Chain connected notification is wrong size slice.")
 			break
 		}
@@ -179,14 +179,14 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 			}
 		}
 	case blockchain.BlockDisconnected:
-		block, ok := notification.Data.(*types.SerializedBlock)
+		blockSlice, ok := notification.Data.([]interface{})
 		if !ok {
 			log.Warn("Chain disconnected notification is not a block slice.")
 			break
 		}
 		// Rollback previous block recorded by the fee estimator.
 		if tm.FeeEstimator() != nil {
-			tm.FeeEstimator().Rollback(block.Hash())
+			tm.FeeEstimator().Rollback(blockSlice[0].(*types.SerializedBlock).Hash())
 		}
 	}
 }

@@ -1368,8 +1368,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) err
 	if mainParent == nil {
 		return ruleError(ErrPrevBlockNotBest, "main parent")
 	}
-	block.SetOrder(uint64(mainParent.GetOrder() + 1))
-	virBlock.SetOrder(uint(block.Order()))
+	virBlock.SetOrder(mainParent.GetOrder() + 1)
 	virBlock.GetState().(*state.BlockState).SetDefault(mainParent.GetState().(*state.BlockState))
 	err = b.checkBlockContext(block, mainParent, flags)
 	if err != nil {

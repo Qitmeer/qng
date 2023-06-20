@@ -321,7 +321,6 @@ func (b *BlockChain) initChainState() error {
 func (b *BlockChain) createChainState() error {
 	// Create a new node from the genesis block and set it as the best node.
 	genesisBlock := types.NewBlock(b.params.GenesisBlock)
-	genesisBlock.SetOrder(0)
 	header := &genesisBlock.Block().Header
 	node := NewBlockNode(genesisBlock)
 	_, _, ib, _ := b.bd.AddBlock(node)
@@ -685,7 +684,6 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			panic(err)
 		}
 		log.Debug("detach block", "hash", n.Block.GetHash().String(), "old order", n.OldOrder, "status", n.Block.GetState().GetStatus().String())
-		block.SetOrder(uint64(n.OldOrder))
 		// Load all of the utxos referenced by the block that aren't
 		// already in the view.
 		var stxos []utxo.SpentTxOut
@@ -749,7 +747,6 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			if err != nil {
 				return err
 			}
-			block.SetOrder(uint64(nodeBlock.GetOrder()))
 			block.SetHeight(nodeBlock.GetHeight())
 		}
 		if !nodeBlock.IsOrdered() {
@@ -1121,7 +1118,6 @@ func (b *BlockChain) Rebuild() error {
 			return err
 		}
 		genesisBlock := types.NewBlock(params.ActiveNetParams.GenesisBlock)
-		genesisBlock.SetOrder(0)
 
 		view := utxo.NewUtxoViewpoint()
 		view.SetViewpoints([]*hash.Hash{genesisBlock.Hash()})
@@ -1163,7 +1159,6 @@ func (b *BlockChain) Rebuild() error {
 		if err != nil {
 			return err
 		}
-		block.SetOrder(uint64(ib.GetOrder()))
 		block.SetHeight(ib.GetHeight())
 
 		if i == 0 {

@@ -31,8 +31,9 @@ type BlockProgressLogger struct {
 
 // NewBlockProgressLogger returns a new block progress logger.
 // The progress message is templated as follows:
-//  {progressAction} {numProcessed} {blocks|block} in the last {timePeriod}
-//  ({numTxs}, height {lastBlockHeight}, {lastBlockTimeStamp})
+//
+//	{progressAction} {numProcessed} {blocks|block} in the last {timePeriod}
+//	({numTxs}, height {lastBlockHeight}, {lastBlockTimeStamp})
 func NewBlockProgressLogger(progressMessage string, logger log.Logger) *BlockProgressLogger {
 	return &BlockProgressLogger{
 		lastBlockLogTime: roughtime.Now(),
@@ -41,47 +42,10 @@ func NewBlockProgressLogger(progressMessage string, logger log.Logger) *BlockPro
 	}
 }
 
-// LogBlockHeight logs a new block height as an information message to show
-// progress to the user. In order to prevent spam, it limits logging to one
-// message every 10 seconds with duration and totals included.
-func (b *BlockProgressLogger) LogBlockHeightByParent(block, parent *types.SerializedBlock) {
-	b.Lock()
-	defer b.Unlock()
-	b.receivedLogBlocks++
-	b.receivedLogTx += int64(len(parent.Transactions()))
-
-	now := roughtime.Now()
-	duration := now.Sub(b.lastBlockLogTime)
-	if duration < time.Second*10 {
-		return
-	}
-
-	// Truncate the duration to 10s of milliseconds.
-	durationMillis := int64(duration / time.Millisecond)
-	tDuration := 10 * time.Millisecond * time.Duration(durationMillis/10)
-
-	// Log information about new block height.
-	blockStr := "blocks"
-	if b.receivedLogBlocks == 1 {
-		blockStr = "block"
-	}
-	txStr := "transactions"
-	if b.receivedLogTx == 1 {
-		txStr = "transaction"
-	}
-
-	b.subsystemLogger.Info(fmt.Sprintf("%s %d %s in the last %s ",b.progressAction, b.receivedLogBlocks, blockStr, tDuration),
-		txStr,b.receivedLogTx,"order",meerdag.GetOrderLogStr(uint(block.Order())),"time",block.Block().Header.Timestamp)
-
-	b.receivedLogBlocks = 0
-	b.receivedLogTx = 0
-	b.lastBlockLogTime = now
-}
-
 // logBlockHeight logs a new block height as an information message to show
 // progress to the user. In order to prevent spam, it limits logging to one
 // message every 10 seconds with duration and totals included.
-func (b *BlockProgressLogger) LogBlockHeight(block *types.SerializedBlock) {
+func (b *BlockProgressLogger) LogBlockOrder(order uint, block *types.SerializedBlock) {
 	b.Lock()
 	defer b.Unlock()
 	b.receivedLogBlocks++
@@ -106,8 +70,8 @@ func (b *BlockProgressLogger) LogBlockHeight(block *types.SerializedBlock) {
 		txStr = "transaction"
 	}
 
-	b.subsystemLogger.Info(fmt.Sprintf("%s %d %s in the last %s ",b.progressAction, b.receivedLogBlocks, blockStr, tDuration),
-		txStr,b.receivedLogTx,"order",meerdag.GetOrderLogStr(uint(block.Order())),"time",block.Block().Header.Timestamp)
+	b.subsystemLogger.Info(fmt.Sprintf("%s %d %s in the last %s ", b.progressAction, b.receivedLogBlocks, blockStr, tDuration),
+		txStr, b.receivedLogTx, "order", meerdag.GetOrderLogStr(order), "time", block.Block().Header.Timestamp)
 	b.receivedLogBlocks = 0
 	b.receivedLogTx = 0
 	b.lastBlockLogTime = now

@@ -31,6 +31,10 @@ func (node *BlockNode) GetHeader() *types.BlockHeader {
 	return &node.block.Block().Header
 }
 
+func (node *BlockNode) GetBody() *types.SerializedBlock {
+	return node.block
+}
+
 func (node *BlockNode) Difficulty() uint32 {
 	return node.GetHeader().Difficulty
 }
