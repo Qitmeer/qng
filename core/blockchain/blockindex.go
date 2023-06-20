@@ -146,7 +146,6 @@ func (b *BlockChain) FetchBlockByOrder(order uint64) (*types.SerializedBlock, mo
 	if err != nil {
 		return nil, nil, err
 	}
-	block.SetHeight(ib.GetHeight())
 	return block, ib, nil
 }
 

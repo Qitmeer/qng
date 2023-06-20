@@ -928,7 +928,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 
 	if runScripts {
 		err = b.checkBlockScripts(block, utxoView,
-			scriptFlags, b.sigCache)
+			scriptFlags, b.sigCache, int64(ib.GetHeight()))
 		if err != nil {
 			log.Trace("checkBlockScripts failed; error returned "+
 				"on txtreeregular of cur block: %v", err)
@@ -1343,7 +1343,7 @@ func (b *BlockChain) CheckTransactionInputs(tx *types.Tx, utxoView *utxo.UtxoVie
 // the current tip of the main chain or its parent.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) error {
+func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock, height uint64) error {
 	// Skip the proof of work check as this is just a block template.
 	flags := BFNoPoWCheck
 
@@ -1361,7 +1361,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock) err
 	if virBlock == nil {
 		return ruleError(ErrPrevBlockNotBest, "tipsNode")
 	}
-	if virBlock.GetHeight() != block.Height() {
+	if uint64(virBlock.GetHeight()) != height {
 		return ruleError(ErrPrevBlockNotBest, "tipsNode height")
 	}
 	mainParent := b.bd.GetBlockById(virBlock.GetMainParent())

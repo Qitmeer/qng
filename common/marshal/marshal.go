@@ -299,7 +299,7 @@ func MarshalJsonBlock(block meerdag.IBlock, b *types.SerializedBlock, inclTx boo
 		{Key: "confirmations", Val: confirmations},
 		{Key: "version", Val: head.Version},
 		{Key: "weight", Val: types.GetBlockWeight(b.Block())},
-		{Key: "height", Val: b.Height()},
+		{Key: "height", Val: block.GetHeight()},
 		{Key: "txRoot", Val: head.TxRoot.String()},
 	}
 	if isOrdered {

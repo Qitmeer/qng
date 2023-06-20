@@ -546,8 +546,7 @@ mempool:
 		}
 	}
 	sblock := types.NewBlock(&block)
-	sblock.SetHeight(uint(nextBlockHeight))
-	err = bc.CheckConnectBlockTemplate(sblock)
+	err = bc.CheckConnectBlockTemplate(sblock, nextBlockHeight)
 	if err != nil {
 		str := fmt.Sprintf("failed to do final check for check connect "+
 			"block when making new block template: %v",

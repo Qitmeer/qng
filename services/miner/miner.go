@@ -637,7 +637,7 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 		BlockHash:      block.Hash().String(),
 		CoinbaseTxID:   block.Transactions()[0].Hash().String(),
 		Order:          meerdag.GetOrderLogStr(ib.GetOrder()),
-		Height:         int64(block.Height()),
+		Height:         int64(ib.GetHeight()),
 		CoinbaseAmount: coinbaseTxGenerated,
 		MinerType:      m.worker.GetType(),
 	}, nil
@@ -672,7 +672,6 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 	tHeader.Timestamp = header.Timestamp
 	tHeader.Pow = header.Pow
 	block := types.NewBlock(m.template.Block)
-	block.SetHeight(uint(m.template.Height))
 	return m.submitBlock(block)
 }
 

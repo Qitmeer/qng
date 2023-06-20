@@ -212,14 +212,14 @@ func (ef *FeeEstimator) ObserveTransaction(t *TxDesc) {
 }
 
 // RegisterBlock informs the fee estimator of a new block to take into account.
-func (ef *FeeEstimator) RegisterBlock(block *types.SerializedBlock) error {
+func (ef *FeeEstimator) RegisterBlock(block *types.SerializedBlock, mainheight uint) error {
 	ef.mtx.Lock()
 	defer ef.mtx.Unlock()
 
 	// The previous sorted list is invalid, so delete it.
 	ef.cached = nil
 
-	height := int32(block.Height())
+	height := int32(mainheight)
 	if height != ef.lastKnownHeight+1 && ef.lastKnownHeight != UnminedHeight {
 		return fmt.Errorf("intermediate block not recorded; current height is %d; new height is %d",
 			ef.lastKnownHeight, height)

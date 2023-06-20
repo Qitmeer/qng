@@ -397,7 +397,6 @@ type SerializedBlock struct {
 	serializedBytes []byte    // Serialized bytes for the block
 	transactions    []*Tx     // Transactions
 	txnsGenerated   bool      // ALL wrapped transactions generated
-	height          uint      //height is in the sub dag chain.
 }
 
 // The stringer method makes SerializedBlock satisfy the Stringer interface.
@@ -532,17 +531,6 @@ func (sb *SerializedBlock) TxLoc() ([]TxLoc, error) {
 		return nil, err
 	}
 	return txLocs, err
-}
-
-func (sb *SerializedBlock) SetOrder(order uint64) {
-}
-
-func (sb *SerializedBlock) Height() uint {
-	return sb.height
-}
-
-func (sb *SerializedBlock) SetHeight(height uint) {
-	sb.height = height
 }
 
 // Transactions returns a slice of wrapped transactions for all

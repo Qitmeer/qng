@@ -65,7 +65,8 @@ type BlockAcceptedNotifyData struct {
 	IsMainChainTipChange bool
 
 	// Block is the block that was accepted into the chain.
-	Block *types.SerializedBlock
+	Block  *types.SerializedBlock
+	Height uint64
 
 	Flags BehaviorFlags
 }

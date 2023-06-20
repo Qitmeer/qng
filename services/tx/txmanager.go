@@ -169,7 +169,7 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 		tm.ntmgr.AnnounceNewTransactions(txds, nil)
 		// Register block with the fee estimator, if it exists.
 		if tm.FeeEstimator() != nil && blockSlice[1].(bool) {
-			err := tm.FeeEstimator().RegisterBlock(block)
+			err := tm.FeeEstimator().RegisterBlock(block, blockSlice[2].(meerdag.IBlock).GetHeight())
 
 			// If an error is somehow generated then the fee estimator
 			// has entered an invalid state. Since it doesn't know how

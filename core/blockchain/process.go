@@ -231,7 +231,6 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		b.ChainUnlock()
 		return nil, fmt.Errorf("Irreparable error![%s]", newNode.GetHash().String())
 	}
-	block.SetHeight(ib.GetHeight())
 	// Insert the block into the database if it's not already there.  Even
 	// though it is possible the block will ultimately fail to connect, it
 	// has already passed all proof-of-work and validity tests which means
@@ -301,6 +300,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		IsMainChainTipChange: isMainChainTipChange,
 		Block:                block,
 		Flags:                flags,
+		Height:               uint64(ib.GetHeight()),
 	})
 	if b.Acct != nil {
 		err = b.Acct.Commit()
@@ -353,7 +353,6 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 				if err != nil {
 					return false, err
 				}
-				sb.SetHeight(nodeBlock.GetHeight())
 			}
 
 			if !nodeBlock.IsOrdered() {

@@ -215,7 +215,7 @@ func ValidateTransactionScripts(tx *types.Tx, utxoView *utxo.UtxoViewpoint, flag
 // the passed block using multiple goroutines.
 // txTree = true is TxTreeRegular, txTree = false is TxTreeStake.
 func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *utxo.UtxoViewpoint,
-	scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
+	scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache, height int64) error {
 
 	// Collect all of the transaction inputs and required information for
 	// validation for all transactions in the block into a single slice.
@@ -259,7 +259,7 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *u
 			if txIn.PreviousOut.OutIndex == math.MaxUint32 {
 				continue
 			}
-			if forks.IsVaildEVMUTXOUnlockTx(tx.Tx, txIn, int64(block.Height())) {
+			if forks.IsVaildEVMUTXOUnlockTx(tx.Tx, txIn, height) {
 				txIn.AmountIn.Value = types.MeerEVMForkInput
 			}
 			txVI := &txValidateItem{

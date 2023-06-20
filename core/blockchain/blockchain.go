@@ -747,7 +747,6 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			if err != nil {
 				return err
 			}
-			block.SetHeight(nodeBlock.GetHeight())
 		}
 		if !nodeBlock.IsOrdered() {
 			er := b.updateDefaultBlockState(nodeBlock)
@@ -1159,7 +1158,6 @@ func (b *BlockChain) Rebuild() error {
 		if err != nil {
 			return err
 		}
-		block.SetHeight(ib.GetHeight())
 
 		if i == 0 {
 			if b.indexManager != nil {
