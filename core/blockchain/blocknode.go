@@ -9,38 +9,26 @@ import (
 )
 
 type BlockNode struct {
-	// hash is the hash of the block this node represents.
-	hash hash.Hash
-
-	parents []hash.Hash
-
-	header types.BlockHeader
-
-	txNum int
+	block *types.SerializedBlock
 }
 
 // return the block node hash.
 func (node *BlockNode) GetHash() *hash.Hash {
-	return &node.hash
+	return node.block.Hash()
 }
 
 // Include all parents for set
 func (node *BlockNode) GetParents() []*hash.Hash {
-	parents := []*hash.Hash{}
-	for _, p := range node.parents {
-		pa := p
-		parents = append(parents, &pa)
-	}
-	return parents
+	return node.block.Block().Parents
 }
 
 // return the timestamp of node
 func (node *BlockNode) GetTimestamp() int64 {
-	return node.header.Timestamp.Unix()
+	return node.block.Block().Header.Timestamp.Unix()
 }
 
 func (node *BlockNode) GetHeader() *types.BlockHeader {
-	return &node.header
+	return &node.block.Block().Header
 }
 
 func (node *BlockNode) Difficulty() uint32 {
@@ -60,24 +48,16 @@ func (node *BlockNode) Timestamp() time.Time {
 }
 
 func (node *BlockNode) GetPriority() int {
-	return node.txNum
+	return len(node.block.Block().Transactions)
 }
 
 func (node *BlockNode) GetMainParent() *hash.Hash {
-	return &node.parents[0]
+	return node.block.Block().Parents[0]
 }
 
 func NewBlockNode(block *types.SerializedBlock) *BlockNode {
-	header := &block.Block().Header
 	bn := BlockNode{
-		hash:    header.BlockHash(),
-		header:  *header,
-		parents: []hash.Hash{},
-		txNum:   len(block.Transactions()),
-	}
-	for _, p := range block.Block().Parents {
-		pa := *p
-		bn.parents = append(bn.parents, pa)
+		block: block,
 	}
 	return &bn
 }
