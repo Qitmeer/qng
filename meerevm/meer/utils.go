@@ -67,6 +67,10 @@ func BuildEVMBlock(block *qtypes.SerializedBlock) (*mmeer.Block, error) {
 		}
 
 		if qtypes.IsCrossChainExportTx(tx.Tx) {
+			if tx.Object != nil {
+				result.Txs = append(result.Txs, tx.Object.(*mmeer.ExportTx))
+				continue
+			}
 			ctx, err := mmeer.NewExportTx(tx.Tx)
 			if err != nil {
 				return nil, err
@@ -83,11 +87,14 @@ func BuildEVMBlock(block *qtypes.SerializedBlock) (*mmeer.Block, error) {
 			}
 			result.Txs = append(result.Txs, ctx)
 		} else if qtypes.IsCrossChainVMTx(tx.Tx) {
-			ctx, err := mmeer.NewVMTx(tx.Tx)
-			if err != nil {
-				return nil, err
+			if tx.Object != nil {
+				vt := tx.Object.(*mmeer.VMTx)
+				if vt.Coinbase == block.Transactions()[0].Hash().String() {
+					result.Txs = append(result.Txs, vt)
+					continue
+				}
 			}
-			err = ctx.SetCoinbaseTx(block.Transactions()[0].Tx)
+			ctx, err := mmeer.NewVMTx(tx.Tx, block.Transactions()[0].Tx)
 			if err != nil {
 				return nil, err
 			}

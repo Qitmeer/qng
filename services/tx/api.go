@@ -671,7 +671,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 
 		if mtx.Tx.IsCoinBase() {
 			amountMap := api.txManager.GetChain().GetFees(rtx.blkHash)
-			result.Vout = marshal.MarshJsonCoinbaseVout(mtx.Tx, filterAddrMap, params, amountMap)
+			result.Vout = marshal.MarshJsonCoinbaseVout(mtx, filterAddrMap, params, amountMap)
 		} else {
 			result.Vout = marshal.MarshJsonVout(mtx.Tx, filterAddrMap, params)
 		}
@@ -993,7 +993,7 @@ func (api *PublicTxAPI) GetTxIDByMeerEVMTxHash(etxh hash.Hash) (interface{}, err
 	if len(txhs) > 0 {
 		for i := 0; i < len(txhs); i++ {
 			if txhs[i].IsEqual(&etxh) {
-				return etxs[i].TxHash().String(), nil
+				return etxs[i].Hash().String(), nil
 			}
 		}
 	}

@@ -12,7 +12,6 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
@@ -109,21 +108,20 @@ func (b *MeerChain) Stop() error {
 
 func (b *MeerChain) CheckConnectBlock(block *mmeer.Block) error {
 	parent := b.chain.Ether().BlockChain().CurrentBlock()
-	_, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
+	mblock, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
 		return err
 	}
+	block.EvmBlock = mblock
 	return nil
 }
 
 func (b *MeerChain) ConnectBlock(block *mmeer.Block) (uint64, error) {
-	parent := b.chain.Ether().BlockChain().CurrentBlock()
-	mblock, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
-	if err != nil {
-		return 0, err
+	mblock := block.EvmBlock
+	if mblock == nil {
+		return 0, fmt.Errorf("No EVM block:%d", block.ID())
 	}
-	var st int
-	st, err = b.chain.Ether().BlockChain().InsertChain(types.Blocks{mblock})
+	st, err := b.chain.Ether().BlockChain().InsertChain(types.Blocks{mblock})
 	if err != nil {
 		return 0, err
 	}
@@ -255,11 +253,7 @@ func (b *MeerChain) fillBlock(qtxs []model.Tx, header *types.Header, statedb *st
 			}
 			header.Extra = txmb
 		} else if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
-			txb := tx.GetData()
-			var txmb = &types.Transaction{}
-			if err := txmb.UnmarshalBinary(txb); err != nil {
-				return nil, nil, err
-			}
+			txmb := tx.(*mmeer.VMTx).ETx
 			err := b.addTx(txmb, header, statedb, &txs, &receipts, gasPool)
 			if err != nil {
 				return nil, nil, err
@@ -428,23 +422,7 @@ func (b *MeerChain) RewindTo(state model.BlockState) error {
 }
 
 func (b *MeerChain) CheckSanity(vt *mmeer.VMTx) error {
-	if vt.GetTxType() != qtypes.TxTypeCrossChainVM {
-		return fmt.Errorf("Not support")
-	}
-	me, err := opreturn.NewOPReturnFrom(vt.TxOut[0].PkScript)
-	if err != nil {
-		return err
-	}
-	err = me.Verify(vt.Transaction)
-	if err != nil {
-		return err
-	}
-	txb := vt.GetData()
-	var txe = &types.Transaction{}
-	if err := txe.UnmarshalBinary(txb); err != nil {
-		return fmt.Errorf("rlp decoding failed: %v", err)
-	}
-	return b.validateTx(txe, false)
+	return b.validateTx(vt.ETx, false)
 
 }
 
@@ -491,13 +469,9 @@ func (b *MeerChain) validateTx(tx *types.Transaction, checkState bool) error {
 	return nil
 }
 
-func (b *MeerChain) VerifyTx(tx model.Tx) (int64, error) {
+func (b *MeerChain) VerifyTx(tx *mmeer.VMTx) (int64, error) {
 	if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
-		txb := tx.GetData()
-		var txe = &types.Transaction{}
-		if err := txe.UnmarshalBinary(txb); err != nil {
-			return 0, fmt.Errorf("rlp decoding failed: %v", err)
-		}
+		txe := tx.ETx
 		err := b.validateTx(txe, true)
 		if err != nil {
 			return 0, err

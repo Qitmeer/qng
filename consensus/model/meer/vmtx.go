@@ -9,14 +9,16 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/params"
+	etypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 type VMTx struct {
 	*Tx
-	*types.Transaction
+	Coinbase string
+	ETx      *etypes.Transaction
 }
 
-func (vt *VMTx) SetCoinbaseTx(tx *types.Transaction) error {
+func (vt *VMTx) setCoinbaseTx(tx *types.Transaction) error {
 	_, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(tx.TxOut[0].PkScript, params.ActiveNetParams.Params)
 	if err != nil {
 		return err
@@ -27,17 +29,39 @@ func (vt *VMTx) SetCoinbaseTx(tx *types.Transaction) error {
 			return fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
 		}
 		vt.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
+		vt.Coinbase = tx.TxHash().String()
 		return nil
 	}
 	return fmt.Errorf("tx format error :TxTypeCrossChainVM")
 }
 
-func NewVMTx(tx *types.Transaction) (*VMTx, error) {
+func NewVMTx(tx *types.Transaction, coinbase *types.Transaction) (*VMTx, error) {
 	if !opreturn.IsMeerEVM(tx.TxOut[0].PkScript) {
 		return nil, fmt.Errorf("Not MeerVM tx")
 	}
-	return &VMTx{
-		Tx:          &Tx{Type: types.TxTypeCrossChainVM, Data: common.ToTxHex(tx.TxIn[0].SignScript)},
-		Transaction: tx,
-	}, nil
+
+	vt := &VMTx{
+		Tx: &Tx{Type: types.TxTypeCrossChainVM, Data: common.ToTxHex(tx.TxIn[0].SignScript)},
+	}
+	if coinbase != nil {
+		err := vt.setCoinbaseTx(coinbase)
+		if err != nil {
+			return nil, err
+		}
+	}
+	me, err := opreturn.NewOPReturnFrom(tx.TxOut[0].PkScript)
+	if err != nil {
+		return nil, err
+	}
+	err = me.Verify(tx)
+	if err != nil {
+		return nil, err
+	}
+	txb := vt.GetData()
+	var txe = &etypes.Transaction{}
+	if err := txe.UnmarshalBinary(txb); err != nil {
+		return nil, fmt.Errorf("rlp decoding failed: %v", err)
+	}
+	vt.ETx = txe
+	return vt, nil
 }

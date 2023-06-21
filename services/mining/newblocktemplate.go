@@ -96,9 +96,9 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 	bc := consensus.BlockChain().(*blockchain.BlockChain)
 	subsidyCache := bc.FetchSubsidyCache()
 	bd := bc.BlockDAG()
-	best := bc.BestSnapshot()
+	//best := bc.BestSnapshot()
 	nextBlockHeight := uint64(0)
-	nextBlockOrder := uint64(best.GraphState.GetTotal())
+	//nextBlockOrder := uint64(best.GraphState.GetTotal())
 	//nextBlockLayer:=uint64(best.GraphState.GetLayer()+1)
 
 	// All transaction scripts are verified using the more strict standarad
@@ -546,9 +546,7 @@ mempool:
 		}
 	}
 	sblock := types.NewBlock(&block)
-	sblock.SetOrder(nextBlockOrder)
-	sblock.SetHeight(uint(nextBlockHeight))
-	err = bc.CheckConnectBlockTemplate(sblock)
+	err = bc.CheckConnectBlockTemplate(sblock, nextBlockHeight)
 	if err != nil {
 		str := fmt.Sprintf("failed to do final check for check connect "+
 			"block when making new block template: %v",

@@ -101,7 +101,7 @@ type Engine struct {
 	lastCodeSep int
 	dstack      stack // data stack
 	astack      stack // alt stack
-	tx          types.Transaction
+	tx          types.Tx
 	scriptTx    types.ScriptTx
 	txIdx       int
 	condStack   []int
@@ -601,14 +601,14 @@ func (vm *Engine) SetAltStack(data [][]byte) {
 // NewEngine returns a new script engine for the provided public key script,
 // transaction, and input index.  The flags modify the behavior of the script
 // engine according to the description provided by each flag.
-func NewEngine(scriptPubKey []byte, tx *types.Transaction, txIdx int,
+func NewEngine(scriptPubKey []byte, tx *types.Tx, txIdx int,
 	flags ScriptFlags, scriptVersion uint16, sigCache *SigCache) (*Engine, error) {
 
 	// The provided transaction input index must refer to a valid input.
-	if txIdx < 0 || txIdx >= len(tx.TxIn) {
+	if txIdx < 0 || txIdx >= len(tx.Tx.TxIn) {
 		return nil, ErrInvalidIndex
 	}
-	scriptSig := tx.TxIn[txIdx].SignScript
+	scriptSig := tx.Tx.TxIn[txIdx].SignScript
 
 	// The clean stack flag (ScriptVerifyCleanStack) is not allowed without
 	// the pay-to-script-hash (P2SH) evaluation (ScriptBip16) flag.
@@ -676,92 +676,6 @@ func NewEngine(scriptPubKey []byte, tx *types.Transaction, txIdx int,
 	}
 
 	vm.tx = *tx
-	vm.txIdx = txIdx
-
-	return &vm, nil
-}
-
-// NewEngine2 (refactor of NewEngine)
-func NewEngine2(scriptPubKey []byte, tx types.ScriptTx, txIdx int,
-	flags ScriptFlags, scriptVersion uint16, sigCache *SigCache) (*Engine, error) {
-
-	// The provided transaction input index must refer to a valid input.
-	if txIdx < 0 || txIdx >= len(tx.GetInput()) {
-		return nil, ErrInvalidIndex
-	}
-	scriptSig := tx.GetInput()[txIdx].GetSignScript()
-
-	// The clean stack flag (ScriptVerifyCleanStack) is not allowed without
-	// the pay-to-script-hash (P2SH) evaluation (ScriptBip16) flag.
-	//
-	// Recall that evaluating a P2SH script without the flag set results in
-	// non-P2SH evaluation which leaves the P2SH inputs on the stack.  Thus,
-	// allowing the clean stack flag without the P2SH flag would make it
-	// possible to have a situation where P2SH would not be a soft fork when
-	// it should be.
-	vm := Engine{version: scriptVersion, flags: flags, sigCache: sigCache}
-	if vm.hasFlag(ScriptVerifyCleanStack) && !vm.hasFlag(ScriptBip16) {
-		return nil, ErrInvalidFlags
-	}
-
-	// The signature script must only contain data pushes when the
-	// associated flag is set.
-	if vm.hasFlag(ScriptVerifySigPushOnly) && !IsPushOnlyScript(scriptSig) {
-		return nil, ErrStackNonPushOnly
-	}
-
-	// Subscripts for pay to script hash outputs are not allowed
-	// to use any stake tag OP codes if the script version is 0.
-	if scriptVersion == DefaultScriptVersion {
-		err := HasP2SHScriptSigStakeOpCodes(scriptVersion, scriptSig,
-			scriptPubKey)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// The engine stores the scripts in parsed form using a slice.  This
-	// allows multiple scripts to be executed in sequence.  For example,
-	// with a pay-to-script-hash transaction, there will be ultimately be
-	// a third script to execute.
-	scripts := [][]byte{scriptSig, scriptPubKey}
-	vm.scripts = make([][]ParsedOpcode, len(scripts))
-	for i, scr := range scripts {
-		if len(scr) > maxScriptSize {
-			return nil, ErrStackLongScript
-		}
-		var err error
-		vm.scripts[i], err = parseScript(scr)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Advance the program counter to the public key script if the signature
-	// script is empty since there is nothing to execute for it in that
-	// case.
-	if len(scripts[0]) == 0 {
-		vm.scriptIdx++
-	}
-
-	if vm.hasFlag(ScriptBip16) && isAnyKindOfScriptHash(vm.scripts[1]) {
-		// Only accept input scripts that push data for P2SH.
-		if !isPushOnly(vm.scripts[0]) {
-			return nil, ErrStackP2SHNonPushOnly
-		}
-		vm.bip16 = true
-	}
-	if vm.hasFlag(ScriptVerifyMinimalData) {
-		vm.dstack.verifyMinimalData = true
-		vm.astack.verifyMinimalData = true
-	}
-
-	vm.scriptTx = tx
-	switch tx.GetType() {
-	case types.QitmeerScriptTx:
-		qitmeertx, _ := tx.(*types.Transaction)
-		vm.tx = *qitmeertx
-	}
 	vm.txIdx = txIdx
 
 	return &vm, nil

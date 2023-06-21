@@ -44,7 +44,7 @@ func (gd *GhostDAG) Init(bd *MeerDAG) bool {
 	gd.algorithm = ghostdag.New(nil, gd, gd, gd, model.KType(gd.anticoneSize), params.ActiveNetParams.GenesisHash)
 
 	//vb
-	gd.virtualBlock = &Block{hash: model.VirtualBlockHash, layer: 0, mainParent: MaxId, parents: NewIdSet(),state: createMockBlockState(uint64(MaxId))}
+	gd.virtualBlock = &Block{hash: model.VirtualBlockHash, layer: 0, mainParent: MaxId, parents: NewIdSet(), state: createMockBlockState(uint64(MaxId))}
 	return true
 }
 
@@ -243,10 +243,10 @@ func (gd *GhostDAG) UpdateOrders() error {
 	return gd.bd.commit()
 }
 
-//---------------
-//implementation
+// ---------------
+// implementation
 func (gd *GhostDAG) BlockHeader(dbContext model.DBReader, stagingArea *cmodel.StagingArea, blockHash *hash.Hash) (model.BlockHeader, error) {
-	return ghostdag.NewBlockHeader(params.ActiveNetParams.GenesisBlock.Header.Difficulty, params.ActiveNetParams.GenesisBlock.Header.Pow), nil
+	return ghostdag.NewBlockHeader(params.ActiveNetParams.GenesisBlock.Block().Header.Difficulty, params.ActiveNetParams.GenesisBlock.Block().Header.Pow), nil
 }
 
 func (gd *GhostDAG) HasBlockHeader(dbContext model.DBReader, stagingArea *cmodel.StagingArea, blockHash *hash.Hash) (bool, error) {

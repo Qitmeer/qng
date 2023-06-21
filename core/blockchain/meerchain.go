@@ -39,24 +39,22 @@ func (b *BlockChain) calcMeerGenesis(txs []*types.Tx) *hash.Hash {
 	return b.meerChain.Genesis()
 }
 
-func (b *BlockChain) meerCheckConnectBlock(block *types.SerializedBlock) error {
-	eb, err := meer.BuildEVMBlock(block)
+func (b *BlockChain) meerCheckConnectBlock(block *BlockNode) error {
+	eb, err := meer.BuildEVMBlock(block.GetBody())
 	if err != nil {
 		return err
 	}
-
+	block.SetMeerBlock(nil)
 	if len(eb.Transactions()) <= 0 {
 		return nil
 	}
+	block.SetMeerBlock(eb)
 	return b.meerChain.CheckConnectBlock(eb)
 }
 
-func (b *BlockChain) meerConnectBlock(block *types.SerializedBlock) (uint64, error) {
-	eb, err := meer.BuildEVMBlock(block)
-	if err != nil {
-		return 0, err
-	}
-	if len(eb.Transactions()) <= 0 {
+func (b *BlockChain) meerConnectBlock(block *BlockNode) (uint64, error) {
+	eb := block.GetMeerBlock()
+	if eb == nil || len(eb.Transactions()) <= 0 {
 		return 0, nil
 	}
 	return b.meerChain.ConnectBlock(eb)
@@ -64,7 +62,7 @@ func (b *BlockChain) meerConnectBlock(block *types.SerializedBlock) (uint64, err
 
 func (b *BlockChain) MeerVerifyTx(tx model.Tx) (int64, error) {
 	if tx.GetTxType() == types.TxTypeCrossChainVM {
-		return b.meerChain.VerifyTx(tx)
+		return b.meerChain.VerifyTx(tx.(*mmeer.VMTx))
 	}
 
 	if tx.GetTxType() != types.TxTypeCrossChainImport {

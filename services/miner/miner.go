@@ -598,7 +598,7 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	}
 	// Process this block using the same rules as blocks coming from other
 	// nodes. This will in turn relay it to the network like normal.
-	IsOrphan, err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd)
+	ib, IsOrphan, err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd)
 	if err != nil {
 		// Anything other than a rule violation is an unexpected error,
 		// so log that error as an internal error.
@@ -636,8 +636,8 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	return json.SubmitBlockResult{
 		BlockHash:      block.Hash().String(),
 		CoinbaseTxID:   block.Transactions()[0].Hash().String(),
-		Order:          meerdag.GetOrderLogStr(uint(block.Order())),
-		Height:         int64(block.Height()),
+		Order:          meerdag.GetOrderLogStr(ib.GetOrder()),
+		Height:         int64(ib.GetHeight()),
 		CoinbaseAmount: coinbaseTxGenerated,
 		MinerType:      m.worker.GetType(),
 	}, nil
@@ -672,7 +672,6 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 	tHeader.Timestamp = header.Timestamp
 	tHeader.Pow = header.Pow
 	block := types.NewBlock(m.template.Block)
-	block.SetHeight(uint(m.template.Height))
 	return m.submitBlock(block)
 }
 

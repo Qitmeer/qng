@@ -7,6 +7,7 @@
 package params
 
 import (
+	"github.com/Qitmeer/qng/core/types"
 	"math/big"
 	"time"
 
@@ -40,7 +41,7 @@ var MixNetParams = Params{
 	},
 
 	// Chain parameters
-	GenesisBlock:         &mixNetGenesisBlock,
+	GenesisBlock:         types.NewBlock(&mixNetGenesisBlock),
 	GenesisHash:          &mixNetGenesisHash,
 	ReduceMinDifficulty:  false,
 	MinDiffReductionTime: 0, // Does not apply since ReduceMinDifficulty false

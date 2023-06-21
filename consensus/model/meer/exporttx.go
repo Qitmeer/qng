@@ -11,20 +11,14 @@ import (
 
 type ExportTx struct {
 	*Tx
-	*types.Transaction
-}
-
-func (etx *ExportTx) CheckSanity() error {
-	if !types.IsCrossChainExportTx(etx.Transaction) {
-		return fmt.Errorf("Not import tx data:%s", etx.Transaction.TxHash())
-	}
-
-	return nil
 }
 
 func NewExportTx(tx *types.Transaction) (*ExportTx, error) {
+	if !types.IsCrossChainExportTx(tx) {
+		return nil, fmt.Errorf("Not import tx data:%s", tx.TxHash())
+	}
 
-	etx := &ExportTx{Transaction: tx, Tx: &Tx{}}
+	etx := &ExportTx{Tx: &Tx{}}
 	etx.Type = types.TxTypeCrossChainExport
 
 	if len(tx.TxIn) < 1 || len(tx.TxOut) < 1 {

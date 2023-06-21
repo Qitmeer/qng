@@ -36,14 +36,14 @@ import (
 //
 // This function is safe for concurrent access.
 // return IsOrphan,error
-func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
+func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (meerdag.IBlock, bool, error) {
 	if b.IsShutdown() {
-		return false, fmt.Errorf("block chain is shutdown")
+		return nil, false, fmt.Errorf("block chain is shutdown")
 	}
 	msg := processMsg{block: block, flags: flags, result: make(chan *processResult)}
 	b.msgChan <- &msg
 	result := <-msg.result
-	return result.isOrphan, result.err
+	return result.block, result.isOrphan, result.err
 }
 
 func (b *BlockChain) handler() {
@@ -53,9 +53,9 @@ out:
 		select {
 		case msg := <-b.msgChan:
 			start := time.Now()
-			isOrphan, err := b.processBlock(msg.block, msg.flags)
+			ib, isOrphan, err := b.processBlock(msg.block, msg.flags)
 			blockProcessTimer.Update(time.Since(start))
-			msg.result <- &processResult{isOrphan: isOrphan, err: err}
+			msg.result <- &processResult{isOrphan: isOrphan, err: err, block: ib}
 		case <-b.quit:
 			break out
 		}
@@ -74,27 +74,27 @@ cleanup:
 	log.Trace("BlockChain handler done")
 }
 
-func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
+func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFlags) (meerdag.IBlock, bool, error) {
 	isorphan, err := b.preProcessBlock(block, flags)
 	if err != nil || isorphan {
-		return isorphan, err
+		return nil, isorphan, err
 	}
 	// The block has passed all context independent checks and appears sane
 	// enough to potentially accept it into the block chain.
-	err = b.maybeAcceptBlock(block, flags)
+	ib, err := b.maybeAcceptBlock(block, flags)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 	// Accept any orphan blocks that depend on this block (they are no
 	// longer orphans) and repeat for those accepted blocks until there are
 	// no more.
 	err = b.RefreshOrphans()
 	if err != nil {
-		return false, err
+		return ib, false, err
 	}
 
 	log.Debug("Accepted block", "hash", block.Hash().String())
-	return false, nil
+	return ib, false, nil
 }
 
 func (b *BlockChain) preProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (bool, error) {
@@ -192,7 +192,7 @@ func (b *BlockChain) preProcessBlock(block *types.SerializedBlock, flags Behavio
 // their documentation for how the flags modify their behavior.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags BehaviorFlags) error {
+func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags BehaviorFlags) (meerdag.IBlock, error) {
 	if onEnd := l.LogAndMeasureExecutionTime(log, "BlockChain.maybeAcceptBlock"); onEnd != nil {
 		defer onEnd()
 	}
@@ -210,14 +210,14 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		mainParent := b.bd.GetBlock(newNode.GetMainParent())
 		if mainParent == nil {
 			b.ChainUnlock()
-			return fmt.Errorf("Can't find main parent")
+			return nil, fmt.Errorf("Can't find main parent")
 		}
 		// The block must pass all of the validation rules which depend on the
 		// position of the block within the block chain.
 		err := b.checkBlockContext(block, mainParent, flags)
 		if err != nil {
 			b.ChainUnlock()
-			return err
+			return nil, err
 		}
 	}
 
@@ -229,10 +229,8 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	newOrders, oldOrders, ib, isMainChainTipChange := b.bd.AddBlock(newNode)
 	if ib == nil {
 		b.ChainUnlock()
-		return fmt.Errorf("Irreparable error![%s]", newNode.GetHash().String())
+		return nil, fmt.Errorf("Irreparable error![%s]", newNode.GetHash().String())
 	}
-	block.SetOrder(uint64(ib.GetOrder()))
-	block.SetHeight(ib.GetHeight())
 	// Insert the block into the database if it's not already there.  Even
 	// though it is possible the block will ultimately fail to connect, it
 	// has already passed all proof-of-work and validity tests which means
@@ -272,7 +270,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	// Connect the passed block to the chain while respecting proper chain
 	// selection according to the chain with the most proof of work.  This
 	// also handles validation of the transaction scripts.
-	_, err = b.connectDagChain(ib, block, newOrders, oldOrders, connectedBlocks)
+	_, err = b.connectDagChain(ib, newNode, newOrders, oldOrders, connectedBlocks)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -292,7 +290,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	}
 
 	if flags&BFP2PAdd == BFP2PAdd {
-		b.progressLogger.LogBlockHeight(block)
+		b.progressLogger.LogBlockOrder(ib.GetOrder(), block)
 	}
 
 	// Notify the caller that the new block was accepted into the block
@@ -302,6 +300,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		IsMainChainTipChange: isMainChainTipChange,
 		Block:                block,
 		Flags:                flags,
+		Height:               uint64(ib.GetHeight()),
 	})
 	if b.Acct != nil {
 		err = b.Acct.Commit()
@@ -309,10 +308,10 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 			log.Error(err.Error())
 		}
 	}
-	return nil
+	return ib, nil
 }
 
-func (b *BlockChain) FastAcceptBlock(block *types.SerializedBlock, flags BehaviorFlags) error {
+func (b *BlockChain) FastAcceptBlock(block *types.SerializedBlock, flags BehaviorFlags) (meerdag.IBlock, error) {
 	return b.maybeAcceptBlock(block, flags)
 }
 
@@ -332,7 +331,7 @@ func (b *BlockChain) FastAcceptBlock(block *types.SerializedBlock, flags Behavio
 //     This is useful when using checkpoints.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedBlock, newOrders *list.List, oldOrders *list.List, connectedBlocks *list.List) (bool, error) {
+func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *BlockNode, newOrders *list.List, oldOrders *list.List, connectedBlocks *list.List) (bool, error) {
 
 	if oldOrders.Len() <= 0 {
 		newOr := []meerdag.IBlock{}
@@ -343,19 +342,17 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 		if len(newOr) <= 0 {
 			newOr = append(newOr, ib)
 		}
-		var sb *types.SerializedBlock
+		var sb *BlockNode
 		var err error
 		isEVMInit := false
 		for _, nodeBlock := range newOr {
 			if nodeBlock.GetID() == ib.GetID() {
 				sb = block
 			} else {
-				sb, err = b.FetchBlockByHash(nodeBlock.GetHash())
-				if err != nil {
-					return false, err
+				sb = b.GetBlockNode(nodeBlock)
+				if sb == nil {
+					return false, fmt.Errorf("No block data:%s", nodeBlock.GetHash().String())
 				}
-				sb.SetOrder(uint64(nodeBlock.GetOrder()))
-				sb.SetHeight(nodeBlock.GetHeight())
 			}
 
 			if !nodeBlock.IsOrdered() {
@@ -398,7 +395,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 				b.bd.ValidBlock(nodeBlock)
 			}
 			b.bd.UpdateWeight(nodeBlock)
-			er := b.updateBlockState(nodeBlock, sb)
+			er := b.updateBlockState(nodeBlock, sb.GetBody())
 			if er != nil {
 				log.Error(er.Error())
 			}
@@ -436,13 +433,14 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 // it would be inefficient to repeat it.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBlock, view *utxo.UtxoViewpoint, stxos []utxo.SpentTxOut, connectedBlocks *list.List) error {
+func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, view *utxo.UtxoViewpoint, stxos []utxo.SpentTxOut, connectedBlocks *list.List) error {
+	block := blockNode.GetBody()
 	pkss := [][]byte{}
 	for _, stxo := range stxos {
 		pkss = append(pkss, stxo.PkScript)
 	}
 	if !node.GetState().GetStatus().KnownInvalid() {
-		_, err := b.meerConnectBlock(block)
+		_, err := b.meerConnectBlock(blockNode)
 		if err != nil {
 			return err
 		}
@@ -496,7 +494,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBl
 			}
 		}
 	}
-	connectedBlocks.PushBack([]interface{}{block, b.bd.IsOnMainChain(node.GetID())})
+	connectedBlocks.PushBack([]interface{}{block, b.bd.IsOnMainChain(node.GetID()), node})
 	return nil
 }
 
@@ -542,7 +540,7 @@ func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedB
 	// now that the modifications have been committed to the database.
 	view.Commit()
 
-	b.sendNotification(BlockDisconnected, block)
+	b.sendNotification(BlockDisconnected, []interface{}{block, ib})
 	return nil
 }
 
@@ -816,6 +814,7 @@ type processMsg struct {
 }
 
 type processResult struct {
+	block    meerdag.IBlock
 	isOrphan bool
 	err      error
 }

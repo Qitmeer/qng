@@ -179,7 +179,7 @@ func (api *PublicBlockChainAPI) GetSubsidy() (interface{}, error) {
 		info.TotalTime = totalTime.Truncate(time.Second).String()
 
 		firstMBlock := api.node.GetBlockChain().BlockDAG().GetBlockByOrder(1)
-		startTime := time.Unix(api.node.GetBlockChain().BlockDAG().GetBlockData(firstMBlock).GetTimestamp(), 0)
+		startTime := time.Unix(api.node.GetBlockChain().GetBlockNode(firstMBlock).GetTimestamp(), 0)
 		leftTotalTime := totalTime - time.Since(startTime)
 		if leftTotalTime < 0 {
 			leftTotalTime = 0

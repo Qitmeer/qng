@@ -156,9 +156,6 @@ type Transaction struct {
 	LockTime  uint32
 	Expire    uint32
 	Timestamp time.Time // When the transaction was created for extensibility
-
-	Message    []byte //a unencrypted/encrypted message if user pay additional fee & limit the max length
-	CachedHash *hash.Hash
 }
 
 // NewMsgTx returns a new tx message that conforms to the Message interface.
@@ -736,25 +733,6 @@ func writeTxScriptsToMsgTx(tx *Transaction, totalScriptSize uint64, serType TxSe
 	writeTxOuts()
 }
 
-// CachedTxHash is equivalent to calling TxHash, however it caches the result so
-// subsequent calls do not have to recalculate the hash.  It can be recalculated
-// later with RecacheTxHash.
-func (t *Transaction) CachedTxHash() *hash.Hash {
-	if t.CachedHash == nil {
-		return t.RecacheTxHash()
-	}
-	return t.CachedHash
-}
-
-// RecacheTxHash is equivalent to calling TxHash, however it replaces the cached
-// result so future calls to CachedTxHash will return this newly calculated
-// hash.
-func (t *Transaction) RecacheTxHash() *hash.Hash {
-	h := t.TxHash()
-	t.CachedHash = &h
-	return t.CachedHash
-}
-
 // TxHash generates the hash for the transaction prefix.  Since it does not
 // contain any witness data, it is not malleable and therefore is stable for
 // use in unconfirmed transaction chains.
@@ -793,6 +771,7 @@ type Tx struct {
 	hash        hash.Hash    // Cached transaction hash
 	txIndex     int          // Position within a block or TxIndexUnknown
 	IsDuplicate bool         // Whether duplicate tx.
+	Object      interface{}  // Generate different object for different transaction types when need env data
 }
 
 // Transaction() returns the underlying Tx for the transaction.
@@ -865,13 +844,12 @@ func NewTxDeep(msgTx *Transaction) *Tx {
 	}
 
 	mtx := &Transaction{
-		CachedHash: nil,
-		Version:    msgTx.Version,
-		TxIn:       txIns,
-		TxOut:      txOuts,
-		LockTime:   msgTx.LockTime,
-		Expire:     msgTx.Expire,
-		Timestamp:  msgTx.Timestamp,
+		Version:   msgTx.Version,
+		TxIn:      txIns,
+		TxOut:     txOuts,
+		LockTime:  msgTx.LockTime,
+		Expire:    msgTx.Expire,
+		Timestamp: msgTx.Timestamp,
 	}
 
 	return &Tx{

@@ -64,7 +64,7 @@ func MarshalJsonTransaction(transaction *types.Tx, params *params.Params, blkHas
 		txr.Timestamp = tx.Timestamp.Format(time.RFC3339)
 	}
 	if tx.IsCoinBase() {
-		txr.Vout = MarshJsonCoinbaseVout(tx, nil, params, coinbaseAmout)
+		txr.Vout = MarshJsonCoinbaseVout(transaction, nil, params, coinbaseAmout)
 	} else {
 		txr.Vout = MarshJsonVout(tx, nil, params)
 	}
@@ -213,9 +213,10 @@ func MarshJsonVout(tx *types.Transaction, filterAddrMap map[string]struct{}, par
 	return voutList
 }
 
-func MarshJsonCoinbaseVout(tx *types.Transaction, filterAddrMap map[string]struct{}, params *params.Params, coinbaseAmout types.AmountMap) []json.Vout {
+func MarshJsonCoinbaseVout(transaction *types.Tx, filterAddrMap map[string]struct{}, params *params.Params, coinbaseAmout types.AmountMap) []json.Vout {
+	tx := transaction.Tx
 	if len(coinbaseAmout) <= 0 ||
-		tx.CachedTxHash().IsEqual(params.GenesisBlock.Transactions[0].CachedTxHash()) {
+		transaction.Hash().IsEqual(params.GenesisBlock.Transactions()[0].Hash()) {
 		return MarshJsonVout(tx, filterAddrMap, params)
 	}
 	voutList := make([]json.Vout, 0, len(tx.TxOut))
@@ -286,8 +287,10 @@ func MarshJsonCoinbaseVout(tx *types.Transaction, filterAddrMap map[string]struc
 // RPCMarshalBlock converts the given block to the RPC output which depends on fullTx. If inclTx is true transactions are
 // returned. When fullTx is true the returned block contains full transaction details, otherwise it will only contain
 // transaction hashes.
-func MarshalJsonBlock(b *types.SerializedBlock, inclTx bool, fullTx bool,
-	params *params.Params, confirmations int64, children []*hash.Hash, state bool, isOrdered bool, coinbaseAmout types.AmountMap, coinbaseFee types.AmountMap) (json.OrderedResult, error) {
+func MarshalJsonBlock(block meerdag.IBlock, b *types.SerializedBlock, inclTx bool, fullTx bool,
+	params *params.Params, confirmations int64, children []*hash.Hash, coinbaseAmout types.AmountMap, coinbaseFee types.AmountMap) (json.OrderedResult, error) {
+	state := !block.GetState().GetStatus().KnownInvalid()
+	isOrdered := block.IsOrdered()
 
 	head := b.Block().Header // copies the header once
 	// Get next block hash unless there are none.
@@ -297,11 +300,11 @@ func MarshalJsonBlock(b *types.SerializedBlock, inclTx bool, fullTx bool,
 		{Key: "confirmations", Val: confirmations},
 		{Key: "version", Val: head.Version},
 		{Key: "weight", Val: types.GetBlockWeight(b.Block())},
-		{Key: "height", Val: b.Height()},
+		{Key: "height", Val: block.GetHeight()},
 		{Key: "txRoot", Val: head.TxRoot.String()},
 	}
 	if isOrdered {
-		fields = append(fields, json.KV{Key: "order", Val: b.Order()})
+		fields = append(fields, json.KV{Key: "order", Val: block.GetOrder()})
 	}
 	if inclTx {
 		formatTx := func(tx *types.Tx) (interface{}, error) {

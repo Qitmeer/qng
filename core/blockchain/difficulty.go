@@ -9,8 +9,8 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/meerdag"
 	"math/big"
 	"time"
 )
@@ -383,7 +383,7 @@ func (b *BlockChain) getDistanceFromLastAdjustment(block meerdag.IBlock, powType
 			count >= needAjustCount {
 			return needAjustCount * b.params.WorkDiffWindows
 		}
-		if curNode.parents == nil {
+		if curNode.GetParents() == nil {
 			return count
 		}
 
@@ -463,7 +463,7 @@ func (b *BlockChain) GetCurrentPowDiff(ib meerdag.IBlock, powType pow.PowType) *
 			return pow.CompactToBig(curNode.Difficulty())
 		}
 
-		if curNode.parents == nil || !ib.HasParents() {
+		if curNode.GetParents() == nil || !ib.HasParents() {
 			return safeBigDiff
 		}
 

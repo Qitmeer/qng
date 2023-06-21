@@ -471,8 +471,8 @@ func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock,
 	if blk == nil {
 		return fmt.Errorf("no node %s", block.Hash())
 	}
-	if block.Order() != uint64(newOrder) {
-		return fmt.Errorf("TxIndex.curOrder != block(%s).order(%d)", block.Hash(), block.Order())
+	if int64(blk.GetOrder()) != newOrder {
+		return fmt.Errorf("TxIndex.curOrder != block(%s).order(%d)", block.Hash(), blk.GetOrder())
 	}
 
 	if !blk.GetState().GetStatus().KnownInvalid() {

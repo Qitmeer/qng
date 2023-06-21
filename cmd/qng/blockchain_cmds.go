@@ -396,7 +396,7 @@ func importBlockChain(consensus model.Consensus, inputPath string) error {
 		if err != nil {
 			return err
 		}
-		err = bc.FastAcceptBlock(ibdb.blk, blockchain.BFFastAdd)
+		_, err = bc.FastAcceptBlock(ibdb.blk, blockchain.BFFastAdd)
 		if err != nil {
 			return err
 		}
@@ -482,7 +482,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 		if er != nil {
 			return er
 		}
-		er = newbc.FastAcceptBlock(block, blockchain.BFFastAdd)
+		_, er = newbc.FastAcceptBlock(block, blockchain.BFFastAdd)
 		if er != nil {
 			return er
 		}
