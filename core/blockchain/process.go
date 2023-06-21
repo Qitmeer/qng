@@ -270,7 +270,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	// Connect the passed block to the chain while respecting proper chain
 	// selection according to the chain with the most proof of work.  This
 	// also handles validation of the transaction scripts.
-	_, err = b.connectDagChain(ib, block, newOrders, oldOrders, connectedBlocks)
+	_, err = b.connectDagChain(ib, newNode, newOrders, oldOrders, connectedBlocks)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -331,7 +331,7 @@ func (b *BlockChain) FastAcceptBlock(block *types.SerializedBlock, flags Behavio
 //     This is useful when using checkpoints.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedBlock, newOrders *list.List, oldOrders *list.List, connectedBlocks *list.List) (bool, error) {
+func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *BlockNode, newOrders *list.List, oldOrders *list.List, connectedBlocks *list.List) (bool, error) {
 
 	if oldOrders.Len() <= 0 {
 		newOr := []meerdag.IBlock{}
@@ -342,16 +342,16 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 		if len(newOr) <= 0 {
 			newOr = append(newOr, ib)
 		}
-		var sb *types.SerializedBlock
+		var sb *BlockNode
 		var err error
 		isEVMInit := false
 		for _, nodeBlock := range newOr {
 			if nodeBlock.GetID() == ib.GetID() {
 				sb = block
 			} else {
-				sb, err = b.FetchBlockByHash(nodeBlock.GetHash())
-				if err != nil {
-					return false, err
+				sb = b.GetBlockNode(nodeBlock)
+				if sb == nil {
+					return false, fmt.Errorf("No block data:%s", nodeBlock.GetHash().String())
 				}
 			}
 
@@ -395,7 +395,7 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 				b.bd.ValidBlock(nodeBlock)
 			}
 			b.bd.UpdateWeight(nodeBlock)
-			er := b.updateBlockState(nodeBlock, sb)
+			er := b.updateBlockState(nodeBlock, sb.GetBody())
 			if er != nil {
 				log.Error(er.Error())
 			}
@@ -433,13 +433,14 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *types.SerializedB
 // it would be inefficient to repeat it.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectBlock(node meerdag.IBlock, block *types.SerializedBlock, view *utxo.UtxoViewpoint, stxos []utxo.SpentTxOut, connectedBlocks *list.List) error {
+func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, view *utxo.UtxoViewpoint, stxos []utxo.SpentTxOut, connectedBlocks *list.List) error {
+	block := blockNode.GetBody()
 	pkss := [][]byte{}
 	for _, stxo := range stxos {
 		pkss = append(pkss, stxo.PkScript)
 	}
 	if !node.GetState().GetStatus().KnownInvalid() {
-		_, err := b.meerConnectBlock(block)
+		_, err := b.meerConnectBlock(blockNode)
 		if err != nil {
 			return err
 		}

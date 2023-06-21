@@ -7,13 +7,15 @@ package meer
 import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/ethereum/go-ethereum/core/types"
 	"time"
 )
 
 type Block struct {
-	Id   *hash.Hash
-	Txs  []model.Tx
-	Time time.Time
+	Id       *hash.Hash
+	Txs      []model.Tx
+	Time     time.Time
+	EvmBlock *types.Block
 }
 
 func (b *Block) ID() *hash.Hash {

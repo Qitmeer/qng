@@ -3,13 +3,15 @@ package blockchain
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"time"
 )
 
 type BlockNode struct {
-	block *types.SerializedBlock
+	block     *types.SerializedBlock
+	meerBlock *meer.Block // Used for meer chain
 }
 
 // return the block node hash.
@@ -57,6 +59,14 @@ func (node *BlockNode) GetPriority() int {
 
 func (node *BlockNode) GetMainParent() *hash.Hash {
 	return node.block.Block().Parents[0]
+}
+
+func (node *BlockNode) GetMeerBlock() *meer.Block {
+	return node.meerBlock
+}
+
+func (node *BlockNode) SetMeerBlock(block *meer.Block) {
+	node.meerBlock = block
 }
 
 func NewBlockNode(block *types.SerializedBlock) *BlockNode {

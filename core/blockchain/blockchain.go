@@ -648,7 +648,7 @@ func (b *BlockChain) FetchSubsidyCache() *SubsidyCache {
 //
 // This function MUST be called with the chain state lock held (for writes).
 
-func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, attachNodes *list.List, newBlock *types.SerializedBlock, connectedBlocks *list.List) error {
+func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, attachNodes *list.List, newBlock *BlockNode, connectedBlocks *list.List) error {
 	oldBlocks := []*hash.Hash{}
 	for e := detachNodes.Front(); e != nil; e = e.Next() {
 		ob := e.Value.(*meerdag.BlockOrderHelp)
@@ -657,7 +657,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 
 	b.sendNotification(Reorganization, &ReorganizationNotifyData{
 		OldBlocks: oldBlocks,
-		NewBlock:  newBlock.Hash(),
+		NewBlock:  newBlock.GetHash(),
 		NewOrder:  uint64(ib.GetOrder()),
 	})
 
@@ -665,7 +665,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 	// must be one of the tip of the dag.This is very important for the following understanding.
 	// In the two case, the perspective is the same.In the other words, the future can not
 	// affect the past.
-	var block *types.SerializedBlock
+	var block *BlockNode
 	var err error
 
 	for e := detachNodes.Back(); e != nil; e = e.Prev() {
@@ -679,10 +679,11 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			log.Error(er.Error())
 		}
 		//
-		block, err = b.fetchBlockByHash(n.Block.GetHash())
-		if err != nil {
-			panic(err)
+		blockNode := b.GetBlockNode(n.Block)
+		if blockNode == nil {
+			panic(fmt.Errorf("No block node:%s", n.Block.GetHash()))
 		}
+		block := blockNode.GetBody()
 		log.Debug("detach block", "hash", n.Block.GetHash().String(), "old order", n.OldOrder, "status", n.Block.GetState().GetStatus().String())
 		// Load all of the utxos referenced by the block that aren't
 		// already in the view.
@@ -742,10 +743,10 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		} else {
 			// If any previous nodes in attachNodes failed validation,
 			// mark this one as having an invalid ancestor.
-			block, err = b.FetchBlockByHash(nodeBlock.GetHash())
+			block = b.GetBlockNode(nodeBlock)
 
-			if err != nil {
-				return err
+			if block == nil {
+				return fmt.Errorf("No block node:%s", nodeBlock.GetHash())
 			}
 		}
 		if !nodeBlock.IsOrdered() {
@@ -785,7 +786,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			b.bd.ValidBlock(nodeBlock)
 		}
 		b.bd.UpdateWeight(nodeBlock)
-		er := b.updateBlockState(nodeBlock, block)
+		er := b.updateBlockState(nodeBlock, block.GetBody())
 		if er != nil {
 			log.Error(er.Error())
 		}
@@ -1154,11 +1155,11 @@ func (b *BlockChain) Rebuild() error {
 			return fmt.Errorf("No block order:%d", i)
 		}
 		err = nil
-		block, err = b.fetchBlockByHash(ib.GetHash())
-		if err != nil {
-			return err
+		blockNode := b.GetBlockNode(ib)
+		if blockNode == nil {
+			return fmt.Errorf("No block node:%s", ib.GetHash())
 		}
-
+		block = blockNode.GetBody()
 		if i == 0 {
 			if b.indexManager != nil {
 				err = b.indexManager.ConnectBlock(block, nil, ib)
@@ -1172,14 +1173,14 @@ func (b *BlockChain) Rebuild() error {
 		view := utxo.NewUtxoViewpoint()
 		view.SetViewpoints([]*hash.Hash{ib.GetHash()})
 		stxos := []utxo.SpentTxOut{}
-		err = b.checkConnectBlock(ib, block, view, &stxos)
+		err = b.checkConnectBlock(ib, blockNode, view, &stxos)
 		if err != nil {
 			b.bd.InvalidBlock(ib)
 			stxos = []utxo.SpentTxOut{}
 			view.Clean()
 		}
 		connectedBlocks := list.New()
-		err = b.connectBlock(ib, block, view, stxos, connectedBlocks)
+		err = b.connectBlock(ib, blockNode, view, stxos, connectedBlocks)
 		if err != nil {
 			b.bd.InvalidBlock(ib)
 			return err

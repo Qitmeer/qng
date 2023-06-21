@@ -836,7 +836,8 @@ func (b *BlockChain) checkBlockHeaderContext(block *types.SerializedBlock, prevN
 // the bulk of its work.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, utxoView *utxo.UtxoViewpoint, stxos *[]utxo.SpentTxOut) error {
+func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, blockNode *BlockNode, utxoView *utxo.UtxoViewpoint, stxos *[]utxo.SpentTxOut) error {
+	block := blockNode.GetBody()
 	// If the side chain blocks end up in the database, a call to
 	// CheckBlockSanity should be done here in case a previous version
 	// allowed a block that is no longer valid.  However, since the
@@ -885,11 +886,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 		return err
 	}
 
-	node := b.GetBlockNode(ib)
-	if node == nil {
-		return fmt.Errorf("Block Node error:%s\n", ib.GetHash().String())
-	}
-	err = b.checkTransactionsAndConnect(node, block, b.subsidyCache, utxoView, stxos)
+	err = b.checkTransactionsAndConnect(blockNode, block, b.subsidyCache, utxoView, stxos)
 	if err != nil {
 		log.Trace("checkTransactionsAndConnect failed", "err", err)
 		return err
@@ -940,7 +937,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, block *types.Serialize
 	if err != nil {
 		return err
 	}
-	return b.meerCheckConnectBlock(block)
+	return b.meerCheckConnectBlock(blockNode)
 }
 
 // consensusScriptVerifyFlags returns the script flags that must be used when
@@ -1378,7 +1375,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *types.SerializedBlock, hei
 	view := utxo.NewUtxoViewpoint()
 	view.SetViewpoints(block.Block().Parents)
 
-	err = b.checkConnectBlock(virBlock, block, view, nil)
+	err = b.checkConnectBlock(virBlock, newNode, view, nil)
 	if err != nil {
 		return err
 	}

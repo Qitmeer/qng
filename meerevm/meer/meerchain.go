@@ -109,21 +109,20 @@ func (b *MeerChain) Stop() error {
 
 func (b *MeerChain) CheckConnectBlock(block *mmeer.Block) error {
 	parent := b.chain.Ether().BlockChain().CurrentBlock()
-	_, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
+	mblock, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
 		return err
 	}
+	block.EvmBlock = mblock
 	return nil
 }
 
 func (b *MeerChain) ConnectBlock(block *mmeer.Block) (uint64, error) {
-	parent := b.chain.Ether().BlockChain().CurrentBlock()
-	mblock, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
-	if err != nil {
-		return 0, err
+	mblock := block.EvmBlock
+	if mblock == nil {
+		return 0, fmt.Errorf("No EVM block:%d", block.ID())
 	}
-	var st int
-	st, err = b.chain.Ether().BlockChain().InsertChain(types.Blocks{mblock})
+	st, err := b.chain.Ether().BlockChain().InsertChain(types.Blocks{mblock})
 	if err != nil {
 		return 0, err
 	}
