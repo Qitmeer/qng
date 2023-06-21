@@ -771,7 +771,7 @@ type Tx struct {
 	hash        hash.Hash    // Cached transaction hash
 	txIndex     int          // Position within a block or TxIndexUnknown
 	IsDuplicate bool         // Whether duplicate tx.
-	Object      interface{}  // Generate different object for different transaction types
+	Object      interface{}  // Generate different object for different transaction types when need env data
 }
 
 // Transaction() returns the underlying Tx for the transaction.

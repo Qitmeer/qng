@@ -62,7 +62,7 @@ func (b *BlockChain) meerConnectBlock(block *BlockNode) (uint64, error) {
 
 func (b *BlockChain) MeerVerifyTx(tx model.Tx) (int64, error) {
 	if tx.GetTxType() == types.TxTypeCrossChainVM {
-		return b.meerChain.VerifyTx(tx)
+		return b.meerChain.VerifyTx(tx.(*mmeer.VMTx))
 	}
 
 	if tx.GetTxType() != types.TxTypeCrossChainImport {

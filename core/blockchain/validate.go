@@ -170,7 +170,7 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource m
 		}
 		// A block must not have stake transactions in the regular
 		// transaction tree.
-		err := CheckTransactionSanity(tx.Transaction(), chainParams, transactions[0].Transaction(), b)
+		err := CheckTransactionSanity(tx, chainParams, transactions[0].Transaction(), b)
 		if err != nil {
 			return err
 		}
@@ -300,44 +300,42 @@ func checkProofOfWork(header *types.BlockHeader, powConfig *pow.PowConfig, flags
 
 // CheckTransactionSanity performs some preliminary checks on a transaction to
 // ensure it is sane.  These checks are context free.
-func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinbase *types.Transaction, bc *BlockChain) error {
+func CheckTransactionSanity(tx *types.Tx, params *params.Params, coinbase *types.Transaction, bc *BlockChain) error {
 	// A transaction must have at least one input.
-	if len(tx.TxIn) == 0 {
+	if len(tx.Tx.TxIn) == 0 {
 		return ruleError(ErrNoTxInputs, "transaction has no inputs")
 	}
 
 	// A transaction must have at least one output.
-	if len(tx.TxOut) == 0 {
+	if len(tx.Tx.TxOut) == 0 {
 		return ruleError(ErrNoTxOutputs, "transaction has no outputs")
 	}
 
 	// A transaction must not exceed the maximum allowed size when
 	// serialized.
-	serializedTxSize := tx.SerializeSize()
+	serializedTxSize := tx.Tx.SerializeSize()
 	if serializedTxSize > params.MaxTxSize {
 		str := fmt.Sprintf("serialized transaction is too big - got "+
 			"%d, max %d", serializedTxSize, params.MaxTxSize)
 		return ruleError(ErrTxTooBig, str)
 	}
 
-	if types.IsTokenTx(tx) {
-		update, err := token.NewUpdateFromTx(tx)
+	if types.IsTokenTx(tx.Tx) {
+		update, err := token.NewUpdateFromTx(tx.Tx)
 		if err != nil {
 			return err
 		}
 		return update.CheckSanity()
-	} else if types.IsCrossChainVMTx(tx) {
-		vtx, err := mmeer.NewVMTx(tx)
+	} else if types.IsCrossChainVMTx(tx.Tx) {
+		vtx, err := mmeer.NewVMTx(tx.Tx, coinbase)
 		if err != nil {
 			return err
 		}
-		if coinbase != nil {
-			err = vtx.SetCoinbaseTx(coinbase)
-			if err != nil {
-				return err
-			}
+		err = bc.meerChain.CheckSanity(vtx)
+		if err != nil {
+			return err
 		}
-		return bc.meerChain.CheckSanity(vtx)
+		tx.Object = vtx
 	}
 
 	// Ensure the transaction amounts are in range.  Each transaction
@@ -347,7 +345,7 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinba
 	// known as an atom.  One Coin is a quantity of atoms as defined by
 	// the AtomsPerCoin constant.
 	totalAtom := make(map[types.CoinID]int64)
-	for _, txOut := range tx.TxOut {
+	for _, txOut := range tx.Tx.TxOut {
 		atom := txOut.Amount
 		if atom.Value > types.MaxAmount {
 			str := fmt.Sprintf("transaction output value of %v is "+
@@ -377,7 +375,7 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinba
 
 	// Check for duplicate transaction inputs.
 	existingTxOut := make(map[types.TxOutPoint]struct{})
-	for _, txIn := range tx.TxIn {
+	for _, txIn := range tx.Tx.TxIn {
 		if _, exists := existingTxOut[txIn.PreviousOut]; exists {
 			return ruleError(ErrDuplicateTxInputs, "transaction "+
 				"contains duplicate inputs")
@@ -386,8 +384,8 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinba
 	}
 
 	// Coinbase script length must be between min and max length.
-	if tx.IsCoinBase() {
-		err := validateCoinbase(tx, params)
+	if tx.Tx.IsCoinBase() {
+		err := validateCoinbase(tx.Tx, params)
 		if err != nil {
 			return err
 		}
@@ -395,7 +393,7 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinba
 		// Previous transaction outputs referenced by the inputs to
 		// this transaction must not be null except in the case of
 		// stake bases for SSGen tx.
-		for _, txIn := range tx.TxIn {
+		for _, txIn := range tx.Tx.TxIn {
 			prevOut := &txIn.PreviousOut
 			if isNullOutpoint(prevOut) {
 				return ruleError(ErrInvalidTxInput, "transaction "+
@@ -404,18 +402,18 @@ func CheckTransactionSanity(tx *types.Transaction, params *params.Params, coinba
 			}
 		}
 	}
-	if types.IsCrossChainImportTx(tx) {
-		itx, err := mmeer.NewImportTx(tx)
+	if types.IsCrossChainImportTx(tx.Tx) {
+		itx, err := mmeer.NewImportTx(tx.Tx)
 		if err != nil {
 			return err
 		}
 		return itx.CheckSanity()
-	} else if types.IsCrossChainExportTx(tx) {
-		etx, err := mmeer.NewExportTx(tx)
+	} else if types.IsCrossChainExportTx(tx.Tx) {
+		etx, err := mmeer.NewExportTx(tx.Tx)
 		if err != nil {
 			return err
 		}
-		return etx.CheckSanity()
+		tx.Object = etx
 	}
 	return nil
 }
@@ -1017,9 +1015,15 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			continue
 		}
 		if types.IsCrossChainVMTx(tx.Tx) {
-			vtx, err := mmeer.NewVMTx(tx.Tx)
-			if err != nil {
-				return err
+			var vtx *mmeer.VMTx
+			var err error
+			if tx.Object != nil {
+				vtx = tx.Object.(*mmeer.VMTx)
+			} else {
+				vtx, err = mmeer.NewVMTx(tx.Tx, block.Transactions()[0].Tx)
+				if err != nil {
+					return err
+				}
 			}
 			_, err = b.MeerVerifyTx(vtx)
 			if err != nil {
