@@ -64,7 +64,7 @@ func MarshalJsonTransaction(transaction *types.Tx, params *params.Params, blkHas
 		txr.Timestamp = tx.Timestamp.Format(time.RFC3339)
 	}
 	if tx.IsCoinBase() {
-		txr.Vout = MarshJsonCoinbaseVout(tx, nil, params, coinbaseAmout)
+		txr.Vout = MarshJsonCoinbaseVout(transaction, nil, params, coinbaseAmout)
 	} else {
 		txr.Vout = MarshJsonVout(tx, nil, params)
 	}
@@ -213,9 +213,10 @@ func MarshJsonVout(tx *types.Transaction, filterAddrMap map[string]struct{}, par
 	return voutList
 }
 
-func MarshJsonCoinbaseVout(tx *types.Transaction, filterAddrMap map[string]struct{}, params *params.Params, coinbaseAmout types.AmountMap) []json.Vout {
+func MarshJsonCoinbaseVout(transaction *types.Tx, filterAddrMap map[string]struct{}, params *params.Params, coinbaseAmout types.AmountMap) []json.Vout {
+	tx := transaction.Tx
 	if len(coinbaseAmout) <= 0 ||
-		tx.CachedTxHash().IsEqual(params.GenesisBlock.Transactions[0].CachedTxHash()) {
+		transaction.Hash().IsEqual(params.GenesisBlock.Transactions()[0].Hash()) {
 		return MarshJsonVout(tx, filterAddrMap, params)
 	}
 	voutList := make([]json.Vout, 0, len(tx.TxOut))

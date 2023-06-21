@@ -21,7 +21,7 @@ func QngGenesis() *core.Genesis {
 		GasLimit:   100000000,
 		Difficulty: big.NewInt(0),
 		Alloc:      DecodePrealloc(getAllocData(qparams.MainNetParams.Name)),
-		Timestamp:  uint64(qparams.MainNetParams.GenesisBlock.Header.Timestamp.Unix()),
+		Timestamp:  uint64(qparams.MainNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
 }
 
@@ -34,7 +34,7 @@ func QngTestnetGenesis() *core.Genesis {
 		GasLimit:   8000000,
 		Difficulty: big.NewInt(0),
 		Alloc:      DecodePrealloc(getAllocData(qparams.TestNetParams.Name)),
-		Timestamp:  uint64(qparams.TestNetParams.GenesisBlock.Header.Timestamp.Unix()),
+		Timestamp:  uint64(qparams.TestNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
 }
 
@@ -47,7 +47,7 @@ func QngMixnetGenesis() *core.Genesis {
 		GasLimit:   100000000,
 		Difficulty: big.NewInt(0),
 		Alloc:      DecodePrealloc(getAllocData(qparams.MixNetParams.Name)),
-		Timestamp:  uint64(qparams.MixNetParams.GenesisBlock.Header.Timestamp.Unix()),
+		Timestamp:  uint64(qparams.MixNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
 }
 
@@ -60,7 +60,7 @@ func QngPrivnetGenesis() *core.Genesis {
 		GasLimit:   100000000,
 		Difficulty: big.NewInt(0),
 		Alloc:      DecodePrealloc(getAllocData(qparams.PrivNetParams.Name)),
-		Timestamp:  uint64(qparams.PrivNetParams.GenesisBlock.Header.Timestamp.Unix()),
+		Timestamp:  uint64(qparams.PrivNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
 }
 

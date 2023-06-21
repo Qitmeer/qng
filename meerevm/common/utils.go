@@ -86,7 +86,7 @@ func FromEVMHash(h common.Hash) *hash.Hash {
 	return th
 }
 
-func ToQNGTx(tx *types.Transaction, timestamp int64, newEncoding bool) *qtypes.Transaction {
+func ToQNGTx(tx *types.Transaction, timestamp int64, newEncoding bool) *qtypes.Tx {
 	txmb, err := tx.MarshalBinary()
 	if err != nil {
 		log.Error(err.Error())
@@ -119,7 +119,7 @@ func ToQNGTx(tx *types.Transaction, timestamp int64, newEncoding bool) *qtypes.T
 		PkScript: opreturn.NewEVMTx().PKScript(),
 	})
 
-	return mtx
+	return qtypes.NewTx(mtx)
 }
 
 // Merge merges the given flag slices.

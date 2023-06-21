@@ -10,7 +10,7 @@ import (
 
 func TestLockedLedger(t *testing.T) {
 	params.ActiveNetParams = &params.PrivNetParam
-	genesisTxHash := params.ActiveNetParams.Params.GenesisBlock.Transactions[1].TxHash()
+	genesisTxHash := params.ActiveNetParams.Params.GenesisBlock.Transactions()[1].Hash()
 
 	args := []string{"--modules=miner", "--modules=qitmeer"}
 	h, err := testutils.NewHarness(t, params.ActiveNetParams.Params, args...)

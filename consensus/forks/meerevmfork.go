@@ -47,12 +47,12 @@ func IsVaildEVMUTXOUnlockTx(tx *types.Transaction, ip *types.TxInput, mainHeight
 
 func IsMaxLockUTXOInGenesis(op *types.TxOutPoint) bool {
 	gblock := params.ActiveNetParams.GenesisBlock
-	for _, tx := range gblock.Transactions {
-		if tx.CachedTxHash().IsEqual(&op.Hash) {
-			if op.OutIndex >= uint32(len(tx.TxOut)) {
+	for _, tx := range gblock.Transactions() {
+		if tx.Hash().IsEqual(&op.Hash) {
+			if op.OutIndex >= uint32(len(tx.Tx.TxOut)) {
 				return false
 			}
-			ops, err := txscript.ParseScript(tx.TxOut[op.OutIndex].PkScript)
+			ops, err := txscript.ParseScript(tx.Tx.TxOut[op.OutIndex].PkScript)
 			if err != nil {
 				return false
 			}

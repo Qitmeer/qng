@@ -74,7 +74,7 @@ out:
 			// script is available.
 			pkScript := utxo.PkScript()
 			sigScript := txIn.SignScript
-			vm, err := txscript.NewEngine(pkScript, txVI.tx.Transaction(),
+			vm, err := txscript.NewEngine(pkScript, txVI.tx,
 				txVI.txInIndex, v.flags, txscript.DefaultScriptVersion, v.sigCache)
 			if err != nil {
 				str := fmt.Sprintf("failed to parse input "+

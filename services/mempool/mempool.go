@@ -86,7 +86,7 @@ func (mp *TxPool) TxDescs() []*TxDesc {
 	for _, tx := range etxs {
 		txDesc := &TxDesc{
 			TxDesc: types.TxDesc{
-				Tx:     types.NewTx(tx),
+				Tx:     tx,
 				Added:  roughtime.Now(),
 				Height: mp.GetMainHeight(),
 			},
@@ -148,7 +148,7 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 		if mp.cfg.BC.IsShutdown() {
 			return
 		}
-		err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().RemoveTx(tx.Tx)
+		err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().RemoveTx(tx)
 		if err != nil {
 			log.Error(err.Error())
 		}
@@ -452,7 +452,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			if mp.cfg.BC.HasTx(txHash) {
 				return nil, nil, fmt.Errorf("Already have transaction %v", txHash)
 			}
-			fee, err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().AddTx(tx.Tx, false)
+			fee, err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().AddTx(tx, false)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -1008,9 +1008,9 @@ func (mp *TxPool) FetchTransaction(txHash *hash.Hash) (*types.Tx, error) {
 	}
 
 	for _, tx := range etxs {
-		th := tx.TxHash()
-		if txHash.IsEqual(&th) {
-			return types.NewTx(tx), nil
+		th := tx.Hash()
+		if txHash.IsEqual(th) {
+			return tx, nil
 		}
 	}
 	return nil, er
@@ -1036,9 +1036,9 @@ func (mp *TxPool) FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error) {
 		return nil, er
 	}
 
-	etxsM := map[string]*types.Transaction{}
+	etxsM := map[string]*types.Tx{}
 	for i := 0; i < len(etxs); i++ {
-		etxsM[etxs[i].TxHash().String()] = etxs[i]
+		etxsM[etxs[i].Hash().String()] = etxs[i]
 	}
 
 	for _, txh := range txHashs {
@@ -1046,7 +1046,7 @@ func (mp *TxPool) FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error) {
 		if !exists {
 			continue
 		}
-		result = append(result, types.NewTx(tx))
+		result = append(result, tx)
 	}
 	return result, nil
 }
@@ -1065,8 +1065,8 @@ func (mp *TxPool) HaveAllTransactions(hashes []hash.Hash) bool {
 			isinep := false
 			if len(etxs) > 0 {
 				for _, tx := range etxs {
-					th := tx.TxHash()
-					if h.IsEqual(&th) {
+					th := tx.Hash()
+					if h.IsEqual(th) {
 						isinep = true
 						break
 					}
@@ -1195,7 +1195,7 @@ func (mp *TxPool) MiningDescs() []*types.TxDesc {
 
 	for _, tx := range etxs {
 		txDesc := &types.TxDesc{
-			Tx:     types.NewTx(tx),
+			Tx:     tx,
 			Added:  roughtime.Now(),
 			Height: mp.GetMainHeight(),
 		}

@@ -320,7 +320,7 @@ func (b *BlockChain) initChainState() error {
 // the genesis block, so it must only be called on an uninitialized database.
 func (b *BlockChain) createChainState() error {
 	// Create a new node from the genesis block and set it as the best node.
-	genesisBlock := types.NewBlock(b.params.GenesisBlock)
+	genesisBlock := b.params.GenesisBlock
 	header := &genesisBlock.Block().Header
 	node := NewBlockNode(genesisBlock)
 	_, _, ib, _ := b.bd.AddBlock(node)
@@ -1117,7 +1117,7 @@ func (b *BlockChain) Rebuild() error {
 		if err != nil {
 			return err
 		}
-		genesisBlock := types.NewBlock(params.ActiveNetParams.GenesisBlock)
+		genesisBlock := params.ActiveNetParams.GenesisBlock
 
 		view := utxo.NewUtxoViewpoint()
 		view.SetViewpoints([]*hash.Hash{genesisBlock.Hash()})
