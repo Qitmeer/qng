@@ -8,7 +8,6 @@ import (
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/params"
 	"io"
-	"math"
 	"time"
 )
 
@@ -78,46 +77,40 @@ func (bd *MeerDAG) updateBlockDataCache() {
 		return
 	}
 	maxLife := params.ActiveNetParams.TargetTimePerBlock
-	startTime := time.Now()
-	mainHeight := bd.GetMainChainTip().GetHeight()
 	need := cacheSize - bd.minBDCacheSize
-	blockDataCache := map[uint]time.Time{}
+	blockDataCache := []uint{}
 	bd.blockDataLock.Lock()
-	const waitTime = time.Second * 2
 	for k, t := range bd.blockDataCache {
-		blockDataCache[k] = t
+		if time.Since(t) < maxLife {
+			continue
+		}
+		blockDataCache = append(blockDataCache, k)
 		need--
 		if need <= 0 {
 			break
 		}
-		if time.Since(startTime) > waitTime {
-			break
-		}
 	}
 	bd.blockDataLock.Unlock()
-	for k, t := range blockDataCache {
-		if time.Since(t) > maxLife {
-			if !bd.HasLoadedBlock(k) {
-				bd.blockDataLock.Lock()
-				delete(bd.blockDataCache, k)
-				bd.blockDataLock.Unlock()
-				continue
-			}
-			ib := bd.GetBlockById(k)
-			if ib != nil {
-				if math.Abs(float64(mainHeight)-float64(ib.GetHeight())) <= float64(bd.minBDCacheSize) {
-					continue
-				}
-				ib.SetData(nil)
-			}
+	if len(blockDataCache) <= 0 {
+		return
+	}
+	for _, k := range blockDataCache {
+		if !bd.HasLoadedBlock(k) {
 			bd.blockDataLock.Lock()
 			delete(bd.blockDataCache, k)
 			bd.blockDataLock.Unlock()
+			continue
 		}
-		if time.Since(startTime) > waitTime {
-			break
+		ib := bd.GetBlockById(k)
+		if ib != nil {
+			ib.GetData().Clean()
+			ib.SetData(nil)
 		}
+		bd.blockDataLock.Lock()
+		delete(bd.blockDataCache, k)
+		bd.blockDataLock.Unlock()
 	}
+	log.Debug("MeerDAG block data cache release", "num", len(blockDataCache))
 }
 
 func (bd *MeerDAG) LoadBlockDataSet(sets *IdSet) {
@@ -266,6 +259,9 @@ func (bd *MeerDAG) updateBlockCache() {
 	for _, b := range deletes {
 		bd.unloadBlock(b)
 	}
+	if len(deletes) > 0 {
+		log.Debug("MeerDAG block cache release", "num", len(deletes))
+	}
 }
 
 func (bd *MeerDAG) unloadBlock(ib IBlock) {
@@ -304,7 +300,7 @@ func (bd *MeerDAG) SetCacheSize(dag uint64, data uint64) {
 	if dag > MinBlockPruneSize {
 		bd.minCacheSize = dag
 	}
-	if data > MinBlockDataCache {
+	if data > 0 {
 		bd.minBDCacheSize = data
 	}
 }
