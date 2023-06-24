@@ -23,6 +23,8 @@ type IBlockData interface {
 
 	// Priority
 	GetPriority() int
+
+	Clean()
 }
 
 // The interface of block

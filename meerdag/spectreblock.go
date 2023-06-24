@@ -45,3 +45,7 @@ func (sd *SpectreBlockData) GetWeight() uint64 {
 func (sd *SpectreBlockData) GetPriority() int {
 	return 1
 }
+
+func (sd *SpectreBlockData) Clean() {
+
+}
