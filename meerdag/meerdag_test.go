@@ -132,10 +132,6 @@ func (tb *TestBlock) GetPriority() int {
 	return MaxPriority
 }
 
-func (tb *TestBlock) Clean() {
-
-}
-
 // This is the interface for Block DAG,can use to call public function.
 var bd *MeerDAG
 

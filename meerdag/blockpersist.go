@@ -103,7 +103,6 @@ func (bd *MeerDAG) updateBlockDataCache() {
 		}
 		ib := bd.GetBlockById(k)
 		if ib != nil {
-			ib.GetData().Clean()
 			ib.SetData(nil)
 		}
 		bd.blockDataLock.Lock()
