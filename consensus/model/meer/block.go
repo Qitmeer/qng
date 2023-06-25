@@ -29,3 +29,9 @@ func (b *Block) Timestamp() time.Time {
 func (b *Block) Transactions() []model.Tx {
 	return b.Txs
 }
+
+func (b *Block) Clean() {
+	b.Id = nil
+	b.Txs = nil
+	b.EvmBlock = nil
+}

@@ -69,6 +69,16 @@ func (node *BlockNode) SetMeerBlock(block *meer.Block) {
 	node.meerBlock = block
 }
 
+func (node *BlockNode) Clean() {
+	if node.meerBlock != nil {
+		node.meerBlock.Clean()
+		node.meerBlock = nil
+	}
+	for _, tx := range node.block.Transactions() {
+		tx.Object = nil
+	}
+}
+
 func NewBlockNode(block *types.SerializedBlock) *BlockNode {
 	bn := BlockNode{
 		block: block,

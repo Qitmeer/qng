@@ -409,10 +409,11 @@ func (sb *SerializedBlock) String() string {
 // NewBlock returns a new instance of the serialized block given an underlying Block.
 // the block hash has been calculated and cached
 func NewBlock(block *Block) *SerializedBlock {
-	return &SerializedBlock{
+	sb := &SerializedBlock{
 		hash:  block.BlockHash(),
 		block: block,
 	}
+	return sb
 }
 
 // NewBlockFromBlockAndBytes returns a new instance of a block given

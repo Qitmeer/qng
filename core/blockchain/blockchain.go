@@ -521,61 +521,6 @@ func (b *BlockChain) TipGeneration() ([]hash.Hash, error) {
 	return tiphashs, nil
 }
 
-// BlockByHash returns the block from the main chain with the given hash.
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) BlockByHash(hash *hash.Hash) (*types.SerializedBlock, error) {
-	b.ChainRLock()
-	defer b.ChainRUnlock()
-
-	return b.fetchMainChainBlockByHash(hash)
-}
-
-// HeaderByHash returns the block header identified by the given hash or an
-// error if it doesn't exist.  Note that this will return headers from both the
-// main chain and any side chains.
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) HeaderByHash(hash *hash.Hash) (types.BlockHeader, error) {
-	block, err := b.fetchBlockByHash(hash)
-	if err != nil || block == nil {
-		return types.BlockHeader{}, fmt.Errorf("block %s is not known", hash)
-	}
-
-	return block.Block().Header, nil
-}
-
-// FetchBlockByHash searches the internal chain block stores and the database
-// in an attempt to find the requested block.
-//
-// This function differs from BlockByHash in that this one also returns blocks
-// that are not part of the main chain (if they are known).
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) FetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error) {
-	return b.fetchBlockByHash(hash)
-}
-
-func (b *BlockChain) FetchBlockBytesByHash(hash *hash.Hash) ([]byte, error) {
-	return b.fetchBlockBytesByHash(hash)
-}
-
-// fetchMainChainBlockByHash returns the block from the main chain with the
-// given hash.  It first attempts to use cache and then falls back to loading it
-// from the database.
-//
-// An error is returned if the block is either not found or not in the main
-// chain.
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) fetchMainChainBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error) {
-	if !b.MainChainHasBlock(hash) {
-		return nil, fmt.Errorf("No block in main chain")
-	}
-	block, err := b.fetchBlockByHash(hash)
-	return block, err
-}
-
 // MaximumBlockSize returns the maximum permitted block size for the block
 // AFTER the given node.
 //
@@ -586,49 +531,6 @@ func (b *BlockChain) maxBlockSize() (int64, error) {
 
 	// The max block size is not changed in any other cases.
 	return maxSize, nil
-}
-
-// fetchBlockByHash returns the block with the given hash from all known sources
-// such as the internal caches and the database.
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) fetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error) {
-	// Check orphan cache.
-	block := b.GetOrphan(hash)
-	if block != nil {
-		return block, nil
-	}
-
-	// Load the block from the database.
-	dbErr := b.db.View(func(dbTx database.Tx) error {
-		var err error
-		block, err = dbFetchBlockByHash(dbTx, hash)
-		return err
-	})
-	if dbErr == nil && block != nil {
-		return block, nil
-	}
-	return nil, fmt.Errorf("unable to find block %v db", hash)
-}
-
-func (b *BlockChain) fetchBlockBytesByHash(hash *hash.Hash) ([]byte, error) {
-	// Check orphan cache.
-	block := b.GetOrphan(hash)
-	if block != nil {
-		return block.Bytes()
-	}
-
-	var bytes []byte
-	var err error
-	// Load the block from the database.
-	err = b.db.View(func(dbTx database.Tx) error {
-		bytes, err = dbTx.FetchBlock(hash)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	return bytes, err
 }
 
 // FetchSubsidyCache returns the current subsidy cache from the blockchain.
@@ -947,13 +849,13 @@ func (b *BlockChain) GetFees(h *hash.Hash) types.AmountMap {
 	if ib.GetState().GetStatus().KnownInvalid() {
 		return nil
 	}
-	block, err := b.FetchBlockByHash(h)
-	if err != nil {
+	bn := b.GetBlockNode(ib)
+	if bn == nil {
 		return nil
 	}
-	b.CalculateDAGDuplicateTxs(block)
+	b.CalculateDAGDuplicateTxs(bn.GetBody())
 
-	return b.CalculateFees(block)
+	return b.CalculateFees(bn.GetBody())
 }
 
 func (b *BlockChain) GetFeeByCoinID(h *hash.Hash, coinId types.CoinID) int64 {
@@ -968,12 +870,12 @@ func (b *BlockChain) CalcWeight(ib meerdag.IBlock, bi *meerdag.BlueInfo) int64 {
 	if ib.GetState().GetStatus().KnownInvalid() {
 		return 0
 	}
-	block, err := b.FetchBlockByHash(ib.GetHash())
-	if err != nil {
-		log.Error(fmt.Sprintf("CalcWeight:%v", err))
+	bn := b.GetBlockNode(ib)
+	if bn == nil {
+		log.Error(fmt.Sprintf("CalcWeight:%v", ib.GetHash().String()))
 		return 0
 	}
-	if b.IsDuplicateTx(block.Transactions()[0].Hash(), ib.GetHash()) {
+	if b.IsDuplicateTx(bn.GetBody().Transactions()[0].Hash(), ib.GetHash()) {
 		return 0
 	}
 	return b.subsidyCache.CalcBlockSubsidy(bi)
