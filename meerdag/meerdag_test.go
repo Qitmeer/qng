@@ -189,7 +189,7 @@ func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
 		return nil
 	}
 
-	bd = New(dagType, CalcBlockWeight, -1, db, nil, createMockBlockState, createMockBlockStateFromBytes)
+	bd = New(dagType, CalcBlockWeight, -1, db, nil, createMockBlockState, createMockBlockStateFromBytes, nil)
 	instance := bd.GetInstance()
 	tbMap = map[string]IBlock{}
 	for i := 0; i < blen; i++ {

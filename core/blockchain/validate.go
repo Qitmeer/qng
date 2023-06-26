@@ -1024,6 +1024,7 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 				if err != nil {
 					return err
 				}
+				tx.Object = vtx
 			}
 			_, err = b.MeerVerifyTx(vtx)
 			if err != nil {

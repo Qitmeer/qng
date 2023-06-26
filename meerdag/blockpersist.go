@@ -103,6 +103,9 @@ func (bd *MeerDAG) updateBlockDataCache() {
 		}
 		ib := bd.GetBlockById(k)
 		if ib != nil {
+			if bd.onBlockDataRelease != nil {
+				bd.onBlockDataRelease(ib)
+			}
 			ib.SetData(nil)
 		}
 		bd.blockDataLock.Lock()

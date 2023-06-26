@@ -98,6 +98,7 @@ func BuildEVMBlock(block *qtypes.SerializedBlock) (*mmeer.Block, error) {
 			if err != nil {
 				return nil, err
 			}
+			tx.Object = ctx
 			result.Txs = append(result.Txs, ctx)
 		}
 	}
