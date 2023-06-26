@@ -76,6 +76,7 @@ func (node *BlockNode) Clean() {
 	}
 	for _, tx := range node.block.Transactions() {
 		tx.Object = nil
+		tx.Tx = nil
 	}
 }
 
