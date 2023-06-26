@@ -331,3 +331,14 @@ func (b *BlockChain) fetchBlockBytesByHash(hash *hash.Hash) ([]byte, error) {
 	})
 	return bytes, err
 }
+
+func onBlockDataRelease(ib meerdag.IBlock) {
+	if ib.GetData() == nil {
+		return
+	}
+	bn, ok := ib.GetData().(*BlockNode)
+	if !ok {
+		return
+	}
+	bn.Clean()
+}
