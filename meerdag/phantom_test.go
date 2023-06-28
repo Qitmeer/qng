@@ -452,7 +452,7 @@ func checkLoad(t *testing.T) {
 		}
 		return tb
 	}
-	bd = New(phantom, CalcBlockWeight, -1, db, getBlockData, createMockBlockState, createMockBlockStateFromBytes, nil)
+	bd = New(phantom, CalcBlockWeight, -1, db, getBlockData, createMockBlockState, createMockBlockStateFromBytes)
 	total, err := dbGetTotal()
 	if err != nil {
 		t.Fatal(err)

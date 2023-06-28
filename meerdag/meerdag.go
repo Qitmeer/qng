@@ -168,8 +168,6 @@ type CreateBlockStateFromBytes func(data []byte) (model.BlockState, error)
 
 var createBlockStateFromBytes CreateBlockStateFromBytes
 
-type OnBlockDataRelease func(ib IBlock)
-
 // The general foundation framework of Block DAG implement
 type MeerDAG struct {
 	service.Service
@@ -225,8 +223,6 @@ type MeerDAG struct {
 
 	minCacheSize   uint64
 	minBDCacheSize uint64
-
-	onBlockDataRelease OnBlockDataRelease
 }
 
 // Acquire the name of DAG instance
@@ -240,12 +236,11 @@ func (bd *MeerDAG) GetInstance() ConsensusAlgorithm {
 }
 
 // Initialize self, the function to be invoked at the beginning
-func (bd *MeerDAG) init(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData, onBlockDataRelease OnBlockDataRelease) ConsensusAlgorithm {
+func (bd *MeerDAG) init(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData) ConsensusAlgorithm {
 	bd.lastTime = time.Unix(roughtime.Now().Unix(), 0)
 	bd.commitOrder = map[uint]uint{}
 	bd.calcWeight = calcWeight
 	bd.getBlockData = getBlockData
-	bd.onBlockDataRelease = onBlockDataRelease
 	bd.db = db
 	bd.commitBlock = NewIdSet()
 	bd.lastSnapshot = NewDAGSnapshot()
@@ -1443,7 +1438,7 @@ out:
 	log.Trace("MeerDAG handler done")
 }
 
-func New(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData, createBS CreateBlockState, createBSB CreateBlockStateFromBytes, onBlockDataRelease OnBlockDataRelease) *MeerDAG {
+func New(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData, createBS CreateBlockState, createBSB CreateBlockStateFromBytes) *MeerDAG {
 	createBlockState = createBS
 	createBlockStateFromBytes = createBSB
 	md := &MeerDAG{
@@ -1452,6 +1447,6 @@ func New(dagType string, calcWeight CalcWeight, blockRate float64, db database.D
 		minCacheSize:   MinBlockPruneSize,
 		minBDCacheSize: MinBlockDataCache,
 	}
-	md.init(dagType, calcWeight, blockRate, db, getBlockData, onBlockDataRelease)
+	md.init(dagType, calcWeight, blockRate, db, getBlockData)
 	return md
 }
