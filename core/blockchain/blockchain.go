@@ -1156,7 +1156,7 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 
 	b.bd = meerdag.New(config.DAGType, b.CalcWeight,
 		1.0/float64(par.TargetTimePerBlock/time.Second),
-		b.db, b.getBlockData, state.CreateBlockState, state.CreateBlockStateFromBytes, onBlockDataRelease)
+		b.db, b.getBlockData, state.CreateBlockState, state.CreateBlockStateFromBytes)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
 	b.bd.SetCacheSize(config.DAGCacheSize, config.BlockDataCacheSize)
 
