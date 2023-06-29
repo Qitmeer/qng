@@ -69,28 +69,20 @@ func (b *BlockChain) calcEasiestDifficulty(bits uint32, duration time.Duration, 
 func (b *BlockChain) findPrevTestNetDifficulty(startBlock meerdag.IBlock, powInstance pow.IPow) uint32 {
 	// Search backwards through the chain for the last block without
 	// the special rule applied.
-	blocksPerRetarget := uint64(b.params.WorkDiffWindowSize *
-		b.params.WorkDiffWindows)
-	iterBlock := startBlock
-	var iterNode *BlockNode
 	target := powInstance.GetSafeDiff(0)
-	for {
-		if iterBlock == nil ||
-			uint64(iterBlock.GetHeight())%blocksPerRetarget == 0 {
-			break
-		}
-		iterNode = b.GetBlockNode(iterBlock)
-		if iterNode.Difficulty() != pow.BigToCompact(target) {
-			break
-		}
-	}
-	// Return the found difficulty or the minimum difficulty if no
-	// appropriate block was found.
 	lastBits := pow.BigToCompact(target)
-	if iterNode != nil {
-		lastBits = iterNode.Difficulty()
+	blocksPerRetarget := uint64(b.params.WorkDiffWindowSize * b.params.WorkDiffWindows)
+	iterBlock := startBlock
+	if iterBlock == nil ||
+		uint64(iterBlock.GetHeight())%blocksPerRetarget == 0 {
+		return lastBits
 	}
-	return lastBits
+	var iterNode *BlockNode
+	iterNode = b.GetBlockNode(iterBlock)
+	if iterNode.Difficulty() != pow.BigToCompact(target) {
+		return lastBits
+	}
+	return iterNode.Difficulty()
 }
 
 // calcNextRequiredDifficulty calculates the required difficulty for the block
