@@ -331,7 +331,7 @@ func handleRescan(wsc *wsClient, icmd interface{}) (interface{}, error) {
 		lastBlockHash.String(),
 		lastTx,
 		uint64(lastBlock.GetOrder()),
-		chain.GetBlockNode(lastBlock).GetTimestamp(),
+		chain.GetBlockHeader(lastBlock).Timestamp.Unix(),
 	)
 	if mn, err := cmds.MarshalCmd(nil, n); err != nil {
 		log.Error(fmt.Sprintf("Failed to marshal rescan finished "+

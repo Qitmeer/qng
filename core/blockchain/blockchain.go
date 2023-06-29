@@ -932,11 +932,11 @@ func (b *BlockChain) CalcPastMedianTime(block meerdag.IBlock) time.Time {
 	numNodes := 0
 	iterBlock := block
 	for i := 0; i < medianTimeBlocks && iterBlock != nil; i++ {
-		iterNode := b.GetBlockNode(iterBlock)
+		iterNode := b.GetBlockHeader(iterBlock)
 		if iterNode == nil {
 			break
 		}
-		timestamps[i] = iterNode.GetTimestamp()
+		timestamps[i] = iterNode.Timestamp.Unix()
 		numNodes++
 
 		iterBlock = b.bd.GetBlockById(iterBlock.GetMainParent())
