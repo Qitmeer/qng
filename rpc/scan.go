@@ -210,7 +210,7 @@ fetchRange:
 			}
 			n := cmds.NewRescanProgressNtfn(
 				hashList[i].String(), uint64(node.GetOrder()),
-				chain.GetBlockNode(node).GetTimestamp(),
+				chain.GetBlockHeader(node).Timestamp.Unix(),
 			)
 			mn, err := cmds.MarshalCmd(nil, n)
 			if err != nil {

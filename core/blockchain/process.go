@@ -135,10 +135,10 @@ func (b *BlockChain) preProcessBlock(block *types.SerializedBlock, flags Behavio
 	if err != nil {
 		return false, err
 	}
-	checkpointNode := b.GetBlockNode(checkpoint)
+	checkpointNode := b.GetBlockHeader(checkpoint)
 	if checkpointNode != nil {
 		// Ensure the block timestamp is after the checkpoint timestamp.
-		checkpointTime := time.Unix(checkpointNode.GetTimestamp(), 0)
+		checkpointTime := time.Unix(checkpointNode.Timestamp.Unix(), 0)
 		if blockHeader.Timestamp.Before(checkpointTime) {
 			str := fmt.Sprintf("block %v has timestamp %v before "+
 				"last checkpoint timestamp %v", blockHash,
@@ -155,7 +155,7 @@ func (b *BlockChain) preProcessBlock(block *types.SerializedBlock, flags Behavio
 			// maximum adjustment allowed by the retarget rules.
 			duration := blockHeader.Timestamp.Sub(checkpointTime)
 			requiredTarget := pow.CompactToBig(b.calcEasiestDifficulty(
-				checkpointNode.Difficulty(), duration, block.Block().Header.Pow))
+				checkpointNode.Difficulty, duration, block.Block().Header.Pow))
 			currentTarget := pow.CompactToBig(blockHeader.Difficulty)
 			if !block.Block().Header.Pow.CompareDiff(currentTarget, requiredTarget) {
 				str := fmt.Sprintf("block target difficulty of %064x "+

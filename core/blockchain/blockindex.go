@@ -331,3 +331,42 @@ func (b *BlockChain) fetchBlockBytesByHash(hash *hash.Hash) ([]byte, error) {
 	})
 	return bytes, err
 }
+
+func (b *BlockChain) fetchHeaderByHash(hash *hash.Hash) (*types.BlockHeader, error) {
+	// Check orphan cache.
+	block := b.GetOrphan(hash)
+	if block != nil {
+		return &block.Block().Header, nil
+	}
+
+	var header *types.BlockHeader
+	dbErr := b.db.View(func(dbTx database.Tx) error {
+		var err error
+		header, err = dbFetchHeaderByHash(dbTx, hash)
+		return err
+	})
+	if dbErr == nil && header != nil {
+		return header, nil
+	}
+	return nil, fmt.Errorf("unable to find block header %v db %v", hash, dbErr)
+}
+
+func (b *BlockChain) GetBlockHeader(ib meerdag.IBlock) *types.BlockHeader {
+	if ib == nil {
+		return nil
+	}
+	if ib.GetData() != nil {
+		bn, ok := ib.GetData().(*BlockNode)
+		if !ok {
+			log.Error("block data type error", "hash", ib.GetHash().String())
+			return nil
+		}
+		return bn.GetHeader()
+	}
+	header, err := b.fetchHeaderByHash(ib.GetHash())
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return header
+}

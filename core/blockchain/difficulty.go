@@ -9,6 +9,7 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/meerdag"
 	"math/big"
@@ -69,28 +70,20 @@ func (b *BlockChain) calcEasiestDifficulty(bits uint32, duration time.Duration, 
 func (b *BlockChain) findPrevTestNetDifficulty(startBlock meerdag.IBlock, powInstance pow.IPow) uint32 {
 	// Search backwards through the chain for the last block without
 	// the special rule applied.
-	blocksPerRetarget := uint64(b.params.WorkDiffWindowSize *
-		b.params.WorkDiffWindows)
-	iterBlock := startBlock
-	var iterNode *BlockNode
 	target := powInstance.GetSafeDiff(0)
-	for {
-		if iterBlock == nil ||
-			uint64(iterBlock.GetHeight())%blocksPerRetarget == 0 {
-			break
-		}
-		iterNode = b.GetBlockNode(iterBlock)
-		if iterNode.Difficulty() != pow.BigToCompact(target) {
-			break
-		}
-	}
-	// Return the found difficulty or the minimum difficulty if no
-	// appropriate block was found.
 	lastBits := pow.BigToCompact(target)
-	if iterNode != nil {
-		lastBits = iterNode.Difficulty()
+	blocksPerRetarget := uint64(b.params.WorkDiffWindowSize * b.params.WorkDiffWindows)
+	iterBlock := startBlock
+	if iterBlock == nil ||
+		uint64(iterBlock.GetHeight())%blocksPerRetarget == 0 {
+		return lastBits
 	}
-	return lastBits
+	var iterNode *types.BlockHeader
+	iterNode = b.GetBlockHeader(iterBlock)
+	if iterNode.Difficulty != pow.BigToCompact(target) {
+		return lastBits
+	}
+	return iterNode.Difficulty
 }
 
 // calcNextRequiredDifficulty calculates the required difficulty for the block
@@ -110,14 +103,14 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 	if block == nil {
 		return pow.BigToCompact(baseTarget), nil
 	}
-	curNode := b.GetBlockNode(block)
+	curNode := b.GetBlockHeader(block)
 	if curNode == nil {
 		return pow.BigToCompact(baseTarget), nil
 	}
 	// Get the old difficulty; if we aren't at a block height where it changes,
 	// just return this.
-	oldDiff := curNode.Difficulty()
-	oldDiffBig := pow.CompactToBig(curNode.Difficulty())
+	oldDiff := curNode.Difficulty
+	oldDiffBig := pow.CompactToBig(curNode.Difficulty)
 	windowsSizeBig := big.NewInt(b.params.WorkDiffWindowSize)
 	// percent is *100 * 2^32
 	windowsSizeBig.Mul(windowsSizeBig, powInstance.PowPercent())
@@ -134,18 +127,18 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 			// amount of time has elapsed without mining a block.
 			reductionTime := int64(b.params.MinDiffReductionTime /
 				time.Second)
-			allowMinTime := curNode.GetTimestamp() + reductionTime
+			allowMinTime := curNode.Timestamp.Unix() + reductionTime
 
 			// For every extra target timespan that passes, we halve the
 			// difficulty.
 			if newBlockTime.Unix() > allowMinTime {
-				timePassed := newBlockTime.Unix() - curNode.GetTimestamp()
+				timePassed := newBlockTime.Unix() - curNode.Timestamp.Unix()
 				timePassed -= reductionTime
 				shifts := uint((timePassed / int64(b.params.TargetTimePerBlock/
 					time.Second)) + 1)
 
 				// Scale the difficulty with time passed.
-				oldTarget := pow.CompactToBig(curNode.Difficulty())
+				oldTarget := pow.CompactToBig(curNode.Difficulty)
 				newTarget := new(big.Int)
 				if shifts < maxShift {
 					newTarget.Lsh(oldTarget, shifts)
@@ -171,9 +164,9 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 	}
 	// Declare some useful variables.
 	RAFBig := big.NewInt(b.params.RetargetAdjustmentFactor)
-	nextDiffBigMin := pow.CompactToBig(curNode.Difficulty())
+	nextDiffBigMin := pow.CompactToBig(curNode.Difficulty)
 	nextDiffBigMin.Div(nextDiffBigMin, RAFBig)
-	nextDiffBigMax := pow.CompactToBig(curNode.Difficulty())
+	nextDiffBigMax := pow.CompactToBig(curNode.Difficulty)
 	nextDiffBigMax.Mul(nextDiffBigMax, RAFBig)
 
 	alpha := b.params.WorkDiffAlpha
@@ -194,10 +187,10 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 	var weights uint64
 	oldBlock := block
 
-	oldNodeTimestamp := curNode.GetTimestamp()
+	oldNodeTimestamp := curNode.Timestamp.Unix()
 	oldBlockOrder := block.GetOrder()
 
-	recentTime := curNode.GetTimestamp()
+	recentTime := curNode.Timestamp.Unix()
 	for i := uint64(0); ; i++ {
 		// Store and reset after reaching the end of every window period.
 		if i%uint64(needAjustCount) == 0 && i != 0 {
@@ -248,11 +241,11 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 				oldBlockOrder = 0
 				continue
 			}
-			on := b.GetBlockNode(oldBlock)
+			on := b.GetBlockHeader(oldBlock)
 			if on == nil {
 				continue
 			}
-			oldNodeTimestamp = on.GetTimestamp()
+			oldNodeTimestamp = on.Timestamp.Unix()
 			oldBlockOrder = oldBlock.GetOrder()
 		}
 	}
@@ -301,7 +294,7 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 	nextDiffBits := pow.BigToCompact(nextDiffBig)
 
 	log.Debug("Difficulty retarget", "block main height", block.GetHeight()+1)
-	log.Debug("Old target", "bits", fmt.Sprintf("%08x", curNode.Difficulty()),
+	log.Debug("Old target", "bits", fmt.Sprintf("%08x", curNode.Difficulty),
 		"diff", fmt.Sprintf("(%064x)", oldDiffBig))
 	log.Debug("New target", "bits", fmt.Sprintf("%08x", nextDiffBits),
 		"diff", fmt.Sprintf("(%064x)", nextDiffBig))
@@ -328,12 +321,12 @@ func (b *BlockChain) calcCurrentPowCount(block meerdag.IBlock, nodesToTraverse i
 		if oldBlock.HasParents() {
 			ob := b.bd.GetBlockById(oldBlock.GetMainParent())
 			if ob != nil {
-				oldNode := b.GetBlockNode(ob)
+				oldNode := b.GetBlockHeader(ob)
 				if oldNode == nil {
 					continue
 				}
 				oldBlock = ob
-				if oldBlock.GetOrder() != 0 && oldNode.GetPowType() != powType {
+				if oldBlock.GetOrder() != 0 && oldNode.Pow.GetPowType() != powType {
 					currentPowBlockCount--
 				}
 
@@ -358,17 +351,17 @@ func (b *BlockChain) getDistanceFromLastAdjustment(block meerdag.IBlock, powType
 	if block == nil {
 		return 0
 	}
-	curNode := b.GetBlockNode(block)
+	curNode := b.GetBlockHeader(block)
 	if curNode == nil {
 		return 0
 	}
 	//calculate
-	oldBits := curNode.Difficulty()
+	oldBits := curNode.Difficulty
 	count := int64(0)
-	currentTime := curNode.GetTimestamp()
+	currentTime := curNode.Timestamp.Unix()
 	for {
-		if curNode.Pow().GetPowType() == powType {
-			if oldBits != curNode.Difficulty() {
+		if curNode.Pow.GetPowType() == powType {
+			if oldBits != curNode.Difficulty {
 				return count
 			}
 			count++
@@ -379,17 +372,17 @@ func (b *BlockChain) getDistanceFromLastAdjustment(block meerdag.IBlock, powType
 		}
 		// if TargetTimespan have only one pow block need ajustment difficulty
 		// or count >= needAjustCount
-		if (count > 1 && currentTime-curNode.GetTimestamp() > (count-1)*int64(b.params.TargetTimespan/time.Second)) ||
+		if (count > 1 && currentTime-curNode.Timestamp.Unix() > (count-1)*int64(b.params.TargetTimespan/time.Second)) ||
 			count >= needAjustCount {
 			return needAjustCount * b.params.WorkDiffWindows
 		}
-		if curNode.GetParents() == nil {
+		if !block.HasParents() {
 			return count
 		}
 
 		block = b.bd.GetBlockById(block.GetMainParent())
 		if block != nil {
-			curNode = b.GetBlockNode(block)
+			curNode = b.GetBlockHeader(block)
 		} else {
 			return count
 		}
@@ -431,11 +424,11 @@ func (b *BlockChain) CalcNextRequiredDifficulty(timestamp time.Time, powType pow
 // find block node by pow type
 func (b *BlockChain) getPowTypeNode(block meerdag.IBlock, powType pow.PowType) meerdag.IBlock {
 	for {
-		curNode := b.GetBlockNode(block)
+		curNode := b.GetBlockHeader(block)
 		if curNode == nil {
 			return nil
 		}
-		if curNode.Pow().GetPowType() == powType {
+		if curNode.Pow.GetPowType() == powType {
 			return block
 		}
 
@@ -455,15 +448,15 @@ func (b *BlockChain) GetCurrentPowDiff(ib meerdag.IBlock, powType pow.PowType) *
 	instance.SetParams(b.params.PowConfig)
 	safeBigDiff := instance.GetSafeDiff(0)
 	for {
-		curNode := b.GetBlockNode(ib)
+		curNode := b.GetBlockHeader(ib)
 		if curNode == nil {
 			return safeBigDiff
 		}
-		if curNode.Pow().GetPowType() == powType {
-			return pow.CompactToBig(curNode.Difficulty())
+		if curNode.Pow.GetPowType() == powType {
+			return pow.CompactToBig(curNode.Difficulty)
 		}
 
-		if curNode.GetParents() == nil || !ib.HasParents() {
+		if !ib.HasParents() {
 			return safeBigDiff
 		}
 
