@@ -5,7 +5,6 @@
 package meer
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
@@ -180,11 +179,7 @@ func (b *MeerChain) fillBlock(qtxs []model.Tx, header *types.Header, statedb *st
 	for _, tx := range qtxs {
 		if tx.GetTxType() == qtypes.TxTypeCrossChainVM ||
 			tx.GetTxType() == qtypes.TxTypeCrossChainImport {
-			pubkBytes, err := hex.DecodeString(tx.GetTo())
-			if err != nil {
-				return nil, nil, err
-			}
-			publicKey, err := crypto.UnmarshalPubkey(pubkBytes)
+			publicKey, err := crypto.UnmarshalPubkey(tx.GetTo())
 			if err != nil {
 				return nil, nil, err
 			}
@@ -198,11 +193,7 @@ func (b *MeerChain) fillBlock(qtxs []model.Tx, header *types.Header, statedb *st
 
 	for _, tx := range qtxs {
 		if tx.GetTxType() == qtypes.TxTypeCrossChainExport {
-			pubkBytes, err := hex.DecodeString(tx.GetTo())
-			if err != nil {
-				return nil, nil, err
-			}
-			publicKey, err := crypto.UnmarshalPubkey(pubkBytes)
+			publicKey, err := crypto.UnmarshalPubkey(tx.GetTo())
 			if err != nil {
 				return nil, nil, err
 			}
@@ -225,11 +216,7 @@ func (b *MeerChain) fillBlock(qtxs []model.Tx, header *types.Header, statedb *st
 			}
 			header.Extra = txmb
 		} else if tx.GetTxType() == qtypes.TxTypeCrossChainImport {
-			pubkBytes, err := hex.DecodeString(tx.GetFrom())
-			if err != nil {
-				return nil, nil, err
-			}
-			publicKey, err := crypto.UnmarshalPubkey(pubkBytes)
+			publicKey, err := crypto.UnmarshalPubkey(tx.GetFrom())
 			if err != nil {
 				return nil, nil, err
 			}
