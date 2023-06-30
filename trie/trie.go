@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/metrics"
+	"github.com/ethereum/go-ethereum/metrics"
 )
 
 var (
