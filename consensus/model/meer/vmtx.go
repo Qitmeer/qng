@@ -1,8 +1,8 @@
 package meer
 
 import (
-	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/types"
@@ -14,7 +14,7 @@ import (
 
 type VMTx struct {
 	*Tx
-	Coinbase string
+	Coinbase hash.Hash
 	ETx      *etypes.Transaction
 }
 
@@ -28,8 +28,8 @@ func (vt *VMTx) setCoinbaseTx(tx *types.Transaction) error {
 		if !ok {
 			return fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
 		}
-		vt.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
-		vt.Coinbase = tx.TxHash().String()
+		vt.To = secpPksAddr.PubKey().SerializeUncompressed()
+		vt.Coinbase = tx.TxHash()
 		return nil
 	}
 	return fmt.Errorf("tx format error :TxTypeCrossChainVM")

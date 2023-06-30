@@ -5,7 +5,6 @@
 package common
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
@@ -35,13 +34,8 @@ func ReverseBytes(bs *[]byte) *[]byte {
 	return bs
 }
 
-func NewMeerEVMAddress(pubkeyHex string) (common.Address, error) {
-	pubkBytes, err := hex.DecodeString(pubkeyHex)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	publicKey, err := ecc.Secp256k1.ParsePubKey(pubkBytes)
+func NewMeerEVMAddress(pubkeyHex []byte) (common.Address, error) {
+	publicKey, err := ecc.Secp256k1.ParsePubKey(pubkeyHex)
 	if err != nil {
 		return common.Address{}, err
 	}

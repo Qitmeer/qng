@@ -5,7 +5,6 @@
 package meer
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
@@ -20,11 +19,7 @@ type ImportTx struct {
 }
 
 func (itx *ImportTx) GetPKAddress() (*address.SecpPubKeyAddress, error) {
-	pk, err := hex.DecodeString(itx.From)
-	if err != nil {
-		return nil, err
-	}
-	return address.NewSecpPubKeyAddress(pk, params.ActiveNetParams.Params)
+	return address.NewSecpPubKeyAddress(itx.From, params.ActiveNetParams.Params)
 }
 
 func (itx *ImportTx) GetPKScript() ([]byte, error) {
@@ -80,11 +75,7 @@ func (itx *ImportTx) CheckSanity() error {
 	if len(pksAddrs) <= 0 {
 		return fmt.Errorf("PKScript is error")
 	}
-	pk, err := hex.DecodeString(itx.From)
-	if err != nil {
-		return err
-	}
-	spka, err := address.NewSecpPubKeyAddress(pk, params.ActiveNetParams.Params)
+	spka, err := address.NewSecpPubKeyAddress(itx.From, params.ActiveNetParams.Params)
 	if err != nil {
 		return err
 	}
@@ -104,7 +95,7 @@ func (itx *ImportTx) SetCoinbaseTx(tx *types.Transaction) error {
 		if !ok {
 			return fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
 		}
-		itx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
+		itx.To = secpPksAddr.PubKey().SerializeUncompressed()
 		return nil
 	}
 	return fmt.Errorf("tx format error :TxTypeCrossChainVM")
@@ -157,7 +148,7 @@ func NewImportTx(tx *types.Transaction) (*ImportTx, error) {
 	if !ok {
 		return nil, fmt.Errorf("Not SecpPubKeyAddress:%s", addr.String())
 	}
-	itx.From = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
+	itx.From = secpPksAddr.PubKey().SerializeUncompressed()
 	itx.Value = uint64(tx.TxOut[0].Amount.Value)
 	return itx, nil
 }

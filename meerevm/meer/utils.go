@@ -89,7 +89,7 @@ func BuildEVMBlock(block *qtypes.SerializedBlock) (*mmeer.Block, error) {
 		} else if qtypes.IsCrossChainVMTx(tx.Tx) {
 			if tx.Object != nil {
 				vt := tx.Object.(*mmeer.VMTx)
-				if vt.Coinbase == block.Transactions()[0].Hash().String() {
+				if vt.Coinbase.IsEqual(block.Transactions()[0].Hash()) {
 					result.Txs = append(result.Txs, vt)
 					continue
 				}

@@ -1,7 +1,6 @@
 package meer
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
@@ -38,7 +37,7 @@ func NewExportTx(tx *types.Transaction) (*ExportTx, error) {
 		if !ok {
 			return nil, fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s in tx(%s)", pksAddrs[0].String(), tx.TxHash()))
 		}
-		etx.To = hex.EncodeToString(secpPksAddr.PubKey().SerializeUncompressed())
+		etx.To = secpPksAddr.PubKey().SerializeUncompressed()
 		etx.Value = uint64(tx.TxOut[0].Amount.Value)
 	} else {
 		return nil, fmt.Errorf("tx format error :TxTypeCrossChainExport in tx(%s)", tx.TxHash())
