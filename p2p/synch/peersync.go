@@ -45,7 +45,7 @@ type PeerSync struct {
 	interrupt      chan struct{}
 	processID      uint64
 	processLock    sync.Mutex
-	processWorkNum int
+	processWorkNum atomic.Int32
 }
 
 func (ps *PeerSync) Start() error {
@@ -165,10 +165,8 @@ func (ps *PeerSync) handleStallSample() {
 	if atomic.LoadInt32(&ps.shutdown) != 0 {
 		return
 	}
-	if ps.HasSyncPeer() {
-		if time.Since(ps.lastSync) >= ps.sy.PeerInterval {
-			ps.TryAgainUpdateSyncPeer(true)
-		}
+	if time.Since(ps.lastSync) >= ps.sy.PeerInterval {
+		ps.TryAgainUpdateSyncPeer(true)
 	}
 }
 
@@ -476,18 +474,18 @@ func (ps *PeerSync) updateSyncPeer(force bool) {
 	if !ps.IsRunning() {
 		return
 	}
-	if ps.processWorkNum >= 2 {
+	if ps.processWorkNum.Load() >= 2 {
 		return
 	}
-	ps.processWorkNum++
+	ps.processWorkNum.Add(1)
 	log.Debug("Updating sync peer", "force", force)
-	if force {
+	if force && ps.processWorkNum.Load() >= 2 {
 		go func() {
 			ps.interrupt <- struct{}{}
 		}()
 	}
 	ps.startSync()
-	ps.processWorkNum--
+	ps.processWorkNum.Add(-1)
 }
 
 func (ps *PeerSync) TryAgainUpdateSyncPeer(immediately bool) {
