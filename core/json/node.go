@@ -121,9 +121,10 @@ type AcctInfo struct {
 }
 
 type MeerDAGInfoResult struct {
-	Name               string `json:"name"`
-	Total              uint   `json:"total"`
-	BlockCacheSize     string `json:"bcachesize"`
-	BlockCacheRate     string `json:"bcacherate"`
-	BlockDataCacheSize string `json:"bdcachesize"`
+	Name                 string `json:"name"`
+	Total                uint   `json:"total"`
+	BlockCacheSize       uint64 `json:"bcachesize"`
+	BlockCacheHeightSize uint64 `json:"bcacheheightsize"`
+	BlockCacheRate       string `json:"bcacherate"`
+	BlockDataCacheSize   string `json:"bdcachesize"`
 }
