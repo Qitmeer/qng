@@ -33,7 +33,7 @@ type Node struct {
 	Params *params.Params
 
 	// database layer
-	// Will gradually be deprecated in the future
+	// TODO:Will gradually be deprecated in the future
 	DB database.DB
 
 	// All open databases

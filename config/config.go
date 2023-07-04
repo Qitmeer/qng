@@ -122,6 +122,10 @@ type Config struct {
 	MetricsExpensive bool `long:"metrics.expensive" description:"Enable expensive metrics collection and reporting"`
 
 	Minfreedisk uint64 `long:"minfreedisk" description:"Minimum free disk space in MB, once reached triggers auto shut down (default = 512M, 0 = disabled)"`
+
+	Cache         int `long:"cache" description:"Megabytes of memory allocated to internal caching (default = 1024 mainnet full node)"`
+	CacheDatabase int `long:"cache.database" description:"Percentage of cache memory allowance to use for database io"`
+	CacheSnapshot int `long:"cache.snapshot" description:"Percentage of cache memory allowance to use for snapshot caching (default = 10% full mode, 20% archive mode)"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {
@@ -137,6 +141,14 @@ func (c *Config) ResolveDataPath(path string) string {
 		return path
 	}
 	return filepath.Join(c.DataDir, path)
+}
+
+func (c *Config) DatabaseCache() int {
+	return c.Cache * c.CacheDatabase / 100
+}
+
+func (c *Config) SnapshotCache() int {
+	return c.Cache * c.CacheSnapshot / 100
 }
 
 var Cfg *Config
