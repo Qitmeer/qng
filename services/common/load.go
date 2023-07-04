@@ -585,6 +585,24 @@ var (
 			Value:       512,
 			Destination: &cfg.Minfreedisk,
 		},
+		&cli.IntFlag{
+			Name:        "cache",
+			Usage:       "Megabytes of memory allocated to internal caching (default = 1024 mainnet full node)",
+			Value:       1024,
+			Destination: &cfg.Cache,
+		},
+		&cli.IntFlag{
+			Name:        "cache.database",
+			Usage:       "Percentage of cache memory allowance to use for database io",
+			Value:       50,
+			Destination: &cfg.CacheDatabase,
+		},
+		&cli.IntFlag{
+			Name:        "cache.snapshot",
+			Usage:       "Percentage of cache memory allowance to use for snapshot caching (default = 10% full mode, 20% archive mode)",
+			Value:       10,
+			Destination: &cfg.CacheSnapshot,
+		},
 	}
 )
 
