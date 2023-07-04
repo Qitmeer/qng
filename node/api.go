@@ -6,6 +6,7 @@
 package node
 
 import (
+	js "encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/common/roughtime"
@@ -214,7 +215,8 @@ func (api *PublicBlockChainAPI) GetMeerDAGInfo() (interface{}, error) {
 	md := api.node.GetBlockChain().BlockDAG()
 	mdr.Name = md.GetName()
 	mdr.Total = md.GetBlockTotal()
-	mdr.BlockCacheSize = fmt.Sprintf("%d / %d", md.GetBlockCacheSize(), md.GetMinBlockCacheSize())
+	mdr.BlockCacheSize = md.GetBlockCacheSize()
+	mdr.BlockCacheHeightSize = md.GetMinBlockCacheSize()
 	mdr.BlockCacheRate = fmt.Sprintf("%.2f%%", float64(md.GetBlockCacheSize())/float64(mdr.Total)*100)
 	mdr.BlockDataCacheSize = fmt.Sprintf("%d / %d", md.GetBlockDataCacheSize(), md.GetMinBlockDataCacheSize())
 	return mdr, nil
@@ -245,6 +247,14 @@ func (api *PrivateBlockChainAPI) SetRpcMaxClients(max int) (interface{}, error) 
 	}
 	api.node.node.Config.RPCMaxClients = max
 	return api.node.node.Config.RPCMaxClients, nil
+}
+
+func (api *PrivateBlockChainAPI) GetConfig() (interface{}, error) {
+	cs, err := js.Marshal(*api.node.node.Config)
+	if err != nil {
+		return nil, err
+	}
+	return string(cs), nil
 }
 
 type PrivateLogAPI struct {
