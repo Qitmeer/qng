@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/Qitmeer/qng/core/types"
+	"path/filepath"
 )
 
 type Config struct {
@@ -129,6 +130,13 @@ func (c *Config) GetMinningAddrs() []types.Address {
 
 func (c *Config) SetMiningAddrs(addr types.Address) {
 	c.miningAddrs = append(c.miningAddrs, addr)
+}
+
+func (c *Config) ResolveDataPath(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(c.DataDir, path)
 }
 
 var Cfg *Config
