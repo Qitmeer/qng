@@ -718,6 +718,11 @@ function get_stateroot(){
   get_result "$data"
 }
 
+function get_config(){
+  local data='{"jsonrpc":"2.0","method":"test_getConfig","params":[],"id":1}'
+  get_result "$data"
+}
+
 function get_result(){
   local proto="https"
   if [ $notls -eq 1 ]; then
@@ -797,6 +802,7 @@ function usage(){
   echo "  getaddresses <private key>"
   echo "  modules"
   echo "  daginfo"
+  echo "  config"
   echo "block  :"
   echo "  block <order|hash>"
   echo "  blockbyhash <hash>"
@@ -1520,6 +1526,10 @@ elif [ "$1" == "daginfo" ]; then
 elif [ "$1" == "stateroot" ]; then
   shift
   get_stateroot $@
+
+elif [ "$1" == "config" ]; then
+  shift
+  get_config $@
 
 elif [ "$1" == "list_command" ]; then
   usage
