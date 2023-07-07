@@ -52,6 +52,7 @@ func NewNode(cfg *config.Config, database database.DB, chainParams *params.Param
 		Params:    chainParams,
 		interrupt: interrupt,
 		consensus: consensus.New(cfg, database, interrupt, system.ShutdownRequestChannel),
+		databases: make(map[*closeTrackingDB]struct{}),
 	}
 	n.InitServices()
 
