@@ -188,12 +188,19 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, id, limit uint64) ([]meerda
 			if mb == nil {
 				return fmt.Errorf("canonical hash missing, can't freeze block %d", id)
 			}
-			block := ReadBlockBaw(nfdb, mb.GetHash())
-			if len(block) == 0 {
+			header := ReadHeaderRaw(nfdb, mb.GetHash())
+			if len(header) == 0 {
 				return fmt.Errorf("block header missing, can't freeze block %d %s", id, mb.GetHash().String())
+			}
+			block := ReadBlockRaw(nfdb, mb.GetHash())
+			if len(block) == 0 {
+				return fmt.Errorf("block body missing, can't freeze block %d %s", id, mb.GetHash().String())
 			}
 
 			// Write to the batch.
+			if err := op.AppendRaw(ChainFreezerHeaderTable, id, header); err != nil {
+				return fmt.Errorf("can't write header to Freezer: %v", err)
+			}
 			if err := op.AppendRaw(ChainFreezerBlockTable, id, block); err != nil {
 				return fmt.Errorf("can't write hash to Freezer: %v", err)
 			}
