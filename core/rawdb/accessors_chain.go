@@ -1,15 +1,15 @@
 package rawdb
 
 import (
+	"bytes"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/meerdag"
-
 	"github.com/ethereum/go-ethereum/ethdb"
 
 	"github.com/Qitmeer/qng/core/types"
 )
 
-func ReadBlockBaw(db ethdb.Reader, hash *hash.Hash) []byte {
+func ReadBlockRaw(db ethdb.Reader, hash *hash.Hash) []byte {
 	var data []byte
 	data, _ = db.Get(blockKey(hash))
 	if len(data) > 0 {
@@ -28,7 +28,7 @@ func ReadBlockBaw(db ethdb.Reader, hash *hash.Hash) []byte {
 }
 
 func ReadBlock(db ethdb.Reader, hash *hash.Hash) *types.SerializedBlock {
-	data := ReadBlockBaw(db, hash)
+	data := ReadBlockRaw(db, hash)
 	if len(data) == 0 {
 		return nil
 	}
@@ -57,7 +57,7 @@ func WriteBlock(db ethdb.KeyValueWriter, block *types.SerializedBlock) error {
 
 func DeleteBlock(db ethdb.KeyValueWriter, hash *hash.Hash) {
 	if err := db.Delete(blockKey(hash)); err != nil {
-		log.Crit("Failed to delete hash to number mapping", "err", err)
+		log.Crit("Failed to delete hash to block mapping", "err", err)
 	}
 }
 
@@ -94,4 +94,66 @@ func writeAncientBlock(op ethdb.AncientWriteOp, block *types.SerializedBlock, da
 		return err
 	}
 	return nil
+}
+
+// header
+func ReadHeaderRaw(db ethdb.Reader, hash *hash.Hash) []byte {
+	var data []byte
+	data, _ = db.Get(headerKey(hash))
+	if len(data) > 0 {
+		return data
+	}
+	blockID := ReadBlockID(db, hash)
+	if blockID == nil {
+		return nil
+	}
+	db.ReadAncients(func(reader ethdb.AncientReaderOp) error {
+		data, _ = reader.Ancient(ChainFreezerHeaderTable, *blockID)
+		return nil
+	})
+	return data
+}
+
+func HasHeader(db ethdb.Reader, hash *hash.Hash) bool {
+	if has, err := db.Has(headerKey(hash)); !has || err != nil {
+		return false
+	}
+	blockID := ReadBlockID(db, hash)
+	return blockID != nil
+}
+
+func ReadHeader(db ethdb.Reader, hash *hash.Hash) *types.BlockHeader {
+	data := ReadHeaderRaw(db, hash)
+	if len(data) == 0 {
+		return nil
+	}
+	var header types.BlockHeader
+	err := header.Deserialize(bytes.NewReader(data))
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return &header
+}
+
+func WriteHeader(db ethdb.KeyValueWriter, header *types.BlockHeader) error {
+	var headerBuf bytes.Buffer
+	err := header.Serialize(&headerBuf)
+	if err != nil {
+		return err
+	}
+	data := headerBuf.Bytes()
+	h := header.BlockHash()
+	key := headerKey(&h)
+	err = db.Put(key, data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeleteHeader(db ethdb.KeyValueWriter, hash *hash.Hash) {
+	if err := db.Delete(headerKey(hash)); err != nil {
+		log.Crit("Failed to delete hash to header mapping", "err", err)
+	}
 }

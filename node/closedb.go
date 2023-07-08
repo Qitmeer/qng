@@ -34,3 +34,7 @@ func (n *Node) closeDatabases() (errors []error) {
 	}
 	return errors
 }
+
+func (n *Node) CloseDatabases() (errors []error) {
+	return n.closeDatabases()
+}

@@ -35,7 +35,8 @@ var (
 	uncleanShutdownKey = []byte("Unclean-shutdown") // config prefix for the db
 
 	// base
-	blockPrefix = []byte("b") // blockPrefix + hash -> block
+	headerPrefix = []byte("h") // headerPrefix + hash -> header
+	blockPrefix  = []byte("b") // blockPrefix + hash -> block
 	// dag
 	dagBlockPrefix = []byte("d") // dagBlockPrefix + id (uint64 big endian) -> dag block
 	blockIDPrefix  = []byte("i") // block hash -> block id.
@@ -55,6 +56,11 @@ func encodeBlockID(id uint64) []byte {
 	enc := make([]byte, 8)
 	binary.BigEndian.PutUint64(enc, id)
 	return enc
+}
+
+// headerKey = headerPrefix + hash
+func headerKey(hash *hash.Hash) []byte {
+	return append(headerPrefix, hash.Bytes()...)
 }
 
 // blockKey = blockPrefix + hash
