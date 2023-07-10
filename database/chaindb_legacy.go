@@ -12,3 +12,7 @@ type LegacyChainDB struct {
 func (cdb *LegacyChainDB) Name() string {
 	return "Legacy Chain DB"
 }
+
+func (cdb *LegacyChainDB) Close() {
+	log.Info("Close %s", cdb.Name())
+}
