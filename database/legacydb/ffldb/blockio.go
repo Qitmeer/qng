@@ -15,7 +15,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"hash/crc32"
 	"io"
 	"os"
@@ -240,7 +240,7 @@ func (s *blockStore) openWriteFile(fileNum uint32) (filer, error) {
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		str := fmt.Sprintf("failed to open file %q: %v", filePath, err)
-		return nil, makeDbErr(database.ErrDriverSpecific, str, err)
+		return nil, makeDbErr(legacydb.ErrDriverSpecific, str, err)
 	}
 
 	return file, nil
@@ -258,7 +258,7 @@ func (s *blockStore) openFile(fileNum uint32) (*lockableFile, error) {
 	filePath := blockFilePath(s.basePath, fileNum)
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, makeDbErr(database.ErrDriverSpecific, err.Error(),
+		return nil, makeDbErr(legacydb.ErrDriverSpecific, err.Error(),
 			err)
 	}
 	blockFile := &lockableFile{file: file}
@@ -305,7 +305,7 @@ func (s *blockStore) openFile(fileNum uint32) (*lockableFile, error) {
 func (s *blockStore) deleteFile(fileNum uint32) error {
 	filePath := blockFilePath(s.basePath, fileNum)
 	if err := os.Remove(filePath); err != nil {
-		return makeDbErr(database.ErrDriverSpecific, err.Error(), err)
+		return makeDbErr(legacydb.ErrDriverSpecific, err.Error(), err)
 	}
 
 	return nil
@@ -387,7 +387,7 @@ func (s *blockStore) writeData(data []byte, fieldName string) error {
 		str := fmt.Sprintf("failed to write %s to file %d at "+
 			"offset %d: %v", fieldName, wc.curFileNum,
 			wc.curOffset-uint32(n), err)
-		return makeDbErr(database.ErrDriverSpecific, str, err)
+		return makeDbErr(legacydb.ErrDriverSpecific, str, err)
 	}
 
 	return nil
@@ -525,7 +525,7 @@ func (s *blockStore) readBlock(hash *hash.Hash, loc blockLocation) ([]byte, erro
 		str := fmt.Sprintf("failed to read block %s from file %d, "+
 			"offset %d: %v", hash, loc.blockFileNum, loc.fileOffset,
 			err)
-		return nil, makeDbErr(database.ErrDriverSpecific, str, err)
+		return nil, makeDbErr(legacydb.ErrDriverSpecific, str, err)
 	}
 
 	// Calculate the checksum of the read data and ensure it matches the
@@ -538,7 +538,7 @@ func (s *blockStore) readBlock(hash *hash.Hash, loc blockLocation) ([]byte, erro
 		str := fmt.Sprintf("block data for block %s checksum "+
 			"does not match - got %x, want %x", hash,
 			calculatedChecksum, serializedChecksum)
-		return nil, makeDbErr(database.ErrCorruption, str, nil)
+		return nil, makeDbErr(legacydb.ErrCorruption, str, nil)
 	}
 
 	// The network associated with the block must match the current active
@@ -549,7 +549,7 @@ func (s *blockStore) readBlock(hash *hash.Hash, loc blockLocation) ([]byte, erro
 		str := fmt.Sprintf("block data for block %s is for the "+
 			"wrong network - got %d, want %d", hash, serializedNet,
 			uint32(s.network))
-		return nil, makeDbErr(database.ErrDriverSpecific, str, nil)
+		return nil, makeDbErr(legacydb.ErrDriverSpecific, str, nil)
 	}
 
 	// The raw block excludes the network, length of the block, and
@@ -585,7 +585,7 @@ func (s *blockStore) readBlockRegion(loc blockLocation, offset, numBytes uint32)
 		str := fmt.Sprintf("failed to read region from block file %d, "+
 			"offset %d, len %d: %v", loc.blockFileNum, readOffset,
 			numBytes, err)
-		return nil, makeDbErr(database.ErrDriverSpecific, str, err)
+		return nil, makeDbErr(legacydb.ErrDriverSpecific, str, err)
 	}
 
 	return serializedData, nil
@@ -615,7 +615,7 @@ func (s *blockStore) syncBlocks() error {
 	if err := wc.curFile.file.Sync(); err != nil {
 		str := fmt.Sprintf("failed to sync file %d: %v", wc.curFileNum,
 			err)
-		return makeDbErr(database.ErrDriverSpecific, str, err)
+		return makeDbErr(legacydb.ErrDriverSpecific, str, err)
 	}
 
 	return nil
@@ -626,8 +626,8 @@ func (s *blockStore) syncBlocks() error {
 // were partially written.
 //
 // There are effectively two scenarios to consider here:
-//   1) Transient write failures from which recovery is possible
-//   2) More permanent failures such as hard disk death and/or removal
+//  1. Transient write failures from which recovery is possible
+//  2. More permanent failures such as hard disk death and/or removal
 //
 // In either case, the write cursor will be repositioned to the old block file
 // offset regardless of any other errors that occur while attempting to undo

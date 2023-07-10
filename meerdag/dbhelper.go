@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"math"
 )
 
@@ -33,7 +33,7 @@ func NewDAGError(e error) error {
 
 // DBPutDAGBlock stores the information needed to reconstruct the provided
 // block in the block index according to the format described above.
-func DBPutDAGBlock(dbTx database.Tx, block IBlock) error {
+func DBPutDAGBlock(dbTx legacydb.Tx, block IBlock) error {
 	bucket := dbTx.Metadata().Bucket(BlockIndexBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(block.GetID()))
@@ -49,7 +49,7 @@ func DBPutDAGBlock(dbTx database.Tx, block IBlock) error {
 }
 
 // DBGetDAGBlock get dag block data by resouce ID
-func DBGetDAGBlock(dbTx database.Tx, block IBlock) error {
+func DBGetDAGBlock(dbTx legacydb.Tx, block IBlock) error {
 	bucket := dbTx.Metadata().Bucket(BlockIndexBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(block.GetID()))
@@ -61,14 +61,14 @@ func DBGetDAGBlock(dbTx database.Tx, block IBlock) error {
 	return NewDAGError(block.Decode(bytes.NewReader(data)))
 }
 
-func DBDelDAGBlock(dbTx database.Tx, id uint) error {
+func DBDelDAGBlock(dbTx legacydb.Tx, id uint) error {
 	bucket := dbTx.Metadata().Bucket(BlockIndexBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
 	return bucket.Delete(serializedID[:])
 }
 
-func DBGetDAGBlockHashByID(dbTx database.Tx, id uint64) (*hash.Hash, error) {
+func DBGetDAGBlockHashByID(dbTx legacydb.Tx, id uint64) (*hash.Hash, error) {
 	bucket := dbTx.Metadata().Bucket(BlockIndexBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
@@ -90,7 +90,7 @@ func GetOrderLogStr(order uint) string {
 	return fmt.Sprintf("%d", order)
 }
 
-func DBPutDAGInfo(dbTx database.Tx, bd *MeerDAG) error {
+func DBPutDAGInfo(dbTx legacydb.Tx, bd *MeerDAG) error {
 	var buff bytes.Buffer
 	err := bd.Encode(&buff)
 	if err != nil {
@@ -99,7 +99,7 @@ func DBPutDAGInfo(dbTx database.Tx, bd *MeerDAG) error {
 	return dbTx.Metadata().Put(DagInfoBucketName, buff.Bytes())
 }
 
-func DBHasMainChainBlock(dbTx database.Tx, id uint) bool {
+func DBHasMainChainBlock(dbTx legacydb.Tx, id uint) bool {
 	bucket := dbTx.Metadata().Bucket(DagMainChainBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
@@ -108,7 +108,7 @@ func DBHasMainChainBlock(dbTx database.Tx, id uint) bool {
 	return data != nil
 }
 
-func DBPutMainChainBlock(dbTx database.Tx, id uint) error {
+func DBPutMainChainBlock(dbTx legacydb.Tx, id uint) error {
 	bucket := dbTx.Metadata().Bucket(DagMainChainBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
@@ -117,7 +117,7 @@ func DBPutMainChainBlock(dbTx database.Tx, id uint) error {
 	return bucket.Put(key, []byte{0})
 }
 
-func DBRemoveMainChainBlock(dbTx database.Tx, id uint) error {
+func DBRemoveMainChainBlock(dbTx legacydb.Tx, id uint) error {
 	bucket := dbTx.Metadata().Bucket(DagMainChainBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
@@ -128,7 +128,7 @@ func DBRemoveMainChainBlock(dbTx database.Tx, id uint) error {
 
 // block order
 
-func DBPutBlockIdByOrder(dbTx database.Tx, order uint, id uint) error {
+func DBPutBlockIdByOrder(dbTx legacydb.Tx, order uint, id uint) error {
 	// Serialize the order for use in the index entries.
 	var serializedOrder [4]byte
 	ByteOrder.PutUint32(serializedOrder[:], uint32(order))
@@ -141,7 +141,7 @@ func DBPutBlockIdByOrder(dbTx database.Tx, order uint, id uint) error {
 	return bucket.Put(serializedOrder[:], serializedID[:])
 }
 
-func DBGetBlockIdByOrder(dbTx database.Tx, order uint) (uint32, error) {
+func DBGetBlockIdByOrder(dbTx legacydb.Tx, order uint) (uint32, error) {
 	if order > math.MaxUint32 {
 		str := fmt.Sprintf("order %d is overflow", order)
 		return uint32(MaxId), &DAGError{str}
@@ -158,7 +158,7 @@ func DBGetBlockIdByOrder(dbTx database.Tx, order uint) (uint32, error) {
 	return ByteOrder.Uint32(idBytes), nil
 }
 
-func DBPutDAGBlockIdByHash(dbTx database.Tx, block IBlock) error {
+func DBPutDAGBlockIdByHash(dbTx legacydb.Tx, block IBlock) error {
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(block.GetID()))
 
@@ -167,7 +167,7 @@ func DBPutDAGBlockIdByHash(dbTx database.Tx, block IBlock) error {
 	return bucket.Put(key, serializedID[:])
 }
 
-func DBGetBlockIdByHash(dbTx database.Tx, h *hash.Hash) (uint32, error) {
+func DBGetBlockIdByHash(dbTx legacydb.Tx, h *hash.Hash) (uint32, error) {
 	bucket := dbTx.Metadata().Bucket(BlockIdBucketName)
 	data := bucket.Get(h[:])
 	if data == nil {
@@ -176,13 +176,13 @@ func DBGetBlockIdByHash(dbTx database.Tx, h *hash.Hash) (uint32, error) {
 	return ByteOrder.Uint32(data), nil
 }
 
-func DBDelBlockIdByHash(dbTx database.Tx, h *hash.Hash) error {
+func DBDelBlockIdByHash(dbTx legacydb.Tx, h *hash.Hash) error {
 	bucket := dbTx.Metadata().Bucket(BlockIdBucketName)
 	return bucket.Delete(h[:])
 }
 
 // tips
-func DBPutDAGTip(dbTx database.Tx, id uint, isMain bool) error {
+func DBPutDAGTip(dbTx legacydb.Tx, id uint, isMain bool) error {
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
 
@@ -194,7 +194,7 @@ func DBPutDAGTip(dbTx database.Tx, id uint, isMain bool) error {
 	return bucket.Put(serializedID[:], []byte{main})
 }
 
-func DBGetDAGTips(dbTx database.Tx) ([]uint, error) {
+func DBGetDAGTips(dbTx legacydb.Tx) ([]uint, error) {
 	bucket := dbTx.Metadata().Bucket(DAGTipsBucketName)
 	cursor := bucket.Cursor()
 	mainTip := MaxId
@@ -223,7 +223,7 @@ func DBGetDAGTips(dbTx database.Tx) ([]uint, error) {
 	return result, nil
 }
 
-func DBDelDAGTip(dbTx database.Tx, id uint) error {
+func DBDelDAGTip(dbTx legacydb.Tx, id uint) error {
 	bucket := dbTx.Metadata().Bucket(DAGTipsBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
@@ -231,14 +231,14 @@ func DBDelDAGTip(dbTx database.Tx, id uint) error {
 }
 
 // diffAnticone
-func DBPutDiffAnticone(dbTx database.Tx, id uint) error {
+func DBPutDiffAnticone(dbTx legacydb.Tx, id uint) error {
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
 	bucket := dbTx.Metadata().Bucket(DiffAnticoneBucketName)
 	return bucket.Put(serializedID[:], []byte{byte(0)})
 }
 
-func DBGetDiffAnticone(dbTx database.Tx) ([]uint, error) {
+func DBGetDiffAnticone(dbTx legacydb.Tx) ([]uint, error) {
 	bucket := dbTx.Metadata().Bucket(DiffAnticoneBucketName)
 	cursor := bucket.Cursor()
 	diffs := []uint{}
@@ -249,7 +249,7 @@ func DBGetDiffAnticone(dbTx database.Tx) ([]uint, error) {
 	return diffs, nil
 }
 
-func DBDelDiffAnticone(dbTx database.Tx, id uint) error {
+func DBDelDiffAnticone(dbTx legacydb.Tx, id uint) error {
 	bucket := dbTx.Metadata().Bucket(DiffAnticoneBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))

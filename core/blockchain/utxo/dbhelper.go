@@ -7,12 +7,12 @@ import (
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 )
 
 const UtxoEntryAmountCoinIDSize = 2
 
-func DBFetchUtxoEntry(dbTx database.Tx, outpoint types.TxOutPoint) (*UtxoEntry, error) {
+func DBFetchUtxoEntry(dbTx legacydb.Tx, outpoint types.TxOutPoint) (*UtxoEntry, error) {
 	return dbFetchUtxoEntry(dbTx, outpoint)
 }
 
@@ -21,7 +21,7 @@ func DBFetchUtxoEntry(dbTx database.Tx, outpoint types.TxOutPoint) (*UtxoEntry, 
 //
 // When there is no entry for the provided hash, nil will be returned for the
 // both the entry and the error.
-func dbFetchUtxoEntry(dbTx database.Tx, outpoint types.TxOutPoint) (*UtxoEntry, error) {
+func dbFetchUtxoEntry(dbTx legacydb.Tx, outpoint types.TxOutPoint) (*UtxoEntry, error) {
 	// Fetch the unspent transaction output information for the passed
 	// transaction output.  Return now when there is no entry.
 	key := OutpointKey(outpoint)
@@ -45,8 +45,8 @@ func dbFetchUtxoEntry(dbTx database.Tx, outpoint types.TxOutPoint) (*UtxoEntry, 
 		// Ensure any deserialization errors are returned as database
 		// corruption errors.
 		if model.IsDeserializeErr(err) {
-			return nil, database.Error{
-				ErrorCode: database.ErrCorruption,
+			return nil, legacydb.Error{
+				ErrorCode: legacydb.ErrCorruption,
 				Description: fmt.Sprintf("corrupt utxo entry "+
 					"for %v: %v", outpoint, err),
 			}

@@ -14,7 +14,7 @@ import (
 	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
@@ -242,7 +242,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	// blocks that fail to connect available for further analysis.
 	//
 	// Also, store the associated block index entry.
-	err := b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx legacydb.Tx) error {
 		exists, err := dbTx.HasBlock(block.Hash())
 		if err != nil {
 			return err
@@ -252,7 +252,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		}
 		err = dbMaybeStoreBlock(dbTx, block)
 		if err != nil {
-			if database.IsError(err, database.ErrBlockExists) {
+			if legacydb.IsError(err, legacydb.ErrBlockExists) {
 				return nil
 			}
 			return err
@@ -446,7 +446,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, vie
 		}
 
 		// Atomically insert info into the database.
-		err = b.db.Update(func(dbTx database.Tx) error {
+		err = b.db.Update(func(dbTx legacydb.Tx) error {
 			// Update the utxo set using the state of the utxo view.  This
 			// entails removing all of the utxos spent and adding the new
 			// ones created by the block.
@@ -504,7 +504,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, vie
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, view *utxo.UtxoViewpoint, stxos []utxo.SpentTxOut) error {
 	// Calculate the exact subsidy produced by adding the block.
-	err := b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx legacydb.Tx) error {
 		// Update the utxo set using the state of the utxo view.  This
 		// entails restoring all of the utxos spent and removing the new
 		// ones created by the block.
@@ -727,7 +727,7 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 		b.bd.GetMainChainTip().GetState().GetWeight(), b.bd.GetGraphState(), b.GetTokenTipHash(), *mainTip.GetState().Root())
 
 	// Atomically insert info into the database.
-	err := b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx legacydb.Tx) error {
 		// Update best block state.
 		err := dbPutBestState(dbTx, state, pow.CalcWork(mainTipNode.Difficulty(), mainTipNode.Pow().GetPowType()))
 		if err != nil {

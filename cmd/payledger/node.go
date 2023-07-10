@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
@@ -16,7 +16,7 @@ import (
 type Node struct {
 	name     string
 	bc       *blockchain.BlockChain
-	db       database.DB
+	db       legacydb.DB
 	cfg      *Config
 	endPoint meerdag.IBlock
 }
@@ -67,7 +67,7 @@ func (node *Node) BlockChain() *blockchain.BlockChain {
 	return node.bc
 }
 
-func (node *Node) DB() database.DB {
+func (node *Node) DB() legacydb.DB {
 	return node.db
 }
 

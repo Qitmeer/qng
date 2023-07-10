@@ -5,7 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	l "github.com/Qitmeer/qng/log"
 )
 
@@ -32,7 +32,7 @@ func (b *BlockChain) upgradeDB(interrupt <-chan struct{}) error {
 	bidxStart := roughtime.Now()
 
 	var bs *bestChainState
-	err := b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		serializedData := meta.Get(dbnamespace.ChainStateKeyName)
 		if serializedData == nil {
@@ -51,7 +51,7 @@ func (b *BlockChain) upgradeDB(interrupt <-chan struct{}) error {
 		return err
 	}
 
-	err = b.db.Update(func(dbTx database.Tx) error {
+	err = b.db.Update(func(dbTx legacydb.Tx) error {
 		// save
 		b.dbInfo = &databaseInfo{
 			version: currentDatabaseVersion,

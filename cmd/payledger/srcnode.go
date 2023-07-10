@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/services/common"
 	"path"
@@ -22,7 +22,7 @@ import (
 type SrcNode struct {
 	name string
 	bc   *blockchain.BlockChain
-	db   database.DB
+	db   legacydb.DB
 	cfg  *Config
 }
 
@@ -44,12 +44,12 @@ func (node *SrcNode) init(cfg *Config) error {
 	}()
 	node.db = db
 	//
-	ccfg:=common.DefaultConfig(cfg.HomeDir)
-	ccfg.DataDir=cfg.DataDir
-	ccfg.DbType=cfg.DbType
-	ccfg.DAGType=cfg.DAGType
-	cons:=consensus.NewPure(ccfg,db)
-	err=cons.Init()
+	ccfg := common.DefaultConfig(cfg.HomeDir)
+	ccfg.DataDir = cfg.DataDir
+	ccfg.DbType = cfg.DbType
+	ccfg.DAGType = cfg.DAGType
+	cons := consensus.NewPure(ccfg, db)
+	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -72,6 +72,6 @@ func (node *SrcNode) BlockChain() *blockchain.BlockChain {
 	return node.bc
 }
 
-func (node *SrcNode) DB() database.DB {
+func (node *SrcNode) DB() legacydb.DB {
 	return node.db
 }

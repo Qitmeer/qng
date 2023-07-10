@@ -9,7 +9,7 @@ import (
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerevm/amana"
@@ -27,7 +27,7 @@ const (
 
 type consensus struct {
 	lock                   sync.Mutex
-	databaseContext        database.DB
+	databaseContext        legacydb.DB
 	cfg                    *config.Config
 	interrupt              <-chan struct{}
 	shutdownRequestChannel chan struct{}
@@ -84,7 +84,7 @@ func (s *consensus) Init() error {
 	return blockchain.Init()
 }
 
-func (s *consensus) DatabaseContext() database.DB {
+func (s *consensus) DatabaseContext() legacydb.DB {
 	return s.databaseContext
 }
 
@@ -170,7 +170,7 @@ func (s *consensus) Rebuild() error {
 		log.Info(err.Error())
 	}
 	//
-	err = s.databaseContext.Update(func(tx database.Tx) error {
+	err = s.databaseContext.Update(func(tx legacydb.Tx) error {
 		meta := tx.Metadata()
 		err = meta.DeleteBucket(dbnamespace.SpendJournalBucketName)
 		if err != nil {
@@ -190,7 +190,7 @@ func (s *consensus) Rebuild() error {
 		return err
 	}
 	//
-	err = s.databaseContext.Update(func(tx database.Tx) error {
+	err = s.databaseContext.Update(func(tx legacydb.Tx) error {
 		meta := tx.Metadata()
 		_, err = meta.CreateBucket(dbnamespace.SpendJournalBucketName)
 		if err != nil {
@@ -211,7 +211,7 @@ func (s *consensus) Rebuild() error {
 	}
 	txIndex := s.indexManager.(*index.Manager).TxIndex()
 	txIndex.SetCurOrder(-1)
-	err = s.databaseContext.Update(func(tx database.Tx) error {
+	err = s.databaseContext.Update(func(tx legacydb.Tx) error {
 		err = txIndex.Create(tx)
 		if err != nil {
 			return err
@@ -228,7 +228,7 @@ func (s *consensus) Rebuild() error {
 	return s.blockchain.Rebuild()
 }
 
-func New(cfg *config.Config, databaseContext database.DB, interrupt <-chan struct{}, shutdownRequestChannel chan struct{}) *consensus {
+func New(cfg *config.Config, databaseContext legacydb.DB, interrupt <-chan struct{}, shutdownRequestChannel chan struct{}) *consensus {
 	return &consensus{
 		cfg:                    cfg,
 		databaseContext:        databaseContext,
@@ -239,6 +239,6 @@ func New(cfg *config.Config, databaseContext database.DB, interrupt <-chan struc
 	}
 }
 
-func NewPure(cfg *config.Config, databaseContext database.DB) *consensus {
+func NewPure(cfg *config.Config, databaseContext legacydb.DB) *consensus {
 	return New(cfg, databaseContext, make(chan struct{}), make(chan struct{}))
 }

@@ -8,9 +8,8 @@ package ffldb
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"hash/crc32"
-
-	"github.com/Qitmeer/qng/database"
 )
 
 // The serialized write cursor location format is:
@@ -41,7 +40,7 @@ func deserializeWriteRow(writeRow []byte) (uint32, uint32, error) {
 		str := fmt.Sprintf("metadata for write cursor does not match "+
 			"the expected checksum - got %d, want %d", gotChecksum,
 			wantChecksum)
-		return 0, 0, makeDbErr(database.ErrCorruption, str, nil)
+		return 0, 0, makeDbErr(legacydb.ErrCorruption, str, nil)
 	}
 
 	fileNum := byteOrder.Uint32(writeRow[0:4])
@@ -51,7 +50,7 @@ func deserializeWriteRow(writeRow []byte) (uint32, uint32, error) {
 
 // reconcileDB reconciles the metadata with the flat block files on disk.  It
 // will also initialize the underlying database if the create flag is set.
-func reconcileDB(pdb *db, create bool) (database.DB, error) {
+func reconcileDB(pdb *db, create bool) (legacydb.DB, error) {
 	// Perform initial internal bucket and value creation during database
 	// creation.
 	if create {
@@ -62,11 +61,11 @@ func reconcileDB(pdb *db, create bool) (database.DB, error) {
 
 	// Load the current write cursor position from the metadata.
 	var curFileNum, curOffset uint32
-	err := pdb.View(func(tx database.Tx) error {
+	err := pdb.View(func(tx legacydb.Tx) error {
 		writeRow := tx.Metadata().Get(writeLocKeyName)
 		if writeRow == nil {
 			str := "write cursor does not exist"
-			return makeDbErr(database.ErrCorruption, str, nil)
+			return makeDbErr(legacydb.ErrCorruption, str, nil)
 		}
 
 		var err error
@@ -112,7 +111,7 @@ func reconcileDB(pdb *db, create bool) (database.DB, error) {
 			"block data is at file %d, offset %d", curFileNum,
 			curOffset, wc.curFileNum, wc.curOffset)
 		dblog.Warn("***Database corruption detected***: ", "err", str)
-		return nil, makeDbErr(database.ErrCorruption, str, nil)
+		return nil, makeDbErr(legacydb.ErrCorruption, str, nil)
 	}
 
 	return pdb, nil

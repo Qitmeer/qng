@@ -8,9 +8,8 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 )
-
 
 var bucketName = []byte("invalid_tx_index")
 var itxidByTxhashBucketName = []byte("invalid_txidbytxhash")
@@ -19,7 +18,7 @@ var tipHashKeyName = []byte("itxi_tip_hash")
 
 type invalidtxindexStore struct {
 	shardID model.StagingShardID
-	db      database.DB
+	db      legacydb.DB
 }
 
 func (itxis *invalidtxindexStore) Stage(stagingArea *model.StagingArea, bid uint64, block *types.SerializedBlock) {
@@ -42,29 +41,29 @@ func (itxis *invalidtxindexStore) IsStaged(stagingArea *model.StagingArea) bool 
 
 func (itxis *invalidtxindexStore) Get(stagingArea *model.StagingArea, txid *hash.Hash) (*types.Transaction, error) {
 	stagingShard := itxis.stagingShard(stagingArea)
-	for _,add:=range stagingShard.toAdd {
-		for _,tx:=range add.Transactions() {
+	for _, add := range stagingShard.toAdd {
+		for _, tx := range add.Transactions() {
 			if tx.Hash().IsEqual(txid) {
-				return tx.Tx,nil
+				return tx.Tx, nil
 			}
 		}
 	}
 
-	for _,add:=range stagingShard.toDelete {
-		for _,tx:=range add.Transactions() {
+	for _, add := range stagingShard.toDelete {
+		for _, tx := range add.Transactions() {
 			if tx.Hash().IsEqual(txid) {
-				return nil,nil
+				return nil, nil
 			}
 		}
 	}
 
 	var tx *types.Transaction
-	err := itxis.db.View(func(dbTx database.Tx) error {
+	err := itxis.db.View(func(dbTx legacydb.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
 		if bucket == nil {
 			return nil
 		}
-		blockRegion,err:=dbFetchTxIndexEntry(dbTx,bucket,txid)
+		blockRegion, err := dbFetchTxIndexEntry(dbTx, bucket, txid)
 		if err != nil {
 			return err
 		}
@@ -72,12 +71,12 @@ func (itxis *invalidtxindexStore) Get(stagingArea *model.StagingArea, txid *hash
 		if err != nil {
 			return err
 		}
-		dtx:=types.Transaction{}
+		dtx := types.Transaction{}
 		err = dtx.Deserialize(bytes.NewReader(txBytes))
 		if err != nil {
 			return err
 		}
-		tx=&dtx
+		tx = &dtx
 		return err
 	})
 	if err != nil {
@@ -86,42 +85,42 @@ func (itxis *invalidtxindexStore) Get(stagingArea *model.StagingArea, txid *hash
 	return tx, nil
 }
 
-func (itxis *invalidtxindexStore) GetIdByHash(stagingArea *model.StagingArea,h *hash.Hash) (*hash.Hash, error) {
+func (itxis *invalidtxindexStore) GetIdByHash(stagingArea *model.StagingArea, h *hash.Hash) (*hash.Hash, error) {
 	stagingShard := itxis.stagingShard(stagingArea)
-	for _,add:=range stagingShard.toAdd {
-		for _,tx:=range add.Transactions() {
-			th:=tx.Tx.TxHashFull()
+	for _, add := range stagingShard.toAdd {
+		for _, tx := range add.Transactions() {
+			th := tx.Tx.TxHashFull()
 			if th.IsEqual(h) {
-				return tx.Hash(),nil
+				return tx.Hash(), nil
 			}
 		}
 	}
 
-	for _,add:=range stagingShard.toDelete {
-		for _,tx:=range add.Transactions() {
-			th:=tx.Tx.TxHashFull()
+	for _, add := range stagingShard.toDelete {
+		for _, tx := range add.Transactions() {
+			th := tx.Tx.TxHashFull()
 			if th.IsEqual(h) {
-				return nil,nil
+				return nil, nil
 			}
 		}
 	}
 
 	var txid *hash.Hash
-	err := itxis.db.View(func(dbTx database.Tx) error {
-		id,er:=dbFetchTxIdByHash(dbTx,h)
+	err := itxis.db.View(func(dbTx legacydb.Tx) error {
+		id, er := dbFetchTxIdByHash(dbTx, h)
 		if er != nil {
 			return er
 		}
-		txid=id
+		txid = id
 		return nil
 	})
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	return txid,nil
+	return txid, nil
 }
 
-func (itxis *invalidtxindexStore) Delete(stagingArea *model.StagingArea, bid uint64,block *types.SerializedBlock) {
+func (itxis *invalidtxindexStore) Delete(stagingArea *model.StagingArea, bid uint64, block *types.SerializedBlock) {
 	stagingShard := itxis.stagingShard(stagingArea)
 	if _, ok := stagingShard.toAdd[bid]; ok {
 		delete(stagingShard.toAdd, bid)
@@ -136,10 +135,10 @@ func (itxis *invalidtxindexStore) Tip(stagingArea *model.StagingArea) (uint64, *
 	}
 	var tipHash *hash.Hash
 	var tipOrder uint64
-	err := itxis.db.View(func(dbTx database.Tx) error {
+	err := itxis.db.View(func(dbTx legacydb.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
 		if bucket == nil {
-			return fmt.Errorf("No vm block index:%s",bucketName)
+			return fmt.Errorf("No vm block index:%s", bucketName)
 		}
 		tiphashValue := bucket.Get(tipHashKeyName)
 		if len(tiphashValue) <= 0 {
@@ -170,20 +169,20 @@ func (itxis *invalidtxindexStore) Tip(stagingArea *model.StagingArea) (uint64, *
 
 func (itxis *invalidtxindexStore) IsEmpty() bool {
 	has := false
-	itxis.db.View(func(dbTx database.Tx) error {
+	itxis.db.View(func(dbTx legacydb.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
 		if bucket == nil {
 			return nil
 		}
 		cursor := bucket.Cursor()
-		has=cursor.First()
+		has = cursor.First()
 		return nil
 	})
 	return !has
 }
 
 func (itxis *invalidtxindexStore) Clean() error {
-	return itxis.db.Update(func(dbTx database.Tx) error {
+	return itxis.db.Update(func(dbTx legacydb.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
 		if bucket != nil {
 			return dbTx.Metadata().DeleteBucket(bucketName)
@@ -202,7 +201,7 @@ func (itxis *invalidtxindexStore) stagingShard(stagingArea *model.StagingArea) *
 	}).(*invalidtxindexStagingShard)
 }
 
-func New(db database.DB, cacheSize int, preallocate bool) (model.InvalidTxIndexStore, error) {
+func New(db legacydb.DB, cacheSize int, preallocate bool) (model.InvalidTxIndexStore, error) {
 	store := &invalidtxindexStore{
 		shardID: staging.GenerateShardingID(),
 		db:      db,
@@ -210,16 +209,16 @@ func New(db database.DB, cacheSize int, preallocate bool) (model.InvalidTxIndexS
 	return store, nil
 }
 
-func dbGetTx(dbTx database.Tx,br *database.BlockRegion) (*types.Transaction,error) {
+func dbGetTx(dbTx legacydb.Tx, br *legacydb.BlockRegion) (*types.Transaction, error) {
 	txBytes, err := dbTx.FetchBlockRegion(br)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	// Deserialize the transaction
 	var msgTx types.Transaction
 	err = msgTx.Deserialize(bytes.NewReader(txBytes))
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	return &msgTx,nil
+	return &msgTx, nil
 }

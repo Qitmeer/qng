@@ -10,7 +10,7 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
-	_ "github.com/Qitmeer/qng/database/ffldb"
+	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/log"
 	_ "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/node"
@@ -74,7 +74,7 @@ func qitmeerd(ctx *cli.Context) error {
 	var nodeChan chan<- *node.Node
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
-	cfg, err := common.LoadConfig(ctx,true)
+	cfg, err := common.LoadConfig(ctx, true)
 	if err != nil {
 		return err
 	}

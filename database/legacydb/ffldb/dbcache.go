@@ -10,10 +10,10 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/Qitmeer/qng/common/roughtime"
+	treap2 "github.com/Qitmeer/qng/database/legacydb/ffldb/treap"
 	"sync"
 	"time"
 
-	"github.com/Qitmeer/qng/database/ffldb/treap"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -32,7 +32,7 @@ const (
 // ldbCacheIter wraps a treap iterator to provide the additional functionality
 // needed to satisfy the leveldb iterator.Iterator interface.
 type ldbCacheIter struct {
-	*treap.Iterator
+	*treap2.Iterator
 }
 
 // Enforce ldbCacheIterator implements the leveldb iterator.Iterator interface.
@@ -276,8 +276,8 @@ func (iter *dbCacheIterator) Error() error {
 // database at a particular point in time.
 type dbCacheSnapshot struct {
 	dbSnapshot    *leveldb.Snapshot
-	pendingKeys   *treap.Immutable
-	pendingRemove *treap.Immutable
+	pendingKeys   *treap2.Immutable
+	pendingRemove *treap2.Immutable
 }
 
 // Has returns whether or not the passed key exists.
@@ -377,8 +377,8 @@ type dbCache struct {
 	// the cached data.  The cacheLock is used to protect concurrent access
 	// for cache updates and snapshots.
 	cacheLock    sync.RWMutex
-	cachedKeys   *treap.Immutable
-	cachedRemove *treap.Immutable
+	cachedKeys   *treap2.Immutable
+	cachedRemove *treap2.Immutable
 }
 
 // Snapshot returns a snapshot of the database cache and underlying database at
@@ -506,8 +506,8 @@ func (c *dbCache) flush() error {
 
 	// Clear the cache since it has been flushed.
 	c.cacheLock.Lock()
-	c.cachedKeys = treap.NewImmutable()
-	c.cachedRemove = treap.NewImmutable()
+	c.cachedKeys = treap2.NewImmutable()
+	c.cachedRemove = treap2.NewImmutable()
 	c.cacheLock.Unlock()
 
 	return nil
@@ -645,7 +645,7 @@ func newDbCache(ldb *leveldb.DB, store *blockStore, maxSize uint64, flushInterva
 		maxSize:       maxSize,
 		flushInterval: time.Second * time.Duration(flushIntervalSecs),
 		lastFlush:     roughtime.Now(),
-		cachedKeys:    treap.NewImmutable(),
-		cachedRemove:  treap.NewImmutable(),
+		cachedKeys:    treap2.NewImmutable(),
+		cachedRemove:  treap2.NewImmutable(),
 	}
 }

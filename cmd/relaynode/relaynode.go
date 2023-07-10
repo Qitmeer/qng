@@ -7,7 +7,7 @@ package main
 import (
 	"github.com/Qitmeer/qng/cmd/relaynode/config"
 	"github.com/Qitmeer/qng/common/roughtime"
-	_ "github.com/Qitmeer/qng/database/ffldb"
+	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	_ "github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/version"
 	"github.com/urfave/cli/v2"

@@ -11,7 +11,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/meerevm/eth"
@@ -413,7 +413,7 @@ func importBlockChain(consensus model.Consensus, inputPath string) error {
 	return nil
 }
 
-func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan struct{}, inputPath string, end string, byID bool, aidMode bool) error {
+func upgradeBlockChain(cfg *config.Config, db legacydb.DB, interrupt <-chan struct{}, inputPath string, end string, byID bool, aidMode bool) error {
 	// new block chain
 	var err error
 	newCfg := *cfg
@@ -496,7 +496,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 	//
 	if aidMode {
 		endNum := uint(0)
-		err := db.Update(func(dbTx database.Tx) error {
+		err := db.Update(func(dbTx legacydb.Tx) error {
 			meta := dbTx.Metadata()
 			serializedData := meta.Get(dbnamespace.ChainStateKeyName)
 			if serializedData == nil {
@@ -539,7 +539,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 			bar.Add(1)
 			blockHash = nil
 			isEmpty := false
-			err = db.View(func(dbTx database.Tx) error {
+			err = db.View(func(dbTx legacydb.Tx) error {
 
 				block := &meerdag.Block{}
 				block.SetID(i)
@@ -568,7 +568,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 			}
 
 			var blockBytes []byte
-			err = db.View(func(dbTx database.Tx) error {
+			err = db.View(func(dbTx legacydb.Tx) error {
 				bb, er := dbTx.FetchBlock(blockHash)
 				if er != nil {
 					return er

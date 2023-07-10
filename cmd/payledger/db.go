@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/params"
 	"os"
@@ -30,18 +30,18 @@ var (
 // contains additional logic such warning the user if there are multiple
 // databases which consume space on the file system and ensuring the regression
 // test database is clean when in regression test mode.
-func LoadBlockDB(DbType string, DataDir string, nocreate bool) (database.DB, error) {
+func LoadBlockDB(DbType string, DataDir string, nocreate bool) (legacydb.DB, error) {
 	// The database name is based on the database type.
 	dbPath := blockDbPath(DbType, DataDir)
 
 	log.Trace("Loading block database", "dbPath", dbPath)
-	db, err := database.Open(DbType, dbPath, params.ActiveNetParams.Net)
+	db, err := legacydb.Open(DbType, dbPath, params.ActiveNetParams.Net)
 	if err != nil {
 		if nocreate {
 			// Return the error if it's not because the database doesn't
 			// exist.
-			if dbErr, ok := err.(database.Error); !ok || dbErr.ErrorCode !=
-				database.ErrDbDoesNotExist {
+			if dbErr, ok := err.(legacydb.Error); !ok || dbErr.ErrorCode !=
+				legacydb.ErrDbDoesNotExist {
 
 				return nil, err
 			}
@@ -50,7 +50,7 @@ func LoadBlockDB(DbType string, DataDir string, nocreate bool) (database.DB, err
 			if err != nil {
 				return nil, err
 			}
-			db, err = database.Create(DbType, dbPath, params.ActiveNetParams.Net)
+			db, err = legacydb.Create(DbType, dbPath, params.ActiveNetParams.Net)
 			if err != nil {
 				return nil, err
 			}

@@ -7,7 +7,7 @@
 // Parts of this interface were inspired heavily by the excellent boltdb project
 // at https://github.com/boltdb/bolt by Ben B. Johnson.
 
-package database
+package legacydb
 
 import (
 	"github.com/Qitmeer/qng/common/hash"

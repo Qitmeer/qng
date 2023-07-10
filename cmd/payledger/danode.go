@@ -17,7 +17,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
@@ -30,7 +30,7 @@ import (
 type DebugAddressNode struct {
 	name     string
 	bc       *blockchain.BlockChain
-	db       database.DB
+	db       legacydb.DB
 	cfg      *Config
 	endPoint meerdag.IBlock
 
@@ -87,13 +87,13 @@ func (node *DebugAddressNode) BlockChain() *blockchain.BlockChain {
 	return node.bc
 }
 
-func (node *DebugAddressNode) DB() database.DB {
+func (node *DebugAddressNode) DB() legacydb.DB {
 	return node.db
 }
 
 // Load from database
 func (node *DebugAddressNode) LoadInfo() error {
-	err := node.db.View(func(dbTx database.Tx) error {
+	err := node.db.View(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		serializedData := meta.Get(DebugAddrInfoBucketName)
 		if serializedData == nil {
@@ -265,10 +265,10 @@ func (node *DebugAddressNode) processAddress(blueM *map[uint]bool) error {
 	return nil
 }
 
-func isTxValid(db database.DB, txHash *hash.Hash, txFullHash *hash.Hash, blockHash *hash.Hash) bool {
+func isTxValid(db legacydb.DB, txHash *hash.Hash, txFullHash *hash.Hash, blockHash *hash.Hash) bool {
 	var preTx *types.Transaction
 	var preBlockH *hash.Hash
-	err := db.View(func(dbTx database.Tx) error {
+	err := db.View(func(dbTx legacydb.Tx) error {
 		dtx, blockH, erro := index.DBFetchTxAndBlock(dbTx, txHash)
 		if erro != nil {
 			return erro
@@ -303,7 +303,7 @@ func (node *DebugAddressNode) checkUTXO(blueM *map[uint]bool) error {
 	var count int
 	serializedUtxos := [][]byte{}
 
-	err := db.View(func(dbTx database.Tx) error {
+	err := db.View(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		utxoBucket := meta.Bucket(dbnamespace.UtxoSetBucketName)
 		cursor := utxoBucket.Cursor()

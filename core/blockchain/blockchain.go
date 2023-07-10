@@ -20,7 +20,7 @@ import (
 	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
@@ -61,7 +61,7 @@ type BlockChain struct {
 	// separate mutex.
 	checkpointsByLayer map[uint64]*params.Checkpoint
 
-	db           database.DB
+	db           legacydb.DB
 	dbInfo       *databaseInfo
 	timeSource   model.MedianTimeSource
 	events       *event.Feed
@@ -190,7 +190,7 @@ func (b *BlockChain) initChainState() error {
 
 	// Determine the state of the database.
 	var isStateInitialized bool
-	err = b.db.View(func(dbTx database.Tx) error {
+	err = b.db.View(func(dbTx legacydb.Tx) error {
 		// Fetch the database versioning information.
 		dbInfo, err := dbFetchDatabaseInfo(dbTx)
 		if err != nil {
@@ -247,7 +247,7 @@ func (b *BlockChain) initChainState() error {
 
 	var state bestChainState
 	// Attempt to load the chain state from the database.
-	err = b.db.Update(func(dbTx database.Tx) error {
+	err = b.db.Update(func(dbTx legacydb.Tx) error {
 		// Fetch the stored chain state from the database metadata.
 		// When it doesn't exist, it means the database hasn't been
 		// initialized for use with chain yet, so break out now to allow
@@ -289,7 +289,7 @@ func (b *BlockChain) initChainState() error {
 	}
 
 	var block *types.SerializedBlock
-	err = b.db.View(func(dbTx database.Tx) error {
+	err = b.db.View(func(dbTx legacydb.Tx) error {
 		block, err = dbFetchBlockByHash(dbTx, mainTip.GetHash())
 		if err != nil {
 			return err
@@ -335,7 +335,7 @@ func (b *BlockChain) createChainState() error {
 	b.TokenTipID = 0
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
-	err := b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 
 		// Create the bucket that houses information about the database's
@@ -454,7 +454,7 @@ func (b *BlockChain) HaveBlock(hash *hash.Hash) bool {
 }
 
 func (b *BlockChain) HasBlockInDB(h *hash.Hash) bool {
-	err := b.db.View(func(dbTx database.Tx) error {
+	err := b.db.View(func(dbTx legacydb.Tx) error {
 		has, er := dbTx.HasBlock(h)
 		if er != nil {
 			return er
@@ -602,7 +602,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			// Load all of the spent txos for the block from the spend
 			// journal.
 
-			err = b.db.View(func(dbTx database.Tx) error {
+			err = b.db.View(func(dbTx legacydb.Tx) error {
 				stxos, err = utxo.DBFetchSpendJournalEntry(dbTx, block)
 				return err
 			})
@@ -738,7 +738,7 @@ func (b *BlockChain) FetchSpendJournal(targetBlock *types.SerializedBlock) ([]ut
 
 func (b *BlockChain) fetchSpendJournal(targetBlock *types.SerializedBlock) ([]utxo.SpentTxOut, error) {
 	var spendEntries []utxo.SpentTxOut
-	err := b.db.View(func(dbTx database.Tx) error {
+	err := b.db.View(func(dbTx legacydb.Tx) error {
 		var err error
 
 		spendEntries, err = utxo.DBFetchSpendJournalEntry(dbTx, targetBlock)
@@ -782,7 +782,7 @@ func (b *BlockChain) ChainRUnlock() {
 }
 
 func (b *BlockChain) IsDuplicateTx(txid *hash.Hash, blockHash *hash.Hash) bool {
-	err := b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx legacydb.Tx) error {
 		if b.indexManager != nil {
 			if b.indexManager.IsDuplicateTx(dbTx, txid, blockHash) {
 				return nil
@@ -980,7 +980,7 @@ func (b *BlockChain) GetSubsidyCache() *SubsidyCache {
 	return b.subsidyCache
 }
 
-func (b *BlockChain) DB() database.DB {
+func (b *BlockChain) DB() legacydb.DB {
 	return b.db
 }
 
@@ -1014,7 +1014,7 @@ func (b *BlockChain) Rebuild() error {
 	if gib == nil {
 		return fmt.Errorf("No genesis block")
 	}
-	err = b.db.Update(func(tx database.Tx) error {
+	err = b.db.Update(func(tx legacydb.Tx) error {
 		err = token.DBPutTokenState(tx, uint32(gib.GetID()), initTS)
 		if err != nil {
 			return err

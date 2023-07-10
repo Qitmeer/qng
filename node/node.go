@@ -8,8 +8,8 @@ import (
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/event"
-	"github.com/Qitmeer/qng/core/rawdb"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
+	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -34,7 +34,7 @@ type Node struct {
 
 	// database layer
 	// TODO:Will gradually be deprecated in the future
-	DB database.DB
+	DB legacydb.DB
 
 	// All open databases
 	databases map[*closeTrackingDB]struct{}
@@ -45,7 +45,7 @@ type Node struct {
 	consensus model.Consensus
 }
 
-func NewNode(cfg *config.Config, database database.DB, chainParams *params.Params, interrupt <-chan struct{}) (*Node, error) {
+func NewNode(cfg *config.Config, database legacydb.DB, chainParams *params.Params, interrupt <-chan struct{}) (*Node, error) {
 	n := Node{
 		Config:    cfg,
 		DB:        database,

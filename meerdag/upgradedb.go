@@ -10,7 +10,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	l "github.com/Qitmeer/qng/log"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
@@ -25,7 +25,7 @@ import (
 )
 
 // update db to new version
-func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, genesis *hash.Hash, interrupt <-chan struct{}, dbFetchBlockByHash func(dbTx database.Tx, hash *hash.Hash) (*types.SerializedBlock, error), isDuplicateTx func(dbTx database.Tx, txid *hash.Hash, blockHash *hash.Hash) bool, evmbc *core.BlockChain, edb ethdb.Database) error {
+func (bd *MeerDAG) UpgradeDB(db legacydb.DB, mainTip *hash.Hash, total uint64, genesis *hash.Hash, interrupt <-chan struct{}, dbFetchBlockByHash func(dbTx legacydb.Tx, hash *hash.Hash) (*types.SerializedBlock, error), isDuplicateTx func(dbTx legacydb.Tx, txid *hash.Hash, blockHash *hash.Hash) bool, evmbc *core.BlockChain, edb ethdb.Database) error {
 	log.Info(fmt.Sprintf("Start upgrade MeerDAG🛠 (total=%d mainTip=%s)", total, mainTip.String()))
 	//
 	mainTipBlock := getOldBlock(db, mainTip)
@@ -77,7 +77,7 @@ func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, g
 		} else {
 			// dups
 			var block *types.SerializedBlock
-			err := db.View(func(dbTx database.Tx) error {
+			err := db.View(func(dbTx legacydb.Tx) error {
 				var e error
 				block, e = dbFetchBlockByHash(dbTx, ib.GetHash())
 				return e
@@ -87,7 +87,7 @@ func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, g
 			}
 			txs := block.Transactions()
 			for _, tx := range txs {
-				db.View(func(dbTx database.Tx) error {
+				db.View(func(dbTx legacydb.Tx) error {
 					tx.IsDuplicate = isDuplicateTx(dbTx, tx.Hash(), block.Hash())
 					return nil
 				})
@@ -111,7 +111,7 @@ func (bd *MeerDAG) UpgradeDB(db database.DB, mainTip *hash.Hash, total uint64, g
 
 		//
 		npb := opb.toPhantomBlock()
-		err := db.Update(func(dbTx database.Tx) error {
+		err := db.Update(func(dbTx legacydb.Tx) error {
 			return DBPutDAGBlock(dbTx, npb)
 		})
 		if err != nil {
@@ -779,12 +779,12 @@ func (b *OldBlock) GetState() model.BlockState {
 	return b.state
 }
 
-func getOldBlockId(db database.DB, h *hash.Hash) uint {
+func getOldBlockId(db legacydb.DB, h *hash.Hash) uint {
 	if h == nil {
 		return MaxId
 	}
 	id := MaxId
-	err := db.View(func(dbTx database.Tx) error {
+	err := db.View(func(dbTx legacydb.Tx) error {
 		bid, er := DBGetBlockIdByHash(dbTx, h)
 		if er == nil {
 			id = uint(bid)
@@ -798,10 +798,10 @@ func getOldBlockId(db database.DB, h *hash.Hash) uint {
 	return id
 }
 
-func getOldBlockById(db database.DB, id uint) IBlock {
+func getOldBlockById(db legacydb.DB, id uint) IBlock {
 	block := OldBlock{id: id}
 	ib := &OldPhantomBlock{&block, 0, nil, nil}
-	err := db.View(func(dbTx database.Tx) error {
+	err := db.View(func(dbTx legacydb.Tx) error {
 		return DBGetDAGBlock(dbTx, ib)
 	})
 	if err != nil {
@@ -815,16 +815,16 @@ func getOldBlockById(db database.DB, id uint) IBlock {
 	return ib
 }
 
-func getOldBlock(db database.DB, h *hash.Hash) IBlock {
+func getOldBlock(db legacydb.DB, h *hash.Hash) IBlock {
 	return getOldBlockById(db, getOldBlockId(db, h))
 }
 
-func getOldBlockByOrder(db database.DB, order uint) IBlock {
+func getOldBlockByOrder(db legacydb.DB, order uint) IBlock {
 	if order >= MaxBlockOrder {
 		return nil
 	}
 	bid := uint(MaxId)
-	err := db.View(func(dbTx database.Tx) error {
+	err := db.View(func(dbTx legacydb.Tx) error {
 		id, er := DBGetBlockIdByOrder(dbTx, order)
 		if er == nil {
 			bid = uint(id)

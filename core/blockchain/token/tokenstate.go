@@ -10,7 +10,7 @@ import (
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/meerdag"
 )
 
@@ -224,7 +224,7 @@ func (ts *TokenState) CheckFees(fees types.AmountMap) error {
 
 // dbPutTokenState put a token balance record into the token state database.
 // the key is the provided block hash
-func DBPutTokenState(dbTx database.Tx, bid uint32, ts *TokenState) error {
+func DBPutTokenState(dbTx legacydb.Tx, bid uint32, ts *TokenState) error {
 	// Serialize the current token state.
 	serializedData, err := ts.Serialize()
 	if err != nil {
@@ -240,7 +240,7 @@ func DBPutTokenState(dbTx database.Tx, bid uint32, ts *TokenState) error {
 
 // dbFetchTokenState fetch the token balance record from the token state database.
 // the key is the input block hash.
-func DBFetchTokenState(dbTx database.Tx, bid uint32) (*TokenState, error) {
+func DBFetchTokenState(dbTx legacydb.Tx, bid uint32) (*TokenState, error) {
 	// if it is genesis hash, return empty tokenState directly
 	// Fetch record from the token state database by block hash
 	meta := dbTx.Metadata()
@@ -258,7 +258,7 @@ func DBFetchTokenState(dbTx database.Tx, bid uint32) (*TokenState, error) {
 	return &ts, err
 }
 
-func DBRemoveTokenState(dbTx database.Tx, id uint32) error {
+func DBRemoveTokenState(dbTx legacydb.Tx, id uint32) error {
 	bucket := dbTx.Metadata().Bucket(dbnamespace.TokenBucketName)
 	var serializedID [4]byte
 	dbnamespace.ByteOrder.PutUint32(serializedID[:], id)

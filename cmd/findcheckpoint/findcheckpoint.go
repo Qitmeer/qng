@@ -5,7 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
-	_ "github.com/Qitmeer/qng/database/ffldb"
+	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
@@ -40,19 +40,19 @@ func main() {
 		db.Close()
 	}()
 
-	ccfg:=common.DefaultConfig(cfg.HomeDir)
-	ccfg.DataDir=cfg.DataDir
-	ccfg.DbType=cfg.DbType
-	ccfg.DAGType=cfg.DAGType
-	cons:=consensus.NewPure(ccfg,db)
-	err=cons.Init()
+	ccfg := common.DefaultConfig(cfg.HomeDir)
+	ccfg.DataDir = cfg.DataDir
+	ccfg.DbType = cfg.DbType
+	ccfg.DAGType = cfg.DAGType
+	cons := consensus.NewPure(ccfg, db)
+	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
 
 	// find
-	bc:=cons.BlockChain().(*blockchain.BlockChain)
+	bc := cons.BlockChain().(*blockchain.BlockChain)
 	if processIsCheckpoint(bc, cfg) {
 		return
 	}

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/shutdown"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/meerevm/amana"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
 	"os"
 	"path/filepath"
@@ -25,17 +25,17 @@ const (
 // contains additional logic such warning the user if there are multiple
 // databases which consume space on the file system and ensuring the regression
 // test database is clean when in regression test mode.
-func LoadBlockDB(cfg *config.Config) (database.DB, error) {
+func LoadBlockDB(cfg *config.Config) (legacydb.DB, error) {
 	// The database name is based on the database type.
 	dbPath := blockDbPath(cfg.DbType, cfg)
 
 	log.Info("Loading block database", "dbPath", dbPath)
-	db, err := database.Open(cfg.DbType, dbPath, params.ActiveNetParams.Net)
+	db, err := legacydb.Open(cfg.DbType, dbPath, params.ActiveNetParams.Net)
 	if err != nil {
 		// Return the error if it's not because the database doesn't
 		// exist.
-		if dbErr, ok := err.(database.Error); !ok || dbErr.ErrorCode !=
-			database.ErrDbDoesNotExist {
+		if dbErr, ok := err.(legacydb.Error); !ok || dbErr.ErrorCode !=
+			legacydb.ErrDbDoesNotExist {
 
 			return nil, err
 		}
@@ -44,7 +44,7 @@ func LoadBlockDB(cfg *config.Config) (database.DB, error) {
 		if err != nil {
 			return nil, err
 		}
-		db, err = database.Create(cfg.DbType, dbPath, params.ActiveNetParams.Net)
+		db, err = legacydb.Create(cfg.DbType, dbPath, params.ActiveNetParams.Net)
 		if err != nil {
 			return nil, err
 		}

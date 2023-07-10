@@ -17,7 +17,7 @@ import (
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
@@ -262,7 +262,7 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 				"must be enabled to query the blockchain (specify --txindex in configuration)")
 		}
 		// Look up the location of the transaction.
-		var blockRegion *database.BlockRegion
+		var blockRegion *legacydb.BlockRegion
 		var err error
 
 		blockRegion, err = txIndex.TxBlockRegion(txHash)
@@ -291,7 +291,7 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 
 			// Load the raw transaction bytes from the database.
 			var txBytes []byte
-			err = api.txManager.db.View(func(dbTx database.Tx) error {
+			err = api.txManager.db.View(func(dbTx legacydb.Tx) error {
 				var err error
 				txBytes, err = dbTx.FetchBlockRegion(blockRegion)
 				return err
@@ -547,7 +547,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 	// Fetch transactions from the database in the desired order if more are
 	// needed.
 	if uint(len(addressTxns)) < numRequested {
-		err = api.txManager.db.View(func(dbTx database.Tx) error {
+		err = api.txManager.db.View(func(dbTx legacydb.Tx) error {
 			regions, dbSkipped, err := addrIndex.TxRegionsForAddress(
 				dbTx, addr, uint32(numToSkip)-numSkipped,
 				uint32(numRequested-uint(len(addressTxns))), reverse)
@@ -880,7 +880,7 @@ func (api *PublicTxAPI) fetchInputTxos(tx *types.Tx) (map[types.TxOutPoint]types
 
 		// Load the raw transaction bytes from the database.
 		var txBytes []byte
-		err = api.txManager.db.View(func(dbTx database.Tx) error {
+		err = api.txManager.db.View(func(dbTx legacydb.Tx) error {
 			var err error
 			txBytes, err = dbTx.FetchBlockRegion(blockRegion)
 			return err
@@ -941,7 +941,7 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 			return nil, fmt.Errorf("the transaction index " +
 				"must be enabled to query the blockchain (specify --txindex in configuration)")
 		}
-		var blockRegion *database.BlockRegion
+		var blockRegion *legacydb.BlockRegion
 		var err error
 
 		blockRegion, err = txIndex.TxBlockRegion(txid)
@@ -960,7 +960,7 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 			}
 		} else {
 			var txBytes []byte
-			err = api.txManager.db.View(func(dbTx database.Tx) error {
+			err = api.txManager.db.View(func(dbTx legacydb.Tx) error {
 				var err error
 				txBytes, err = dbTx.FetchBlockRegion(blockRegion)
 				return err
@@ -1128,7 +1128,7 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 
 			// Load the raw transaction bytes from the database.
 			var txBytes []byte
-			err = api.txManager.db.View(func(dbTx database.Tx) error {
+			err = api.txManager.db.View(func(dbTx legacydb.Tx) error {
 				var err error
 				txBytes, err = dbTx.FetchBlockRegion(blockRegion)
 				return err
