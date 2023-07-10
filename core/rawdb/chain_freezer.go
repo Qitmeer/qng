@@ -192,7 +192,7 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, id, limit uint64) ([]meerda
 			if len(header) == 0 {
 				return fmt.Errorf("block header missing, can't freeze block %d %s", id, mb.GetHash().String())
 			}
-			block := ReadBlockRaw(nfdb, mb.GetHash())
+			block := ReadBodyRaw(nfdb, mb.GetHash())
 			if len(block) == 0 {
 				return fmt.Errorf("block body missing, can't freeze block %d %s", id, mb.GetHash().String())
 			}
