@@ -55,7 +55,6 @@ func DeleteDAGBlock(db ethdb.KeyValueWriter, id uint64) {
 func ReadBlockID(db ethdb.Reader, hash *hash.Hash) *uint64 {
 	data, err := db.Get(blockIDKey(hash))
 	if err != nil {
-		log.Error(err.Error())
 		return nil
 	}
 	number := binary.BigEndian.Uint64(data)

@@ -74,7 +74,7 @@ func WriteBlock(db ethdb.KeyValueWriter, block *types.SerializedBlock) error {
 	if err != nil {
 		return err
 	}
-	return WriteBlock(db, block)
+	return WriteBody(db, block)
 }
 
 func WriteAncientBlocks(db ethdb.AncientWriter, blocks []*types.SerializedBlock, dagblocks []meerdag.IBlock) (int64, error) {
