@@ -92,8 +92,7 @@ func (n *Node) RegisterService() error {
 	}
 	n.DB = chainDB
 	if chainDB == nil {
-		system.ShutdownRequestChannel <- struct{}{}
-		return nil
+		return ErrNodeNoDB
 	}
 	n.consensus = consensus.New(n.Config, n.DB, n.interrupt, system.ShutdownRequestChannel)
 

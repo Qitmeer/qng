@@ -122,10 +122,10 @@ func qitmeerd(ctx *cli.Context) error {
 	}
 	err = n.RegisterService()
 	if err != nil {
+		if err == node.ErrNodeNoDB {
+			return nil
+		}
 		return err
-	}
-	if system.InterruptRequested(interrupt) {
-		return nil
 	}
 	defer func() {
 		err := n.Stop()
