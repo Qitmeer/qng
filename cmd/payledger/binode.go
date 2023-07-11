@@ -11,12 +11,14 @@ package main
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacychaindb"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/services/common"
 	"path"
 )
 
@@ -29,21 +31,17 @@ type BINode struct {
 
 func (node *BINode) init(cfg *Config) error {
 	node.cfg = cfg
-
+	qcfg := cfg.ToQNGConfig()
 	// Load the block database.
-	db, err := LoadBlockDB(cfg.DbType, cfg.DataDir, true)
+	db, err := database.New(qcfg, system.InterruptListener())
 	if err != nil {
 		log.Error("load block database", "error", err)
 		return err
 	}
 
-	node.db = db
+	node.db = db.(*legacychaindb.LegacyChainDB).DB()
 	//
-	ccfg := common.DefaultConfig(node.cfg.HomeDir)
-	ccfg.DataDir = cfg.DataDir
-	ccfg.DbType = cfg.DbType
-	ccfg.DAGType = cfg.DAGType
-	cons := consensus.NewPure(ccfg, db)
+	cons := consensus.NewPure(qcfg, db)
 	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())

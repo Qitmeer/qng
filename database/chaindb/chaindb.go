@@ -1,7 +1,9 @@
 package chaindb
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/node"
@@ -125,6 +127,10 @@ func (cdb *ChainDB) ResolveAncient(name string, ancient string) string {
 		ancient = cdb.cfg.ResolveDataPath(ancient)
 	}
 	return ancient
+}
+
+func (cdb *ChainDB) Rebuild(mgr model.IndexManager) error {
+	return fmt.Errorf("No support Rebuild:%s", cdb.Name())
 }
 
 func New(cfg *config.Config) (*ChainDB, error) {

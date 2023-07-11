@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacychaindb"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/common"
-	"os"
 	"path"
 )
 
@@ -25,24 +26,17 @@ func (node *Node) init(cfg *Config, srcnode *SrcNode, endPoint meerdag.IBlock) e
 	node.cfg = cfg
 	node.endPoint = endPoint
 	//
-	err := CleanupBlockDB(cfg)
-	if err != nil {
-		return err
-	}
+	qcfg := cfg.ToQNGConfig()
+	database.Cleanup(qcfg)
 	// Load the block database.
-	db, err := LoadBlockDB(cfg.DbType, cfg.DataDir, true)
+	db, err := database.New(qcfg, system.InterruptListener())
 	if err != nil {
 		log.Error("load block database", "error", err)
 		return err
 	}
 
-	node.db = db
-	//
-	ccfg := common.DefaultConfig(node.cfg.HomeDir)
-	ccfg.DataDir = cfg.DataDir
-	ccfg.DbType = cfg.DbType
-	ccfg.DAGType = cfg.DAGType
-	cons := consensus.NewPure(ccfg, db)
+	node.db = db.(*legacychaindb.LegacyChainDB).DB()
+	cons := consensus.NewPure(qcfg, db)
 	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
@@ -131,37 +125,5 @@ func (node *Node) processBlockDAG(srcnode *SrcNode) error {
 	if bar != nil {
 		bar.setMax()
 	}
-	return nil
-}
-
-// removeBlockDB removes the existing database
-func removeBlockDB(dbPath string) error {
-	// Remove the old database if it already exists.
-	fi, err := os.Stat(dbPath)
-	if err == nil {
-		log.Info(fmt.Sprintf("Removing block database from '%s'", dbPath))
-		if fi.IsDir() {
-			err := os.RemoveAll(dbPath)
-			if err != nil {
-				return err
-			}
-		} else {
-			err := os.Remove(dbPath)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func CleanupBlockDB(cfg *Config) error {
-	dbPath := blockDbPath(cfg.DbType, cfg.DataDir)
-	err := removeBlockDB(dbPath)
-	if err != nil {
-		return err
-	}
-	log.Info("Finished cleanup")
 	return nil
 }

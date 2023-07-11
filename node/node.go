@@ -9,7 +9,6 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/database/legacychaindb"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/gofrs/flock"
@@ -96,7 +95,7 @@ func (n *Node) RegisterService() error {
 		system.ShutdownRequestChannel <- struct{}{}
 		return nil
 	}
-	n.consensus = consensus.New(n.Config, n.DB.(*legacychaindb.LegacyChainDB).DB(), n.interrupt, system.ShutdownRequestChannel)
+	n.consensus = consensus.New(n.Config, n.DB, n.interrupt, system.ShutdownRequestChannel)
 
 	if n.Config.LightNode {
 		return n.registerQitmeerLight()

@@ -29,7 +29,7 @@ func Cleanup(cfg *config.Config) {
 	if cfg.DevNextGDB {
 		dbPath = cfg.ResolveDataPath(chaindb.DBDirectoryName)
 	} else {
-		dbPath = legacychaindb.BlockDbPath(cfg.DbType, cfg)
+		dbPath = legacychaindb.BlockDbPath(cfg)
 	}
 	err := remove(dbPath)
 	if err != nil {

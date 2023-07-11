@@ -4,6 +4,7 @@ import (
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/database/legacychaindb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerevm/amana"
@@ -98,7 +99,7 @@ func consensusCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := legacychaindb.LoadBlockDB(cfg)
+					db, err := database.New(cfg, interrupt)
 					if err != nil {
 						log.Error("load block database", "error", err)
 						return err

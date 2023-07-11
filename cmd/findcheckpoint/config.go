@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/services/common"
 	"github.com/jessevdk/go-flags"
 	"os"
 	"path/filepath"
@@ -35,6 +37,17 @@ type Config struct {
 	NumCandidates int    `short:"n" long:"numcandidates" description:"Max num of checkpoint candidates to show {1-20}"`
 	UseGoOutput   bool   `short:"g" long:"gooutput" description:"Display the candidates using Go syntax that is ready to insert into the qitmeer checkpoint list"`
 	IsCheckPoint  string `short:"I" long:"ischeckpoint" description:"Determine if it's a check point"`
+}
+
+func (cfg *Config) ToQNGConfig() *config.Config {
+	qcfg := common.DefaultConfig(cfg.HomeDir)
+	qcfg.DataDir = cfg.DataDir
+	qcfg.DbType = cfg.DbType
+	qcfg.DAGType = cfg.DAGType
+	qcfg.TestNet = cfg.TestNet
+	qcfg.MixNet = cfg.MixNet
+	qcfg.PrivNet = cfg.PrivNet
+	return qcfg
 }
 
 // loadConfig initializes and parses the config using a config file and command

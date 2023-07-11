@@ -83,17 +83,11 @@ func blockchainCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := legacychaindb.LoadBlockDB(cfg)
+					db, err := database.New(cfg, interrupt)
 					if err != nil {
-						log.Error("load block database", "error", err)
 						return err
 					}
-					defer func() {
-						err = db.Close()
-						if err != nil {
-							log.Error(err.Error())
-						}
-					}()
+					defer db.Close()
 					//
 					cfg.InvalidTxIndex = false
 					cfg.AddrIndex = false
@@ -145,17 +139,11 @@ func blockchainCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := legacychaindb.LoadBlockDB(cfg)
+					db, err := database.New(cfg, interrupt)
 					if err != nil {
-						log.Error("load block database", "error", err)
 						return err
 					}
-					defer func() {
-						err = db.Close()
-						if err != nil {
-							log.Error(err.Error())
-						}
-					}()
+					defer db.Close()
 					//
 					cfg.InvalidTxIndex = false
 					cfg.AddrIndex = false
@@ -226,7 +214,7 @@ func blockchainCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := legacychaindb.LoadBlockDB(cfg)
+					db, err := database.New(cfg, interrupt)
 					if err != nil {
 						log.Error("load block database", "error", err)
 						return err
@@ -414,7 +402,7 @@ func importBlockChain(consensus model.Consensus, inputPath string) error {
 	return nil
 }
 
-func upgradeBlockChain(cfg *config.Config, db legacydb.DB, interrupt <-chan struct{}, inputPath string, end string, byID bool, aidMode bool) error {
+func upgradeBlockChain(cfg *config.Config, cdb model.DataBase, interrupt <-chan struct{}, inputPath string, end string, byID bool, aidMode bool) error {
 	// new block chain
 	var err error
 	newCfg := *cfg
@@ -425,17 +413,14 @@ func upgradeBlockChain(cfg *config.Config, db legacydb.DB, interrupt <-chan stru
 	database.Cleanup(&newCfg)
 	time.Sleep(time.Second * 2)
 
-	newdb, err := legacychaindb.LoadBlockDB(&newCfg)
+	newdb, err := database.New(&newCfg, interrupt)
 	if err != nil {
 		log.Error("load block database", "error", err)
 		return err
 	}
 	defer func() {
 		if newdb != nil {
-			err = newdb.Close()
-			if err != nil {
-				log.Error(err.Error())
-			}
+			newdb.Close()
 			time.Sleep(time.Second * 2)
 			database.Cleanup(&newCfg)
 		}
@@ -495,6 +480,7 @@ func upgradeBlockChain(cfg *config.Config, db legacydb.DB, interrupt <-chan stru
 
 	logLvl := log.Glogger().GetVerbosity()
 	//
+	db := cdb.(*legacychaindb.LegacyChainDB).DB()
 	if aidMode {
 		endNum := uint(0)
 		err := db.Update(func(dbTx legacydb.Tx) error {
@@ -601,7 +587,7 @@ func upgradeBlockChain(cfg *config.Config, db legacydb.DB, interrupt <-chan stru
 	} else {
 		cfg.InvalidTxIndex = false
 		cfg.AddrIndex = false
-		cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
+		cons := consensus.New(cfg, cdb, interrupt, make(chan struct{}))
 		err := cons.Init()
 		if err != nil {
 			log.Error(err.Error())
@@ -706,10 +692,7 @@ func upgradeBlockChain(cfg *config.Config, db legacydb.DB, interrupt <-chan stru
 		log.Error(err.Error())
 	}
 	newcons = nil
-	err = newdb.Close()
-	if err != nil {
-		log.Error(err.Error())
-	}
+	newdb.Close()
 	newdb = nil
 	//
 	log.Info(fmt.Sprintf("Gracefully shutting down the last database:%s", cfg.DataDir))

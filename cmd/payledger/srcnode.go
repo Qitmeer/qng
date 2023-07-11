@@ -11,11 +11,13 @@ package main
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacychaindb"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/services/common"
 	"path"
 )
 
@@ -28,36 +30,31 @@ type SrcNode struct {
 
 func (node *SrcNode) init(cfg *Config) error {
 	node.cfg = cfg
+	tempCfg := *cfg
 	// Load the block database.
-	srcDataDir := cfg.SrcDataDir
+	tempCfg.DataDir = cfg.SrcDataDir
 	if cfg.Last {
-		srcDataDir = cfg.DataDir
+		tempCfg.DataDir = cfg.DataDir
 	}
-	db, err := LoadBlockDB(cfg.DbType, srcDataDir, false)
+	tempQCfg := tempCfg.ToQNGConfig()
+	legacychaindb.CreateIfNoExist = false
+	db, err := database.New(tempQCfg, system.InterruptListener())
 	if err != nil {
 		log.Error("load block database", "error", err)
 		return err
 	}
-	defer func() {
-		// Ensure the database is sync'd and closed on shutdown.
-
-	}()
-	node.db = db
+	node.db = db.(*legacychaindb.LegacyChainDB).DB()
 	//
-	ccfg := common.DefaultConfig(cfg.HomeDir)
-	ccfg.DataDir = cfg.DataDir
-	ccfg.DbType = cfg.DbType
-	ccfg.DAGType = cfg.DAGType
-	cons := consensus.NewPure(ccfg, db)
+	cons := consensus.NewPure(cfg.ToQNGConfig(), db)
 	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
 		return err
 	}
 	node.bc = cons.BlockChain().(*blockchain.BlockChain)
-	node.name = path.Base(srcDataDir)
+	node.name = path.Base(tempCfg.DataDir)
 
-	log.Info(fmt.Sprintf("Load Src Data:%s", srcDataDir))
+	log.Info(fmt.Sprintf("Load Src Data:%s", tempCfg.DataDir))
 	return nil
 }
 
