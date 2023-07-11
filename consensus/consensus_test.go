@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/database/legacychaindb"
 	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common"
@@ -16,7 +17,7 @@ func TestAloneConsensus(t *testing.T) {
 	cfg.DataDir = util.CleanAndExpandPath(cfg.DataDir)
 	cfg.DataDir = filepath.Join(cfg.DataDir, params.ActiveNetParams.Name)
 	//
-	db, err := common.LoadBlockDB(cfg)
+	db, err := legacychaindb.LoadBlockDB(cfg)
 	if err != nil {
 		t.Error(err)
 	}

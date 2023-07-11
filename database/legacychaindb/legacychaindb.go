@@ -4,7 +4,6 @@ import (
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/database/legacydb"
-	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 )
 
@@ -20,7 +19,7 @@ func (cdb *LegacyChainDB) Name() string {
 }
 
 func (cdb *LegacyChainDB) Close() {
-	log.Info("Close %s", cdb.Name())
+	log.Info("Close", "name", cdb.Name())
 	cdb.db.Close()
 
 }
@@ -31,7 +30,7 @@ func (cdb *LegacyChainDB) DB() legacydb.DB {
 
 func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) {
 	// Load the block database.
-	db, err := common.LoadBlockDB(cfg)
+	db, err := LoadBlockDB(cfg)
 	if err != nil {
 		log.Error("load block database", "error", err)
 		return nil, err
@@ -59,7 +58,7 @@ func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) 
 	// Cleanup the block database
 	if cfg.Cleanup {
 		db.Close()
-		common.CleanupBlockDB(cfg)
+		CleanupBlockDB(cfg)
 		return nil, nil
 	}
 	cdb := &LegacyChainDB{

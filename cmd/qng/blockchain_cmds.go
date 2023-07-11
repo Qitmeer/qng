@@ -11,12 +11,12 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/database/legacychaindb"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/version"
 	"github.com/schollz/progressbar/v3"
 	"github.com/urfave/cli/v2"
@@ -82,7 +82,7 @@ func blockchainCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := common.LoadBlockDB(cfg)
+					db, err := legacychaindb.LoadBlockDB(cfg)
 					if err != nil {
 						log.Error("load block database", "error", err)
 						return err
@@ -144,7 +144,7 @@ func blockchainCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := common.LoadBlockDB(cfg)
+					db, err := legacychaindb.LoadBlockDB(cfg)
 					if err != nil {
 						log.Error("load block database", "error", err)
 						return err
@@ -225,7 +225,7 @@ func blockchainCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := common.LoadBlockDB(cfg)
+					db, err := legacychaindb.LoadBlockDB(cfg)
 					if err != nil {
 						log.Error("load block database", "error", err)
 						return err
@@ -421,10 +421,10 @@ func upgradeBlockChain(cfg *config.Config, db legacydb.DB, interrupt <-chan stru
 	if err != nil {
 		return err
 	}
-	common.CleanupBlockDB(&newCfg)
+	legacychaindb.CleanupBlockDB(&newCfg)
 	time.Sleep(time.Second * 2)
 
-	newdb, err := common.LoadBlockDB(&newCfg)
+	newdb, err := legacychaindb.LoadBlockDB(&newCfg)
 	if err != nil {
 		log.Error("load block database", "error", err)
 		return err
@@ -436,7 +436,7 @@ func upgradeBlockChain(cfg *config.Config, db legacydb.DB, interrupt <-chan stru
 				log.Error(err.Error())
 			}
 			time.Sleep(time.Second * 2)
-			common.CleanupBlockDB(&newCfg)
+			legacychaindb.CleanupBlockDB(&newCfg)
 		}
 	}()
 	//

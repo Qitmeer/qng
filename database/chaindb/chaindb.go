@@ -25,9 +25,9 @@ func (cdb *ChainDB) Name() string {
 }
 
 func (cdb *ChainDB) Close() {
-	log.Info("Close %s", cdb.Name())
+	log.Info("Close", "name", cdb.Name())
 	if cdb.closedState.Load() {
-		log.Error("%s is already closed", cdb.Name())
+		log.Error("Already closed", "name", cdb.Name())
 		return
 	}
 	cdb.closedState.Store(true)

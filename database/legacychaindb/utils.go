@@ -1,11 +1,10 @@
-package common
+package legacychaindb
 
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/shutdown"
 	"github.com/Qitmeer/qng/database/legacydb"
-	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
