@@ -10,7 +10,6 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
 	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/meerevm/meer"
@@ -41,7 +40,7 @@ type QitmeerFull struct {
 	// msg notifier
 	nfManager model.Notify
 	// database
-	db legacydb.DB
+	db model.DataBase
 	// address service
 	addressApi *address.AddressApi
 }

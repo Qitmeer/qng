@@ -8,7 +8,8 @@ import (
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/event"
-	"github.com/Qitmeer/qng/database/legacydb"
+	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacychaindb"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/gofrs/flock"
@@ -30,9 +31,7 @@ type Node struct {
 	Params *params.Params
 
 	// database layer
-	// TODO:Will gradually be deprecated in the future
-	DB  legacydb.DB
-	CDB model.DataBase
+	DB model.DataBase
 
 	dirLock *flock.Flock // prevents concurrent use of instance directory
 
@@ -41,13 +40,11 @@ type Node struct {
 	consensus model.Consensus
 }
 
-func NewNode(cfg *config.Config, database legacydb.DB, chainParams *params.Params, interrupt <-chan struct{}) (*Node, error) {
+func NewNode(cfg *config.Config, chainParams *params.Params, interrupt <-chan struct{}) (*Node, error) {
 	n := Node{
 		Config:    cfg,
-		DB:        database,
 		Params:    chainParams,
 		interrupt: interrupt,
-		consensus: consensus.New(cfg, database, interrupt, system.ShutdownRequestChannel),
 	}
 	n.InitServices()
 
@@ -66,7 +63,7 @@ func (n *Node) Stop() error {
 	if err := n.Service.Stop(); err != nil {
 		return err
 	}
-	n.CDB.Close()
+	n.DB.Close()
 	// Release instance directory lock.
 	n.closeDataDir()
 	return nil
@@ -90,6 +87,17 @@ func (n *Node) Start() error {
 }
 
 func (n *Node) RegisterService() error {
+	chainDB, err := database.New(n.Config, n.interrupt)
+	if err != nil {
+		return err
+	}
+	n.DB = chainDB
+	if chainDB == nil {
+		system.ShutdownRequestChannel <- struct{}{}
+		return nil
+	}
+	n.consensus = consensus.New(n.Config, n.DB.(*legacychaindb.LegacyChainDB).DB(), n.interrupt, system.ShutdownRequestChannel)
+
 	if n.Config.LightNode {
 		return n.registerQitmeerLight()
 	}

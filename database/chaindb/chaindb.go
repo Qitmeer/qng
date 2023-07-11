@@ -1,4 +1,4 @@
-package database
+package chaindb
 
 import (
 	"github.com/Qitmeer/qng/config"
@@ -123,11 +123,11 @@ func (cdb *ChainDB) ResolveAncient(name string, ancient string) string {
 	return ancient
 }
 
-func NewChainDB(cfg *config.Config) *ChainDB {
+func New(cfg *config.Config) (*ChainDB, error) {
 	cdb := &ChainDB{
 		cfg:       cfg,
 		databases: make(map[*closeTrackingDB]struct{}),
 	}
 	cdb.closedState.Store(false)
-	return cdb
+	return cdb, nil
 }

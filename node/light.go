@@ -3,7 +3,7 @@ package node
 
 import (
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/database/legacydb"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/node/service"
 )
 
@@ -11,7 +11,7 @@ import (
 type QitmeerLight struct {
 	service.Service
 	// database
-	db     legacydb.DB
+	db     model.DataBase
 	config *config.Config
 }
 
