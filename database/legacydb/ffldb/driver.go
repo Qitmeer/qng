@@ -9,7 +9,7 @@ package ffldb
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
 )
 
@@ -44,7 +44,7 @@ func parseArgs(funcName string, args ...interface{}) (string, protocol.Network, 
 
 // openDBDriver is the callback provided during driver registration that opens
 // an existing database for use.
-func openDBDriver(args ...interface{}) (database.DB, error) {
+func openDBDriver(args ...interface{}) (legacydb.DB, error) {
 	dbPath, network, err := parseArgs("Open", args...)
 	if err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func openDBDriver(args ...interface{}) (database.DB, error) {
 
 // createDBDriver is the callback provided during driver registration that
 // creates, initializes, and opens a database for use.
-func createDBDriver(args ...interface{}) (database.DB, error) {
+func createDBDriver(args ...interface{}) (legacydb.DB, error) {
 	dbPath, network, err := parseArgs("Create", args...)
 	if err != nil {
 		return nil, err
@@ -72,13 +72,13 @@ func useLogger(logger log.Logger) {
 
 func init() {
 	// Register the driver.
-	driver := database.Driver{
+	driver := legacydb.Driver{
 		DbType:    dbType,
 		Create:    createDBDriver,
 		Open:      openDBDriver,
 		UseLogger: useLogger,
 	}
-	if err := database.RegisterDriver(driver); err != nil {
+	if err := legacydb.RegisterDriver(driver); err != nil {
 		panic(fmt.Sprintf("Failed to regiser database driver '%s': %v",
 			dbType, err))
 	}

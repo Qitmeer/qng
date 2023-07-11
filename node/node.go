@@ -8,12 +8,9 @@ import (
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/event"
-	"github.com/Qitmeer/qng/core/rawdb"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/node"
 	"github.com/gofrs/flock"
 	"os"
 	"path/filepath"
@@ -33,26 +30,20 @@ type Node struct {
 	Params *params.Params
 
 	// database layer
-	// TODO:Will gradually be deprecated in the future
-	DB database.DB
+	DB model.DataBase
 
-	// All open databases
-	databases map[*closeTrackingDB]struct{}
-	dirLock   *flock.Flock // prevents concurrent use of instance directory
+	dirLock *flock.Flock // prevents concurrent use of instance directory
 
 	interrupt <-chan struct{}
 
 	consensus model.Consensus
 }
 
-func NewNode(cfg *config.Config, database database.DB, chainParams *params.Params, interrupt <-chan struct{}) (*Node, error) {
+func NewNode(cfg *config.Config, chainParams *params.Params, interrupt <-chan struct{}) (*Node, error) {
 	n := Node{
 		Config:    cfg,
-		DB:        database,
 		Params:    chainParams,
 		interrupt: interrupt,
-		consensus: consensus.New(cfg, database, interrupt, system.ShutdownRequestChannel),
-		databases: make(map[*closeTrackingDB]struct{}),
 	}
 	n.InitServices()
 
@@ -71,8 +62,7 @@ func (n *Node) Stop() error {
 	if err := n.Service.Stop(); err != nil {
 		return err
 	}
-	n.closeDatabases()
-
+	n.DB.Close()
 	// Release instance directory lock.
 	n.closeDataDir()
 	return nil
@@ -96,6 +86,17 @@ func (n *Node) Start() error {
 }
 
 func (n *Node) RegisterService() error {
+	chainDB, err := database.New(n.Config, n.interrupt)
+	if err != nil {
+		return err
+	}
+	n.DB = chainDB
+	if chainDB == nil {
+		system.ShutdownRequestChannel <- struct{}{}
+		return nil
+	}
+	n.consensus = consensus.New(n.Config, n.DB, n.interrupt, system.ShutdownRequestChannel)
+
 	if n.Config.LightNode {
 		return n.registerQitmeerLight()
 	}
@@ -130,73 +131,6 @@ func (n *Node) GetQitmeerFull() *QitmeerFull {
 		return nil
 	}
 	return qm
-}
-
-func (n *Node) OpenDatabaseWithFreezer(name string, cache, handles int, ancient string, namespace string, readonly bool) (ethdb.Database, error) {
-	n.lock.Lock()
-	defer n.lock.Unlock()
-
-	if n.IsShutdown() {
-		return nil, ErrNodeStopped
-	}
-	var db ethdb.Database
-	var err error
-	if n.Config.DataDir == "" {
-		db = rawdb.NewMemoryDatabase()
-	} else {
-		db, err = rawdb.Open(rawdb.OpenOptions{
-			Type:              node.DefaultConfig.DBEngine,
-			Directory:         n.Config.ResolveDataPath(name),
-			AncientsDirectory: n.ResolveAncient(name, ancient),
-			Namespace:         namespace,
-			Cache:             cache,
-			Handles:           handles,
-			ReadOnly:          readonly,
-		})
-	}
-
-	if err == nil {
-		db = n.wrapDatabase(db)
-	}
-	return db, err
-}
-
-func (n *Node) OpenDatabase(name string, cache, handles int, namespace string, readonly bool) (ethdb.Database, error) {
-	n.lock.Lock()
-	defer n.lock.Unlock()
-	if n.IsShutdown() {
-		return nil, ErrNodeStopped
-	}
-
-	var db ethdb.Database
-	var err error
-	if n.Config.DataDir == "" {
-		db = rawdb.NewMemoryDatabase()
-	} else {
-		db, err = rawdb.Open(rawdb.OpenOptions{
-			Type:      node.DefaultConfig.DBEngine,
-			Directory: n.Config.ResolveDataPath(name),
-			Namespace: namespace,
-			Cache:     cache,
-			Handles:   handles,
-			ReadOnly:  readonly,
-		})
-	}
-
-	if err == nil {
-		db = n.wrapDatabase(db)
-	}
-	return db, err
-}
-
-func (n *Node) ResolveAncient(name string, ancient string) string {
-	switch {
-	case ancient == "":
-		ancient = filepath.Join(n.Config.ResolveDataPath(name), "ancient")
-	case !filepath.IsAbs(ancient):
-		ancient = n.Config.ResolveDataPath(ancient)
-	}
-	return ancient
 }
 
 func (n *Node) openDataDir() error {

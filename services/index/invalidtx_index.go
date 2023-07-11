@@ -7,7 +7,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/store/invalid_tx_index"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/schollz/progressbar/v3"
 )
@@ -158,7 +158,7 @@ func NewInvalidTxIndex(consensus model.Consensus) *InvalidTxIndex {
 	}
 }
 
-func DropInvalidTxIndex(db database.DB, interrupt <-chan struct{}) error {
+func DropInvalidTxIndex(db legacydb.DB, interrupt <-chan struct{}) error {
 	log.Info("Start drop invalidtx index")
 	itiStore, err := invalid_tx_index.New(db, 10, false)
 	if err != nil {
@@ -176,12 +176,12 @@ func DropInvalidTxIndex(db database.DB, interrupt <-chan struct{}) error {
 }
 
 // TODO: Discard in the future
-func dropOldInvalidTx(db database.DB) error {
+func dropOldInvalidTx(db legacydb.DB) error {
 	var (
 		itxIndexKey             = []byte("invalid_txbyhashidx")
 		itxidByTxhashBucketName = []byte("invalid_txidbytxhash")
 	)
-	return db.Update(func(dbTx database.Tx) error {
+	return db.Update(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		if meta.Bucket(itxIndexKey) != nil {
 			err := meta.DeleteBucket(itxIndexKey)

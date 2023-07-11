@@ -6,7 +6,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/node/service"
@@ -27,7 +27,7 @@ type TxManager struct {
 	ntmgr model.Notify
 
 	// db
-	db database.DB
+	db legacydb.DB
 
 	//invalidTx hash->block hash
 	invalidTx map[hash.Hash]*meerdag.HashSet
@@ -63,7 +63,7 @@ func (tm *TxManager) initFeeEstimator() error {
 	}
 	// Search for a FeeEstimator state in the database. If none can be found
 	// or if it cannot be loaded, create a new one.
-	tm.db.Update(func(tx database.Tx) error {
+	tm.db.Update(func(tx legacydb.Tx) error {
 		metadata := tx.Metadata()
 		feeEstimationData := metadata.Get(mempool.EstimateFeeDatabaseKey)
 		if feeEstimationData != nil {
@@ -111,7 +111,7 @@ func (tm *TxManager) Stop() error {
 
 	if tm.feeEstimator != nil {
 		// Save fee estimator state in the database.
-		tm.db.Update(func(tx database.Tx) error {
+		tm.db.Update(func(tx legacydb.Tx) error {
 			metadata := tx.Metadata()
 			metadata.Put(mempool.EstimateFeeDatabaseKey, tm.feeEstimator.Save())
 

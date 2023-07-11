@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/merkle"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"math"
 )
 
@@ -154,7 +154,7 @@ func (bd *MeerDAG) optimizeTips() {
 func (bd *MeerDAG) removeTip(b IBlock) error {
 	bd.tips.Remove(b.GetID())
 	parents := bd.getParents(b)
-	return bd.db.Update(func(dbTx database.Tx) error {
+	return bd.db.Update(func(dbTx legacydb.Tx) error {
 		err := DBDelDAGBlock(dbTx, b.GetID())
 		if err != nil {
 			return err

@@ -10,6 +10,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/Qitmeer/qng/database/legacydb"
+	treap2 "github.com/Qitmeer/qng/database/legacydb/ffldb/treap"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -19,8 +21,6 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/database/ffldb/treap"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	ldberrors "github.com/syndtr/goleveldb/leveldb/errors"
@@ -129,35 +129,35 @@ func (s bulkFetchDataSorter) Less(i, j int) bool {
 }
 
 // makeDbErr creates a database.Error given a set of arguments.
-func makeDbErr(c database.ErrorCode, desc string, err error) database.Error {
-	return database.Error{ErrorCode: c, Description: desc, Err: err}
+func makeDbErr(c legacydb.ErrorCode, desc string, err error) legacydb.Error {
+	return legacydb.Error{ErrorCode: c, Description: desc, Err: err}
 }
 
 // convertErr converts the passed leveldb error into a database error with an
 // equivalent error code  and the passed description.  It also sets the passed
 // error as the underlying error.
-func convertErr(desc string, ldbErr error) database.Error {
+func convertErr(desc string, ldbErr error) legacydb.Error {
 	// Use the driver-specific error code by default.  The code below will
 	// update this with the converted error if it's recognized.
-	var code = database.ErrDriverSpecific
+	var code = legacydb.ErrDriverSpecific
 
 	switch {
 	// Database corruption errors.
 	case ldberrors.IsCorrupted(ldbErr):
-		code = database.ErrCorruption
+		code = legacydb.ErrCorruption
 
 	// Database open/create errors.
 	case ldbErr == leveldb.ErrClosed:
-		code = database.ErrDbNotOpen
+		code = legacydb.ErrDbNotOpen
 
 	// Transaction errors.
 	case ldbErr == leveldb.ErrSnapshotReleased:
-		code = database.ErrTxClosed
+		code = legacydb.ErrTxClosed
 	case ldbErr == leveldb.ErrIterReleased:
-		code = database.ErrTxClosed
+		code = legacydb.ErrTxClosed
 	}
 
-	return database.Error{ErrorCode: code, Description: desc, Err: ldbErr}
+	return legacydb.Error{ErrorCode: code, Description: desc, Err: ldbErr}
 }
 
 // copySlice returns a copy of the passed slice.  This is mostly used to copy
@@ -179,12 +179,12 @@ type cursor struct {
 }
 
 // Enforce cursor implements the database.Cursor interface.
-var _ database.Cursor = (*cursor)(nil)
+var _ legacydb.Cursor = (*cursor)(nil)
 
 // Bucket returns the bucket the cursor was created for.
 //
 // This function is part of the database.Cursor interface implementation.
-func (c *cursor) Bucket() database.Bucket {
+func (c *cursor) Bucket() legacydb.Bucket {
 	// Ensure transaction state is valid.
 	if err := c.bucket.tx.checkClosed(); err != nil {
 		return nil
@@ -212,14 +212,14 @@ func (c *cursor) Delete() error {
 	// Error if the cursor is exhausted.
 	if c.currentIter == nil {
 		str := "cursor is exhausted"
-		return makeDbErr(database.ErrIncompatibleValue, str, nil)
+		return makeDbErr(legacydb.ErrIncompatibleValue, str, nil)
 	}
 
 	// Do not allow buckets to be deleted via the cursor.
 	key := c.currentIter.Key()
 	if bytes.HasPrefix(key, bucketIndexPrefix) {
 		str := "buckets may not be deleted from a cursor"
-		return makeDbErr(database.ErrIncompatibleValue, str, nil)
+		return makeDbErr(legacydb.ErrIncompatibleValue, str, nil)
 	}
 
 	c.bucket.tx.deleteKey(copySlice(key), true)
@@ -559,7 +559,7 @@ type bucket struct {
 }
 
 // Enforce bucket implements the database.Bucket interface.
-var _ database.Bucket = (*bucket)(nil)
+var _ legacydb.Bucket = (*bucket)(nil)
 
 // bucketIndexKey returns the actual key to use for storing and retrieving a
 // child bucket in the bucket index.  This is required because additional
@@ -590,7 +590,7 @@ func bucketizedKey(bucketID [4]byte, key []byte) []byte {
 // the bucket does not exist.
 //
 // This function is part of the database.Bucket interface implementation.
-func (b *bucket) Bucket(key []byte) database.Bucket {
+func (b *bucket) Bucket(key []byte) legacydb.Bucket {
 	// Ensure transaction state is valid.
 	if err := b.tx.checkClosed(); err != nil {
 		return nil
@@ -619,7 +619,7 @@ func (b *bucket) Bucket(key []byte) database.Bucket {
 //   - ErrTxClosed if the transaction has already been closed
 //
 // This function is part of the database.Bucket interface implementation.
-func (b *bucket) CreateBucket(key []byte) (database.Bucket, error) {
+func (b *bucket) CreateBucket(key []byte) (legacydb.Bucket, error) {
 	// Ensure transaction state is valid.
 	if err := b.tx.checkClosed(); err != nil {
 		return nil, err
@@ -628,20 +628,20 @@ func (b *bucket) CreateBucket(key []byte) (database.Bucket, error) {
 	// Ensure the transaction is writable.
 	if !b.tx.writable {
 		str := "create bucket requires a writable database transaction"
-		return nil, makeDbErr(database.ErrTxNotWritable, str, nil)
+		return nil, makeDbErr(legacydb.ErrTxNotWritable, str, nil)
 	}
 
 	// Ensure a key was provided.
 	if len(key) == 0 {
 		str := "create bucket requires a key"
-		return nil, makeDbErr(database.ErrBucketNameRequired, str, nil)
+		return nil, makeDbErr(legacydb.ErrBucketNameRequired, str, nil)
 	}
 
 	// Ensure bucket does not already exist.
 	bidxKey := bucketIndexKey(b.id, key)
 	if b.tx.hasKey(bidxKey) {
 		str := "bucket already exists"
-		return nil, makeDbErr(database.ErrBucketExists, str, nil)
+		return nil, makeDbErr(legacydb.ErrBucketExists, str, nil)
 	}
 
 	// Find the appropriate next bucket ID to use for the new bucket.  In
@@ -676,7 +676,7 @@ func (b *bucket) CreateBucket(key []byte) (database.Bucket, error) {
 //   - ErrTxClosed if the transaction has already been closed
 //
 // This function is part of the database.Bucket interface implementation.
-func (b *bucket) CreateBucketIfNotExists(key []byte) (database.Bucket, error) {
+func (b *bucket) CreateBucketIfNotExists(key []byte) (legacydb.Bucket, error) {
 	// Ensure transaction state is valid.
 	if err := b.tx.checkClosed(); err != nil {
 		return nil, err
@@ -685,7 +685,7 @@ func (b *bucket) CreateBucketIfNotExists(key []byte) (database.Bucket, error) {
 	// Ensure the transaction is writable.
 	if !b.tx.writable {
 		str := "create bucket requires a writable database transaction"
-		return nil, makeDbErr(database.ErrTxNotWritable, str, nil)
+		return nil, makeDbErr(legacydb.ErrTxNotWritable, str, nil)
 	}
 
 	// Return existing bucket if it already exists, otherwise create it.
@@ -712,7 +712,7 @@ func (b *bucket) DeleteBucket(key []byte) error {
 	// Ensure the transaction is writable.
 	if !b.tx.writable {
 		str := "delete bucket requires a writable database transaction"
-		return makeDbErr(database.ErrTxNotWritable, str, nil)
+		return makeDbErr(legacydb.ErrTxNotWritable, str, nil)
 	}
 
 	// Attempt to fetch the ID for the child bucket.  The bucket does not
@@ -722,7 +722,7 @@ func (b *bucket) DeleteBucket(key []byte) error {
 	childID := b.tx.fetchKey(bidxKey)
 	if childID == nil {
 		str := fmt.Sprintf("bucket %q does not exist", key)
-		return makeDbErr(database.ErrBucketNotFound, str, nil)
+		return makeDbErr(legacydb.ErrBucketNotFound, str, nil)
 	}
 
 	// Remove all nested buckets and their keys.
@@ -767,7 +767,7 @@ func (b *bucket) DeleteBucket(key []byte) error {
 // the Prev and Next functions and nil for Key and Value functions.
 //
 // This function is part of the database.Bucket interface implementation.
-func (b *bucket) Cursor() database.Cursor {
+func (b *bucket) Cursor() legacydb.Cursor {
 	// Ensure transaction state is valid.
 	if err := b.tx.checkClosed(); err != nil {
 		return &cursor{bucket: b}
@@ -878,13 +878,13 @@ func (b *bucket) Put(key, value []byte) error {
 	// Ensure the transaction is writable.
 	if !b.tx.writable {
 		str := "setting a key requires a writable database transaction"
-		return makeDbErr(database.ErrTxNotWritable, str, nil)
+		return makeDbErr(legacydb.ErrTxNotWritable, str, nil)
 	}
 
 	// Ensure a key was provided.
 	if len(key) == 0 {
 		str := "put requires a key"
-		return makeDbErr(database.ErrKeyRequired, str, nil)
+		return makeDbErr(legacydb.ErrKeyRequired, str, nil)
 	}
 
 	return b.tx.putKey(bucketizedKey(b.id, key), value)
@@ -932,7 +932,7 @@ func (b *bucket) Delete(key []byte) error {
 	// Ensure the transaction is writable.
 	if !b.tx.writable {
 		str := "deleting a value requires a writable database transaction"
-		return makeDbErr(database.ErrTxNotWritable, str, nil)
+		return makeDbErr(legacydb.ErrTxNotWritable, str, nil)
 	}
 
 	// Nothing to do if there is no key.
@@ -969,22 +969,22 @@ type transaction struct {
 	pendingBlockData []pendingBlock
 
 	// Keys that need to be stored or deleted on commit.
-	pendingKeys   *treap.Mutable
-	pendingRemove *treap.Mutable
+	pendingKeys   *treap2.Mutable
+	pendingRemove *treap2.Mutable
 
 	// Active iterators that need to be notified when the pending keys have
 	// been updated so the cursors can properly handle updates to the
 	// transaction state.
 	activeIterLock sync.RWMutex
-	activeIters    []*treap.Iterator
+	activeIters    []*treap2.Iterator
 }
 
 // Enforce transaction implements the database.Tx interface.
-var _ database.Tx = (*transaction)(nil)
+var _ legacydb.Tx = (*transaction)(nil)
 
 // removeActiveIter removes the passed iterator from the list of active
 // iterators against the pending keys treap.
-func (tx *transaction) removeActiveIter(iter *treap.Iterator) {
+func (tx *transaction) removeActiveIter(iter *treap2.Iterator) {
 	// An indexing for loop is intentionally used over a range here as range
 	// does not reevaluate the slice on each iteration nor does it adjust
 	// the index for the modified slice.
@@ -1001,7 +1001,7 @@ func (tx *transaction) removeActiveIter(iter *treap.Iterator) {
 
 // addActiveIter adds the passed iterator to the list of active iterators for
 // the pending keys treap.
-func (tx *transaction) addActiveIter(iter *treap.Iterator) {
+func (tx *transaction) addActiveIter(iter *treap2.Iterator) {
 	tx.activeIterLock.Lock()
 	tx.activeIters = append(tx.activeIters, iter)
 	tx.activeIterLock.Unlock()
@@ -1021,7 +1021,7 @@ func (tx *transaction) notifyActiveIters() {
 func (tx *transaction) checkClosed() error {
 	// The transaction is no longer valid if it has been closed.
 	if tx.closed {
-		return makeDbErr(database.ErrTxClosed, errTxClosedStr, nil)
+		return makeDbErr(legacydb.ErrTxClosed, errTxClosedStr, nil)
 	}
 
 	return nil
@@ -1122,7 +1122,7 @@ func (tx *transaction) nextBucketID() ([4]byte, error) {
 // Metadata returns the top-most bucket for all metadata storage.
 //
 // This function is part of the database.Tx interface implementation.
-func (tx *transaction) Metadata() database.Bucket {
+func (tx *transaction) Metadata() legacydb.Bucket {
 	return tx.metaBucket
 }
 
@@ -1157,21 +1157,21 @@ func (tx *transaction) StoreBlock(block *types.SerializedBlock) error {
 	// Ensure the transaction is writable.
 	if !tx.writable {
 		str := "store block requires a writable database transaction"
-		return makeDbErr(database.ErrTxNotWritable, str, nil)
+		return makeDbErr(legacydb.ErrTxNotWritable, str, nil)
 	}
 
 	// Reject the block if it already exists.
 	blockHash := block.Hash()
 	if tx.hasBlock(blockHash) {
 		str := fmt.Sprintf("block %s already exists", blockHash)
-		return makeDbErr(database.ErrBlockExists, str, nil)
+		return makeDbErr(legacydb.ErrBlockExists, str, nil)
 	}
 
 	blockBytes, err := block.Bytes()
 	if err != nil {
 		str := fmt.Sprintf("failed to get serialized bytes for block %s",
 			blockHash)
-		return makeDbErr(database.ErrDriverSpecific, str, err)
+		return makeDbErr(legacydb.ErrDriverSpecific, str, err)
 	}
 
 	// Add the block to be stored to the list of pending blocks to store
@@ -1234,7 +1234,7 @@ func (tx *transaction) fetchBlockRow(hash *hash.Hash) ([]byte, error) {
 	blockRow := tx.blockIdxBucket.Get(hash[:])
 	if blockRow == nil {
 		str := fmt.Sprintf("block %s does not exist", hash)
-		return nil, makeDbErr(database.ErrBlockNotFound, str, nil)
+		return nil, makeDbErr(legacydb.ErrBlockNotFound, str, nil)
 	}
 
 	return blockRow, nil
@@ -1427,7 +1427,7 @@ func (tx *transaction) FetchBlocks(hashes []hash.Hash) ([][]byte, error) {
 // when the region references a block which is not pending.  When the region
 // does reference a pending block, it is bounds checked and returns
 // ErrBlockRegionInvalid if invalid.
-func (tx *transaction) fetchPendingRegion(region *database.BlockRegion) ([]byte, error) {
+func (tx *transaction) fetchPendingRegion(region *legacydb.BlockRegion) ([]byte, error) {
 	// Nothing to do if the block is not pending to be written on commit.
 	idx, exists := tx.pendingBlocks[*region.Hash]
 	if !exists {
@@ -1442,7 +1442,7 @@ func (tx *transaction) fetchPendingRegion(region *database.BlockRegion) ([]byte,
 		str := fmt.Sprintf("block %s region offset %d, length %d "+
 			"exceeds block length of %d", region.Hash,
 			region.Offset, region.Len, blockLen)
-		return nil, makeDbErr(database.ErrBlockRegionInvalid, str, nil)
+		return nil, makeDbErr(legacydb.ErrBlockRegionInvalid, str, nil)
 	}
 
 	// Return the bytes from the pending block.
@@ -1476,7 +1476,7 @@ func (tx *transaction) fetchPendingRegion(region *database.BlockRegion) ([]byte,
 // allows support for memory-mapped database implementations.
 //
 // This function is part of the database.Tx interface implementation.
-func (tx *transaction) FetchBlockRegion(region *database.BlockRegion) ([]byte, error) {
+func (tx *transaction) FetchBlockRegion(region *legacydb.BlockRegion) ([]byte, error) {
 	// Ensure transaction state is valid.
 	if err := tx.checkClosed(); err != nil {
 		return nil, err
@@ -1507,7 +1507,7 @@ func (tx *transaction) FetchBlockRegion(region *database.BlockRegion) ([]byte, e
 		str := fmt.Sprintf("block %s region offset %d, length %d "+
 			"exceeds block length of %d", region.Hash,
 			region.Offset, region.Len, location.blockLen)
-		return nil, makeDbErr(database.ErrBlockRegionInvalid, str, nil)
+		return nil, makeDbErr(legacydb.ErrBlockRegionInvalid, str, nil)
 
 	}
 
@@ -1549,7 +1549,7 @@ func (tx *transaction) FetchBlockRegion(region *database.BlockRegion) ([]byte, e
 // allows support for memory-mapped database implementations.
 //
 // This function is part of the database.Tx interface implementation.
-func (tx *transaction) FetchBlockRegions(regions []database.BlockRegion) ([][]byte, error) {
+func (tx *transaction) FetchBlockRegions(regions []legacydb.BlockRegion) ([][]byte, error) {
 	// Ensure transaction state is valid.
 	if err := tx.checkClosed(); err != nil {
 		return nil, err
@@ -1605,7 +1605,7 @@ func (tx *transaction) FetchBlockRegions(regions []database.BlockRegion) ([][]by
 			str := fmt.Sprintf("block %s region offset %d, length "+
 				"%d exceeds block length of %d", region.Hash,
 				region.Offset, region.Len, location.blockLen)
-			return nil, makeDbErr(database.ErrBlockRegionInvalid, str, nil)
+			return nil, makeDbErr(legacydb.ErrBlockRegionInvalid, str, nil)
 		}
 
 		fetchList = append(fetchList, bulkFetchData{&location, i})
@@ -1756,7 +1756,7 @@ func (tx *transaction) Commit() error {
 	// Ensure the transaction is writable.
 	if !tx.writable {
 		str := "Commit requires a writable database transaction"
-		return makeDbErr(database.ErrTxNotWritable, str, nil)
+		return makeDbErr(legacydb.ErrTxNotWritable, str, nil)
 	}
 
 	// Write pending data.  The function will rollback if any errors occur.
@@ -1795,7 +1795,7 @@ type db struct {
 }
 
 // Enforce db implements the database.DB interface.
-var _ database.DB = (*db)(nil)
+var _ legacydb.DB = (*db)(nil)
 
 // Type returns the database driver type the current database instance was
 // created with.
@@ -1830,7 +1830,7 @@ func (db *db) begin(writable bool) (*transaction, error) {
 		if writable {
 			db.writeLock.Unlock()
 		}
-		return nil, makeDbErr(database.ErrDbNotOpen, errDbNotOpenStr,
+		return nil, makeDbErr(legacydb.ErrDbNotOpen, errDbNotOpenStr,
 			nil)
 	}
 
@@ -1852,8 +1852,8 @@ func (db *db) begin(writable bool) (*transaction, error) {
 		writable:      writable,
 		db:            db,
 		snapshot:      snapshot,
-		pendingKeys:   treap.NewMutable(),
-		pendingRemove: treap.NewMutable(),
+		pendingKeys:   treap2.NewMutable(),
+		pendingRemove: treap2.NewMutable(),
 	}
 	tx.metaBucket = &bucket{tx: tx, id: metadataBucketID}
 	tx.blockIdxBucket = &bucket{tx: tx, id: blockIdxBucketID}
@@ -1870,7 +1870,7 @@ func (db *db) begin(writable bool) (*transaction, error) {
 // it is no longer needed.  Failure to do so will result in unclaimed memory.
 //
 // This function is part of the database.DB interface implementation.
-func (db *db) Begin(writable bool) (database.Tx, error) {
+func (db *db) Begin(writable bool) (legacydb.Tx, error) {
 	return db.begin(writable)
 }
 
@@ -1897,7 +1897,7 @@ func rollbackOnPanic(tx *transaction) {
 // the user-supplied function are returned from this function.
 //
 // This function is part of the database.DB interface implementation.
-func (db *db) View(fn func(database.Tx) error) error {
+func (db *db) View(fn func(legacydb.Tx) error) error {
 	// Start a read-only transaction.
 	tx, err := db.begin(false)
 	if err != nil {
@@ -1931,7 +1931,7 @@ func (db *db) View(fn func(database.Tx) error) error {
 // when the user-supplied function returns a nil error.
 //
 // This function is part of the database.DB interface implementation.
-func (db *db) Update(fn func(database.Tx) error) error {
+func (db *db) Update(fn func(legacydb.Tx) error) error {
 	// Start a read-write transaction.
 	tx, err := db.begin(true)
 	if err != nil {
@@ -1970,7 +1970,7 @@ func (db *db) Close() error {
 	defer db.closeLock.Unlock()
 
 	if db.closed {
-		return makeDbErr(database.ErrDbNotOpen, errDbNotOpenStr, nil)
+		return makeDbErr(legacydb.ErrDbNotOpen, errDbNotOpenStr, nil)
 	}
 	db.closed = true
 
@@ -2042,13 +2042,13 @@ func initDB(ldb *leveldb.DB) error {
 
 // openDB opens the database at the provided path.  database.ErrDbDoesNotExist
 // is returned if the database doesn't exist and the create flag is not set.
-func openDB(dbPath string, network protocol.Network, create bool) (database.DB, error) {
+func openDB(dbPath string, network protocol.Network, create bool) (legacydb.DB, error) {
 	// Error if the database doesn't exist and the create flag is not set.
 	metadataDbPath := filepath.Join(dbPath, metadataDbName)
 	dbExists := fileExists(metadataDbPath)
 	if !create && !dbExists {
 		str := fmt.Sprintf("database %q does not exist", metadataDbPath)
-		return nil, makeDbErr(database.ErrDbDoesNotExist, str, nil)
+		return nil, makeDbErr(legacydb.ErrDbDoesNotExist, str, nil)
 	}
 
 	// Ensure the full path to the database exists.

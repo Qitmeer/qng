@@ -8,7 +8,7 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/params"
 	"io"
@@ -362,14 +362,14 @@ func CalcBlockWeight(ib IBlock, bi *BlueInfo) int64 {
 	return 1
 }
 
-func loadBlockDB(cfg *config.Config) (database.DB, error) {
+func loadBlockDB(cfg *config.Config) (legacydb.DB, error) {
 	dbName := "blocks_" + cfg.DbType
 	dbPath := filepath.Join(cfg.DataDir, dbName)
 	err := removeBlockDB(dbPath)
 	if err != nil {
 		return nil, err
 	}
-	db, err := database.Create(cfg.DbType, dbPath, params.ActiveNetParams.Net)
+	db, err := legacydb.Create(cfg.DbType, dbPath, params.ActiveNetParams.Net)
 	if err != nil {
 		return nil, err
 	}
@@ -412,14 +412,14 @@ func exit() {
 }
 
 func storeBlock(block *TestBlock) error {
-	return bd.db.Update(func(dbTx database.Tx) error {
+	return bd.db.Update(func(dbTx legacydb.Tx) error {
 		return dbTx.StoreBlock(block.block)
 	})
 }
 
 func fetchBlock(h *hash.Hash) (*TestBlock, error) {
 	tb := &TestBlock{}
-	err := bd.db.View(func(dbTx database.Tx) error {
+	err := bd.db.View(func(dbTx legacydb.Tx) error {
 		blockBytes, err := dbTx.FetchBlock(h)
 		if err != nil {
 			return err
@@ -442,14 +442,14 @@ func dbPutTotal(total uint) error {
 	var serializedTotal [4]byte
 	ByteOrder.PutUint32(serializedTotal[:], uint32(total))
 
-	return bd.db.Update(func(dbTx database.Tx) error {
+	return bd.db.Update(func(dbTx legacydb.Tx) error {
 		return dbTx.Metadata().Put([]byte("blocktotal"), serializedTotal[:])
 	})
 }
 
 func dbGetTotal() (uint32, error) {
 	total := uint32(0)
-	err := bd.db.View(func(dbTx database.Tx) error {
+	err := bd.db.View(func(dbTx legacydb.Tx) error {
 		serializedTotal := dbTx.Metadata().Get([]byte("blocktotal"))
 		if serializedTotal == nil {
 			return fmt.Errorf("No data")
@@ -466,7 +466,7 @@ func dbGetTotal() (uint32, error) {
 func dbGetGenesis() (*hash.Hash, error) {
 	block := Block{id: 0}
 	ib := &PhantomBlock{&block, 0, NewIdSet(), NewIdSet()}
-	err := bd.db.View(func(dbTx database.Tx) error {
+	err := bd.db.View(func(dbTx legacydb.Tx) error {
 		return DBGetDAGBlock(dbTx, ib)
 	})
 	if err != nil {

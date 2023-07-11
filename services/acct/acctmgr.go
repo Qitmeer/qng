@@ -10,7 +10,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
@@ -23,7 +23,7 @@ type AccountManager struct {
 	service.Service
 	chain    *blockchain.BlockChain
 	cfg      *config.Config
-	db       database.DB
+	db       legacydb.DB
 	info     *AcctInfo
 	utxoops  []*UTXOOP
 	watchers map[string]*AcctBalanceWatcher
@@ -66,7 +66,7 @@ func (a *AccountManager) initDB(first bool) error {
 	curDAGID := uint32(a.chain.BlockDAG().GetBlockTotal())
 	rebuilddb := false
 	rebuildidx := false
-	err = a.db.Update(func(dbTx database.Tx) error {
+	err = a.db.Update(func(dbTx legacydb.Tx) error {
 		info, err := DBGetACCTInfo(dbTx)
 		if err != nil {
 			return err
@@ -133,7 +133,7 @@ func (a *AccountManager) cleanDB() {
 	}
 
 	if a.db != nil {
-		err := a.db.Update(func(dbTx database.Tx) error {
+		err := a.db.Update(func(dbTx legacydb.Tx) error {
 			meta := dbTx.Metadata()
 			infoData := meta.Get(InfoBucketName)
 			if infoData == nil {
@@ -171,7 +171,7 @@ func (a *AccountManager) rebuild(addrs []string) error {
 	}
 	ops := []*types.TxOutPoint{}
 	entrys := []*utxo.UtxoEntry{}
-	err := a.chain.DB().View(func(dbTx database.Tx) error {
+	err := a.chain.DB().View(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		utxoBucket := meta.Bucket(dbnamespace.UtxoSetBucketName)
 		cursor := utxoBucket.Cursor()
@@ -268,7 +268,7 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *utxo.UtxoE
 			return nil
 		}
 		var balance *AcctBalance
-		err = a.db.View(func(dbTx database.Tx) error {
+		err = a.db.View(func(dbTx legacydb.Tx) error {
 			balance, err = DBGetACCTBalance(dbTx, addrStr)
 			return err
 		})
@@ -284,7 +284,7 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *utxo.UtxoE
 				balance = NewAcctBalance(uint64(entry.Amount().Value), 1, 0, 0)
 			}
 			a.info.total++
-			err = a.db.Update(func(tx database.Tx) error {
+			err = a.db.Update(func(tx legacydb.Tx) error {
 				return DBPutACCTInfo(tx, a.info)
 			})
 			if err != nil {
@@ -301,7 +301,7 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *utxo.UtxoE
 			}
 
 		}
-		err = a.db.Update(func(tx database.Tx) error {
+		err = a.db.Update(func(tx legacydb.Tx) error {
 			return DBPutACCTBalance(tx, addrStr, balance)
 		})
 		if err != nil {
@@ -340,11 +340,11 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *utxo.UtxoE
 			}
 		}
 		log.Trace(fmt.Sprintf("Add balance: %s (%s)", addrStr, au.String()))
-		return a.db.Update(func(tx database.Tx) error {
+		return a.db.Update(func(tx legacydb.Tx) error {
 			return DBPutACCTUTXO(tx, addrStr, op, au)
 		})
 	} else {
-		err = a.db.Update(func(dbTx database.Tx) error {
+		err = a.db.Update(func(dbTx legacydb.Tx) error {
 			balance, er := DBGetACCTBalance(dbTx, addrStr)
 			if er != nil {
 				return er
@@ -413,7 +413,7 @@ func (a *AccountManager) DelWatcher(addr string, op *types.TxOutPoint) {
 	}
 }
 
-func (a *AccountManager) initWatchers(dbTx database.Tx) error {
+func (a *AccountManager) initWatchers(dbTx legacydb.Tx) error {
 	meta := dbTx.Metadata()
 	balBucket := meta.Bucket(BalanceBucketName)
 	if balBucket == nil {
@@ -498,7 +498,7 @@ func (a *AccountManager) Commit() error {
 
 	curDAGID := uint32(a.chain.BlockDAG().GetBlockTotal())
 	a.info.updateDAGID = curDAGID
-	err := a.db.Update(func(dbTx database.Tx) error {
+	err := a.db.Update(func(dbTx legacydb.Tx) error {
 		return DBPutACCTInfo(dbTx, a.info)
 	})
 	if err != nil {
@@ -536,7 +536,7 @@ func (a *AccountManager) GetBalance(addr string) (uint64, error) {
 		return wb.GetBalance(), nil
 	}
 
-	err := a.db.Update(func(dbTx database.Tx) error {
+	err := a.db.Update(func(dbTx legacydb.Tx) error {
 		balance, err := DBGetACCTBalance(dbTx, addr)
 		if err != nil {
 			return err
@@ -554,7 +554,7 @@ func (a *AccountManager) GetBalance(addr string) (uint64, error) {
 
 func (a *AccountManager) GetUTXOs(addr string) ([]UTXOResult, error) {
 	utxos := []UTXOResult{}
-	err := a.db.Update(func(dbTx database.Tx) error {
+	err := a.db.Update(func(dbTx legacydb.Tx) error {
 		us := DBGetACCTUTXOs(dbTx, addr)
 		if len(us) > 0 {
 			for k, v := range us {
@@ -608,7 +608,7 @@ func (a *AccountManager) AddAddress(addr string) error {
 		return fmt.Errorf(fmt.Sprintf("Already exists watcher:%s", addr))
 	}
 	a.info.Add(addr)
-	err := a.db.Update(func(dbTx database.Tx) error {
+	err := a.db.Update(func(dbTx legacydb.Tx) error {
 		return a.cleanBalanceDB(dbTx, addr)
 	})
 	if err != nil {
@@ -617,7 +617,7 @@ func (a *AccountManager) AddAddress(addr string) error {
 	return a.rebuild([]string{addr})
 }
 
-func (a *AccountManager) cleanBalanceDB(dbTx database.Tx, addr string) error {
+func (a *AccountManager) cleanBalanceDB(dbTx legacydb.Tx, addr string) error {
 	er := DBDelACCTBalance(dbTx, addr)
 	if er != nil {
 		return er

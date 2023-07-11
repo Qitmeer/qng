@@ -7,7 +7,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/meerdag"
 )
 
@@ -301,7 +301,7 @@ func (b *BlockChain) fetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, 
 	}
 
 	// Load the block from the database.
-	dbErr := b.db.View(func(dbTx database.Tx) error {
+	dbErr := b.db.View(func(dbTx legacydb.Tx) error {
 		var err error
 		block, err = dbFetchBlockByHash(dbTx, hash)
 		return err
@@ -322,7 +322,7 @@ func (b *BlockChain) fetchBlockBytesByHash(hash *hash.Hash) ([]byte, error) {
 	var bytes []byte
 	var err error
 	// Load the block from the database.
-	err = b.db.View(func(dbTx database.Tx) error {
+	err = b.db.View(func(dbTx legacydb.Tx) error {
 		bytes, err = dbTx.FetchBlock(hash)
 		if err != nil {
 			return err
@@ -340,7 +340,7 @@ func (b *BlockChain) fetchHeaderByHash(hash *hash.Hash) (*types.BlockHeader, err
 	}
 
 	var header *types.BlockHeader
-	dbErr := b.db.View(func(dbTx database.Tx) error {
+	dbErr := b.db.View(func(dbTx legacydb.Tx) error {
 		var err error
 		header, err = dbFetchHeaderByHash(dbTx, hash)
 		return err

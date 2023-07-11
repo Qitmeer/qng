@@ -7,7 +7,7 @@ import (
 	"github.com/Qitmeer/qng/common/math"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/meerdag/anticone"
 	"io"
 )
@@ -602,7 +602,7 @@ func (ph *Phantom) Decode(r io.Reader) error {
 func (ph *Phantom) Load() error {
 	var tips []uint
 	var diffs []uint
-	err := ph.bd.db.View(func(dbTx database.Tx) error {
+	err := ph.bd.db.View(func(dbTx legacydb.Tx) error {
 		ts, err := DBGetDAGTips(dbTx)
 		if err != nil {
 			return err
@@ -832,7 +832,7 @@ func (ph *Phantom) CheckBlockOrderDB(maxDepth uint64) error {
 	for i := mainTip.GetOrder() - 1; i > 0; i-- {
 		depth++
 		var blockid uint
-		err := ph.bd.db.View(func(dbTx database.Tx) error {
+		err := ph.bd.db.View(func(dbTx legacydb.Tx) error {
 			id, err := DBGetBlockIdByOrder(dbTx, i)
 			if err != nil {
 				return err
@@ -881,7 +881,7 @@ func (mc *MainChain) Has(id uint) bool {
 		}
 	}
 
-	mc.bd.db.View(func(dbTx database.Tx) error {
+	mc.bd.db.View(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		mchBucket := meta.Bucket(DagMainChainBucketName)
 		if mchBucket == nil {
@@ -894,7 +894,7 @@ func (mc *MainChain) Has(id uint) bool {
 }
 
 func (mc *MainChain) Add(id uint) error {
-	return mc.bd.db.Update(func(dbTx database.Tx) error {
+	return mc.bd.db.Update(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		mchBucket := meta.Bucket(DagMainChainBucketName)
 		if mchBucket == nil {
@@ -908,7 +908,7 @@ func (mc *MainChain) Remove(id uint) error {
 	if !mc.Has(id) {
 		return nil
 	}
-	return mc.bd.db.Update(func(dbTx database.Tx) error {
+	return mc.bd.db.Update(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		mchBucket := meta.Bucket(DagMainChainBucketName)
 		if mchBucket == nil {

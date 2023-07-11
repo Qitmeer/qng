@@ -10,13 +10,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"sync"
 
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
-	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
 )
@@ -160,7 +160,7 @@ func serializeAddrIndexEntry(blockID uint32, txLoc types.TxLoc) []byte {
 // provided region struct according to the format described in detail above and
 // uses the passed block hash fetching function in order to conver the block ID
 // to the associated block hash.
-func deserializeAddrIndexEntry(serialized []byte, region *database.BlockRegion, fetchBlockHash fetchBlockHashFunc) error {
+func deserializeAddrIndexEntry(serialized []byte, region *legacydb.BlockRegion, fetchBlockHash fetchBlockHashFunc) error {
 	// Ensure there are enough bytes to decode.
 	if len(serialized) < txEntrySize {
 		return model.ErrDeserialize("unexpected end of data")
@@ -258,7 +258,7 @@ func dbPutAddrIndexEntry(bucket internalBucket, addrKey [addrKeySize]byte, block
 // the given address key and the number of entries skipped since it could have
 // been less in the case where there are less total entries than the requested
 // number of entries to skip.
-func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, numToSkip, numRequested uint32, reverse bool, fetchBlockHash fetchBlockHashFunc) ([]database.BlockRegion, uint32, error) {
+func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, numToSkip, numRequested uint32, reverse bool, fetchBlockHash fetchBlockHashFunc) ([]legacydb.BlockRegion, uint32, error) {
 	// When the reverse flag is not set, all levels need to be fetched
 	// because numToSkip and numRequested are counted from the oldest
 	// transactions (highest level) and thus the total count is needed.
@@ -304,7 +304,7 @@ func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, n
 
 	// Start the offset after all skipped entries and load the calculated
 	// number.
-	results := make([]database.BlockRegion, numToLoad)
+	results := make([]legacydb.BlockRegion, numToLoad)
 	for i := uint32(0); i < numToLoad; i++ {
 		// Calculate the read offset according to the reverse flag.
 		var offset uint32
@@ -321,8 +321,8 @@ func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, n
 			// Ensure any deserialization errors are returned as
 			// database corruption errors.
 			if model.IsDeserializeErr(err) {
-				err = database.Error{
-					ErrorCode: database.ErrCorruption,
+				err = legacydb.Error{
+					ErrorCode: legacydb.ErrCorruption,
 					Description: fmt.Sprintf("failed to "+
 						"deserialized address index "+
 						"for key %x: %v", addrKey, err),
@@ -594,7 +594,7 @@ type AddrIndex struct {
 	// The following fields are set when the instance is created and can't
 	// be changed afterwards, so there is no need to protect them with a
 	// separate mutex.
-	db          database.DB
+	db          legacydb.DB
 	chainParams *params.Params
 
 	// The following fields are used to quickly link transactions and
@@ -657,7 +657,7 @@ func (idx *AddrIndex) Name() string {
 // index.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) Create(dbTx database.Tx) error {
+func (idx *AddrIndex) Create(dbTx legacydb.Tx) error {
 	_, err := dbTx.Metadata().CreateBucket(addrIndexKey)
 	return err
 }
@@ -745,7 +745,7 @@ func (idx *AddrIndex) indexBlock(data writeIndexData, block *types.SerializedBlo
 // the transactions in the block involve.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
+func (idx *AddrIndex) ConnectBlock(dbTx legacydb.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
 	if blk.GetState().GetStatus().KnownInvalid() {
 		return nil
 	}
@@ -789,7 +789,7 @@ func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *types.SerializedBloc
 // each transaction in the block involve.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte) error {
+func (idx *AddrIndex) DisconnectBlock(dbTx legacydb.Tx, block *types.SerializedBlock, stxos [][]byte) error {
 
 	// Build all of the address to transaction mappings in a local map.
 	addrsToTxns := make(writeIndexData)
@@ -818,15 +818,15 @@ func (idx *AddrIndex) DisconnectBlock(dbTx database.Tx, block *types.SerializedB
 // that involve a given address.
 //
 // This function is safe for concurrent access.
-func (idx *AddrIndex) TxRegionsForAddress(dbTx database.Tx, addr types.Address, numToSkip, numRequested uint32, reverse bool) ([]database.BlockRegion, uint32, error) {
+func (idx *AddrIndex) TxRegionsForAddress(dbTx legacydb.Tx, addr types.Address, numToSkip, numRequested uint32, reverse bool) ([]legacydb.BlockRegion, uint32, error) {
 	addrKey, err := addrToKey(addr, idx.chainParams)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	var regions []database.BlockRegion
+	var regions []legacydb.BlockRegion
 	var skipped uint32
-	err = idx.db.View(func(dbTx database.Tx) error {
+	err = idx.db.View(func(dbTx legacydb.Tx) error {
 		// Create closure to lookup the block hash given the ID using
 		// the database transaction.
 		fetchBlockHash := func(id []byte) (*hash.Hash, error) {
@@ -956,7 +956,7 @@ func (idx *AddrIndex) UnconfirmedTxnsForAddress(addr types.Address) []*types.Tx 
 // It implements the Indexer interface which plugs into the IndexManager that in
 // turn is used by the blockchain package.  This allows the index to be
 // seamlessly maintained along with the chain.
-func NewAddrIndex(db database.DB) *AddrIndex {
+func NewAddrIndex(db legacydb.DB) *AddrIndex {
 	return &AddrIndex{
 		db:          db,
 		chainParams: params.ActiveNetParams.Params,
@@ -967,6 +967,6 @@ func NewAddrIndex(db database.DB) *AddrIndex {
 
 // DropAddrIndex drops the address index from the provided database if it
 // exists.
-func DropAddrIndex(db database.DB, interrupt <-chan struct{}) error {
+func DropAddrIndex(db legacydb.DB, interrupt <-chan struct{}) error {
 	return dropIndex(db, addrIndexKey, addrIndexName, interrupt)
 }

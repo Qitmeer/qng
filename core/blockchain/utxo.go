@@ -6,7 +6,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/meerdag"
 )
 
@@ -26,7 +26,7 @@ func (bc *BlockChain) IsInvalidOut(entry *utxo.UtxoEntry) bool {
 	return true
 }
 
-func (bc *BlockChain) FetchInputUtxos(db database.DB, block *types.SerializedBlock, view *utxo.UtxoViewpoint) error {
+func (bc *BlockChain) FetchInputUtxos(db legacydb.DB, block *types.SerializedBlock, view *utxo.UtxoViewpoint) error {
 	return bc.fetchInputUtxos(db, block, view)
 }
 
@@ -35,7 +35,7 @@ func (bc *BlockChain) FetchInputUtxos(db database.DB, block *types.SerializedBlo
 // needed.  In particular, referenced entries that are earlier in the block are
 // added to the view and entries that are already in the view are not modified.
 // TODO, revisit the usage on the parent block
-func (bc *BlockChain) fetchInputUtxos(db database.DB, block *types.SerializedBlock, view *utxo.UtxoViewpoint) error {
+func (bc *BlockChain) fetchInputUtxos(db legacydb.DB, block *types.SerializedBlock, view *utxo.UtxoViewpoint) error {
 	// Build a map of in-flight transactions because some of the inputs in
 	// this block could be referencing other transactions earlier in this
 	// block which are not yet in the chain.
@@ -173,7 +173,7 @@ func (b *BlockChain) FetchUtxoEntry(outpoint types.TxOutPoint) (*utxo.UtxoEntry,
 	defer b.ChainRUnlock()
 
 	var entry *utxo.UtxoEntry
-	err := b.db.View(func(dbTx database.Tx) error {
+	err := b.db.View(func(dbTx legacydb.Tx) error {
 		var err error
 		entry, err = utxo.DBFetchUtxoEntry(dbTx, outpoint)
 		return err
@@ -187,7 +187,7 @@ func (b *BlockChain) FetchUtxoEntry(outpoint types.TxOutPoint) (*utxo.UtxoEntry,
 	return entry, nil
 }
 
-func (b *BlockChain) dbPutUtxoView(dbTx database.Tx, view *utxo.UtxoViewpoint) error {
+func (b *BlockChain) dbPutUtxoView(dbTx legacydb.Tx, view *utxo.UtxoViewpoint) error {
 	utxoBucket := dbTx.Metadata().Bucket(dbnamespace.UtxoSetBucketName)
 	for outpoint, entry := range view.Entries() {
 		// No need to update the database if the entry was not modified.

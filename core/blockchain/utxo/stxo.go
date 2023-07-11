@@ -8,7 +8,7 @@ import (
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 )
 
 var byteOrder = binary.LittleEndian
@@ -289,7 +289,7 @@ func serializeSpendJournalEntry(stxos []SpentTxOut) ([]byte, error) {
 // view MUST have the utxos referenced by all of the transactions available for
 // the passed block since that information is required to reconstruct the spent
 // txouts.
-func DBFetchSpendJournalEntry(dbTx database.Tx, block *types.SerializedBlock) ([]SpentTxOut, error) {
+func DBFetchSpendJournalEntry(dbTx legacydb.Tx, block *types.SerializedBlock) ([]SpentTxOut, error) {
 	// Exclude the coinbase transaction since it can't spend anything.
 	spendBucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
 	serialized := spendBucket.Get(block.Hash()[:])
@@ -300,8 +300,8 @@ func DBFetchSpendJournalEntry(dbTx database.Tx, block *types.SerializedBlock) ([
 		// Ensure any deserialization errors are returned as database
 		// corruption errors.
 		if model.IsDeserializeErr(err) {
-			return nil, database.Error{
-				ErrorCode: database.ErrCorruption,
+			return nil, legacydb.Error{
+				ErrorCode: legacydb.ErrCorruption,
 				Description: fmt.Sprintf("corrupt spend "+
 					"information for %v: %v", block.Hash(),
 					err),
@@ -318,7 +318,7 @@ func DBFetchSpendJournalEntry(dbTx database.Tx, block *types.SerializedBlock) ([
 // spend journal entry for the given block hash using the provided slice of
 // spent txouts.   The spent txouts slice must contain an entry for every txout
 // the transactions in the block spend in the order they are spent.
-func DBPutSpendJournalEntry(dbTx database.Tx, blockHash *hash.Hash, stxos []SpentTxOut) error {
+func DBPutSpendJournalEntry(dbTx legacydb.Tx, blockHash *hash.Hash, stxos []SpentTxOut) error {
 	if len(stxos) == 0 {
 		return nil
 	}
@@ -332,7 +332,7 @@ func DBPutSpendJournalEntry(dbTx database.Tx, blockHash *hash.Hash, stxos []Spen
 
 // dbRemoveSpendJournalEntry uses an existing database transaction to remove the
 // spend journal entry for the passed block hash.
-func DBRemoveSpendJournalEntry(dbTx database.Tx, blockHash *hash.Hash) error {
+func DBRemoveSpendJournalEntry(dbTx legacydb.Tx, blockHash *hash.Hash) error {
 	spendBucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
 	return spendBucket.Delete(blockHash[:])
 }

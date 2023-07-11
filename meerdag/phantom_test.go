@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/database"
-	_ "github.com/Qitmeer/qng/database/ffldb"
+	"github.com/Qitmeer/qng/database/legacydb"
+	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/params"
 	"path/filepath"
 	"strconv"
@@ -430,10 +430,10 @@ func Test_tips(t *testing.T) {
 }
 
 func checkLoad(t *testing.T) {
-	openBlockDB := func(cfg *config.Config) (database.DB, error) {
+	openBlockDB := func(cfg *config.Config) (legacydb.DB, error) {
 		dbName := "blocks_" + cfg.DbType
 		dbPath := filepath.Join(cfg.DataDir, dbName)
-		db, err := database.Open(cfg.DbType, dbPath, params.ActiveNetParams.Net)
+		db, err := legacydb.Open(cfg.DbType, dbPath, params.ActiveNetParams.Net)
 		if err != nil {
 			return nil, err
 		}

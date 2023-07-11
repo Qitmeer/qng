@@ -5,7 +5,7 @@ import (
 	"github.com/Qitmeer/qng/cmd/crawler/log"
 	"github.com/Qitmeer/qng/cmd/crawler/node"
 	"github.com/Qitmeer/qng/common/roughtime"
-	_ "github.com/Qitmeer/qng/database/ffldb"
+	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	_ "github.com/Qitmeer/qng/services/common"
 	"github.com/urfave/cli/v2"
 	"os"

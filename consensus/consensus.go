@@ -6,17 +6,16 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/store/invalid_tx_index"
 	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacychaindb"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/index"
-	"math"
 	"sync"
 )
 
@@ -27,7 +26,7 @@ const (
 
 type consensus struct {
 	lock                   sync.Mutex
-	databaseContext        database.DB
+	databaseContext        model.DataBase
 	cfg                    *config.Config
 	interrupt              <-chan struct{}
 	shutdownRequestChannel chan struct{}
@@ -56,7 +55,7 @@ func (s *consensus) Init() error {
 	}
 
 	if s.cfg.InvalidTxIndex {
-		invalidtxindexStore, err := invalid_tx_index.New(s.databaseContext, defaultCacheSize, defaultPreallocateCaches)
+		invalidtxindexStore, err := invalid_tx_index.New(s.databaseContext.(*legacychaindb.LegacyChainDB).DB(), defaultCacheSize, defaultPreallocateCaches)
 		if err != nil {
 			return err
 		}
@@ -84,8 +83,8 @@ func (s *consensus) Init() error {
 	return blockchain.Init()
 }
 
-func (s *consensus) DatabaseContext() database.DB {
-	return s.databaseContext
+func (s *consensus) DatabaseContext() legacydb.DB {
+	return s.databaseContext.(*legacychaindb.LegacyChainDB).DB()
 }
 
 func (s *consensus) Config() *config.Config {
@@ -161,74 +160,14 @@ func (s *consensus) subscribe() {
 }
 
 func (s *consensus) Rebuild() error {
-	err := index.DropInvalidTxIndex(s.databaseContext, s.interrupt)
-	if err != nil {
-		log.Info(err.Error())
-	}
-	err = index.DropTxIndex(s.databaseContext, s.interrupt)
-	if err != nil {
-		log.Info(err.Error())
-	}
-	//
-	err = s.databaseContext.Update(func(tx database.Tx) error {
-		meta := tx.Metadata()
-		err = meta.DeleteBucket(dbnamespace.SpendJournalBucketName)
-		if err != nil {
-			return err
-		}
-		err = meta.DeleteBucket(dbnamespace.UtxoSetBucketName)
-		if err != nil {
-			return err
-		}
-		err = meta.DeleteBucket(dbnamespace.TokenBucketName)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	//
-	err = s.databaseContext.Update(func(tx database.Tx) error {
-		meta := tx.Metadata()
-		_, err = meta.CreateBucket(dbnamespace.SpendJournalBucketName)
-		if err != nil {
-			return err
-		}
-		_, err = meta.CreateBucket(dbnamespace.UtxoSetBucketName)
-		if err != nil {
-			return err
-		}
-		_, err = meta.CreateBucket(dbnamespace.TokenBucketName)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	txIndex := s.indexManager.(*index.Manager).TxIndex()
-	txIndex.SetCurOrder(-1)
-	err = s.databaseContext.Update(func(tx database.Tx) error {
-		err = txIndex.Create(tx)
-		if err != nil {
-			return err
-		}
-		err = index.DBPutIndexerTip(tx, txIndex.Key(), &hash.ZeroHash, math.MaxUint32)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err := s.databaseContext.Rebuild(s.indexManager)
 	if err != nil {
 		return err
 	}
 	return s.blockchain.Rebuild()
 }
 
-func New(cfg *config.Config, databaseContext database.DB, interrupt <-chan struct{}, shutdownRequestChannel chan struct{}) *consensus {
+func New(cfg *config.Config, databaseContext model.DataBase, interrupt <-chan struct{}, shutdownRequestChannel chan struct{}) *consensus {
 	return &consensus{
 		cfg:                    cfg,
 		databaseContext:        databaseContext,
@@ -239,6 +178,6 @@ func New(cfg *config.Config, databaseContext database.DB, interrupt <-chan struc
 	}
 }
 
-func NewPure(cfg *config.Config, databaseContext database.DB) *consensus {
+func NewPure(cfg *config.Config, databaseContext model.DataBase) *consensus {
 	return New(cfg, databaseContext, make(chan struct{}), make(chan struct{}))
 }

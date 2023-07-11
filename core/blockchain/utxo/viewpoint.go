@@ -3,7 +3,7 @@ package utxo
 import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
 )
@@ -143,7 +143,7 @@ func (view *UtxoViewpoint) SetViewpoints(views []*hash.Hash) {
 // Upon completion of this function, the view will contain an entry for each
 // requested transaction.  Fully spent transactions, or those which otherwise
 // don't exist, will result in a nil entry in the view.
-func (view *UtxoViewpoint) FetchUtxosMain(db database.DB, outpoints map[types.TxOutPoint]struct{}) error {
+func (view *UtxoViewpoint) FetchUtxosMain(db legacydb.DB, outpoints map[types.TxOutPoint]struct{}) error {
 	// Nothing to do if there are no requested hashes.
 	if len(outpoints) == 0 {
 		return nil
@@ -157,7 +157,7 @@ func (view *UtxoViewpoint) FetchUtxosMain(db database.DB, outpoints map[types.Tx
 	// since other code uses the presence of an entry in the store as a way
 	// to optimize spend and unspend updates to apply only to the specific
 	// utxos that the caller needs access to.
-	return db.View(func(dbTx database.Tx) error {
+	return db.View(func(dbTx legacydb.Tx) error {
 		for outpoint := range outpoints {
 			entry, err := dbFetchUtxoEntry(dbTx, outpoint)
 			if err != nil {
@@ -189,7 +189,7 @@ func (view *UtxoViewpoint) LookupEntry(outpoint types.TxOutPoint) *UtxoEntry {
 // fetchUtxos loads the unspent transaction outputs for the provided set of
 // outputs into the view from the database as needed unless they already exist
 // in the view in which case they are ignored.
-func (view *UtxoViewpoint) fetchUtxos(db database.DB, outpoints map[types.TxOutPoint]struct{}) error {
+func (view *UtxoViewpoint) fetchUtxos(db legacydb.DB, outpoints map[types.TxOutPoint]struct{}) error {
 	// Nothing to do if there are no requested outputs.
 	if len(outpoints) == 0 {
 		return nil

@@ -11,7 +11,9 @@ package main
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/services/common"
 	"github.com/jessevdk/go-flags"
 	"os"
 	"path/filepath"
@@ -54,6 +56,17 @@ type Config struct {
 	BlocksInfo      bool   `long:"blocksinfo"  description:"Show all blocks information."`
 
 	UnlocksPerHeight int `long:"unlocksperheight"  description:"How many will be unlocked at each DAG main height."`
+}
+
+func (cfg *Config) ToQNGConfig() *config.Config {
+	qcfg := common.DefaultConfig(cfg.HomeDir)
+	qcfg.DataDir = cfg.DataDir
+	qcfg.DbType = cfg.DbType
+	qcfg.DAGType = cfg.DAGType
+	qcfg.TestNet = cfg.TestNet
+	qcfg.MixNet = cfg.MixNet
+	qcfg.PrivNet = cfg.PrivNet
+	return qcfg
 }
 
 func LoadConfig() (*Config, []string, error) {

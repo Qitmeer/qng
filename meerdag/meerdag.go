@@ -6,7 +6,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag/anticone"
 	"github.com/Qitmeer/qng/node/service"
@@ -209,7 +209,7 @@ type MeerDAG struct {
 	// blocks per second
 	blockRate float64
 
-	db database.DB
+	db legacydb.DB
 
 	// Rollback mechanism
 	lastSnapshot *DAGSnapshot
@@ -236,7 +236,7 @@ func (bd *MeerDAG) GetInstance() ConsensusAlgorithm {
 }
 
 // Initialize self, the function to be invoked at the beginning
-func (bd *MeerDAG) init(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData) ConsensusAlgorithm {
+func (bd *MeerDAG) init(dagType string, calcWeight CalcWeight, blockRate float64, db legacydb.DB, getBlockData GetBlockData) ConsensusAlgorithm {
 	bd.lastTime = time.Unix(roughtime.Now().Unix(), 0)
 	bd.commitOrder = map[uint]uint{}
 	bd.calcWeight = calcWeight
@@ -252,7 +252,7 @@ func (bd *MeerDAG) init(dagType string, calcWeight CalcWeight, blockRate float64
 	bd.instance = NewBlockDAG(dagType)
 	bd.instance.Init(bd)
 
-	err := db.Update(func(dbTx database.Tx) error {
+	err := db.Update(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		serializedData := meta.Get(DagInfoBucketName)
 		if serializedData == nil {
@@ -1201,7 +1201,7 @@ func (bd *MeerDAG) commit() error {
 	}
 	ph, ok := bd.instance.(*Phantom)
 	if needPB {
-		err := bd.db.Update(func(dbTx database.Tx) error {
+		err := bd.db.Update(func(dbTx legacydb.Tx) error {
 			return DBPutDAGBlockIdByHash(dbTx, bd.lastSnapshot.block)
 		})
 		if err != nil {
@@ -1213,7 +1213,7 @@ func (bd *MeerDAG) commit() error {
 				k != bd.lastSnapshot.mainChainTip {
 				continue
 			}
-			err := bd.db.Update(func(dbTx database.Tx) error {
+			err := bd.db.Update(func(dbTx legacydb.Tx) error {
 				return DBPutDAGTip(dbTx, k, k == bd.instance.GetMainChainTipId())
 			})
 			if err != nil {
@@ -1225,7 +1225,7 @@ func (bd *MeerDAG) commit() error {
 			if bd.tips.Has(k) {
 				continue
 			}
-			err := bd.db.Update(func(dbTx database.Tx) error {
+			err := bd.db.Update(func(dbTx legacydb.Tx) error {
 				return DBDelDAGTip(dbTx, k)
 			})
 			if err != nil {
@@ -1238,7 +1238,7 @@ func (bd *MeerDAG) commit() error {
 				if bd.lastSnapshot.diffAnticone.Has(k) {
 					continue
 				}
-				err := bd.db.Update(func(dbTx database.Tx) error {
+				err := bd.db.Update(func(dbTx legacydb.Tx) error {
 					return DBPutDiffAnticone(dbTx, k)
 				})
 				if err != nil {
@@ -1250,7 +1250,7 @@ func (bd *MeerDAG) commit() error {
 				if ph.diffAnticone.Has(k) {
 					continue
 				}
-				err := bd.db.Update(func(dbTx database.Tx) error {
+				err := bd.db.Update(func(dbTx legacydb.Tx) error {
 					return DBDelDiffAnticone(dbTx, k)
 				})
 				if err != nil {
@@ -1262,7 +1262,7 @@ func (bd *MeerDAG) commit() error {
 	}
 
 	if len(bd.commitOrder) > 0 {
-		err := bd.db.Update(func(dbTx database.Tx) error {
+		err := bd.db.Update(func(dbTx legacydb.Tx) error {
 			var e error
 			for order, id := range bd.commitOrder {
 				er := DBPutBlockIdByOrder(dbTx, order, id)
@@ -1280,7 +1280,7 @@ func (bd *MeerDAG) commit() error {
 	}
 
 	if !bd.commitBlock.IsEmpty() {
-		err := bd.db.Update(func(dbTx database.Tx) error {
+		err := bd.db.Update(func(dbTx legacydb.Tx) error {
 			for _, v := range bd.commitBlock.GetMap() {
 				block, ok := v.(IBlock)
 				if !ok {
@@ -1438,7 +1438,7 @@ out:
 	log.Trace("MeerDAG handler done")
 }
 
-func New(dagType string, calcWeight CalcWeight, blockRate float64, db database.DB, getBlockData GetBlockData, createBS CreateBlockState, createBSB CreateBlockStateFromBytes) *MeerDAG {
+func New(dagType string, calcWeight CalcWeight, blockRate float64, db legacydb.DB, getBlockData GetBlockData, createBS CreateBlockState, createBSB CreateBlockStateFromBytes) *MeerDAG {
 	createBlockState = createBS
 	createBlockStateFromBytes = createBSB
 	md := &MeerDAG{

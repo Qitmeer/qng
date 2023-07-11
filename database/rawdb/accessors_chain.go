@@ -9,7 +9,7 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 )
 
-func ReadBlockRaw(db ethdb.Reader, hash *hash.Hash) []byte {
+func ReadBodyRaw(db ethdb.Reader, hash *hash.Hash) []byte {
 	var data []byte
 	data, _ = db.Get(blockKey(hash))
 	if len(data) > 0 {
@@ -27,8 +27,8 @@ func ReadBlockRaw(db ethdb.Reader, hash *hash.Hash) []byte {
 	return data
 }
 
-func ReadBlock(db ethdb.Reader, hash *hash.Hash) *types.SerializedBlock {
-	data := ReadBlockRaw(db, hash)
+func ReadBody(db ethdb.Reader, hash *hash.Hash) *types.SerializedBlock {
+	data := ReadBodyRaw(db, hash)
 	if len(data) == 0 {
 		return nil
 	}
@@ -40,7 +40,7 @@ func ReadBlock(db ethdb.Reader, hash *hash.Hash) *types.SerializedBlock {
 	return block
 }
 
-func WriteBlock(db ethdb.KeyValueWriter, block *types.SerializedBlock) error {
+func WriteBody(db ethdb.KeyValueWriter, block *types.SerializedBlock) error {
 	data, err := block.Bytes()
 	if err != nil {
 		log.Error(err.Error())
@@ -55,18 +55,26 @@ func WriteBlock(db ethdb.KeyValueWriter, block *types.SerializedBlock) error {
 	return nil
 }
 
-func DeleteBlock(db ethdb.KeyValueWriter, hash *hash.Hash) {
+func DeleteBody(db ethdb.KeyValueWriter, hash *hash.Hash) {
 	if err := db.Delete(blockKey(hash)); err != nil {
 		log.Crit("Failed to delete hash to block mapping", "err", err)
 	}
 }
 
-func HasBlock(db ethdb.Reader, hash *hash.Hash) bool {
+func HasBody(db ethdb.Reader, hash *hash.Hash) bool {
 	if has, err := db.Has(blockKey(hash)); !has || err != nil {
 		return false
 	}
 	blockID := ReadBlockID(db, hash)
 	return blockID != nil
+}
+
+func WriteBlock(db ethdb.KeyValueWriter, block *types.SerializedBlock) error {
+	err := WriteHeader(db, &block.Block().Header)
+	if err != nil {
+		return err
+	}
+	return WriteBody(db, block)
 }
 
 func WriteAncientBlocks(db ethdb.AncientWriter, blocks []*types.SerializedBlock, dagblocks []meerdag.IBlock) (int64, error) {
@@ -93,7 +101,13 @@ func writeAncientBlock(op ethdb.AncientWriteOp, block *types.SerializedBlock, da
 	if err != nil {
 		return err
 	}
-	return nil
+	var headerBuf bytes.Buffer
+	err = block.Block().Header.Serialize(&headerBuf)
+	if err != nil {
+		return err
+	}
+	data = headerBuf.Bytes()
+	return op.AppendRaw(ChainFreezerHeaderTable, uint64(dagblock.GetID()), data)
 }
 
 // header
@@ -156,4 +170,9 @@ func DeleteHeader(db ethdb.KeyValueWriter, hash *hash.Hash) {
 	if err := db.Delete(headerKey(hash)); err != nil {
 		log.Crit("Failed to delete hash to header mapping", "err", err)
 	}
+}
+
+func DeleteBlock(db ethdb.KeyValueWriter, hash *hash.Hash) {
+	DeleteHeader(db, hash)
+	DeleteBody(db, hash)
 }

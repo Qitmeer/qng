@@ -3,7 +3,7 @@ package meerdag
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"sort"
 )
 
@@ -70,7 +70,7 @@ func (bd *MeerDAG) getBlockId(h *hash.Hash) uint {
 		}
 	}
 	id := MaxId
-	err := bd.db.View(func(dbTx database.Tx) error {
+	err := bd.db.View(func(dbTx legacydb.Tx) error {
 		bid, er := DBGetBlockIdByHash(dbTx, h)
 		if er == nil {
 			id = uint(bid)
@@ -149,7 +149,7 @@ func (bd *MeerDAG) getBlockByOrder(order uint) IBlock {
 		return bd.getBlockById(id)
 	}
 	bid := uint(MaxId)
-	err := bd.db.View(func(dbTx database.Tx) error {
+	err := bd.db.View(func(dbTx legacydb.Tx) error {
 		id, er := DBGetBlockIdByOrder(dbTx, order)
 		if er == nil {
 			bid = uint(id)
@@ -245,7 +245,7 @@ func (bd *MeerDAG) InvalidBlock(block IBlock) {
 func (bd *MeerDAG) GetIdSet(hs []*hash.Hash) *IdSet {
 	result := NewIdSet()
 
-	err := bd.db.View(func(dbTx database.Tx) error {
+	err := bd.db.View(func(dbTx legacydb.Tx) error {
 		for _, v := range hs {
 			if bd.lastSnapshot.block != nil {
 				if bd.lastSnapshot.block.GetHash().IsEqual(v) {

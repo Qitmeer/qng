@@ -6,7 +6,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"time"
 )
 
@@ -33,7 +33,7 @@ type databaseInfo struct {
 
 // dbFetchDatabaseInfo uses an existing database transaction to fetch the
 // database versioning and creation information.
-func dbFetchDatabaseInfo(dbTx database.Tx) (*databaseInfo, error) {
+func dbFetchDatabaseInfo(dbTx legacydb.Tx) (*databaseInfo, error) {
 	meta := dbTx.Metadata()
 	bucket := meta.Bucket(dbnamespace.BCDBInfoBucketName)
 
@@ -81,7 +81,7 @@ func dbFetchDatabaseInfo(dbTx database.Tx) (*databaseInfo, error) {
 
 // dbPutDatabaseInfo uses an existing database transaction to store the database
 // information.
-func dbPutDatabaseInfo(dbTx database.Tx, dbi *databaseInfo) error {
+func dbPutDatabaseInfo(dbTx legacydb.Tx, dbi *databaseInfo) error {
 	// uint32Bytes is a helper function to convert a uint32 to a byte slice
 	// using the byte order specified by the database namespace.
 	uint32Bytes := func(ui32 uint32) []byte {
@@ -129,7 +129,7 @@ func dbPutDatabaseInfo(dbTx database.Tx, dbi *databaseInfo) error {
 // dbFetchBlockByHash uses an existing database transaction to retrieve the raw
 // block for the provided hash, deserialize it, retrieve the appropriate height
 // from the index, and return a dcrutil.Block with the height set.
-func dbFetchBlockByHash(dbTx database.Tx, hash *hash.Hash) (*types.SerializedBlock, error) {
+func dbFetchBlockByHash(dbTx legacydb.Tx, hash *hash.Hash) (*types.SerializedBlock, error) {
 	// Load the raw block bytes from the database.
 	blockBytes, err := dbTx.FetchBlock(hash)
 	if err != nil {
@@ -147,7 +147,7 @@ func dbFetchBlockByHash(dbTx database.Tx, hash *hash.Hash) (*types.SerializedBlo
 
 // dbFetchHeaderByHash uses an existing database transaction to retrieve the
 // block header for the provided hash.
-func dbFetchHeaderByHash(dbTx database.Tx, hash *hash.Hash) (*types.BlockHeader, error) {
+func dbFetchHeaderByHash(dbTx legacydb.Tx, hash *hash.Hash) (*types.BlockHeader, error) {
 	headerBytes, err := dbTx.FetchBlockHeader(hash)
 	if err != nil {
 		return nil, err
@@ -164,6 +164,6 @@ func dbFetchHeaderByHash(dbTx database.Tx, hash *hash.Hash) (*types.BlockHeader,
 
 // dbMaybeStoreBlock stores the provided block in the database if it's not
 // already there.
-func dbMaybeStoreBlock(dbTx database.Tx, block *types.SerializedBlock) error {
+func dbMaybeStoreBlock(dbTx legacydb.Tx, block *types.SerializedBlock) error {
 	return dbTx.StoreBlock(block)
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/services/progresslog"
 )
 
@@ -21,7 +21,7 @@ import (
 type Manager struct {
 	consensus      model.Consensus
 	cfg            *Config
-	db             database.DB
+	db             legacydb.DB
 	enabledIndexes []Indexer
 	invalidtxIndex *InvalidTxIndex
 }
@@ -94,7 +94,7 @@ func (m *Manager) Init() error {
 	}
 
 	// Create the initial state for the indexes as needed.
-	err := m.db.Update(func(dbTx database.Tx) error {
+	err := m.db.Update(func(dbTx legacydb.Tx) error {
 		// Create the bucket for the current tips as needed.
 		meta := dbTx.Metadata()
 		_, err := meta.CreateBucketIfNotExists(dbnamespace.IndexTipsBucketName)
@@ -127,7 +127,7 @@ func (m *Manager) Init() error {
 
 		// Fetch the current tip for the index.
 		var order uint32
-		err := m.db.View(func(dbTx database.Tx) error {
+		err := m.db.View(func(dbTx legacydb.Tx) error {
 			idxKey := indexer.Key()
 			_, order, err = dbFetchIndexerTip(dbTx, idxKey)
 			return err
@@ -148,7 +148,7 @@ func (m *Manager) Init() error {
 			if err != nil {
 				return err
 			}
-			err = m.db.Update(func(dbTx database.Tx) error {
+			err = m.db.Update(func(dbTx legacydb.Tx) error {
 				spentTxos = nil
 				if indexNeedsInputs(indexer) {
 					spentTxos, err = chain.FetchSpendJournalPKS(block)
@@ -180,7 +180,7 @@ func (m *Manager) Init() error {
 
 	lowestOrder := int64(bestOrder)
 	indexerOrders := make([]int64, len(m.enabledIndexes))
-	err = m.db.View(func(dbTx database.Tx) error {
+	err = m.db.View(func(dbTx legacydb.Tx) error {
 		for i, indexer := range m.enabledIndexes {
 			idxKey := indexer.Key()
 			h, order, err := dbFetchIndexerTip(dbTx, idxKey)
@@ -259,7 +259,7 @@ func (m *Manager) Init() error {
 					return err
 				}
 			}
-			err = m.db.Update(func(dbTx database.Tx) error {
+			err = m.db.Update(func(dbTx legacydb.Tx) error {
 				return dbIndexConnectBlock(dbTx, indexer, block, spentTxos, blk)
 			})
 			if err != nil {
@@ -281,7 +281,7 @@ func (m *Manager) Init() error {
 // one big atomic step due to the massive number of entries.
 func (m *Manager) maybeFinishDrops(interrupt <-chan struct{}) error {
 	indexNeedsDrop := make([]bool, len(m.enabledIndexes))
-	err := m.db.View(func(dbTx database.Tx) error {
+	err := m.db.View(func(dbTx legacydb.Tx) error {
 		// None of the indexes needs to be dropped if the index tips
 		// bucket hasn't been created yet.
 		indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
@@ -336,7 +336,7 @@ func indexNeedsInputs(index Indexer) bool {
 
 // maybeCreateIndexes determines if each of the enabled indexes have already
 // been created and creates them if not.
-func (m *Manager) maybeCreateIndexes(dbTx database.Tx) error {
+func (m *Manager) maybeCreateIndexes(dbTx legacydb.Tx) error {
 	indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
 	for _, indexer := range m.enabledIndexes {
 		// Nothing to do if the index tip already exists.
@@ -371,7 +371,7 @@ func (m *Manager) maybeCreateIndexes(dbTx database.Tx) error {
 func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
 	// Call each of the currently active optional indexes with the block
 	// being connected so they can update accordingly.
-	err := m.db.Update(func(dbTx database.Tx) error {
+	err := m.db.Update(func(dbTx legacydb.Tx) error {
 		for _, index := range m.enabledIndexes {
 			err := dbIndexConnectBlock(dbTx, index, block, stxos, blk)
 			if err != nil {
@@ -400,7 +400,7 @@ func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk
 func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
 	// Call each of the currently active optional indexes with the block
 	// being disconnected so they can update accordingly.
-	err := m.db.Update(func(dbTx database.Tx) error {
+	err := m.db.Update(func(dbTx legacydb.Tx) error {
 		for _, index := range m.enabledIndexes {
 			err := m.dbIndexDisconnectBlock(dbTx, index, block, stxos)
 			if err != nil {
@@ -426,13 +426,13 @@ func (m *Manager) UpdateMainTip(bh *hash.Hash, order uint64) error {
 }
 
 // HasTransaction
-func (m *Manager) IsDuplicateTx(dbTx database.Tx, txid *hash.Hash, blockHash *hash.Hash) bool {
+func (m *Manager) IsDuplicateTx(dbTx legacydb.Tx, txid *hash.Hash, blockHash *hash.Hash) bool {
 	return IsDuplicateTx(dbTx, txid, blockHash)
 }
 
 func (m *Manager) HasTx(txid *hash.Hash) bool {
 	hasTx := false
-	m.db.View(func(dbTx database.Tx) error {
+	m.db.View(func(dbTx legacydb.Tx) error {
 		blockRegion, err := dbFetchTxIndexEntry(dbTx, txid)
 		if err == nil {
 			if blockRegion != nil {
@@ -446,7 +446,7 @@ func (m *Manager) HasTx(txid *hash.Hash) bool {
 
 // dbFetchTx looks up the passed transaction hash in the transaction index and
 // loads it from the database.
-func DBFetchTx(dbTx database.Tx, hash *hash.Hash) (*types.Transaction, error) {
+func DBFetchTx(dbTx legacydb.Tx, hash *hash.Hash) (*types.Transaction, error) {
 	// Look up the location of the transaction.
 	blockRegion, err := dbFetchTxIndexEntry(dbTx, hash)
 	if err != nil {
@@ -472,7 +472,7 @@ func DBFetchTx(dbTx database.Tx, hash *hash.Hash) (*types.Transaction, error) {
 	return &tx, nil
 }
 
-func DBFetchTxAndBlock(dbTx database.Tx, hash *hash.Hash) (*types.Transaction, *hash.Hash, error) {
+func DBFetchTxAndBlock(dbTx legacydb.Tx, hash *hash.Hash) (*types.Transaction, *hash.Hash, error) {
 	// Look up the location of the transaction.
 	blockRegion, err := dbFetchTxIndexEntry(dbTx, hash)
 	if err != nil {
@@ -502,7 +502,7 @@ func DBFetchTxAndBlock(dbTx database.Tx, hash *hash.Hash) (*types.Transaction, *
 // given block using the provided indexer and updates the tip of the indexer
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the passed block.
-func (m *Manager) dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *types.SerializedBlock, stxos [][]byte) error {
+func (m *Manager) dbIndexDisconnectBlock(dbTx legacydb.Tx, indexer Indexer, block *types.SerializedBlock, stxos [][]byte) error {
 	// Assert that the block being disconnected is the current tip of the
 	// index.
 	idxKey := indexer.Key()
@@ -584,10 +584,10 @@ func (m *Manager) GetIndex(name string) Indexer {
 }
 
 // This is part of the Indexer interface.
-func (m *Manager) GetTxBytes(blockRegion *database.BlockRegion) ([]byte, error) {
+func (m *Manager) GetTxBytes(blockRegion *legacydb.BlockRegion) ([]byte, error) {
 	// Load the raw transaction bytes from the database.
 	var txBytes []byte
-	err := m.db.View(func(dbTx database.Tx) error {
+	err := m.db.View(func(dbTx legacydb.Tx) error {
 		var err error
 		txBytes, err = dbTx.FetchBlockRegion(blockRegion)
 		return err
@@ -599,7 +599,7 @@ func (m *Manager) GetTxBytes(blockRegion *database.BlockRegion) ([]byte, error) 
 // given block using the provided indexer and updates the tip of the indexer
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the previous block for the passed block.
-func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
+func dbIndexConnectBlock(dbTx legacydb.Tx, indexer Indexer, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
 	// Assert that the block being connected properly connects to the
 	// current tip of the index.
 	idxKey := indexer.Key()
@@ -625,12 +625,12 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *types.Seriali
 
 // dbFetchIndexerTip uses an existing database transaction to retrieve the
 // hash and height of the current tip for the provided index.
-func dbFetchIndexerTip(dbTx database.Tx, idxKey []byte) (*hash.Hash, uint32, error) {
+func dbFetchIndexerTip(dbTx legacydb.Tx, idxKey []byte) (*hash.Hash, uint32, error) {
 	indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
 	serialized := indexesBucket.Get(idxKey)
 	if len(serialized) < hash.HashSize+4 {
-		return nil, 0, database.Error{
-			ErrorCode: database.ErrCorruption,
+		return nil, 0, legacydb.Error{
+			ErrorCode: legacydb.ErrCorruption,
 			Description: fmt.Sprintf("unexpected end of data for "+
 				"index %q tip", string(idxKey)),
 		}
@@ -657,7 +657,7 @@ func dbFetchIndexerTip(dbTx database.Tx, idxKey []byte) (*hash.Hash, uint32, err
 
 // dbPutIndexerTip uses an existing database transaction to update or add the
 // current tip for the given index to the provided values.
-func dbPutIndexerTip(dbTx database.Tx, idxKey []byte, h *hash.Hash, order uint32) error {
+func dbPutIndexerTip(dbTx legacydb.Tx, idxKey []byte, h *hash.Hash, order uint32) error {
 	serialized := make([]byte, hash.HashSize+4)
 	copy(serialized, h[:])
 	byteOrder.PutUint32(serialized[hash.HashSize:], uint32(order))
@@ -666,14 +666,14 @@ func dbPutIndexerTip(dbTx database.Tx, idxKey []byte, h *hash.Hash, order uint32
 	return indexesBucket.Put(idxKey, serialized)
 }
 
-func DBPutIndexerTip(dbTx database.Tx, idxKey []byte, h *hash.Hash, order uint32) error {
+func DBPutIndexerTip(dbTx legacydb.Tx, idxKey []byte, h *hash.Hash, order uint32) error {
 	return dbPutIndexerTip(dbTx, idxKey, h, order)
 }
 
 // existsIndex returns whether the index keyed by idxKey exists in the database.
-func existsIndex(db database.DB, idxKey []byte, idxName string) (bool, error) {
+func existsIndex(db legacydb.DB, idxKey []byte, idxName string) (bool, error) {
 	var exists bool
-	err := db.View(func(dbTx database.Tx) error {
+	err := db.View(func(dbTx legacydb.Tx) error {
 		indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
 		if indexesBucket != nil && indexesBucket.Get(idxKey) != nil {
 			exists = true
@@ -686,8 +686,8 @@ func existsIndex(db database.DB, idxKey []byte, idxName string) (bool, error) {
 // markIndexDeletion marks the index identified by idxKey for deletion.  Marking
 // an index for deletion allows deletion to resume next startup if an
 // incremental deletion was interrupted.
-func markIndexDeletion(db database.DB, idxKey []byte) error {
-	return db.Update(func(dbTx database.Tx) error {
+func markIndexDeletion(db legacydb.DB, idxKey []byte) error {
+	return db.Update(func(dbTx legacydb.Tx) error {
 		indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
 		return indexesBucket.Put(indexDropKey(idxKey), idxKey)
 	})
@@ -704,7 +704,7 @@ func indexDropKey(idxKey []byte) []byte {
 
 // incrementalFlatDrop uses multiple database updates to remove key/value pairs
 // saved to a flat index.
-func incrementalFlatDrop(db database.DB, idxKey []byte, idxName string, interrupt <-chan struct{}) error {
+func incrementalFlatDrop(db legacydb.DB, idxKey []byte, idxName string, interrupt <-chan struct{}) error {
 	// Since the indexes can be so large, attempting to simply delete
 	// the bucket in a single database transaction would result in massive
 	// memory usage and likely crash many systems due to ulimits.  In order
@@ -717,8 +717,8 @@ func incrementalFlatDrop(db database.DB, idxKey []byte, idxName string, interrup
 	// Recurse through all buckets in the index, cataloging each for
 	// later deletion.
 	var subBuckets [][][]byte
-	var subBucketClosure func(database.Tx, []byte, [][]byte) error
-	subBucketClosure = func(dbTx database.Tx,
+	var subBucketClosure func(legacydb.Tx, []byte, [][]byte) error
+	subBucketClosure = func(dbTx legacydb.Tx,
 		subBucket []byte, tlBucket [][]byte) error {
 		// Get full bucket name and append to subBuckets for later
 		// deletion.
@@ -734,8 +734,8 @@ func incrementalFlatDrop(db database.DB, idxKey []byte, idxName string, interrup
 		for _, subBucketName := range bucketName {
 			bucket = bucket.Bucket(subBucketName)
 			if bucket == nil {
-				return database.Error{
-					ErrorCode:   database.ErrBucketNotFound,
+				return legacydb.Error{
+					ErrorCode:   legacydb.ErrBucketNotFound,
 					Description: fmt.Sprintf("db bucket '%s' not found, your data is corrupted, please clean up your block database by using '--cleanup'", subBucketName),
 					Err:         nil}
 			}
@@ -747,7 +747,7 @@ func incrementalFlatDrop(db database.DB, idxKey []byte, idxName string, interrup
 	}
 
 	// Call subBucketClosure with top-level bucket.
-	err := db.View(func(dbTx database.Tx) error {
+	err := db.View(func(dbTx legacydb.Tx) error {
 		return subBucketClosure(dbTx, idxKey, nil)
 	})
 	if err != nil {
@@ -761,7 +761,7 @@ func incrementalFlatDrop(db database.DB, idxKey []byte, idxName string, interrup
 		// Delete maxDeletions key/value pairs at a time.
 		for numDeleted := maxDeletions; numDeleted == maxDeletions; {
 			numDeleted = 0
-			err := db.Update(func(dbTx database.Tx) error {
+			err := db.Update(func(dbTx legacydb.Tx) error {
 				subBucket := dbTx.Metadata()
 				for _, subBucketName := range bucketName {
 					subBucket = subBucket.Bucket(subBucketName)
@@ -793,7 +793,7 @@ func incrementalFlatDrop(db database.DB, idxKey []byte, idxName string, interrup
 		}
 
 		// Drop the bucket itself.
-		db.Update(func(dbTx database.Tx) error {
+		db.Update(func(dbTx legacydb.Tx) error {
 			bucket := dbTx.Metadata()
 			for j := 0; j < len(bucketName)-1; j++ {
 				bucket = bucket.Bucket(bucketName[j])
@@ -806,8 +806,8 @@ func incrementalFlatDrop(db database.DB, idxKey []byte, idxName string, interrup
 
 // dropIndexMetadata drops the passed index from the database by removing the
 // top level bucket for the index, the index tip, and any in-progress drop flag.
-func dropIndexMetadata(db database.DB, idxKey []byte, idxName string) error {
-	return db.Update(func(dbTx database.Tx) error {
+func dropIndexMetadata(db legacydb.DB, idxKey []byte, idxName string) error {
+	return db.Update(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		indexesBucket := meta.Bucket(dbnamespace.IndexTipsBucketName)
 		err := indexesBucket.Delete(idxKey)
@@ -816,7 +816,7 @@ func dropIndexMetadata(db database.DB, idxKey []byte, idxName string) error {
 		}
 
 		err = meta.DeleteBucket(idxKey)
-		if err != nil && !database.IsError(err, database.ErrBucketNotFound) {
+		if err != nil && !legacydb.IsError(err, legacydb.ErrBucketNotFound) {
 			return err
 		}
 
@@ -827,7 +827,7 @@ func dropIndexMetadata(db database.DB, idxKey []byte, idxName string) error {
 // dropIndex drops the passed index from the database without using incremental
 // deletion.  This should be used to drop indexes containing nested buckets,
 // which can not be deleted with dropFlatIndex.
-func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan struct{}) error {
+func dropIndex(db legacydb.DB, idxKey []byte, idxName string, interrupt <-chan struct{}) error {
 	// Nothing to do if the index doesn't already exist.
 	exists, err := existsIndex(db, idxKey, idxName)
 	if err != nil {
@@ -882,7 +882,7 @@ func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan s
 	return nil
 }
 
-func IsDuplicateTx(dbTx database.Tx, txid *hash.Hash, blockHash *hash.Hash) bool {
+func IsDuplicateTx(dbTx legacydb.Tx, txid *hash.Hash, blockHash *hash.Hash) bool {
 	blockRegion, err := dbFetchTxIndexEntry(dbTx, txid)
 	if err != nil {
 		return false

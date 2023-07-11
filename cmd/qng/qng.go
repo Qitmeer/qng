@@ -10,13 +10,12 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
-	_ "github.com/Qitmeer/qng/database/ffldb"
+	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/log"
 	_ "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/node"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common"
-	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/version"
 	"github.com/urfave/cli/v2"
 	"os"
@@ -74,7 +73,7 @@ func qitmeerd(ctx *cli.Context) error {
 	var nodeChan chan<- *node.Node
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
-	cfg, err := common.LoadConfig(ctx,true)
+	cfg, err := common.LoadConfig(ctx, true)
 	if err != nil {
 		return err
 	}
@@ -115,49 +114,8 @@ func qitmeerd(ctx *cli.Context) error {
 		log.Info("File logging disabled")
 	}
 
-	// Load the block database.
-	db, err := common.LoadBlockDB(cfg)
-	if err != nil {
-		log.Error("load block database", "error", err)
-		return err
-	}
-	defer func() {
-		// Ensure the database is sync'd and closed on shutdown.
-		log.Info("Gracefully shutting down the database...")
-		db.Close()
-	}()
-
-	// Return now if an interrupt signal was triggered.
-	if system.InterruptRequested(interrupt) {
-		return nil
-	}
-	// Drop indexes and exit if requested.
-	if cfg.DropAddrIndex {
-		if err := index.DropAddrIndex(db, interrupt); err != nil {
-			log.Error("%v", err)
-			return err
-		}
-
-		return nil
-	}
-	if cfg.DropTxIndex {
-		if err := index.DropTxIndex(db, interrupt); err != nil {
-			log.Error(fmt.Sprintf("%v", err))
-			return err
-		}
-
-		return nil
-	}
-
-	// Cleanup the block database
-	if cfg.Cleanup {
-		db.Close()
-		common.CleanupBlockDB(cfg)
-		return nil
-	}
-
 	// Create node and start it.
-	n, err := node.NewNode(cfg, db, params.ActiveNetParams.Params, interrupt)
+	n, err := node.NewNode(cfg, params.ActiveNetParams.Params, interrupt)
 	if err != nil {
 		log.Error("Unable to start server", "listeners", cfg.Listener, "error", err)
 		return err
@@ -165,6 +123,9 @@ func qitmeerd(ctx *cli.Context) error {
 	err = n.RegisterService()
 	if err != nil {
 		return err
+	}
+	if system.InterruptRequested(interrupt) {
+		return nil
 	}
 	defer func() {
 		err := n.Stop()
