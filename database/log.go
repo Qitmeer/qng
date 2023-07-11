@@ -1,6 +1,6 @@
 // Copyright (c) 2017-2018 The qitmeer developers
 
-package chaindb
+package database
 
 import (
 	l "github.com/Qitmeer/qng/log"
@@ -18,5 +18,5 @@ func UseLogger(logger l.Logger) {
 
 // The default amount of logging is none.
 func init() {
-	UseLogger(l.New(l.Ctx{"module": "CDB"}))
+	UseLogger(l.New(l.Ctx{"module": "DB"}))
 }

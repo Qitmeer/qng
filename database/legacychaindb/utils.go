@@ -1,12 +1,8 @@
 package legacychaindb
 
 import (
-	"fmt"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/core/shutdown"
 	"github.com/Qitmeer/qng/database/legacydb"
-	"github.com/Qitmeer/qng/meerevm/amana"
-	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
 	"os"
 	"path/filepath"
@@ -26,7 +22,7 @@ const (
 // test database is clean when in regression test mode.
 func LoadBlockDB(cfg *config.Config) (legacydb.DB, error) {
 	// The database name is based on the database type.
-	dbPath := blockDbPath(cfg.DbType, cfg)
+	dbPath := BlockDbPath(cfg.DbType, cfg)
 
 	log.Info("Loading block database", "dbPath", dbPath)
 	db, err := legacydb.Open(cfg.DbType, dbPath, params.ActiveNetParams.Net)
@@ -53,46 +49,9 @@ func LoadBlockDB(cfg *config.Config) (legacydb.DB, error) {
 }
 
 // blockDbPath returns the path to the block database given a database type.
-func blockDbPath(dbType string, cfg *config.Config) string {
+func BlockDbPath(dbType string, cfg *config.Config) string {
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + dbType
 	dbPath := filepath.Join(cfg.DataDir, dbName)
 	return dbPath
-}
-
-// removeBlockDB removes the existing database
-func removeBlockDB(dbPath string) error {
-	// Remove the old database if it already exists.
-	fi, err := os.Stat(dbPath)
-	if err == nil {
-		log.Info(fmt.Sprintf("Removing block database from '%s'", dbPath))
-		if fi.IsDir() {
-			err := os.RemoveAll(dbPath)
-			if err != nil {
-				return err
-			}
-		} else {
-			err := os.Remove(dbPath)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func CleanupBlockDB(cfg *config.Config) {
-	dbPath := blockDbPath(cfg.DbType, cfg)
-	err := removeBlockDB(dbPath)
-	if err != nil {
-		log.Error(err.Error())
-	}
-	meer.Cleanup(cfg)
-	amana.Cleanup(cfg)
-	err = shutdown.NewTracker(cfg.DataDir).Done()
-	if err != nil {
-		log.Error(err.Error())
-	}
-	log.Info("Finished cleanup")
 }

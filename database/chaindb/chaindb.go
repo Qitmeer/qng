@@ -10,6 +10,10 @@ import (
 	"sync/atomic"
 )
 
+var (
+	DBDirectoryName = "chaindata"
+)
+
 type ChainDB struct {
 	db ethdb.Database
 

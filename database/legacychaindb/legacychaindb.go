@@ -54,13 +54,6 @@ func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) 
 		}
 		return nil, nil
 	}
-
-	// Cleanup the block database
-	if cfg.Cleanup {
-		db.Close()
-		CleanupBlockDB(cfg)
-		return nil, nil
-	}
 	cdb := &LegacyChainDB{
 		cfg: cfg,
 		db:  db,

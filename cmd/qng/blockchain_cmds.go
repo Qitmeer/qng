@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/database/legacychaindb"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
@@ -421,7 +422,7 @@ func upgradeBlockChain(cfg *config.Config, db legacydb.DB, interrupt <-chan stru
 	if err != nil {
 		return err
 	}
-	legacychaindb.CleanupBlockDB(&newCfg)
+	database.Cleanup(&newCfg)
 	time.Sleep(time.Second * 2)
 
 	newdb, err := legacychaindb.LoadBlockDB(&newCfg)
@@ -436,7 +437,7 @@ func upgradeBlockChain(cfg *config.Config, db legacydb.DB, interrupt <-chan stru
 				log.Error(err.Error())
 			}
 			time.Sleep(time.Second * 2)
-			legacychaindb.CleanupBlockDB(&newCfg)
+			database.Cleanup(&newCfg)
 		}
 	}()
 	//
