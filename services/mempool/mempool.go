@@ -128,6 +128,10 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 			delete(mp.outpoints, txIn.PreviousOut)
 		}
 		delete(mp.pool, *txHash)
+		// stats daily tx count
+		if mp.LastUpdated().Format("2006-01-02") != time.Now().Format("2006-01-02") {
+			newDailyTxCount.Update(1)
+		}
 		atomic.StoreInt64(&mp.lastUpdated, roughtime.Now().Unix())
 		log.Trace(fmt.Sprintf("TxPool:remove tx %s", txHash))
 	}
@@ -219,6 +223,11 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 			mp.outpoints[txIn.PreviousOut] = tx
 		}
 	}
+	if mp.LastUpdated().Format("2006-01-02") == time.Now().Format("2006-01-02") {
+		newDailyTxCount.Inc(1)
+	} else {
+		newDailyTxCount.Update(1)
+	}
 
 	atomic.StoreInt64(&mp.lastUpdated, roughtime.Now().Unix())
 
@@ -234,7 +243,7 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 	}
 
 	mp.dirty.Store(true)
-	newTxCount.Inc(1)
+
 	return txD
 }
 
