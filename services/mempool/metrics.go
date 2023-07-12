@@ -13,4 +13,5 @@ var (
 	mempoolCheckTransactionInputs   = metrics.NewRegisteredTimer("mempool/maybeAcceptTransaction/checkTransactionInputs", nil)
 	mempoolCountSigOps              = metrics.NewRegisteredTimer("mempool/maybeAcceptTransaction/countSigOps", nil)
 	mempoolHaveTransaction          = metrics.NewRegisteredTimer("mempool/haveTransaction", nil)
+	newTxCount                      = metrics.NewRegisteredGauge("mempool/addtx", nil)
 )

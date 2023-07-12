@@ -234,7 +234,7 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 	}
 
 	mp.dirty.Store(true)
-
+	newTxCount.Update(1)
 	return txD
 }
 
