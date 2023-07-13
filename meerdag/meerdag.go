@@ -155,9 +155,6 @@ type ConsensusAlgorithm interface {
 	getMaxParents() int
 }
 
-// CalcWeight
-type CalcWeight func(ib IBlock, bi *BlueInfo) int64
-
 type GetBlockData func(*hash.Hash) IBlockData
 
 type CreateBlockState func(id uint64) model.BlockState
@@ -201,9 +198,6 @@ type MeerDAG struct {
 	// state lock
 	stateLock sync.RWMutex
 
-	//
-	calcWeight CalcWeight
-
 	getBlockData GetBlockData
 
 	// blocks per second
@@ -236,10 +230,9 @@ func (bd *MeerDAG) GetInstance() ConsensusAlgorithm {
 }
 
 // Initialize self, the function to be invoked at the beginning
-func (bd *MeerDAG) init(dagType string, calcWeight CalcWeight, blockRate float64, db legacydb.DB, getBlockData GetBlockData) ConsensusAlgorithm {
+func (bd *MeerDAG) init(dagType string, blockRate float64, db legacydb.DB, getBlockData GetBlockData) ConsensusAlgorithm {
 	bd.lastTime = time.Unix(roughtime.Now().Unix(), 0)
 	bd.commitOrder = map[uint]uint{}
-	bd.calcWeight = calcWeight
 	bd.getBlockData = getBlockData
 	bd.db = db
 	bd.commitBlock = NewIdSet()
@@ -1168,13 +1161,6 @@ func (bd *MeerDAG) GetBlockConcurrency(h *hash.Hash) (uint, error) {
 	return ib.(*PhantomBlock).GetBlueNum(), nil
 }
 
-func (bd *MeerDAG) UpdateWeight(ib IBlock) {
-	bd.stateLock.Lock()
-	defer bd.stateLock.Unlock()
-
-	bd.instance.(*Phantom).UpdateWeight(ib)
-}
-
 func (bd *MeerDAG) AddToCommit(block IBlock) {
 	bd.stateLock.Lock()
 	defer bd.stateLock.Unlock()
@@ -1438,7 +1424,7 @@ out:
 	log.Trace("MeerDAG handler done")
 }
 
-func New(dagType string, calcWeight CalcWeight, blockRate float64, db legacydb.DB, getBlockData GetBlockData, createBS CreateBlockState, createBSB CreateBlockStateFromBytes) *MeerDAG {
+func New(dagType string, blockRate float64, db legacydb.DB, getBlockData GetBlockData, createBS CreateBlockState, createBSB CreateBlockStateFromBytes) *MeerDAG {
 	createBlockState = createBS
 	createBlockStateFromBytes = createBSB
 	md := &MeerDAG{
@@ -1447,6 +1433,6 @@ func New(dagType string, calcWeight CalcWeight, blockRate float64, db legacydb.D
 		minCacheSize:   MinBlockPruneSize,
 		minBDCacheSize: MinBlockDataCache,
 	}
-	md.init(dagType, calcWeight, blockRate, db, getBlockData)
+	md.init(dagType, blockRate, db, getBlockData)
 	return md
 }

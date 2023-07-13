@@ -687,7 +687,6 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		if !nodeBlock.GetState().GetStatus().KnownInvalid() {
 			b.bd.ValidBlock(nodeBlock)
 		}
-		b.bd.UpdateWeight(nodeBlock)
 		er := b.updateBlockState(nodeBlock, block.GetBody())
 		if er != nil {
 			log.Error(er.Error())
@@ -1090,7 +1089,10 @@ func (b *BlockChain) Rebuild() error {
 		if !ib.GetState().GetStatus().KnownInvalid() {
 			b.bd.ValidBlock(ib)
 		}
-		b.bd.UpdateWeight(ib)
+		err = b.updateBlockState(ib, blockNode.GetBody())
+		if err != nil {
+			log.Error(err.Error())
+		}
 		err = b.bd.Commit()
 		if err != nil {
 			return err
@@ -1154,7 +1156,7 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
-	b.bd = meerdag.New(config.DAGType, b.CalcWeight,
+	b.bd = meerdag.New(config.DAGType,
 		1.0/float64(par.TargetTimePerBlock/time.Second),
 		b.db, b.getBlockData, state.CreateBlockState, state.CreateBlockStateFromBytes)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))

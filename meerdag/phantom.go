@@ -785,23 +785,6 @@ func (ph *Phantom) getMaxParents() int {
 	return types.MaxParentsPerBlock
 }
 
-func (ph *Phantom) UpdateWeight(ib IBlock) {
-	if ib.GetID() != GenesisId {
-		pb := ib.(*PhantomBlock)
-		tp := ph.getBlock(pb.GetMainParent())
-		pb.GetState().SetWeight(tp.GetState().GetWeight())
-
-		pb.GetState().SetWeight(pb.GetState().GetWeight() + uint64(ph.bd.calcWeight(pb, ph.bd.getBlueInfo(pb))))
-		if pb.GetBlueDiffAnticoneSize() > 0 {
-			for k := range pb.blueDiffAnticone.GetMap() {
-				bdpb := ph.getBlock(k)
-				pb.GetState().SetWeight(pb.GetState().GetWeight() + uint64(ph.bd.calcWeight(bdpb, ph.bd.getBlueInfo(bdpb))))
-			}
-		}
-		ph.bd.commitBlock.AddPair(ib.GetID(), ib)
-	}
-}
-
 func (ph *Phantom) CheckMainChainDB(maxDepth uint64) error {
 	depth := uint64(0)
 	var cur *PhantomBlock
