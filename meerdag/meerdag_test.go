@@ -189,7 +189,7 @@ func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
 		return nil
 	}
 
-	bd = New(dagType, CalcBlockWeight, -1, db, nil, createMockBlockState, createMockBlockStateFromBytes)
+	bd = New(dagType, -1, db, nil, createMockBlockState, createMockBlockStateFromBytes)
 	instance := bd.GetInstance()
 	tbMap = map[string]IBlock{}
 	for i := 0; i < blen; i++ {
@@ -351,15 +351,6 @@ func reverseBlockList(s []uint) []uint {
 		s[i], s[j] = s[j], s[i]
 	}
 	return s
-}
-
-func CalcBlockWeight(ib IBlock, bi *BlueInfo) int64 {
-	if ib.(*PhantomBlock).blueNum == 0 {
-		return 0
-	} else if ib.(*PhantomBlock).blueNum < 3 {
-		return 2
-	}
-	return 1
 }
 
 func loadBlockDB(cfg *config.Config) (legacydb.DB, error) {

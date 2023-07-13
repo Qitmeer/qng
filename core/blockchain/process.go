@@ -394,7 +394,6 @@ func (b *BlockChain) connectDagChain(ib meerdag.IBlock, block *BlockNode, newOrd
 			if !nodeBlock.GetState().GetStatus().KnownInvalid() {
 				b.bd.ValidBlock(nodeBlock)
 			}
-			b.bd.UpdateWeight(nodeBlock)
 			er := b.updateBlockState(nodeBlock, sb.GetBody())
 			if er != nil {
 				log.Error(er.Error())
@@ -769,6 +768,7 @@ func (b *BlockChain) updateBlockState(ib meerdag.IBlock, block *types.Serialized
 	if !ok {
 		return fmt.Errorf("block state is nill:%d %s", ib.GetID(), ib.GetHash().String())
 	}
+	b.UpdateWeight(ib)
 	prev := b.bd.GetBlockByOrder(ib.GetOrder() - 1)
 	if prev == nil {
 		return fmt.Errorf("No prev block:%d %s", ib.GetID(), ib.GetHash().String())
@@ -805,6 +805,23 @@ func (b *BlockChain) prepareEVMEnvironment(block meerdag.IBlock) error {
 		return err
 	}
 	return nil
+}
+
+func (b *BlockChain) UpdateWeight(ib meerdag.IBlock) {
+	if ib.GetID() != meerdag.GenesisId {
+		pb := ib.(*meerdag.PhantomBlock)
+		tp := b.bd.GetBlockById(pb.GetMainParent())
+		pb.GetState().SetWeight(tp.GetState().GetWeight())
+
+		pb.GetState().SetWeight(pb.GetState().GetWeight() + uint64(b.CalcWeight(pb, b.bd.GetBlueInfo(pb))))
+		if pb.GetBlueDiffAnticoneSize() > 0 {
+			for k := range pb.GetBlueDiffAnticone().GetMap() {
+				bdpb := b.bd.GetBlockById(k)
+				pb.GetState().SetWeight(pb.GetState().GetWeight() + uint64(b.CalcWeight(bdpb, b.bd.GetBlueInfo(bdpb))))
+			}
+		}
+		b.bd.AddToCommit(ib)
+	}
 }
 
 type processMsg struct {
