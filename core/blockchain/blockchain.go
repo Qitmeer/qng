@@ -20,6 +20,7 @@ import (
 	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
@@ -62,7 +63,7 @@ type BlockChain struct {
 	checkpointsByLayer map[uint64]*params.Checkpoint
 
 	db           legacydb.DB
-	dbInfo       *databaseInfo
+	dbInfo       *common.DatabaseInfo
 	timeSource   model.MedianTimeSource
 	events       *event.Feed
 	sigCache     *txscript.SigCache
@@ -167,8 +168,8 @@ func (b *BlockChain) Init() error {
 
 	//
 	log.Info(fmt.Sprintf("DAG Type:%s", b.bd.GetName()))
-	log.Info("Blockchain database version", "chain", b.dbInfo.version, "compression", b.dbInfo.compVer,
-		"index", b.dbInfo.bidxVer)
+	log.Info("Blockchain database version", "chain", b.dbInfo.Version(), "compression", b.dbInfo.CompVer(),
+		"index", b.dbInfo.BidxVer())
 
 	tips := b.bd.GetTipsList()
 	log.Info(fmt.Sprintf("Chain state:totaltx=%d tipsNum=%d mainOrder=%d total=%d", b.BestSnapshot().TotalTxns, len(tips), b.bd.GetMainChainTip().GetOrder(), b.bd.GetBlockTotal()))
@@ -190,48 +191,38 @@ func (b *BlockChain) initChainState() error {
 
 	// Determine the state of the database.
 	var isStateInitialized bool
-	err = b.db.View(func(dbTx legacydb.Tx) error {
-		// Fetch the database versioning information.
-		dbInfo, err := dbFetchDatabaseInfo(dbTx)
-		if err != nil {
-			return err
-		}
-
-		// The database bucket for the versioning information is missing.
-		if dbInfo == nil {
-			return nil
-		}
-
+	dbInfo, err := b.consensus.DatabaseContext().GetInfo()
+	if err != nil {
+		return err
+	}
+	// The database bucket for the versioning information is missing.
+	if dbInfo != nil {
 		// Don't allow downgrades of the blockchain database.
-		if dbInfo.version > currentDatabaseVersion {
+		if dbInfo.Version() > currentDatabaseVersion {
 			return fmt.Errorf("the current blockchain database is "+
 				"no longer compatible with this version of "+
-				"the software (%d > %d)", dbInfo.version,
+				"the software (%d > %d)", dbInfo.Version(),
 				currentDatabaseVersion)
 		}
 
 		// Don't allow downgrades of the database compression version.
-		if dbInfo.compVer > serialization.CurrentCompressionVersion {
+		if dbInfo.CompVer() > serialization.CurrentCompressionVersion {
 			return fmt.Errorf("the current database compression "+
 				"version is no longer compatible with this "+
 				"version of the software (%d > %d)",
-				dbInfo.compVer, serialization.CurrentCompressionVersion)
+				dbInfo.CompVer(), serialization.CurrentCompressionVersion)
 		}
 
 		// Don't allow downgrades of the block index.
-		if dbInfo.bidxVer > currentBlockIndexVersion {
+		if dbInfo.BidxVer() > currentBlockIndexVersion {
 			return fmt.Errorf("the current database block index "+
 				"version is no longer compatible with this "+
 				"version of the software (%d > %d)",
-				dbInfo.bidxVer, currentBlockIndexVersion)
+				dbInfo.BidxVer(), currentBlockIndexVersion)
 		}
 
 		b.dbInfo = dbInfo
 		isStateInitialized = true
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	// Initialize the database if it has not already been done.
@@ -335,27 +326,13 @@ func (b *BlockChain) createChainState() error {
 	b.TokenTipID = 0
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
-	err := b.db.Update(func(dbTx legacydb.Tx) error {
+	b.dbInfo = common.NewDatabaseInfo(currentDatabaseVersion, serialization.CurrentCompressionVersion, currentBlockIndexVersion, roughtime.Now())
+	err := b.consensus.DatabaseContext().PutInfo(b.dbInfo)
+	if err != nil {
+		return err
+	}
+	err = b.db.Update(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
-
-		// Create the bucket that houses information about the database's
-		// creation and version.
-		_, err := meta.CreateBucket(dbnamespace.BCDBInfoBucketName)
-		if err != nil {
-			return err
-		}
-
-		b.dbInfo = &databaseInfo{
-			version: currentDatabaseVersion,
-			compVer: serialization.CurrentCompressionVersion,
-			bidxVer: currentBlockIndexVersion,
-			created: roughtime.Now(),
-		}
-		err = dbPutDatabaseInfo(dbTx, b.dbInfo)
-		if err != nil {
-			return err
-		}
-
 		// Create the bucket that houses the spend journal data.
 		_, err = meta.CreateBucket(dbnamespace.SpendJournalBucketName)
 		if err != nil {
@@ -1140,7 +1117,7 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 	b := BlockChain{
 		consensus:          consensus,
 		checkpointsByLayer: checkpointsByLayer,
-		db:                 consensus.DatabaseContext(),
+		db:                 consensus.LegacyDB(),
 		params:             par,
 		timeSource:         consensus.MedianTimeSource(),
 		events:             consensus.Events(),

@@ -15,13 +15,13 @@ type Consensus interface {
 	Init() error
 	GenesisHash() *hash.Hash
 	Config() *config.Config
-	DatabaseContext() legacydb.DB
+	DatabaseContext() DataBase
+	LegacyDB() legacydb.DB //TODO: Will be deleted in the future
 	BlockChain() BlockChain
 	IndexManager() IndexManager
 	Events() *event.Feed
 	MedianTimeSource() MedianTimeSource
 	SigCache() *txscript.SigCache
-	InvalidTxIndexStore() InvalidTxIndexStore
 	Interrupt() <-chan struct{}
 	Params() *params.Params
 	Rebuild() error

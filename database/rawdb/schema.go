@@ -7,8 +7,25 @@ import (
 
 // The fields below define the low level database schema prefixing.
 var (
-	// databaseVersionKey tracks the current database version.
-	databaseVersionKey = []byte("DatabaseVersion")
+	// VersionKeyName is the name of the database key used to house
+	// the database version.  It is itself under the BCDBInfoBucketName
+	// bucket.
+	VersionKey = []byte("version")
+
+	// CompressionVersionKeyName is the name of the database key
+	// used to house the database compression version.  It is itself under
+	// the BCDBInfoBucketName bucket.
+	CompressionVersionKey = []byte("compver")
+
+	// BlockIndexVersionKeyName is the name of the database key
+	// used to house the database block index version.  It is itself under
+	// the BCDBInfoBucketName bucket.
+	BlockIndexVersionKey = []byte("bidxver")
+
+	// CreatedKeyName is the name of the database key used to house
+	// date the database was created.  It is itself under the
+	// BCDBInfoBucketName bucket.
+	CreatedKey = []byte("created")
 
 	// snapshotDisabledKey flags that the snapshot should not be maintained due to initial sync.
 	snapshotDisabledKey = []byte("SnapshotDisabled")

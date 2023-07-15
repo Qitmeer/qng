@@ -4,7 +4,6 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/consensus/store/invalid_tx_index"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/protocol"
@@ -19,11 +18,6 @@ import (
 	"sync"
 )
 
-const (
-	defaultPreallocateCaches = false
-	defaultCacheSize         = 10
-)
-
 type consensus struct {
 	lock                   sync.Mutex
 	databaseContext        model.DataBase
@@ -36,8 +30,6 @@ type consensus struct {
 	events event.Feed
 	// clock time service
 	mediantimeSource model.MedianTimeSource
-
-	invalidtxindexStore model.InvalidTxIndexStore
 
 	blockchain   model.BlockChain
 	indexManager model.IndexManager
@@ -54,14 +46,6 @@ func (s *consensus) Init() error {
 		defer onEnd()
 	}
 
-	if s.cfg.InvalidTxIndex {
-		invalidtxindexStore, err := invalid_tx_index.New(s.databaseContext.(*legacychaindb.LegacyChainDB).DB(), defaultCacheSize, defaultPreallocateCaches)
-		if err != nil {
-			return err
-		}
-		s.invalidtxindexStore = invalidtxindexStore
-	}
-	//
 	s.indexManager = index.NewManager(index.ToConfig(s.cfg), s)
 
 	// Create a new block chain instance with the appropriate configuration.
@@ -83,16 +67,17 @@ func (s *consensus) Init() error {
 	return blockchain.Init()
 }
 
-func (s *consensus) DatabaseContext() legacydb.DB {
+func (s *consensus) DatabaseContext() model.DataBase {
+	return s.databaseContext
+}
+
+// TODO: Will be deleted in the future, will be completely replaced by DatabaseContext in the future
+func (s *consensus) LegacyDB() legacydb.DB {
 	return s.databaseContext.(*legacychaindb.LegacyChainDB).DB()
 }
 
 func (s *consensus) Config() *config.Config {
 	return s.cfg
-}
-
-func (s *consensus) InvalidTxIndexStore() model.InvalidTxIndexStore {
-	return s.invalidtxindexStore
 }
 
 func (s *consensus) BlockChain() model.BlockChain {

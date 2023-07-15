@@ -325,8 +325,14 @@ func ReadChainMetadata(db ethdb.KeyValueStore) [][]string {
 		}
 		return fmt.Sprintf("%d (%#x)", *val, *val)
 	}
+	pp32 := func(val *uint32) string {
+		if val == nil {
+			return "<nil>"
+		}
+		return fmt.Sprintf("%d (%#x)", *val, *val)
+	}
 	data := [][]string{
-		{"databaseVersion", pp(ReadDatabaseVersion(db))},
+		{"databaseVersion", pp32(ReadDatabaseVersion(db))},
 		{"len(snapshotSyncStatus)", fmt.Sprintf("%d bytes", len(ReadSnapshotSyncStatus(db)))},
 		{"snapshotDisabled", fmt.Sprintf("%v", ReadSnapshotDisabled(db))},
 		{"snapshotJournal", fmt.Sprintf("%d bytes", len(ReadSnapshotJournal(db)))},

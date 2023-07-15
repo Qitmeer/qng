@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
+	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/legacydb"
 	l "github.com/Qitmeer/qng/log"
 )
@@ -15,19 +16,19 @@ func (b *BlockChain) upgradeDB(interrupt <-chan struct{}) error {
 	version9 := uint32(9)
 	version10 := uint32(10)
 	version11 := uint32(11)
-	if b.dbInfo.version == currentDatabaseVersion {
+	if b.dbInfo.Version() == currentDatabaseVersion {
 		return nil
-	} else if b.dbInfo.version == version8 ||
-		b.dbInfo.version == version9 ||
-		b.dbInfo.version == version10 ||
-		b.dbInfo.version == version11 {
-		return fmt.Errorf("Your database version(%d) is too old and can only use old qng (release-v1.0.20)\n", b.dbInfo.version)
+	} else if b.dbInfo.Version() == version8 ||
+		b.dbInfo.Version() == version9 ||
+		b.dbInfo.Version() == version10 ||
+		b.dbInfo.Version() == version11 {
+		return fmt.Errorf("Your database version(%d) is too old and can only use old qng (release-v1.0.20)\n", b.dbInfo.Version())
 	}
 	//
 	if onEnd := l.LogAndMeasureExecutionTime(log, "BlockChain.upgradeDB"); onEnd != nil {
 		defer onEnd()
 	}
-	log.Info(fmt.Sprintf("Update cur db to new version: version(%d) -> version(%d) ...", b.dbInfo.version, currentDatabaseVersion))
+	log.Info(fmt.Sprintf("Update cur db to new version: version(%d) -> version(%d) ...", b.dbInfo.Version(), currentDatabaseVersion))
 
 	bidxStart := roughtime.Now()
 
@@ -51,20 +52,8 @@ func (b *BlockChain) upgradeDB(interrupt <-chan struct{}) error {
 		return err
 	}
 
-	err = b.db.Update(func(dbTx legacydb.Tx) error {
-		// save
-		b.dbInfo = &databaseInfo{
-			version: currentDatabaseVersion,
-			compVer: serialization.CurrentCompressionVersion,
-			bidxVer: currentBlockIndexVersion,
-			created: roughtime.Now(),
-		}
-		e := dbPutDatabaseInfo(dbTx, b.dbInfo)
-		if e != nil {
-			return e
-		}
-		return nil
-	})
+	b.dbInfo = common.NewDatabaseInfo(currentDatabaseVersion, serialization.CurrentCompressionVersion, currentBlockIndexVersion, roughtime.Now())
+	err = b.consensus.DatabaseContext().PutInfo(b.dbInfo)
 	if err != nil {
 		return fmt.Errorf("Upgrade failed:%s. You can cleanup your block data base by '--cleanup'.\n", err)
 	}

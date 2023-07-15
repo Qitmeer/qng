@@ -3,6 +3,7 @@ package rawdb
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -62,7 +63,9 @@ func ReadBlockID(db ethdb.Reader, hash *hash.Hash) *uint64 {
 }
 
 func WriteBlockID(db ethdb.KeyValueWriter, hash *hash.Hash, id uint64) {
-	if err := db.Put(blockIDKey(hash), hash.Bytes()); err != nil {
+	var serializedID [4]byte
+	binary.BigEndian.PutUint64(serializedID[:], id)
+	if err := db.Put(blockIDKey(hash), serializedID[:]); err != nil {
 		log.Error("Failed to store block id to hash mapping", "err", err)
 	}
 }
@@ -71,6 +74,17 @@ func DeleteBlockID(db ethdb.KeyValueWriter, hash *hash.Hash) {
 	if err := db.Delete(blockIDKey(hash)); err != nil {
 		log.Error("Failed to delete block id to hash mapping", "err", err)
 	}
+}
+
+func ReadBlockHashByID(db ethdb.Reader, id uint64) (*hash.Hash, error) {
+	data := ReadDAGBlockBaw(db, id)
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if len(data) < 4+hash.HashSize {
+		return nil, fmt.Errorf("block(%d) data error", id)
+	}
+	return hash.NewHash(data[4 : hash.HashSize+4])
 }
 
 // ----

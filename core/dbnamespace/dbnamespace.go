@@ -16,26 +16,6 @@ var (
 	// global versioning and date information for the blockchain database.
 	BCDBInfoBucketName = []byte("dbinfo")
 
-	// BCDBInfoVersionKeyName is the name of the database key used to house
-	// the database version.  It is itself under the BCDBInfoBucketName
-	// bucket.
-	BCDBInfoVersionKeyName = []byte("version")
-
-	// BCDBInfoCompressionVersionKeyName is the name of the database key
-	// used to house the database compression version.  It is itself under
-	// the BCDBInfoBucketName bucket.
-	BCDBInfoCompressionVersionKeyName = []byte("compver")
-
-	// BCDBInfoBlockIndexVersionKeyName is the name of the database key
-	// used to house the database block index version.  It is itself under
-	// the BCDBInfoBucketName bucket.
-	BCDBInfoBlockIndexVersionKeyName = []byte("bidxver")
-
-	// BCDBInfoCreatedKeyName is the name of the database key used to house
-	// date the database was created.  It is itself under the
-	// BCDBInfoBucketName bucket.
-	BCDBInfoCreatedKeyName = []byte("created")
-
 	// ChainStateKeyName is the name of the db key used to store the best
 	// chain state.
 	ChainStateKeyName = []byte("chainstate")

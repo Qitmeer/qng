@@ -40,11 +40,11 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 	// Create the transaction and address indexes if needed.
 	var indexers []Indexer
 	if cfg.TxIndex {
-		txIndex := NewTxIndex(consensus.DatabaseContext())
+		txIndex := NewTxIndex(consensus.LegacyDB())
 		indexers = append(indexers, txIndex)
 	}
 	if cfg.AddrIndex {
-		addrIndex := NewAddrIndex(consensus.DatabaseContext())
+		addrIndex := NewAddrIndex(consensus.LegacyDB())
 		indexers = append(indexers, addrIndex)
 	}
 	for _, indexer := range indexers {
@@ -52,7 +52,7 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 	}
 	im := &Manager{
 		cfg:            cfg,
-		db:             consensus.DatabaseContext(),
+		db:             consensus.LegacyDB(),
 		enabledIndexes: indexers,
 		consensus:      consensus,
 	}
@@ -862,10 +862,6 @@ func dropIndex(db legacydb.DB, idxKey []byte, idxName string, interrupt <-chan s
 	// Call extra index specific deinitialization for the transaction index.
 	if idxName == txIndexName {
 		err = dropBlockIDIndex(db)
-		if err != nil {
-			return err
-		}
-		err = dropOldInvalidTx(db)
 		if err != nil {
 			return err
 		}

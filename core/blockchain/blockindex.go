@@ -52,6 +52,10 @@ func (b *BlockChain) GetBlock(h *hash.Hash) meerdag.IBlock {
 	return b.bd.GetBlock(h)
 }
 
+func (b *BlockChain) GetBlockByOrder(order uint64) model.Block {
+	return b.bd.GetBlockByOrder(uint(order))
+}
+
 // BlockOrderByHash returns the order of the block with the given hash in the
 // chain.
 //

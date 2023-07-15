@@ -40,6 +40,42 @@ func ReadBody(db ethdb.Reader, hash *hash.Hash) *types.SerializedBlock {
 	return block
 }
 
+func ReadBodyRawByID(db ethdb.Reader, id uint64) []byte {
+	var data []byte
+
+	db.ReadAncients(func(reader ethdb.AncientReaderOp) error {
+		data, _ = reader.Ancient(ChainFreezerBlockTable, id)
+		return nil
+	})
+	if len(data) > 0 {
+		return data
+	}
+	bh, err := ReadBlockHashByID(db, id)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	if bh == nil {
+		return nil
+	}
+
+	data, _ = db.Get(blockKey(bh))
+	return data
+}
+
+func ReadBodyByID(db ethdb.Reader, id uint64) *types.SerializedBlock {
+	data := ReadBodyRawByID(db, id)
+	if len(data) == 0 {
+		return nil
+	}
+	block, err := types.NewBlockFromBytes(data)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return block
+}
+
 func WriteBody(db ethdb.KeyValueWriter, block *types.SerializedBlock) error {
 	data, err := block.Bytes()
 	if err != nil {

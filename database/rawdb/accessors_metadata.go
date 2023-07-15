@@ -7,10 +7,10 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func ReadDatabaseVersion(db ethdb.KeyValueReader) *uint64 {
-	var version uint64
+func ReadDatabaseVersion(db ethdb.KeyValueReader) *uint32 {
+	var version uint32
 
-	enc, _ := db.Get(databaseVersionKey)
+	enc, _ := db.Get(VersionKey)
 	if len(enc) == 0 {
 		return nil
 	}
@@ -21,15 +21,99 @@ func ReadDatabaseVersion(db ethdb.KeyValueReader) *uint64 {
 	return &version
 }
 
-func WriteDatabaseVersion(db ethdb.KeyValueWriter, version uint64) error {
+func WriteDatabaseVersion(db ethdb.KeyValueWriter, version uint32) error {
 	enc, err := rlp.EncodeToBytes(version)
 	if err != nil {
 		log.Error("Failed to encode database version", "err", err)
 		return err
 	}
-	err = db.Put(databaseVersionKey, enc)
+	err = db.Put(VersionKey, enc)
 	if err != nil {
 		log.Error("Failed to store the database version", "err", err)
+		return err
+	}
+	return nil
+}
+
+func ReadDatabaseCompressionVersion(db ethdb.KeyValueReader) *uint32 {
+	var version uint32
+
+	enc, _ := db.Get(CompressionVersionKey)
+	if len(enc) == 0 {
+		return nil
+	}
+	if err := rlp.DecodeBytes(enc, &version); err != nil {
+		return nil
+	}
+
+	return &version
+}
+
+func WriteDatabaseCompressionVersion(db ethdb.KeyValueWriter, version uint32) error {
+	enc, err := rlp.EncodeToBytes(version)
+	if err != nil {
+		log.Error("Failed to encode database compression version", "err", err)
+		return err
+	}
+	err = db.Put(CompressionVersionKey, enc)
+	if err != nil {
+		log.Error("Failed to store the database compression version", "err", err)
+		return err
+	}
+	return nil
+}
+
+func ReadDatabaseBlockIndexVersion(db ethdb.KeyValueReader) *uint32 {
+	var version uint32
+
+	enc, _ := db.Get(BlockIndexVersionKey)
+	if len(enc) == 0 {
+		return nil
+	}
+	if err := rlp.DecodeBytes(enc, &version); err != nil {
+		return nil
+	}
+
+	return &version
+}
+
+func WriteDatabaseBlockIndexVersion(db ethdb.KeyValueWriter, version uint32) error {
+	enc, err := rlp.EncodeToBytes(version)
+	if err != nil {
+		log.Error("Failed to encode database block index version", "err", err)
+		return err
+	}
+	err = db.Put(BlockIndexVersionKey, enc)
+	if err != nil {
+		log.Error("Failed to store the database block index version", "err", err)
+		return err
+	}
+	return nil
+}
+
+func ReadDatabaseCreate(db ethdb.KeyValueReader) *time.Time {
+	var create int64
+
+	enc, _ := db.Get(CreatedKey)
+	if len(enc) == 0 {
+		return nil
+	}
+	if err := rlp.DecodeBytes(enc, &create); err != nil {
+		return nil
+	}
+	ct := time.Unix(create, 0)
+	return &ct
+}
+
+func WriteDatabaseCreate(db ethdb.KeyValueWriter, create time.Time) error {
+	enc, err := rlp.EncodeToBytes(create.Unix())
+	if err != nil {
+		log.Error("Failed to encode database create time", "err", err)
+		return err
+	}
+	err = db.Put(CreatedKey, enc)
+	if err != nil {
+		log.Error("Failed to store the database create time", "err", err)
 		return err
 	}
 	return nil
