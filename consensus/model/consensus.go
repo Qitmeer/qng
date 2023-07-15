@@ -16,12 +16,12 @@ type Consensus interface {
 	GenesisHash() *hash.Hash
 	Config() *config.Config
 	DatabaseContext() legacydb.DB
+	LegacyDB() legacydb.DB
 	BlockChain() BlockChain
 	IndexManager() IndexManager
 	Events() *event.Feed
 	MedianTimeSource() MedianTimeSource
 	SigCache() *txscript.SigCache
-	InvalidTxIndexStore() InvalidTxIndexStore
 	Interrupt() <-chan struct{}
 	Params() *params.Params
 	Rebuild() error

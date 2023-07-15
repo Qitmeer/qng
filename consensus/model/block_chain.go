@@ -18,4 +18,6 @@ type BlockChain interface {
 	MeerChain() MeerChain
 	Start() error
 	Stop() error
+	GetBlockByOrder(order uint64) Block
+	FetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error)
 }
