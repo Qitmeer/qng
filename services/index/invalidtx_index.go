@@ -113,7 +113,7 @@ func (idx *InvalidTxIndex) ConnectBlock(bid uint64, block *types.SerializedBlock
 	}
 	stagingArea := model.NewStagingArea()
 	store.Stage(stagingArea, bid, block)
-	return staging.CommitAllChanges(idx.consensus.DatabaseContext(), stagingArea)
+	return staging.CommitAllChanges(idx.consensus.LegacyDB(), stagingArea)
 }
 
 func (idx *InvalidTxIndex) DisconnectBlock(bid uint64, block *types.SerializedBlock) error {
@@ -123,7 +123,7 @@ func (idx *InvalidTxIndex) DisconnectBlock(bid uint64, block *types.SerializedBl
 	}
 	stagingArea := model.NewStagingArea()
 	store.Delete(stagingArea, bid, block)
-	return staging.CommitAllChanges(idx.consensus.DatabaseContext(), stagingArea)
+	return staging.CommitAllChanges(idx.consensus.LegacyDB(), stagingArea)
 }
 
 func (idx *InvalidTxIndex) UpdateMainTip(bh *hash.Hash, order uint64) error {
@@ -133,7 +133,7 @@ func (idx *InvalidTxIndex) UpdateMainTip(bh *hash.Hash, order uint64) error {
 	}
 	stagingArea := model.NewStagingArea()
 	store.StageTip(stagingArea, bh, order)
-	return staging.CommitAllChanges(idx.consensus.DatabaseContext(), stagingArea)
+	return staging.CommitAllChanges(idx.consensus.LegacyDB(), stagingArea)
 }
 
 func (idx *InvalidTxIndex) Get(txid *hash.Hash) (*types.Transaction, error) {

@@ -241,7 +241,7 @@ func NewTxManager(consensus model.Consensus, ntmgr model.Notify) (*TxManager, er
 		indexManager: consensus.IndexManager().(*index.Manager),
 		txMemPool:    txMemPool,
 		ntmgr:        ntmgr,
-		db:           consensus.DatabaseContext(),
+		db:           consensus.LegacyDB(),
 		invalidTx:    invalidTx,
 		enableFeeEst: cfg.Estimatefee}
 	consensus.BlockChain().(*blockchain.BlockChain).Subscribe(tm.handleNotifyMsg)

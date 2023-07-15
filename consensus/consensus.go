@@ -67,10 +67,11 @@ func (s *consensus) Init() error {
 	return blockchain.Init()
 }
 
-func (s *consensus) DatabaseContext() legacydb.DB {
-	return s.databaseContext.(*legacychaindb.LegacyChainDB).DB()
+func (s *consensus) DatabaseContext() model.DataBase {
+	return s.databaseContext
 }
 
+// TODO: Will be deleted in the future, will be completely replaced by DatabaseContext in the future
 func (s *consensus) LegacyDB() legacydb.DB {
 	return s.databaseContext.(*legacychaindb.LegacyChainDB).DB()
 }

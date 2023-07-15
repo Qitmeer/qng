@@ -15,8 +15,8 @@ type Consensus interface {
 	Init() error
 	GenesisHash() *hash.Hash
 	Config() *config.Config
-	DatabaseContext() legacydb.DB
-	LegacyDB() legacydb.DB
+	DatabaseContext() DataBase
+	LegacyDB() legacydb.DB //TODO: Will be deleted in the future
 	BlockChain() BlockChain
 	IndexManager() IndexManager
 	Events() *event.Feed
