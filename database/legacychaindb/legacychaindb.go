@@ -101,6 +101,33 @@ func (cdb *LegacyChainDB) Rebuild(mgr model.IndexManager) error {
 	return nil
 }
 
+func (cdb *LegacyChainDB) GetSpendJournal(bh *hash.Hash) ([]byte, error) {
+	var data []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
+		data = bucket.Get(bh[:])
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func (cdb *LegacyChainDB) PutSpendJournal(bh *hash.Hash, data []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
+		return bucket.Put(bh[:], data)
+	})
+}
+
+func (cdb *LegacyChainDB) DeleteSpendJournal(bh *hash.Hash) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
+		return bucket.Delete(bh[:])
+	})
+}
+
 func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) {
 	// Load the block database.
 	db, err := LoadBlockDB(cfg)

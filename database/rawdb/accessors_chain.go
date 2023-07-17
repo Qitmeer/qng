@@ -212,3 +212,27 @@ func DeleteBlock(db ethdb.KeyValueWriter, hash *hash.Hash) {
 	DeleteHeader(db, hash)
 	DeleteBody(db, hash)
 }
+
+// stxo
+
+func ReadSpendJournal(db ethdb.Reader, hash *hash.Hash) []byte {
+	data, err := db.Get(spendJournalKey(hash))
+	if len(data) == 0 {
+		log.Error(err.Error())
+		return nil
+	}
+	return data
+}
+
+func WriteSpendJournal(db ethdb.KeyValueWriter, hash *hash.Hash, data []byte) error {
+	if len(data) <= 0 {
+		return nil
+	}
+	return db.Put(spendJournalKey(hash), data)
+}
+
+func DeleteSpendJournal(db ethdb.KeyValueWriter, hash *hash.Hash) {
+	if err := db.Delete(spendJournalKey(hash)); err != nil {
+		log.Crit("Failed to delete hash to Spend Journal mapping", "err", err)
+	}
+}

@@ -578,11 +578,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 
 			// Load all of the spent txos for the block from the spend
 			// journal.
-
-			err = b.db.View(func(dbTx legacydb.Tx) error {
-				stxos, err = utxo.DBFetchSpendJournalEntry(dbTx, block)
-				return err
-			})
+			stxos, err = utxo.DBFetchSpendJournalEntry(b.consensus.DatabaseContext(), block)
 			if err != nil {
 				return err
 			}
@@ -713,13 +709,7 @@ func (b *BlockChain) FetchSpendJournal(targetBlock *types.SerializedBlock) ([]ut
 }
 
 func (b *BlockChain) fetchSpendJournal(targetBlock *types.SerializedBlock) ([]utxo.SpentTxOut, error) {
-	var spendEntries []utxo.SpentTxOut
-	err := b.db.View(func(dbTx legacydb.Tx) error {
-		var err error
-
-		spendEntries, err = utxo.DBFetchSpendJournalEntry(dbTx, targetBlock)
-		return err
-	})
+	spendEntries, err := utxo.DBFetchSpendJournalEntry(b.consensus.DatabaseContext(), targetBlock)
 	if err != nil {
 		return nil, err
 	}

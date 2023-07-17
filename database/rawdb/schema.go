@@ -52,8 +52,9 @@ var (
 	uncleanShutdownKey = []byte("Unclean-shutdown") // config prefix for the db
 
 	// base
-	headerPrefix = []byte("h") // headerPrefix + hash -> header
-	blockPrefix  = []byte("b") // blockPrefix + hash -> block
+	headerPrefix       = []byte("h") // headerPrefix + hash -> header
+	blockPrefix        = []byte("b") // blockPrefix + hash -> block
+	spendJournalPrefix = []byte("j") // spendJournalPrefix + hash -> SpentTxOuts data
 	// dag
 	dagBlockPrefix = []byte("d") // dagBlockPrefix + id (uint64 big endian) -> dag block
 	blockIDPrefix  = []byte("i") // block hash -> block id.
@@ -102,4 +103,9 @@ func txLookupKey(hash *hash.Hash) []byte {
 
 func blockOrderKey(order uint64) []byte {
 	return append(SnapshotBlockOrderPrefix, encodeBlockID(order)...)
+}
+
+// spendJournalKey = spendJournalPrefix + hash
+func spendJournalKey(hash *hash.Hash) []byte {
+	return append(spendJournalPrefix, hash.Bytes()...)
 }

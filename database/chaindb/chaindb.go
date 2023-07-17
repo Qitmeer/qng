@@ -2,6 +2,7 @@ package chaindb
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/database/rawdb"
@@ -131,6 +132,19 @@ func (cdb *ChainDB) ResolveAncient(name string, ancient string) string {
 
 func (cdb *ChainDB) Rebuild(mgr model.IndexManager) error {
 	return fmt.Errorf("No support Rebuild:%s", cdb.Name())
+}
+
+func (cdb *ChainDB) GetSpendJournal(bh *hash.Hash) ([]byte, error) {
+	return rawdb.ReadSpendJournal(cdb.db, bh), nil
+}
+
+func (cdb *ChainDB) PutSpendJournal(bh *hash.Hash, data []byte) error {
+	return rawdb.WriteSpendJournal(cdb.db, bh, data)
+}
+
+func (cdb *ChainDB) DeleteSpendJournal(bh *hash.Hash) error {
+	rawdb.DeleteSpendJournal(cdb.db, bh)
+	return nil
 }
 
 func New(cfg *config.Config) (*ChainDB, error) {
