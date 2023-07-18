@@ -335,21 +335,16 @@ func (b *BlockChain) createChainState() error {
 	if err != nil {
 		return err
 	}
+	initTS := token.BuildGenesisTokenState()
+	err = initTS.Commit()
+	if err != nil {
+		return err
+	}
+	err = token.DBPutTokenState(b.consensus.DatabaseContext(), ib.GetID(), initTS)
+	if err != nil {
+		return err
+	}
 	err = b.db.Update(func(dbTx legacydb.Tx) error {
-		meta := dbTx.Metadata()
-		// Create the bucket which house the token state
-		if _, err := meta.CreateBucket(dbnamespace.TokenBucketName); err != nil {
-			return err
-		}
-		initTS := token.BuildGenesisTokenState()
-		err = initTS.Commit()
-		if err != nil {
-			return err
-		}
-		err = token.DBPutTokenState(dbTx, uint32(ib.GetID()), initTS)
-		if err != nil {
-			return err
-		}
 		// Store the current best chain state into the database.
 		err = dbPutBestState(dbTx, b.stateSnapshot, pow.CalcWork(header.Difficulty, header.Pow.GetPowType()))
 		if err != nil {
@@ -964,13 +959,7 @@ func (b *BlockChain) Rebuild() error {
 	if gib == nil {
 		return fmt.Errorf("No genesis block")
 	}
-	err = b.db.Update(func(tx legacydb.Tx) error {
-		err = token.DBPutTokenState(tx, uint32(gib.GetID()), initTS)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = token.DBPutTokenState(b.consensus.DatabaseContext(), gib.GetID(), initTS)
 	if err != nil {
 		return err
 	}

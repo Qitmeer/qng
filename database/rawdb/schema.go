@@ -56,6 +56,7 @@ var (
 	blockPrefix        = []byte("b") // blockPrefix + hash -> block
 	spendJournalPrefix = []byte("j") // spendJournalPrefix + hash -> SpentTxOuts data
 	utxoPrefix         = []byte("u") // utxoPrefix + outpoint data -> UtxoEntry data
+	tokenStatePrefix   = []byte("t") // tokenStatePrefix + id (uint64 big endian) -> tokenState data
 	// dag
 	dagBlockPrefix = []byte("d") // dagBlockPrefix + id (uint64 big endian) -> dag block
 	blockIDPrefix  = []byte("i") // block hash -> block id.
@@ -114,4 +115,9 @@ func spendJournalKey(hash *hash.Hash) []byte {
 // utxoKey = utxoPrefix + outpoint data
 func utxoKey(opd []byte) []byte {
 	return append(utxoPrefix, opd...)
+}
+
+// spendJournalKey = tokenStatePrefix + hash
+func tokenStateKey(id uint64) []byte {
+	return append(tokenStatePrefix, encodeBlockID(id)...)
 }

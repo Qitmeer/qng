@@ -164,6 +164,19 @@ func (cdb *ChainDB) DeleteUtxo(key []byte) error {
 	return nil
 }
 
+func (cdb *ChainDB) GetTokenState(blockID uint) ([]byte, error) {
+	return rawdb.ReadTokenState(cdb.db, uint64(blockID)), nil
+}
+
+func (cdb *ChainDB) PutTokenState(blockID uint, data []byte) error {
+	return rawdb.WriteTokenState(cdb.db, uint64(blockID), data)
+}
+
+func (cdb *ChainDB) DeleteTokenState(blockID uint) error {
+	rawdb.DeleteTokenState(cdb.db, uint64(blockID))
+	return nil
+}
+
 func New(cfg *config.Config) (*ChainDB, error) {
 	cdb := &ChainDB{
 		cfg:       cfg,

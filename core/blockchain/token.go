@@ -7,7 +7,6 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/meerdag"
 )
 
@@ -125,9 +124,7 @@ func (b *BlockChain) updateTokenState(node meerdag.IBlock, block *types.Serializ
 		if uint32(node.GetID()) == b.TokenTipID {
 			state := b.GetTokenState(b.TokenTipID)
 			if state != nil {
-				err := b.db.Update(func(dbTx legacydb.Tx) error {
-					return token.DBRemoveTokenState(dbTx, uint32(node.GetID()))
-				})
+				err := token.DBRemoveTokenState(b.consensus.DatabaseContext(), node.GetID())
 				if err != nil {
 					return err
 				}
@@ -168,9 +165,7 @@ func (b *BlockChain) updateTokenState(node meerdag.IBlock, block *types.Serializ
 		return err
 	}
 
-	err = b.db.Update(func(dbTx legacydb.Tx) error {
-		return token.DBPutTokenState(dbTx, uint32(node.GetID()), state)
-	})
+	err = token.DBPutTokenState(b.consensus.DatabaseContext(), node.GetID(), state)
 	if err != nil {
 		return err
 	}
@@ -179,15 +174,7 @@ func (b *BlockChain) updateTokenState(node meerdag.IBlock, block *types.Serializ
 }
 
 func (b *BlockChain) GetTokenState(bid uint32) *token.TokenState {
-	var state *token.TokenState
-	err := b.db.View(func(dbTx legacydb.Tx) error {
-		ts, err := token.DBFetchTokenState(dbTx, bid)
-		if err != nil {
-			return err
-		}
-		state = ts
-		return nil
-	})
+	state, err := token.DBFetchTokenState(b.consensus.DatabaseContext(), uint(bid))
 	if err != nil {
 		log.Error(err.Error())
 		return nil

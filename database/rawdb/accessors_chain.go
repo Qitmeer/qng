@@ -260,3 +260,27 @@ func DeleteUtxo(db ethdb.KeyValueWriter, opd []byte) {
 		log.Crit("Failed to delete hash to utxo mapping", "err", err)
 	}
 }
+
+// tokenState
+
+func ReadTokenState(db ethdb.Reader, id uint64) []byte {
+	data, err := db.Get(tokenStateKey(id))
+	if len(data) == 0 {
+		log.Error(err.Error())
+		return nil
+	}
+	return data
+}
+
+func WriteTokenState(db ethdb.KeyValueWriter, id uint64, data []byte) error {
+	if len(data) <= 0 {
+		return nil
+	}
+	return db.Put(tokenStateKey(id), data)
+}
+
+func DeleteTokenState(db ethdb.KeyValueWriter, id uint64) {
+	if err := db.Delete(tokenStateKey(id)); err != nil {
+		log.Crit("Failed to delete hash to token state mapping", "err", err)
+	}
+}
