@@ -445,27 +445,17 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, vie
 		}
 
 		// Atomically insert info into the database.
-		err = b.db.Update(func(dbTx legacydb.Tx) error {
-			// Update the utxo set using the state of the utxo view.  This
-			// entails removing all of the utxos spent and adding the new
-			// ones created by the block.
-			err := b.dbPutUtxoView(dbTx, view)
-			if err != nil {
-				return err
-			}
-
-			// Update the transaction spend journal by adding a record for
-			// the block that contains all txos spent by it.
-			err = utxo.DBPutSpendJournalEntry(dbTx, block.Hash(), stxos)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+		// Update the utxo set using the state of the utxo view.  This
+		// entails removing all of the utxos spent and adding the new
+		// ones created by the block.
+		err = b.dbPutUtxoView(view)
 		if err != nil {
 			return err
 		}
-
+		err = utxo.DBPutSpendJournalEntry(b.consensus.DatabaseContext(), block.Hash(), stxos)
+		if err != nil {
+			return err
+		}
 		// Allow the index manager to call each of the currently active
 		// optional indexes with the block being connected so they can
 		// update themselves accordingly.
@@ -503,22 +493,14 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, vie
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, view *utxo.UtxoViewpoint, stxos []utxo.SpentTxOut) error {
 	// Calculate the exact subsidy produced by adding the block.
-	err := b.db.Update(func(dbTx legacydb.Tx) error {
-		// Update the utxo set using the state of the utxo view.  This
-		// entails restoring all of the utxos spent and removing the new
-		// ones created by the block.
-		err := b.dbPutUtxoView(dbTx, view)
-		if err != nil {
-			return err
-		}
-		// Update the transaction spend journal by removing the record
-		// that contains all txos spent by the block .
-		err = utxo.DBRemoveSpendJournalEntry(dbTx, block.Hash())
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	// Update the utxo set using the state of the utxo view.  This
+	// entails restoring all of the utxos spent and removing the new
+	// ones created by the block.
+	err := b.dbPutUtxoView(view)
+	if err != nil {
+		return err
+	}
+	err = utxo.DBRemoveSpendJournalEntry(b.consensus.DatabaseContext(), block.Hash())
 	if err != nil {
 		return err
 	}

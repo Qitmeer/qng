@@ -1,6 +1,7 @@
 package legacychaindb
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
@@ -21,6 +22,32 @@ type LegacyChainDB struct {
 
 func (cdb *LegacyChainDB) Name() string {
 	return "Legacy Chain DB"
+}
+
+func (cdb *LegacyChainDB) Init() error {
+	var err error
+	err = cdb.db.Update(func(dbTx legacydb.Tx) error {
+		meta := dbTx.Metadata()
+		// Create the bucket that houses the spend journal data.
+		_, err = meta.CreateBucket(dbnamespace.SpendJournalBucketName)
+		if err != nil {
+			return err
+		}
+		// Create the bucket that houses the utxo set.  Note that the
+		// genesis block coinbase transaction is intentionally not
+		// inserted here since it is not spendable by consensus rules.
+		_, err = meta.CreateBucket(dbnamespace.UtxoSetBucketName)
+		if err != nil {
+			return err
+		}
+		// Create the bucket which house the token state
+		_, err = meta.CreateBucket(dbnamespace.TokenBucketName)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
 }
 
 func (cdb *LegacyChainDB) Close() {
@@ -101,6 +128,94 @@ func (cdb *LegacyChainDB) Rebuild(mgr model.IndexManager) error {
 	return nil
 }
 
+func (cdb *LegacyChainDB) GetSpendJournal(bh *hash.Hash) ([]byte, error) {
+	var data []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
+		data = bucket.Get(bh[:])
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func (cdb *LegacyChainDB) PutSpendJournal(bh *hash.Hash, data []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
+		return bucket.Put(bh[:], data)
+	})
+}
+
+func (cdb *LegacyChainDB) DeleteSpendJournal(bh *hash.Hash) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
+		return bucket.Delete(bh[:])
+	})
+}
+
+func (cdb *LegacyChainDB) GetUtxo(key []byte) ([]byte, error) {
+	var data []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.UtxoSetBucketName)
+		data = bucket.Get(key)
+		return nil
+	})
+	return data, err
+}
+
+func (cdb *LegacyChainDB) PutUtxo(key []byte, data []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.UtxoSetBucketName)
+		return bucket.Put(key, data)
+	})
+}
+
+func (cdb *LegacyChainDB) DeleteUtxo(key []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.UtxoSetBucketName)
+		return bucket.Delete(key)
+	})
+}
+
+func (cdb *LegacyChainDB) GetTokenState(blockID uint) ([]byte, error) {
+	var data []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.TokenBucketName)
+		var serializedID [4]byte
+		dbnamespace.ByteOrder.PutUint32(serializedID[:], uint32(blockID))
+
+		data = bucket.Get(serializedID[:])
+		if data == nil {
+			return fmt.Errorf("tokenstate db can't find record from block id : %v", blockID)
+		}
+		return nil
+	})
+	return data, err
+}
+
+func (cdb *LegacyChainDB) PutTokenState(blockID uint, data []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.TokenBucketName)
+		// Store the current token balance record into the token state database.
+		var serializedID [4]byte
+		dbnamespace.ByteOrder.PutUint32(serializedID[:], uint32(blockID))
+		return bucket.Put(serializedID[:], data)
+	})
+}
+
+func (cdb *LegacyChainDB) DeleteTokenState(blockID uint) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.TokenBucketName)
+		var serializedID [4]byte
+		dbnamespace.ByteOrder.PutUint32(serializedID[:], uint32(blockID))
+
+		key := serializedID[:]
+		return bucket.Delete(key)
+	})
+}
+
 func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) {
 	// Load the block database.
 	db, err := LoadBlockDB(cfg)
@@ -133,4 +248,10 @@ func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) 
 		interrupt: interrupt,
 	}
 	return cdb, nil
+}
+
+func NewNaked(db legacydb.DB) *LegacyChainDB {
+	return &LegacyChainDB{
+		db: db,
+	}
 }

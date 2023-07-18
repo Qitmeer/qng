@@ -326,53 +326,27 @@ func (b *BlockChain) createChainState() error {
 	b.TokenTipID = 0
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
+	err := b.consensus.DatabaseContext().Init()
+	if err != nil {
+		return err
+	}
 	b.dbInfo = common.NewDatabaseInfo(currentDatabaseVersion, serialization.CurrentCompressionVersion, currentBlockIndexVersion, roughtime.Now())
-	err := b.consensus.DatabaseContext().PutInfo(b.dbInfo)
+	err = b.consensus.DatabaseContext().PutInfo(b.dbInfo)
+	if err != nil {
+		return err
+	}
+	initTS := token.BuildGenesisTokenState()
+	err = initTS.Commit()
+	if err != nil {
+		return err
+	}
+	err = token.DBPutTokenState(b.consensus.DatabaseContext(), ib.GetID(), initTS)
 	if err != nil {
 		return err
 	}
 	err = b.db.Update(func(dbTx legacydb.Tx) error {
-		meta := dbTx.Metadata()
-		// Create the bucket that houses the spend journal data.
-		_, err = meta.CreateBucket(dbnamespace.SpendJournalBucketName)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the utxo set.  Note that the
-		// genesis block coinbase transaction is intentionally not
-		// inserted here since it is not spendable by consensus rules.
-		_, err = meta.CreateBucket(dbnamespace.UtxoSetBucketName)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket which house the token state
-		if _, err := meta.CreateBucket(dbnamespace.TokenBucketName); err != nil {
-			return err
-		}
-		initTS := token.BuildGenesisTokenState()
-		err = initTS.Commit()
-		if err != nil {
-			return err
-		}
-		err = token.DBPutTokenState(dbTx, uint32(ib.GetID()), initTS)
-		if err != nil {
-			return err
-		}
 		// Store the current best chain state into the database.
 		err = dbPutBestState(dbTx, b.stateSnapshot, pow.CalcWork(header.Difficulty, header.Pow.GetPowType()))
-		if err != nil {
-			return err
-		}
-
-		// Add genesis utxo
-		view := utxo.NewUtxoViewpoint()
-		view.SetViewpoints([]*hash.Hash{genesisBlock.Hash()})
-		for _, tx := range genesisBlock.Transactions() {
-			view.AddTxOuts(tx, genesisBlock.Hash())
-		}
-		err = b.dbPutUtxoView(dbTx, view)
 		if err != nil {
 			return err
 		}
@@ -383,6 +357,11 @@ func (b *BlockChain) createChainState() error {
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	// Add genesis utxo
+	err = b.dbPutUtxoViewByBlock(genesisBlock)
 	if err != nil {
 		return err
 	}
@@ -571,18 +550,14 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		view.SetViewpoints([]*hash.Hash{block.Hash()})
 		if !n.Block.GetState().GetStatus().KnownInvalid() {
 			b.CalculateDAGDuplicateTxs(block)
-			err = b.fetchInputUtxos(b.db, block, view)
+			err = b.fetchInputUtxos(block, view)
 			if err != nil {
 				return err
 			}
 
 			// Load all of the spent txos for the block from the spend
 			// journal.
-
-			err = b.db.View(func(dbTx legacydb.Tx) error {
-				stxos, err = utxo.DBFetchSpendJournalEntry(dbTx, block)
-				return err
-			})
+			stxos, err = utxo.DBFetchSpendJournalEntry(b.consensus.DatabaseContext(), block)
 			if err != nil {
 				return err
 			}
@@ -713,13 +688,7 @@ func (b *BlockChain) FetchSpendJournal(targetBlock *types.SerializedBlock) ([]ut
 }
 
 func (b *BlockChain) fetchSpendJournal(targetBlock *types.SerializedBlock) ([]utxo.SpentTxOut, error) {
-	var spendEntries []utxo.SpentTxOut
-	err := b.db.View(func(dbTx legacydb.Tx) error {
-		var err error
-
-		spendEntries, err = utxo.DBFetchSpendJournalEntry(dbTx, targetBlock)
-		return err
-	})
+	spendEntries, err := utxo.DBFetchSpendJournalEntry(b.consensus.DatabaseContext(), targetBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -990,24 +959,11 @@ func (b *BlockChain) Rebuild() error {
 	if gib == nil {
 		return fmt.Errorf("No genesis block")
 	}
-	err = b.db.Update(func(tx legacydb.Tx) error {
-		err = token.DBPutTokenState(tx, uint32(gib.GetID()), initTS)
-		if err != nil {
-			return err
-		}
-		genesisBlock := params.ActiveNetParams.GenesisBlock
-
-		view := utxo.NewUtxoViewpoint()
-		view.SetViewpoints([]*hash.Hash{genesisBlock.Hash()})
-		for _, tx := range genesisBlock.Transactions() {
-			view.AddTxOuts(tx, genesisBlock.Hash())
-		}
-		err = b.dbPutUtxoView(tx, view)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = token.DBPutTokenState(b.consensus.DatabaseContext(), gib.GetID(), initTS)
+	if err != nil {
+		return err
+	}
+	err = b.dbPutUtxoViewByBlock(params.ActiveNetParams.GenesisBlock)
 	if err != nil {
 		return err
 	}
@@ -1084,6 +1040,10 @@ func (b *BlockChain) GetBlockState(order uint64) model.BlockState {
 		return nil
 	}
 	return block.GetState()
+}
+
+func (b *BlockChain) Consensus() model.Consensus {
+	return b.consensus
 }
 
 // New returns a BlockChain instance using the provided configuration details.

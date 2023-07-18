@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
@@ -12,8 +11,8 @@ import (
 
 const UtxoEntryAmountCoinIDSize = 2
 
-func DBFetchUtxoEntry(dbTx legacydb.Tx, outpoint types.TxOutPoint) (*UtxoEntry, error) {
-	return dbFetchUtxoEntry(dbTx, outpoint)
+func DBFetchUtxoEntry(db model.DataBase, outpoint types.TxOutPoint) (*UtxoEntry, error) {
+	return dbFetchUtxoEntry(db, outpoint)
 }
 
 // dbFetchUtxoEntry uses an existing database transaction to fetch all unspent
@@ -21,12 +20,14 @@ func DBFetchUtxoEntry(dbTx legacydb.Tx, outpoint types.TxOutPoint) (*UtxoEntry, 
 //
 // When there is no entry for the provided hash, nil will be returned for the
 // both the entry and the error.
-func dbFetchUtxoEntry(dbTx legacydb.Tx, outpoint types.TxOutPoint) (*UtxoEntry, error) {
+func dbFetchUtxoEntry(db model.DataBase, outpoint types.TxOutPoint) (*UtxoEntry, error) {
 	// Fetch the unspent transaction output information for the passed
 	// transaction output.  Return now when there is no entry.
 	key := OutpointKey(outpoint)
-	utxoBucket := dbTx.Metadata().Bucket(dbnamespace.UtxoSetBucketName)
-	serializedUtxo := utxoBucket.Get(*key)
+	serializedUtxo, err := db.GetUtxo(*key)
+	if err != nil {
+		return nil, err
+	}
 	RecycleOutpointKey(key)
 	if serializedUtxo == nil {
 		return nil, nil

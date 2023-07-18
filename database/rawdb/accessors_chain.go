@@ -212,3 +212,75 @@ func DeleteBlock(db ethdb.KeyValueWriter, hash *hash.Hash) {
 	DeleteHeader(db, hash)
 	DeleteBody(db, hash)
 }
+
+// stxo
+
+func ReadSpendJournal(db ethdb.Reader, hash *hash.Hash) []byte {
+	data, err := db.Get(spendJournalKey(hash))
+	if len(data) == 0 {
+		log.Error(err.Error())
+		return nil
+	}
+	return data
+}
+
+func WriteSpendJournal(db ethdb.KeyValueWriter, hash *hash.Hash, data []byte) error {
+	if len(data) <= 0 {
+		return nil
+	}
+	return db.Put(spendJournalKey(hash), data)
+}
+
+func DeleteSpendJournal(db ethdb.KeyValueWriter, hash *hash.Hash) {
+	if err := db.Delete(spendJournalKey(hash)); err != nil {
+		log.Crit("Failed to delete hash to Spend Journal mapping", "err", err)
+	}
+}
+
+// utxo
+
+func ReadUtxo(db ethdb.Reader, opd []byte) []byte {
+	data, err := db.Get(utxoKey(opd))
+	if len(data) == 0 {
+		log.Error(err.Error())
+		return nil
+	}
+	return data
+}
+
+func WriteUtxo(db ethdb.KeyValueWriter, opd []byte, data []byte) error {
+	if len(data) <= 0 {
+		return nil
+	}
+	return db.Put(utxoKey(opd), data)
+}
+
+func DeleteUtxo(db ethdb.KeyValueWriter, opd []byte) {
+	if err := db.Delete(utxoKey(opd)); err != nil {
+		log.Crit("Failed to delete hash to utxo mapping", "err", err)
+	}
+}
+
+// tokenState
+
+func ReadTokenState(db ethdb.Reader, id uint64) []byte {
+	data, err := db.Get(tokenStateKey(id))
+	if len(data) == 0 {
+		log.Error(err.Error())
+		return nil
+	}
+	return data
+}
+
+func WriteTokenState(db ethdb.KeyValueWriter, id uint64, data []byte) error {
+	if len(data) <= 0 {
+		return nil
+	}
+	return db.Put(tokenStateKey(id), data)
+}
+
+func DeleteTokenState(db ethdb.KeyValueWriter, id uint64) {
+	if err := db.Delete(tokenStateKey(id)); err != nil {
+		log.Crit("Failed to delete hash to token state mapping", "err", err)
+	}
+}

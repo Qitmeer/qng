@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/database/legacychaindb"
 	"github.com/Qitmeer/qng/database/legacydb"
 	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/params"
@@ -95,21 +96,16 @@ func TestTokenStateDB(t *testing.T) {
 	}
 
 	// create a fake block id for testing
-	bid := uint32(0xa)
+	bid := uint(0xa)
 
-	err = tokendb.Update(func(dbTx legacydb.Tx) error {
-		return DBPutTokenState(dbTx, bid, ts)
-	})
+	cdb := legacychaindb.NewNaked(tokendb)
+	err = DBPutTokenState(cdb, bid, ts)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// fetch record from tokenstate db
-	var tsfromdb *TokenState
-	err = tokendb.View(func(dbTx legacydb.Tx) error {
-		tsfromdb, err = DBFetchTokenState(dbTx, bid)
-		return err
-	})
+	tsfromdb, err := DBFetchTokenState(cdb, bid)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

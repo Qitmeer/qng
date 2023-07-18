@@ -2,6 +2,7 @@ package chaindb
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/database/rawdb"
@@ -28,6 +29,10 @@ type ChainDB struct {
 
 func (cdb *ChainDB) Name() string {
 	return "Chain DB"
+}
+
+func (cdb *ChainDB) Init() error {
+	return nil
 }
 
 func (cdb *ChainDB) Close() {
@@ -131,6 +136,45 @@ func (cdb *ChainDB) ResolveAncient(name string, ancient string) string {
 
 func (cdb *ChainDB) Rebuild(mgr model.IndexManager) error {
 	return fmt.Errorf("No support Rebuild:%s", cdb.Name())
+}
+
+func (cdb *ChainDB) GetSpendJournal(bh *hash.Hash) ([]byte, error) {
+	return rawdb.ReadSpendJournal(cdb.db, bh), nil
+}
+
+func (cdb *ChainDB) PutSpendJournal(bh *hash.Hash, data []byte) error {
+	return rawdb.WriteSpendJournal(cdb.db, bh, data)
+}
+
+func (cdb *ChainDB) DeleteSpendJournal(bh *hash.Hash) error {
+	rawdb.DeleteSpendJournal(cdb.db, bh)
+	return nil
+}
+
+func (cdb *ChainDB) GetUtxo(key []byte) ([]byte, error) {
+	return rawdb.ReadUtxo(cdb.db, key), nil
+}
+
+func (cdb *ChainDB) PutUtxo(key []byte, data []byte) error {
+	return rawdb.WriteUtxo(cdb.db, key, data)
+}
+
+func (cdb *ChainDB) DeleteUtxo(key []byte) error {
+	rawdb.DeleteUtxo(cdb.db, key)
+	return nil
+}
+
+func (cdb *ChainDB) GetTokenState(blockID uint) ([]byte, error) {
+	return rawdb.ReadTokenState(cdb.db, uint64(blockID)), nil
+}
+
+func (cdb *ChainDB) PutTokenState(blockID uint, data []byte) error {
+	return rawdb.WriteTokenState(cdb.db, uint64(blockID), data)
+}
+
+func (cdb *ChainDB) DeleteTokenState(blockID uint) error {
+	rawdb.DeleteTokenState(cdb.db, uint64(blockID))
+	return nil
 }
 
 func New(cfg *config.Config) (*ChainDB, error) {

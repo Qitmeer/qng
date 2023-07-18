@@ -4,7 +4,6 @@ package blockchain
 import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/meerdag"
@@ -27,7 +26,7 @@ func (bc *BlockChain) IsInvalidOut(entry *utxo.UtxoEntry) bool {
 }
 
 func (bc *BlockChain) FetchInputUtxos(db legacydb.DB, block *types.SerializedBlock, view *utxo.UtxoViewpoint) error {
-	return bc.fetchInputUtxos(db, block, view)
+	return bc.fetchInputUtxos(block, view)
 }
 
 // fetchInputUtxos loads utxo details about the input transactions referenced
@@ -35,7 +34,7 @@ func (bc *BlockChain) FetchInputUtxos(db legacydb.DB, block *types.SerializedBlo
 // needed.  In particular, referenced entries that are earlier in the block are
 // added to the view and entries that are already in the view are not modified.
 // TODO, revisit the usage on the parent block
-func (bc *BlockChain) fetchInputUtxos(db legacydb.DB, block *types.SerializedBlock, view *utxo.UtxoViewpoint) error {
+func (bc *BlockChain) fetchInputUtxos(block *types.SerializedBlock, view *utxo.UtxoViewpoint) error {
 	// Build a map of in-flight transactions because some of the inputs in
 	// this block could be referencing other transactions earlier in this
 	// block which are not yet in the chain.
@@ -102,7 +101,7 @@ func (bc *BlockChain) fetchInputUtxos(db legacydb.DB, block *types.SerializedBlo
 			txNeededSet[txIn.PreviousOut] = struct{}{}
 		}
 	}
-	err := view.FetchUtxosMain(db, txNeededSet)
+	err := view.FetchUtxosMain(bc.consensus.DatabaseContext(), txNeededSet)
 	if err != nil {
 		return err
 	}
@@ -149,7 +148,7 @@ func (b *BlockChain) FetchUtxoView(tx *types.Tx) (*utxo.UtxoViewpoint, error) {
 	view := utxo.NewUtxoViewpoint()
 	view.SetViewpoints(b.GetMiningTips(meerdag.MaxPriority))
 	b.ChainRLock()
-	err := view.FetchUtxosMain(b.db, neededSet)
+	err := view.FetchUtxosMain(b.consensus.DatabaseContext(), neededSet)
 	b.ChainRUnlock()
 	if err != nil {
 		return view, err
@@ -172,12 +171,7 @@ func (b *BlockChain) FetchUtxoEntry(outpoint types.TxOutPoint) (*utxo.UtxoEntry,
 	b.ChainRLock()
 	defer b.ChainRUnlock()
 
-	var entry *utxo.UtxoEntry
-	err := b.db.View(func(dbTx legacydb.Tx) error {
-		var err error
-		entry, err = utxo.DBFetchUtxoEntry(dbTx, outpoint)
-		return err
-	})
+	entry, err := utxo.DBFetchUtxoEntry(b.consensus.DatabaseContext(), outpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -187,8 +181,7 @@ func (b *BlockChain) FetchUtxoEntry(outpoint types.TxOutPoint) (*utxo.UtxoEntry,
 	return entry, nil
 }
 
-func (b *BlockChain) dbPutUtxoView(dbTx legacydb.Tx, view *utxo.UtxoViewpoint) error {
-	utxoBucket := dbTx.Metadata().Bucket(dbnamespace.UtxoSetBucketName)
+func (b *BlockChain) dbPutUtxoView(view *utxo.UtxoViewpoint) error {
 	for outpoint, entry := range view.Entries() {
 		// No need to update the database if the entry was not modified.
 		if entry == nil || !entry.IsModified() {
@@ -198,7 +191,7 @@ func (b *BlockChain) dbPutUtxoView(dbTx legacydb.Tx, view *utxo.UtxoViewpoint) e
 		// Remove the utxo entry if it is spent.
 		if entry.IsSpent() {
 			key := utxo.OutpointKey(outpoint)
-			err := utxoBucket.Delete(*key)
+			err := b.consensus.DatabaseContext().DeleteUtxo(*key)
 			utxo.RecycleOutpointKey(key)
 			if err != nil {
 				return err
@@ -218,7 +211,7 @@ func (b *BlockChain) dbPutUtxoView(dbTx legacydb.Tx, view *utxo.UtxoViewpoint) e
 			return err
 		}
 		key := utxo.OutpointKey(outpoint)
-		err = utxoBucket.Put(*key, serialized)
+		err = b.consensus.DatabaseContext().PutUtxo(*key, serialized)
 		// NOTE: The key is intentionally not recycled here since the
 		// database interface contract prohibits modifications.  It will
 		// be garbage collected normally when the database is done with
@@ -236,4 +229,13 @@ func (b *BlockChain) dbPutUtxoView(dbTx legacydb.Tx, view *utxo.UtxoViewpoint) e
 	}
 
 	return nil
+}
+
+func (b *BlockChain) dbPutUtxoViewByBlock(block *types.SerializedBlock) error {
+	view := utxo.NewUtxoViewpoint()
+	view.SetViewpoints([]*hash.Hash{block.Hash()})
+	for _, tx := range block.Transactions() {
+		view.AddTxOuts(tx, block.Hash())
+	}
+	return b.dbPutUtxoView(view)
 }
