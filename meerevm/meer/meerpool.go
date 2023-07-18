@@ -634,9 +634,6 @@ func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
 		}
 
 		localTxs = append(localTxs, td)
-		if m.qTxPool.HaveTransaction(td.Tx.Hash()) {
-			continue
-		}
 		m.qTxPool.AddTransaction(td.Tx, uint64(td.Height), td.Fee)
 	}
 	if len(localTxs) <= 0 {
