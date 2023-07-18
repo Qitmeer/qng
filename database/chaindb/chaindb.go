@@ -31,6 +31,10 @@ func (cdb *ChainDB) Name() string {
 	return "Chain DB"
 }
 
+func (cdb *ChainDB) Init() error {
+	return nil
+}
+
 func (cdb *ChainDB) Close() {
 	log.Info("Close", "name", cdb.Name())
 	if cdb.closedState.Load() {
@@ -144,6 +148,19 @@ func (cdb *ChainDB) PutSpendJournal(bh *hash.Hash, data []byte) error {
 
 func (cdb *ChainDB) DeleteSpendJournal(bh *hash.Hash) error {
 	rawdb.DeleteSpendJournal(cdb.db, bh)
+	return nil
+}
+
+func (cdb *ChainDB) GetUtxo(key []byte) ([]byte, error) {
+	return rawdb.ReadUtxo(cdb.db, key), nil
+}
+
+func (cdb *ChainDB) PutUtxo(key []byte, data []byte) error {
+	return rawdb.WriteUtxo(cdb.db, key, data)
+}
+
+func (cdb *ChainDB) DeleteUtxo(key []byte) error {
+	rawdb.DeleteUtxo(cdb.db, key)
 	return nil
 }
 

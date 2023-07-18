@@ -879,7 +879,7 @@ func (b *BlockChain) checkConnectBlock(ib meerdag.IBlock, blockNode *BlockNode, 
 	// scripts.
 	// Do this for all TxTrees.
 
-	err = b.fetchInputUtxos(b.db, block, utxoView)
+	err = b.fetchInputUtxos(block, utxoView)
 	if err != nil {
 		return err
 	}

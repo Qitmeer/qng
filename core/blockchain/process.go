@@ -445,12 +445,10 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, vie
 		}
 
 		// Atomically insert info into the database.
-		err = b.db.Update(func(dbTx legacydb.Tx) error {
-			// Update the utxo set using the state of the utxo view.  This
-			// entails removing all of the utxos spent and adding the new
-			// ones created by the block.
-			return b.dbPutUtxoView(dbTx, view)
-		})
+		// Update the utxo set using the state of the utxo view.  This
+		// entails removing all of the utxos spent and adding the new
+		// ones created by the block.
+		err = b.dbPutUtxoView(view)
 		if err != nil {
 			return err
 		}
@@ -495,12 +493,10 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, vie
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedBlock, view *utxo.UtxoViewpoint, stxos []utxo.SpentTxOut) error {
 	// Calculate the exact subsidy produced by adding the block.
-	err := b.db.Update(func(dbTx legacydb.Tx) error {
-		// Update the utxo set using the state of the utxo view.  This
-		// entails restoring all of the utxos spent and removing the new
-		// ones created by the block.
-		return b.dbPutUtxoView(dbTx, view)
-	})
+	// Update the utxo set using the state of the utxo view.  This
+	// entails restoring all of the utxos spent and removing the new
+	// ones created by the block.
+	err := b.dbPutUtxoView(view)
 	if err != nil {
 		return err
 	}

@@ -55,6 +55,7 @@ var (
 	headerPrefix       = []byte("h") // headerPrefix + hash -> header
 	blockPrefix        = []byte("b") // blockPrefix + hash -> block
 	spendJournalPrefix = []byte("j") // spendJournalPrefix + hash -> SpentTxOuts data
+	utxoPrefix         = []byte("u") // utxoPrefix + outpoint data -> UtxoEntry data
 	// dag
 	dagBlockPrefix = []byte("d") // dagBlockPrefix + id (uint64 big endian) -> dag block
 	blockIDPrefix  = []byte("i") // block hash -> block id.
@@ -108,4 +109,9 @@ func blockOrderKey(order uint64) []byte {
 // spendJournalKey = spendJournalPrefix + hash
 func spendJournalKey(hash *hash.Hash) []byte {
 	return append(spendJournalPrefix, hash.Bytes()...)
+}
+
+// utxoKey = utxoPrefix + outpoint data
+func utxoKey(opd []byte) []byte {
+	return append(utxoPrefix, opd...)
 }

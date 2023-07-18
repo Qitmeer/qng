@@ -326,27 +326,17 @@ func (b *BlockChain) createChainState() error {
 	b.TokenTipID = 0
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
+	err := b.consensus.DatabaseContext().Init()
+	if err != nil {
+		return err
+	}
 	b.dbInfo = common.NewDatabaseInfo(currentDatabaseVersion, serialization.CurrentCompressionVersion, currentBlockIndexVersion, roughtime.Now())
-	err := b.consensus.DatabaseContext().PutInfo(b.dbInfo)
+	err = b.consensus.DatabaseContext().PutInfo(b.dbInfo)
 	if err != nil {
 		return err
 	}
 	err = b.db.Update(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
-		// Create the bucket that houses the spend journal data.
-		_, err = meta.CreateBucket(dbnamespace.SpendJournalBucketName)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the utxo set.  Note that the
-		// genesis block coinbase transaction is intentionally not
-		// inserted here since it is not spendable by consensus rules.
-		_, err = meta.CreateBucket(dbnamespace.UtxoSetBucketName)
-		if err != nil {
-			return err
-		}
-
 		// Create the bucket which house the token state
 		if _, err := meta.CreateBucket(dbnamespace.TokenBucketName); err != nil {
 			return err
@@ -366,23 +356,17 @@ func (b *BlockChain) createChainState() error {
 			return err
 		}
 
-		// Add genesis utxo
-		view := utxo.NewUtxoViewpoint()
-		view.SetViewpoints([]*hash.Hash{genesisBlock.Hash()})
-		for _, tx := range genesisBlock.Transactions() {
-			view.AddTxOuts(tx, genesisBlock.Hash())
-		}
-		err = b.dbPutUtxoView(dbTx, view)
-		if err != nil {
-			return err
-		}
-
 		// Store the genesis block into the database.
 		if err := dbTx.StoreBlock(genesisBlock); err != nil {
 			return err
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	// Add genesis utxo
+	err = b.dbPutUtxoViewByBlock(genesisBlock)
 	if err != nil {
 		return err
 	}
@@ -571,7 +555,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		view.SetViewpoints([]*hash.Hash{block.Hash()})
 		if !n.Block.GetState().GetStatus().KnownInvalid() {
 			b.CalculateDAGDuplicateTxs(block)
-			err = b.fetchInputUtxos(b.db, block, view)
+			err = b.fetchInputUtxos(block, view)
 			if err != nil {
 				return err
 			}
@@ -985,19 +969,12 @@ func (b *BlockChain) Rebuild() error {
 		if err != nil {
 			return err
 		}
-		genesisBlock := params.ActiveNetParams.GenesisBlock
-
-		view := utxo.NewUtxoViewpoint()
-		view.SetViewpoints([]*hash.Hash{genesisBlock.Hash()})
-		for _, tx := range genesisBlock.Transactions() {
-			view.AddTxOuts(tx, genesisBlock.Hash())
-		}
-		err = b.dbPutUtxoView(tx, view)
-		if err != nil {
-			return err
-		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	err = b.dbPutUtxoViewByBlock(params.ActiveNetParams.GenesisBlock)
 	if err != nil {
 		return err
 	}
@@ -1074,6 +1051,10 @@ func (b *BlockChain) GetBlockState(order uint64) model.BlockState {
 		return nil
 	}
 	return block.GetState()
+}
+
+func (b *BlockChain) Consensus() model.Consensus {
+	return b.consensus
 }
 
 // New returns a BlockChain instance using the provided configuration details.

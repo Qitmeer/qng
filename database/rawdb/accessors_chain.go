@@ -236,3 +236,27 @@ func DeleteSpendJournal(db ethdb.KeyValueWriter, hash *hash.Hash) {
 		log.Crit("Failed to delete hash to Spend Journal mapping", "err", err)
 	}
 }
+
+// utxo
+
+func ReadUtxo(db ethdb.Reader, opd []byte) []byte {
+	data, err := db.Get(utxoKey(opd))
+	if len(data) == 0 {
+		log.Error(err.Error())
+		return nil
+	}
+	return data
+}
+
+func WriteUtxo(db ethdb.KeyValueWriter, opd []byte, data []byte) error {
+	if len(data) <= 0 {
+		return nil
+	}
+	return db.Put(utxoKey(opd), data)
+}
+
+func DeleteUtxo(db ethdb.KeyValueWriter, opd []byte) {
+	if err := db.Delete(utxoKey(opd)); err != nil {
+		log.Crit("Failed to delete hash to utxo mapping", "err", err)
+	}
+}

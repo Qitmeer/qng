@@ -23,6 +23,27 @@ func (cdb *LegacyChainDB) Name() string {
 	return "Legacy Chain DB"
 }
 
+func (cdb *LegacyChainDB) Init() error {
+	var err error
+	err = cdb.db.Update(func(dbTx legacydb.Tx) error {
+		meta := dbTx.Metadata()
+		// Create the bucket that houses the spend journal data.
+		_, err = meta.CreateBucket(dbnamespace.SpendJournalBucketName)
+		if err != nil {
+			return err
+		}
+		// Create the bucket that houses the utxo set.  Note that the
+		// genesis block coinbase transaction is intentionally not
+		// inserted here since it is not spendable by consensus rules.
+		_, err = meta.CreateBucket(dbnamespace.UtxoSetBucketName)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
+}
+
 func (cdb *LegacyChainDB) Close() {
 	log.Info("Close", "name", cdb.Name())
 	cdb.db.Close()
@@ -125,6 +146,30 @@ func (cdb *LegacyChainDB) DeleteSpendJournal(bh *hash.Hash) error {
 	return cdb.db.Update(func(dbTx legacydb.Tx) error {
 		bucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
 		return bucket.Delete(bh[:])
+	})
+}
+
+func (cdb *LegacyChainDB) GetUtxo(key []byte) ([]byte, error) {
+	var data []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.UtxoSetBucketName)
+		data = bucket.Get(key)
+		return nil
+	})
+	return data, err
+}
+
+func (cdb *LegacyChainDB) PutUtxo(key []byte, data []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.UtxoSetBucketName)
+		return bucket.Put(key, data)
+	})
+}
+
+func (cdb *LegacyChainDB) DeleteUtxo(key []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.UtxoSetBucketName)
+		return bucket.Delete(key)
 	})
 }
 
