@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/common"
 )
 
@@ -23,4 +24,6 @@ type DataBase interface {
 	DeleteTokenState(blockID uint) error
 	GetBestChainState() ([]byte, error)
 	PutBestChainState(data []byte) error
+	PutBlock(block *types.SerializedBlock) error
+	HasBlock(hash *hash.Hash) bool
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/node"
@@ -183,6 +184,14 @@ func (cdb *ChainDB) GetBestChainState() ([]byte, error) {
 
 func (cdb *ChainDB) PutBestChainState(data []byte) error {
 	return rawdb.WriteBestChainState(cdb.db, data)
+}
+
+func (cdb *ChainDB) PutBlock(block *types.SerializedBlock) error {
+	return rawdb.WriteBlock(cdb.db, block)
+}
+
+func (cdb *ChainDB) HasBlock(hash *hash.Hash) bool {
+	return rawdb.HasHeader(cdb.db, hash)
 }
 
 func New(cfg *config.Config) (*ChainDB, error) {

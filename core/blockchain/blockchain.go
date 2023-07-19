@@ -340,13 +340,8 @@ func (b *BlockChain) createChainState() error {
 	if err != nil {
 		return err
 	}
-	err = b.db.Update(func(dbTx legacydb.Tx) error {
-		// Store the genesis block into the database.
-		if err := dbTx.StoreBlock(genesisBlock); err != nil {
-			return err
-		}
-		return nil
-	})
+	// Store the genesis block into the database.
+	err = b.consensus.DatabaseContext().PutBlock(genesisBlock)
 	if err != nil {
 		return err
 	}
@@ -400,17 +395,7 @@ func (b *BlockChain) HaveBlock(hash *hash.Hash) bool {
 }
 
 func (b *BlockChain) HasBlockInDB(h *hash.Hash) bool {
-	err := b.db.View(func(dbTx legacydb.Tx) error {
-		has, er := dbTx.HasBlock(h)
-		if er != nil {
-			return er
-		}
-		if has {
-			return nil
-		}
-		return fmt.Errorf("no")
-	})
-	return err == nil
+	return b.consensus.DatabaseContext().HasBlock(h)
 }
 
 // IsCurrent returns whether or not the chain believes it is current.  Several

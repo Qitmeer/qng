@@ -4,6 +4,7 @@ package blockchain
 import (
 	"bytes"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
 )
@@ -46,6 +47,13 @@ func dbFetchHeaderByHash(dbTx legacydb.Tx, hash *hash.Hash) (*types.BlockHeader,
 
 // dbMaybeStoreBlock stores the provided block in the database if it's not
 // already there.
-func dbMaybeStoreBlock(dbTx legacydb.Tx, block *types.SerializedBlock) error {
-	return dbTx.StoreBlock(block)
+func dbMaybeStoreBlock(db model.DataBase, block *types.SerializedBlock) error {
+	err := db.PutBlock(block)
+	if err != nil {
+		if legacydb.IsError(err, legacydb.ErrBlockExists) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }

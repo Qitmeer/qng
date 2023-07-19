@@ -7,6 +7,7 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/dbnamespace"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/services/index"
 	"math"
@@ -229,6 +230,29 @@ func (cdb *LegacyChainDB) PutBestChainState(data []byte) error {
 	return cdb.db.Update(func(dbTx legacydb.Tx) error {
 		return dbTx.Metadata().Put(dbnamespace.ChainStateKeyName, data)
 	})
+}
+
+func (cdb *LegacyChainDB) PutBlock(block *types.SerializedBlock) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		return dbTx.StoreBlock(block)
+	})
+}
+
+func (cdb *LegacyChainDB) HasBlock(hash *hash.Hash) bool {
+	result := false
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		has, er := dbTx.HasBlock(hash)
+		if er != nil {
+			return er
+		}
+		result = has
+		return nil
+	})
+	if err != nil {
+		log.Error(err.Error())
+		return false
+	}
+	return result
 }
 
 func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) {
