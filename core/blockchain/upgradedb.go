@@ -3,10 +3,8 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/database/common"
-	"github.com/Qitmeer/qng/database/legacydb"
 	l "github.com/Qitmeer/qng/log"
 )
 
@@ -32,20 +30,18 @@ func (b *BlockChain) upgradeDB(interrupt <-chan struct{}) error {
 
 	bidxStart := roughtime.Now()
 
-	var bs *bestChainState
-	err := b.db.Update(func(dbTx legacydb.Tx) error {
-		meta := dbTx.Metadata()
-		serializedData := meta.Get(dbnamespace.ChainStateKeyName)
-		if serializedData == nil {
-			return fmt.Errorf("No chain state")
-		}
-		state, err := DeserializeBestChainState(serializedData)
-		if err != nil {
-			return err
-		}
-		bs = &state
-		return nil
-	})
+	serializedData, err := b.consensus.DatabaseContext().GetBestChainState()
+	if err != nil {
+		return err
+	}
+	if serializedData == nil {
+		return fmt.Errorf("No chain state")
+	}
+	bs, err := DeserializeBestChainState(serializedData)
+	if err != nil {
+		return err
+	}
+
 	err = b.bd.UpgradeDB(b.db, &bs.hash, bs.total, b.params.GenesisHash, interrupt, dbFetchBlockByHash,
 		b.indexManager.IsDuplicateTx, b.meerChain.ETHChain().Ether().BlockChain(), b.meerChain.ETHChain().Ether().ChainDb())
 	if err != nil {

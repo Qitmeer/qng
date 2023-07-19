@@ -483,27 +483,23 @@ func upgradeBlockChain(cfg *config.Config, cdb model.DataBase, interrupt <-chan 
 	db := cdb.(*legacychaindb.LegacyChainDB).DB()
 	if aidMode {
 		endNum := uint(0)
-		err := db.Update(func(dbTx legacydb.Tx) error {
-			meta := dbTx.Metadata()
-			serializedData := meta.Get(dbnamespace.ChainStateKeyName)
-			if serializedData == nil {
-				return nil
-			}
-			log.Info("Serialized chain state: ", "serializedData", fmt.Sprintf("%x", serializedData))
-			state, err := blockchain.DeserializeBestChainState(serializedData)
-			if err != nil {
-				return err
-			}
-			log.Info(fmt.Sprintf("blocks:%d", state.GetTotal()))
-			if state.GetTotal() == 0 {
-				return fmt.Errorf("No blocks in database")
-			}
-			endNum = uint(state.GetTotal() - 1)
-			return nil
-		})
+		serializedData, err := cdb.GetBestChainState()
 		if err != nil {
 			return err
 		}
+		if serializedData == nil {
+			return nil
+		}
+		log.Info("Serialized chain state: ", "serializedData", fmt.Sprintf("%x", serializedData))
+		state, err := blockchain.DeserializeBestChainState(serializedData)
+		if err != nil {
+			return err
+		}
+		log.Info(fmt.Sprintf("blocks:%d", state.GetTotal()))
+		if state.GetTotal() == 0 {
+			return fmt.Errorf("No blocks in database")
+		}
+		endNum = uint(state.GetTotal() - 1)
 
 		if len(end) > 0 {
 			endV, err := strconv.Atoi(end)

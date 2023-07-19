@@ -216,6 +216,21 @@ func (cdb *LegacyChainDB) DeleteTokenState(blockID uint) error {
 	})
 }
 
+func (cdb *LegacyChainDB) GetBestChainState() ([]byte, error) {
+	var data []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		data = dbTx.Metadata().Get(dbnamespace.ChainStateKeyName)
+		return nil
+	})
+	return data, err
+}
+
+func (cdb *LegacyChainDB) PutBestChainState(data []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		return dbTx.Metadata().Put(dbnamespace.ChainStateKeyName, data)
+	})
+}
+
 func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) {
 	// Load the block database.
 	db, err := LoadBlockDB(cfg)

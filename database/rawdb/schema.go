@@ -51,6 +51,9 @@ var (
 	// uncleanShutdownKey tracks the list of local crashes
 	uncleanShutdownKey = []byte("Unclean-shutdown") // config prefix for the db
 
+	// Best chain state
+	bestChainStateKey = []byte("chainstate")
+
 	// base
 	headerPrefix       = []byte("h") // headerPrefix + hash -> header
 	blockPrefix        = []byte("b") // blockPrefix + hash -> block

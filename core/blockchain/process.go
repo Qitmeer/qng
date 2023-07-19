@@ -708,18 +708,11 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 		b.bd.GetMainChainTip().GetState().GetWeight(), b.bd.GetGraphState(), b.GetTokenTipHash(), *mainTip.GetState().Root())
 
 	// Atomically insert info into the database.
-	err := b.db.Update(func(dbTx legacydb.Tx) error {
-		// Update best block state.
-		err := dbPutBestState(dbTx, state, pow.CalcWork(mainTipNode.Difficulty(), mainTipNode.Pow().GetPowType()))
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	// Update best block state.
+	err := dbPutBestState(b.consensus.DatabaseContext(), state, pow.CalcWork(mainTipNode.Difficulty(), mainTipNode.Pow().GetPowType()))
 	if err != nil {
 		return err
 	}
-
 	if b.indexManager != nil {
 		err := b.indexManager.UpdateMainTip(mainTip.GetHash(), uint64(mainTip.GetOrder()))
 		if err != nil {

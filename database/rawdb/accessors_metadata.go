@@ -198,3 +198,20 @@ func UpdateUncleanShutdownMarker(db ethdb.KeyValueStore) {
 		log.Warn("Failed to write unclean-shutdown marker", "err", err)
 	}
 }
+
+// best chain state
+func ReadBestChainState(db ethdb.Reader) []byte {
+	data, err := db.Get(bestChainStateKey)
+	if len(data) == 0 {
+		log.Error(err.Error())
+		return nil
+	}
+	return data
+}
+
+func WriteBestChainState(db ethdb.KeyValueWriter, data []byte) error {
+	if len(data) <= 0 {
+		return nil
+	}
+	return db.Put(bestChainStateKey, data)
+}

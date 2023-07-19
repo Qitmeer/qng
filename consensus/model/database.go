@@ -21,4 +21,6 @@ type DataBase interface {
 	GetTokenState(blockID uint) ([]byte, error)
 	PutTokenState(blockID uint, data []byte) error
 	DeleteTokenState(blockID uint) error
+	GetBestChainState() ([]byte, error)
+	PutBestChainState(data []byte) error
 }

@@ -177,6 +177,14 @@ func (cdb *ChainDB) DeleteTokenState(blockID uint) error {
 	return nil
 }
 
+func (cdb *ChainDB) GetBestChainState() ([]byte, error) {
+	return rawdb.ReadBestChainState(cdb.db), nil
+}
+
+func (cdb *ChainDB) PutBestChainState(data []byte) error {
+	return rawdb.WriteBestChainState(cdb.db, data)
+}
+
 func New(cfg *config.Config) (*ChainDB, error) {
 	cdb := &ChainDB{
 		cfg:       cfg,
