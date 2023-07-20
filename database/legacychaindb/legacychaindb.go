@@ -1,12 +1,14 @@
 package legacychaindb
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/dbnamespace"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/services/index"
 	"math"
@@ -214,6 +216,105 @@ func (cdb *LegacyChainDB) DeleteTokenState(blockID uint) error {
 		key := serializedID[:]
 		return bucket.Delete(key)
 	})
+}
+
+func (cdb *LegacyChainDB) GetBestChainState() ([]byte, error) {
+	var data []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		data = dbTx.Metadata().Get(dbnamespace.ChainStateKeyName)
+		return nil
+	})
+	return data, err
+}
+
+func (cdb *LegacyChainDB) PutBestChainState(data []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		return dbTx.Metadata().Put(dbnamespace.ChainStateKeyName, data)
+	})
+}
+
+func (cdb *LegacyChainDB) GetBlock(hash *hash.Hash) (*types.SerializedBlock, error) {
+	var blockBytes []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		var err error
+		// Load the raw block bytes from the database.
+		blockBytes, err = dbTx.FetchBlock(hash)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	// Create the encapsulated block and set the height appropriately.
+	block, err := types.NewBlockFromBytes(blockBytes)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
+}
+
+func (cdb *LegacyChainDB) GetBlockBytes(hash *hash.Hash) ([]byte, error) {
+	var blockBytes []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		var err error
+		// Load the raw block bytes from the database.
+		blockBytes, err = dbTx.FetchBlock(hash)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return blockBytes, nil
+}
+
+func (cdb *LegacyChainDB) GetHeader(hash *hash.Hash) (*types.BlockHeader, error) {
+	var headerBytes []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		var err error
+		headerBytes, err = dbTx.FetchBlockHeader(hash)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var header types.BlockHeader
+	err = header.Deserialize(bytes.NewReader(headerBytes))
+	if err != nil {
+		return nil, err
+	}
+	return &header, nil
+}
+
+func (cdb *LegacyChainDB) PutBlock(block *types.SerializedBlock) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		return dbTx.StoreBlock(block)
+	})
+}
+
+func (cdb *LegacyChainDB) HasBlock(hash *hash.Hash) bool {
+	result := false
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		has, er := dbTx.HasBlock(hash)
+		if er != nil {
+			return er
+		}
+		result = has
+		return nil
+	})
+	if err != nil {
+		log.Error(err.Error())
+		return false
+	}
+	return result
 }
 
 func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) {

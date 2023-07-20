@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/node"
@@ -175,6 +176,34 @@ func (cdb *ChainDB) PutTokenState(blockID uint, data []byte) error {
 func (cdb *ChainDB) DeleteTokenState(blockID uint) error {
 	rawdb.DeleteTokenState(cdb.db, uint64(blockID))
 	return nil
+}
+
+func (cdb *ChainDB) GetBestChainState() ([]byte, error) {
+	return rawdb.ReadBestChainState(cdb.db), nil
+}
+
+func (cdb *ChainDB) PutBestChainState(data []byte) error {
+	return rawdb.WriteBestChainState(cdb.db, data)
+}
+
+func (cdb *ChainDB) GetBlock(hash *hash.Hash) (*types.SerializedBlock, error) {
+	return rawdb.ReadBody(cdb.db, hash), nil
+}
+
+func (cdb *ChainDB) GetBlockBytes(hash *hash.Hash) ([]byte, error) {
+	return rawdb.ReadBodyRaw(cdb.db, hash), nil
+}
+
+func (cdb *ChainDB) GetHeader(hash *hash.Hash) (*types.BlockHeader, error) {
+	return rawdb.ReadHeader(cdb.db, hash), nil
+}
+
+func (cdb *ChainDB) PutBlock(block *types.SerializedBlock) error {
+	return rawdb.WriteBlock(cdb.db, block)
+}
+
+func (cdb *ChainDB) HasBlock(hash *hash.Hash) bool {
+	return rawdb.HasHeader(cdb.db, hash)
 }
 
 func New(cfg *config.Config) (*ChainDB, error) {

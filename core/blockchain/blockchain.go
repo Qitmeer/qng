@@ -12,7 +12,6 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/serialization"
@@ -238,27 +237,19 @@ func (b *BlockChain) initChainState() error {
 
 	var state bestChainState
 	// Attempt to load the chain state from the database.
-	err = b.db.Update(func(dbTx legacydb.Tx) error {
-		// Fetch the stored chain state from the database metadata.
-		// When it doesn't exist, it means the database hasn't been
-		// initialized for use with chain yet, so break out now to allow
-		// that to happen under a writable database transaction.
-		meta := dbTx.Metadata()
-		serializedData := meta.Get(dbnamespace.ChainStateKeyName)
-		if serializedData == nil {
-			return fmt.Errorf("No chain state data")
-		}
-		log.Trace("Serialized chain state: ", "serializedData", fmt.Sprintf("%x", serializedData))
-		state, err = DeserializeBestChainState(serializedData)
-		if err != nil {
-			return err
-		}
-		log.Trace(fmt.Sprintf("Load chain state:%s %d %d %s %s", state.hash.String(), state.total, state.totalTxns, state.tokenTipHash.String(), state.workSum.Text(16)))
-		return nil
-	})
+	serializedData, err := b.consensus.DatabaseContext().GetBestChainState()
 	if err != nil {
 		return err
 	}
+	if serializedData == nil {
+		return fmt.Errorf("No chain state data")
+	}
+	log.Trace("Serialized chain state: ", "serializedData", fmt.Sprintf("%x", serializedData))
+	state, err = DeserializeBestChainState(serializedData)
+	if err != nil {
+		return err
+	}
+	log.Trace(fmt.Sprintf("Load chain state:%s %d %d %s %s", state.hash.String(), state.total, state.totalTxns, state.tokenTipHash.String(), state.workSum.Text(16)))
 
 	log.Info("Loading dag ...")
 	bidxStart := roughtime.Now()
@@ -278,15 +269,7 @@ func (b *BlockChain) initChainState() error {
 	if mainTipNode == nil {
 		return fmt.Errorf("No main tip")
 	}
-
-	var block *types.SerializedBlock
-	err = b.db.View(func(dbTx legacydb.Tx) error {
-		block, err = dbFetchBlockByHash(dbTx, mainTip.GetHash())
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	block, err := dbFetchBlockByHash(b.consensus.DatabaseContext(), mainTip.GetHash())
 	if err != nil {
 		return err
 	}
@@ -344,19 +327,13 @@ func (b *BlockChain) createChainState() error {
 	if err != nil {
 		return err
 	}
-	err = b.db.Update(func(dbTx legacydb.Tx) error {
-		// Store the current best chain state into the database.
-		err = dbPutBestState(dbTx, b.stateSnapshot, pow.CalcWork(header.Difficulty, header.Pow.GetPowType()))
-		if err != nil {
-			return err
-		}
-
-		// Store the genesis block into the database.
-		if err := dbTx.StoreBlock(genesisBlock); err != nil {
-			return err
-		}
-		return nil
-	})
+	// Store the current best chain state into the database.
+	err = dbPutBestState(b.consensus.DatabaseContext(), b.stateSnapshot, pow.CalcWork(header.Difficulty, header.Pow.GetPowType()))
+	if err != nil {
+		return err
+	}
+	// Store the genesis block into the database.
+	err = b.consensus.DatabaseContext().PutBlock(genesisBlock)
 	if err != nil {
 		return err
 	}
@@ -410,17 +387,7 @@ func (b *BlockChain) HaveBlock(hash *hash.Hash) bool {
 }
 
 func (b *BlockChain) HasBlockInDB(h *hash.Hash) bool {
-	err := b.db.View(func(dbTx legacydb.Tx) error {
-		has, er := dbTx.HasBlock(h)
-		if er != nil {
-			return er
-		}
-		if has {
-			return nil
-		}
-		return fmt.Errorf("no")
-	})
-	return err == nil
+	return b.consensus.DatabaseContext().HasBlock(h)
 }
 
 // IsCurrent returns whether or not the chain believes it is current.  Several

@@ -14,7 +14,6 @@ import (
 	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
@@ -242,27 +241,13 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	// blocks that fail to connect available for further analysis.
 	//
 	// Also, store the associated block index entry.
-	err := b.db.Update(func(dbTx legacydb.Tx) error {
-		exists, err := dbTx.HasBlock(block.Hash())
+	if !b.consensus.DatabaseContext().HasBlock(block.Hash()) {
+		err := dbMaybeStoreBlock(b.consensus.DatabaseContext(), block)
 		if err != nil {
-			return err
+			panic(err.Error())
 		}
-		if exists {
-			return nil
-		}
-		err = dbMaybeStoreBlock(dbTx, block)
-		if err != nil {
-			if legacydb.IsError(err, legacydb.ErrBlockExists) {
-				return nil
-			}
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		panic(err.Error())
 	}
-	err = b.shutdownTracker.Wait(ib.GetHash())
+	err := b.shutdownTracker.Wait(ib.GetHash())
 	if err != nil {
 		panic(err.Error())
 	}
@@ -708,18 +693,11 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 		b.bd.GetMainChainTip().GetState().GetWeight(), b.bd.GetGraphState(), b.GetTokenTipHash(), *mainTip.GetState().Root())
 
 	// Atomically insert info into the database.
-	err := b.db.Update(func(dbTx legacydb.Tx) error {
-		// Update best block state.
-		err := dbPutBestState(dbTx, state, pow.CalcWork(mainTipNode.Difficulty(), mainTipNode.Pow().GetPowType()))
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	// Update best block state.
+	err := dbPutBestState(b.consensus.DatabaseContext(), state, pow.CalcWork(mainTipNode.Difficulty(), mainTipNode.Pow().GetPowType()))
 	if err != nil {
 		return err
 	}
-
 	if b.indexManager != nil {
 		err := b.indexManager.UpdateMainTip(mainTip.GetHash(), uint64(mainTip.GetOrder()))
 		if err != nil {
