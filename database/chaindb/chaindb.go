@@ -186,6 +186,18 @@ func (cdb *ChainDB) PutBestChainState(data []byte) error {
 	return rawdb.WriteBestChainState(cdb.db, data)
 }
 
+func (cdb *ChainDB) GetBlock(hash *hash.Hash) (*types.SerializedBlock, error) {
+	return rawdb.ReadBody(cdb.db, hash), nil
+}
+
+func (cdb *ChainDB) GetBlockBytes(hash *hash.Hash) ([]byte, error) {
+	return rawdb.ReadBodyRaw(cdb.db, hash), nil
+}
+
+func (cdb *ChainDB) GetHeader(hash *hash.Hash) (*types.BlockHeader, error) {
+	return rawdb.ReadHeader(cdb.db, hash), nil
+}
+
 func (cdb *ChainDB) PutBlock(block *types.SerializedBlock) error {
 	return rawdb.WriteBlock(cdb.db, block)
 }

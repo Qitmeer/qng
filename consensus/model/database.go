@@ -24,6 +24,9 @@ type DataBase interface {
 	DeleteTokenState(blockID uint) error
 	GetBestChainState() ([]byte, error)
 	PutBestChainState(data []byte) error
+	GetBlock(hash *hash.Hash) (*types.SerializedBlock, error)
+	GetBlockBytes(hash *hash.Hash) ([]byte, error)
+	GetHeader(hash *hash.Hash) (*types.BlockHeader, error)
 	PutBlock(block *types.SerializedBlock) error
 	HasBlock(hash *hash.Hash) bool
 }

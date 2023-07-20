@@ -269,15 +269,7 @@ func (b *BlockChain) initChainState() error {
 	if mainTipNode == nil {
 		return fmt.Errorf("No main tip")
 	}
-
-	var block *types.SerializedBlock
-	err = b.db.View(func(dbTx legacydb.Tx) error {
-		block, err = dbFetchBlockByHash(dbTx, mainTip.GetHash())
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	block, err := dbFetchBlockByHash(b.consensus.DatabaseContext(), mainTip.GetHash())
 	if err != nil {
 		return err
 	}

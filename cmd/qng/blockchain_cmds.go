@@ -550,20 +550,7 @@ func upgradeBlockChain(cfg *config.Config, cdb model.DataBase, interrupt <-chan 
 				return fmt.Errorf(fmt.Sprintf("Can't find block (%d)!", i))
 			}
 
-			var blockBytes []byte
-			err = db.View(func(dbTx legacydb.Tx) error {
-				bb, er := dbTx.FetchBlock(blockHash)
-				if er != nil {
-					return er
-				}
-				blockBytes = bb
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-
-			block, err := types.NewBlockFromBytes(blockBytes)
+			block, err := cdb.GetBlock(blockHash)
 			if err != nil {
 				return err
 			}

@@ -1,6 +1,7 @@
 package legacychaindb
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/system"
@@ -230,6 +231,67 @@ func (cdb *LegacyChainDB) PutBestChainState(data []byte) error {
 	return cdb.db.Update(func(dbTx legacydb.Tx) error {
 		return dbTx.Metadata().Put(dbnamespace.ChainStateKeyName, data)
 	})
+}
+
+func (cdb *LegacyChainDB) GetBlock(hash *hash.Hash) (*types.SerializedBlock, error) {
+	var blockBytes []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		var err error
+		// Load the raw block bytes from the database.
+		blockBytes, err = dbTx.FetchBlock(hash)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	// Create the encapsulated block and set the height appropriately.
+	block, err := types.NewBlockFromBytes(blockBytes)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
+}
+
+func (cdb *LegacyChainDB) GetBlockBytes(hash *hash.Hash) ([]byte, error) {
+	var blockBytes []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		var err error
+		// Load the raw block bytes from the database.
+		blockBytes, err = dbTx.FetchBlock(hash)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return blockBytes, nil
+}
+
+func (cdb *LegacyChainDB) GetHeader(hash *hash.Hash) (*types.BlockHeader, error) {
+	var headerBytes []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		var err error
+		headerBytes, err = dbTx.FetchBlockHeader(hash)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var header types.BlockHeader
+	err = header.Deserialize(bytes.NewReader(headerBytes))
+	if err != nil {
+		return nil, err
+	}
+	return &header, nil
 }
 
 func (cdb *LegacyChainDB) PutBlock(block *types.SerializedBlock) error {
