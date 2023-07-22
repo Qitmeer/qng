@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	s "github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/params"
 	"io"
 	"time"
@@ -13,14 +12,11 @@ import (
 
 // Load from database
 func (bd *MeerDAG) Load(blockTotal uint, genesis *hash.Hash) error {
-	err := bd.db.View(func(dbTx legacydb.Tx) error {
-		meta := dbTx.Metadata()
-		serializedData := meta.Get(DagInfoBucketName)
-		if serializedData == nil {
-			return fmt.Errorf("dag load error")
-		}
-		return bd.Decode(bytes.NewReader(serializedData))
-	})
+	serializedData, err := bd.db.GetDagInfo()
+	if err != nil {
+		return err
+	}
+	err = bd.Decode(bytes.NewReader(serializedData))
 	if err != nil {
 		return err
 	}
@@ -140,9 +136,7 @@ func (bd *MeerDAG) loadBlock(id uint) (IBlock, error) {
 	}
 	block := Block{id: id}
 	ib := ph.CreateBlock(&block)
-	err := bd.db.View(func(dbTx legacydb.Tx) error {
-		return DBGetDAGBlock(dbTx, ib)
-	})
+	err := DBGetDAGBlock(bd.db, ib)
 	if err != nil {
 		return nil, err
 	}

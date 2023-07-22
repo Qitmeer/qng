@@ -10,7 +10,6 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/node/service"
-	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/services/mempool"
 	"time"
@@ -214,7 +213,7 @@ func NewTxManager(consensus model.Consensus, ntmgr model.Notify) (*TxManager, er
 			MinRelayTxFee:        *amt,
 			TxTimeScope:          cfg.TxTimeScope,
 			StandardVerifyFlags: func() (txscript.ScriptFlags, error) {
-				return common.StandardScriptVerifyFlags()
+				return mempool.StandardScriptVerifyFlags()
 			},
 		},
 		ChainParams:      consensus.Params(),

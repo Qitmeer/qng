@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
@@ -132,9 +133,17 @@ func putTxIndexEntry(target []byte, blockID uint64, txLoc types.TxLoc) {
 	byteOrder.PutUint32(target[12:], uint32(txLoc.TxLen))
 }
 
-func dbFetchTxIndexEntry(dbTx legacydb.Tx, itxIndex legacydb.Bucket, txid *hash.Hash) (*legacydb.BlockRegion, error) {
-	serializedData := itxIndex.Get(txid[:])
-	if len(serializedData) == 0 {
+func dbFetchTxIndexEntry(ldb legacydb.DB, db model.DataBase, txid *hash.Hash) (*legacydb.BlockRegion, error) {
+	var serializedData []byte
+	ldb.View(func(dbTx legacydb.Tx) error {
+		itxIndex := dbTx.Metadata().Bucket(bucketName)
+		if itxIndex == nil {
+			return nil
+		}
+		serializedData = itxIndex.Get(txid[:])
+		return nil
+	})
+	if len(serializedData) <= 0 {
 		return nil, nil
 	}
 
@@ -153,7 +162,7 @@ func dbFetchTxIndexEntry(dbTx legacydb.Tx, itxIndex legacydb.Bucket, txid *hash.
 		return nil, err
 	}
 
-	h, err := meerdag.DBGetDAGBlockHashByID(dbTx, blockID)
+	h, err := meerdag.DBGetDAGBlockHashByID(db, blockID)
 	if err != nil {
 		return nil, legacydb.Error{
 			ErrorCode: legacydb.ErrCorruption,

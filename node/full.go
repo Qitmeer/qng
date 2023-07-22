@@ -20,7 +20,6 @@ import (
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/services/acct"
 	"github.com/Qitmeer/qng/services/address"
-	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/services/miner"
 	"github.com/Qitmeer/qng/services/mining"
@@ -121,7 +120,7 @@ func (qm *QitmeerFull) RegisterMinerService() error {
 		TxMinFreeFee:      cfg.MinTxFee, //TODO, duplicated config item with mem-pool
 		TxTimeScope:       cfg.TxTimeScope,
 		StandardVerifyFlags: func() (txscript.ScriptFlags, error) {
-			return common.StandardScriptVerifyFlags()
+			return mempool.StandardScriptVerifyFlags()
 		}, //TODO, duplicated config item with mem-pool
 		CoinbaseGenerator: coinbase.NewCoinbaseGenerator(qm.node.Params, qm.GetPeerServer().PeerID().String()),
 	}

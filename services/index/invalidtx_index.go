@@ -157,7 +157,7 @@ func (idx *InvalidTxIndex) GetIdByHash(h *hash.Hash) (*hash.Hash, error) {
 func NewInvalidTxIndex(consensus model.Consensus) *InvalidTxIndex {
 	log.Info(fmt.Sprintf("%s is enabled", invalidTxIndexName))
 
-	invalidtxindexStore, err := invalid_tx_index.New(consensus.LegacyDB(), defaultCacheSize, defaultPreallocateCaches)
+	invalidtxindexStore, err := invalid_tx_index.New(consensus.LegacyDB(), consensus.DatabaseContext(), defaultCacheSize, defaultPreallocateCaches)
 	if err != nil {
 		log.Error(err.Error())
 		return nil
@@ -170,7 +170,7 @@ func NewInvalidTxIndex(consensus model.Consensus) *InvalidTxIndex {
 
 func DropInvalidTxIndex(db legacydb.DB, interrupt <-chan struct{}) error {
 	log.Info("Start drop invalidtx index")
-	itiStore, err := invalid_tx_index.New(db, 10, false)
+	itiStore, err := invalid_tx_index.New(db, nil, 10, false)
 	if err != nil {
 		return err
 	}

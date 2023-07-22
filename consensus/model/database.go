@@ -29,4 +29,25 @@ type DataBase interface {
 	GetHeader(hash *hash.Hash) (*types.BlockHeader, error)
 	PutBlock(block *types.SerializedBlock) error
 	HasBlock(hash *hash.Hash) bool
+	GetDagInfo() ([]byte, error)
+	PutDagInfo(data []byte) error
+	GetDAGBlock(blockID uint) ([]byte, error)
+	PutDAGBlock(blockID uint, data []byte) error
+	DeleteDAGBlock(blockID uint) error
+	GetDAGBlockIdByHash(bh *hash.Hash) (uint, error)
+	PutDAGBlockIdByHash(bh *hash.Hash, id uint) error
+	DeleteDAGBlockIdByHash(bh *hash.Hash) error
+	PutMainChainBlock(blockID uint) error
+	HasMainChainBlock(blockID uint) bool
+	DeleteMainChainBlock(blockID uint) error
+	PutBlockIdByOrder(order uint, id uint) error
+	GetBlockIdByOrder(order uint) (uint, error)
+	PutDAGTip(id uint, isMain bool) error
+	GetDAGTips() ([]uint, error)
+	DeleteDAGTip(id uint) error
+	PutDiffAnticone(id uint) error
+	GetDiffAnticones() ([]uint, error)
+	DeleteDiffAnticone(id uint) error
+	Get(key []byte) ([]byte, error)
+	Put(key []byte, value []byte) error
 }

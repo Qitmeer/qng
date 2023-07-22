@@ -12,6 +12,7 @@ package meerdag
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/meerdag/test"
 	"testing"
 )
 
@@ -137,7 +138,7 @@ func Test_SortListPriority(t *testing.T) {
 	for i := uint(0); i < hashNum; i++ {
 		hashStr := fmt.Sprintf("%d", i)
 		h := hash.MustHexToDecodedHash(hashStr)
-		block := &PhantomBlock{Block: &Block{id: i, hash: h, data: &TestBlock{}}, blueNum: i}
+		block := &PhantomBlock{Block: &Block{id: i, hash: h, data: &test.TestBlock{}}, blueNum: i}
 		hs.AddPair(block.GetID(), block)
 		hl = append(hl, block)
 	}

@@ -18,7 +18,8 @@ var tipHashKeyName = []byte("itxi_tip_hash")
 
 type invalidtxindexStore struct {
 	shardID model.StagingShardID
-	db      legacydb.DB
+	ldb     legacydb.DB
+	db      model.DataBase
 }
 
 func (itxis *invalidtxindexStore) Stage(stagingArea *model.StagingArea, bid uint64, block *types.SerializedBlock) {
@@ -56,17 +57,15 @@ func (itxis *invalidtxindexStore) Get(stagingArea *model.StagingArea, txid *hash
 			}
 		}
 	}
-
+	blockRegion, err := dbFetchTxIndexEntry(itxis.ldb, itxis.db, txid)
+	if err != nil {
+		return nil, err
+	}
+	if blockRegion == nil {
+		return nil, nil
+	}
 	var tx *types.Transaction
-	err := itxis.db.View(func(dbTx legacydb.Tx) error {
-		bucket := dbTx.Metadata().Bucket(bucketName)
-		if bucket == nil {
-			return nil
-		}
-		blockRegion, err := dbFetchTxIndexEntry(dbTx, bucket, txid)
-		if err != nil {
-			return err
-		}
+	err = itxis.ldb.View(func(dbTx legacydb.Tx) error {
 		txBytes, err := dbTx.FetchBlockRegion(blockRegion)
 		if err != nil {
 			return err
@@ -106,7 +105,7 @@ func (itxis *invalidtxindexStore) GetIdByHash(stagingArea *model.StagingArea, h 
 	}
 
 	var txid *hash.Hash
-	err := itxis.db.View(func(dbTx legacydb.Tx) error {
+	err := itxis.ldb.View(func(dbTx legacydb.Tx) error {
 		id, er := dbFetchTxIdByHash(dbTx, h)
 		if er != nil {
 			return er
@@ -135,7 +134,7 @@ func (itxis *invalidtxindexStore) Tip(stagingArea *model.StagingArea) (uint64, *
 	}
 	var tipHash *hash.Hash
 	var tipOrder uint64
-	err := itxis.db.View(func(dbTx legacydb.Tx) error {
+	err := itxis.ldb.View(func(dbTx legacydb.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
 		if bucket == nil {
 			return fmt.Errorf("No vm block index:%s", bucketName)
@@ -169,7 +168,7 @@ func (itxis *invalidtxindexStore) Tip(stagingArea *model.StagingArea) (uint64, *
 
 func (itxis *invalidtxindexStore) IsEmpty() bool {
 	has := false
-	itxis.db.View(func(dbTx legacydb.Tx) error {
+	itxis.ldb.View(func(dbTx legacydb.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
 		if bucket == nil {
 			return nil
@@ -182,7 +181,7 @@ func (itxis *invalidtxindexStore) IsEmpty() bool {
 }
 
 func (itxis *invalidtxindexStore) Clean() error {
-	return itxis.db.Update(func(dbTx legacydb.Tx) error {
+	return itxis.ldb.Update(func(dbTx legacydb.Tx) error {
 		bucket := dbTx.Metadata().Bucket(bucketName)
 		if bucket != nil {
 			return dbTx.Metadata().DeleteBucket(bucketName)
@@ -201,10 +200,11 @@ func (itxis *invalidtxindexStore) stagingShard(stagingArea *model.StagingArea) *
 	}).(*invalidtxindexStagingShard)
 }
 
-func New(db legacydb.DB, cacheSize int, preallocate bool) (model.InvalidTxIndexStore, error) {
+func New(ldb legacydb.DB, db model.DataBase, cacheSize int, preallocate bool) (model.InvalidTxIndexStore, error) {
 	store := &invalidtxindexStore{
 		shardID: staging.GenerateShardingID(),
 		db:      db,
+		ldb:     ldb,
 	}
 	return store, nil
 }

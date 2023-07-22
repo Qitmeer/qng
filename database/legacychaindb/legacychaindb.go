@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/services/index"
 	"math"
 )
@@ -44,6 +45,38 @@ func (cdb *LegacyChainDB) Init() error {
 		}
 		// Create the bucket which house the token state
 		_, err = meta.CreateBucket(dbnamespace.TokenBucketName)
+		if err != nil {
+			return err
+		}
+
+		// DAG
+		// Create the bucket that houses the block index data.
+		_, err := meta.CreateBucket(meerdag.BlockIndexBucketName)
+		if err != nil {
+			return err
+		}
+
+		// Create the bucket that houses the chain block order to hash
+		// index.
+		_, err = meta.CreateBucket(meerdag.OrderIdBucketName)
+		if err != nil {
+			return err
+		}
+
+		_, err = meta.CreateBucket(meerdag.DagMainChainBucketName)
+		if err != nil {
+			return err
+		}
+
+		_, err = meta.CreateBucket(meerdag.BlockIdBucketName)
+		if err != nil {
+			return err
+		}
+		_, err = meta.CreateBucketIfNotExists(meerdag.DAGTipsBucketName)
+		if err != nil {
+			return err
+		}
+		_, err = meta.CreateBucketIfNotExists(meerdag.DiffAnticoneBucketName)
 		if err != nil {
 			return err
 		}
@@ -315,6 +348,268 @@ func (cdb *LegacyChainDB) HasBlock(hash *hash.Hash) bool {
 		return false
 	}
 	return result
+}
+
+func (cdb *LegacyChainDB) GetDagInfo() ([]byte, error) {
+	var data []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		serializedData := dbTx.Metadata().Get(meerdag.DagInfoBucketName)
+		if serializedData == nil {
+			return fmt.Errorf("dag load error")
+		}
+		data = serializedData
+		return nil
+	})
+	return data, err
+}
+
+func (cdb *LegacyChainDB) PutDagInfo(data []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		return dbTx.Metadata().Put(meerdag.DagInfoBucketName, data)
+	})
+}
+
+func (cdb *LegacyChainDB) GetDAGBlock(blockID uint) ([]byte, error) {
+	var data []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.BlockIndexBucketName)
+		var serializedID [4]byte
+		meerdag.ByteOrder.PutUint32(serializedID[:], uint32(blockID))
+
+		data = bucket.Get(serializedID[:])
+		return nil
+	})
+	return data, err
+}
+
+func (cdb *LegacyChainDB) PutDAGBlock(blockID uint, data []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.BlockIndexBucketName)
+		var serializedID [4]byte
+		meerdag.ByteOrder.PutUint32(serializedID[:], uint32(blockID))
+		return bucket.Put(serializedID[:], data)
+	})
+}
+
+func (cdb *LegacyChainDB) DeleteDAGBlock(blockID uint) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.BlockIndexBucketName)
+		var serializedID [4]byte
+		meerdag.ByteOrder.PutUint32(serializedID[:], uint32(blockID))
+		return bucket.Delete(serializedID[:])
+	})
+}
+
+func (cdb *LegacyChainDB) GetDAGBlockIdByHash(bh *hash.Hash) (uint, error) {
+	var id uint
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.BlockIdBucketName)
+		data := bucket.Get(bh[:])
+		if data == nil {
+			id = uint(meerdag.MaxId)
+			return fmt.Errorf("get dag block error")
+		}
+		id = uint(meerdag.ByteOrder.Uint32(data))
+		return nil
+	})
+	return id, err
+}
+
+func (cdb *LegacyChainDB) PutDAGBlockIdByHash(bh *hash.Hash, id uint) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.BlockIdBucketName)
+		var serializedID [4]byte
+		meerdag.ByteOrder.PutUint32(serializedID[:], uint32(id))
+		return bucket.Put(bh[:], serializedID[:])
+	})
+}
+
+func (cdb *LegacyChainDB) DeleteDAGBlockIdByHash(bh *hash.Hash) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.BlockIdBucketName)
+		return bucket.Delete(bh[:])
+	})
+}
+
+func (cdb *LegacyChainDB) PutMainChainBlock(blockID uint) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.DagMainChainBucketName)
+		var serializedID [4]byte
+		meerdag.ByteOrder.PutUint32(serializedID[:], uint32(blockID))
+		return bucket.Put(serializedID[:], []byte{0})
+	})
+}
+
+func (cdb *LegacyChainDB) HasMainChainBlock(blockID uint) bool {
+	has := false
+	cdb.db.View(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.DagMainChainBucketName)
+		var serializedID [4]byte
+		meerdag.ByteOrder.PutUint32(serializedID[:], uint32(blockID))
+
+		data := bucket.Get(serializedID[:])
+		if len(data) > 0 {
+			has = true
+		}
+		return nil
+	})
+	return has
+}
+
+func (cdb *LegacyChainDB) DeleteMainChainBlock(blockID uint) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.DagMainChainBucketName)
+		var serializedID [4]byte
+		meerdag.ByteOrder.PutUint32(serializedID[:], uint32(blockID))
+		return bucket.Delete(serializedID[:])
+	})
+}
+
+func (cdb *LegacyChainDB) PutBlockIdByOrder(order uint, id uint) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		// Serialize the order for use in the index entries.
+		var serializedOrder [4]byte
+		meerdag.ByteOrder.PutUint32(serializedOrder[:], uint32(order))
+
+		var serializedID [4]byte
+		meerdag.ByteOrder.PutUint32(serializedID[:], uint32(id))
+
+		// Add the block order to id mapping to the index.
+		bucket := dbTx.Metadata().Bucket(meerdag.OrderIdBucketName)
+		return bucket.Put(serializedOrder[:], serializedID[:])
+	})
+}
+
+func (cdb *LegacyChainDB) GetBlockIdByOrder(order uint) (uint, error) {
+	if order > math.MaxUint32 {
+		str := fmt.Sprintf("order %d is overflow", order)
+		return uint(meerdag.MaxId), meerdag.NewDAGErrorByStr(str)
+	}
+	var serializedOrder [4]byte
+	meerdag.ByteOrder.PutUint32(serializedOrder[:], uint32(order))
+
+	var id uint
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.OrderIdBucketName)
+		idBytes := bucket.Get(serializedOrder[:])
+		if idBytes == nil {
+			str := fmt.Sprintf("no block at order %d exists", order)
+			id = uint(meerdag.MaxId)
+			return meerdag.NewDAGErrorByStr(str)
+		}
+		id = uint(meerdag.ByteOrder.Uint32(idBytes))
+		return nil
+	})
+	return id, err
+}
+
+func (cdb *LegacyChainDB) PutDAGTip(id uint, isMain bool) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		var serializedID [4]byte
+		meerdag.ByteOrder.PutUint32(serializedID[:], uint32(id))
+
+		bucket := dbTx.Metadata().Bucket(meerdag.DAGTipsBucketName)
+		main := byte(0)
+		if isMain {
+			main = byte(1)
+		}
+		return bucket.Put(serializedID[:], []byte{main})
+	})
+}
+
+func (cdb *LegacyChainDB) GetDAGTips() ([]uint, error) {
+	result := []uint{}
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.DAGTipsBucketName)
+		cursor := bucket.Cursor()
+		mainTip := meerdag.MaxId
+		tips := []uint{}
+		for cok := cursor.First(); cok; cok = cursor.Next() {
+			id := uint(meerdag.ByteOrder.Uint32(cursor.Key()))
+			main := cursor.Value()
+			if len(main) > 0 {
+				if main[0] > 0 {
+					if mainTip != meerdag.MaxId {
+						return fmt.Errorf("Too many main tip:cur(%d) => next(%d)", mainTip, id)
+					}
+					mainTip = id
+					continue
+				}
+			}
+			tips = append(tips, id)
+		}
+		if mainTip == meerdag.MaxId {
+			return fmt.Errorf("Can't find main tip")
+		}
+		result = append(result, mainTip)
+		if len(tips) > 0 {
+			result = append(result, tips...)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, err
+}
+
+func (cdb *LegacyChainDB) DeleteDAGTip(id uint) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.DAGTipsBucketName)
+		var serializedID [4]byte
+		meerdag.ByteOrder.PutUint32(serializedID[:], uint32(id))
+		return bucket.Delete(serializedID[:])
+	})
+}
+
+func (cdb *LegacyChainDB) PutDiffAnticone(id uint) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		var serializedID [4]byte
+		meerdag.ByteOrder.PutUint32(serializedID[:], uint32(id))
+		bucket := dbTx.Metadata().Bucket(meerdag.DiffAnticoneBucketName)
+		return bucket.Put(serializedID[:], []byte{byte(0)})
+	})
+}
+
+func (cdb *LegacyChainDB) GetDiffAnticones() ([]uint, error) {
+	diffs := []uint{}
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.DiffAnticoneBucketName)
+		cursor := bucket.Cursor()
+		for cok := cursor.First(); cok; cok = cursor.Next() {
+			id := uint(meerdag.ByteOrder.Uint32(cursor.Key()))
+			diffs = append(diffs, id)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return diffs, nil
+}
+
+func (cdb *LegacyChainDB) DeleteDiffAnticone(id uint) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(meerdag.DiffAnticoneBucketName)
+		var serializedID [4]byte
+		meerdag.ByteOrder.PutUint32(serializedID[:], uint32(id))
+		return bucket.Delete(serializedID[:])
+	})
+}
+
+func (cdb *LegacyChainDB) Get(key []byte) ([]byte, error) {
+	var value []byte
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		value = dbTx.Metadata().Get(key)
+		return nil
+	})
+	return value, err
+}
+
+func (cdb *LegacyChainDB) Put(key []byte, value []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		return dbTx.Metadata().Put(key, value)
+	})
 }
 
 func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) {
