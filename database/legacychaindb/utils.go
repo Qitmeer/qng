@@ -27,7 +27,6 @@ var (
 func LoadBlockDB(cfg *config.Config) (legacydb.DB, error) {
 	// The database name is based on the database type.
 	dbPath := BlockDbPath(cfg)
-
 	log.Info("Loading block database", "dbPath", dbPath)
 	db, err := legacydb.Open(cfg.DbType, dbPath, params.ActiveNetParams.Net)
 	if err != nil {

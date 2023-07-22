@@ -278,6 +278,12 @@ func (bd *MeerDAG) SortBlock(src []*hash.Hash) []*hash.Hash {
 	return bd.sortBlock(src)
 }
 
+func (bd *MeerDAG) LocateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	return bd.locateBlocks(gs, maxHashes)
+}
+
 // Locate all eligible block by current graph state.
 func (bd *MeerDAG) locateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
 	if gs.IsExcellent(bd.getGraphState()) {

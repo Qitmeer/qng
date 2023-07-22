@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/params"
 	"io"
@@ -296,4 +297,8 @@ func (bd *MeerDAG) SetCacheSize(dag uint64, data uint64) {
 	if data > 0 {
 		bd.minBDCacheSize = data
 	}
+}
+
+func (bd *MeerDAG) DB() model.DataBase {
+	return bd.db
 }

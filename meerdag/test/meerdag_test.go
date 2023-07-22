@@ -190,7 +190,7 @@ func InitBlockDAG(dagType string, graph string) meerdag.ConsensusAlgorithm {
 		fmt.Println(err)
 		return nil
 	}
-	bd = meerdag.New(dagType, -1, db, nil, meerdag.createMockBlockState, meerdag.createMockBlockStateFromBytes)
+	bd = meerdag.New(dagType, -1, db, nil, meerdag.CreateMockBlockState, meerdag.CreateMockBlockStateFromBytes)
 	instance := bd.GetInstance()
 	tbMap = map[string]meerdag.IBlock{}
 	for i := 0; i < blen; i++ {
@@ -358,7 +358,11 @@ func loadBlockDB(cfg *config.Config) (model.DataBase, error) {
 	ccfg := *cfg
 	ccfg.Cleanup = true
 	database.Cleanup(&ccfg)
-	return database.New(cfg, system.InterruptListener())
+	db, err := database.New(cfg, system.InterruptListener())
+	if err != nil {
+		return nil, err
+	}
+	return db, db.Init()
 }
 
 func getBlocksByTag(tags []string) []*hash.Hash {
@@ -378,12 +382,12 @@ func exit() {
 }
 
 func storeBlock(block *TestBlock) error {
-	return bd.db.PutBlock(block.block)
+	return bd.DB().PutBlock(block.block)
 }
 
 func fetchBlock(h *hash.Hash) (*TestBlock, error) {
 	tb := &TestBlock{}
-	block, err := bd.db.GetBlock(h)
+	block, err := bd.DB().GetBlock(h)
 	if err != nil {
 		return nil, err
 	}
@@ -395,12 +399,12 @@ func dbPutTotal(total uint) error {
 	var serializedTotal [4]byte
 	meerdag.ByteOrder.PutUint32(serializedTotal[:], uint32(total))
 
-	return bd.db.Put([]byte("blocktotal"), serializedTotal[:])
+	return bd.DB().Put([]byte("blocktotal"), serializedTotal[:])
 }
 
 func dbGetTotal() (uint32, error) {
 	total := uint32(0)
-	serializedTotal, err := bd.db.Get([]byte("blocktotal"))
+	serializedTotal, err := bd.DB().Get([]byte("blocktotal"))
 	if err != nil {
 		return total, err
 	}
@@ -412,9 +416,9 @@ func dbGetTotal() (uint32, error) {
 }
 
 func dbGetGenesis() (*hash.Hash, error) {
-	block := meerdag.Block{id: 0}
-	ib := &meerdag.PhantomBlock{&block, 0, meerdag.NewIdSet(), meerdag.NewIdSet()}
-	err := meerdag.DBGetDAGBlock(bd.db, ib)
+	block := meerdag.Block{}
+	ib := &meerdag.PhantomBlock{Block: &block}
+	err := meerdag.DBGetDAGBlock(bd.DB(), ib)
 	if err != nil {
 		return nil, err
 	}

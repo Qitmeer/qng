@@ -3,6 +3,8 @@ package test
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/common/system"
+	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/services/common"
 	"os"
@@ -16,7 +18,7 @@ func TestMain(m *testing.M) {
 }
 
 func Test_GetFutureSet(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -24,7 +26,7 @@ func Test_GetFutureSet(t *testing.T) {
 	//ph:=ibd.(*Phantom)
 	anBlock := tbMap[testData.PH_GetFutureSet.Input]
 	bset := meerdag.NewIdSet()
-	bd.getFutureSet(bset, anBlock)
+	bd.GetFutureSet(bset, anBlock)
 	fmt.Printf("Get %s future set：\n", testData.PH_GetFutureSet.Input)
 	printBlockSetTag(bset)
 	//
@@ -34,16 +36,15 @@ func Test_GetFutureSet(t *testing.T) {
 }
 
 func Test_GetAnticone(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
-	ph := ibd.(*meerdag.Phantom)
 	//
 	anBlock := tbMap[testData.PH_GetAnticone.Input]
 
 	////////////
-	bset := ph.bd.getAnticone(anBlock, nil)
+	bset := bd.GetAnticone(anBlock, nil)
 	fmt.Printf("Get %s anticone set：\n", testData.PH_GetAnticone.Input)
 	printBlockSetTag(bset)
 	//
@@ -54,7 +55,7 @@ func Test_GetAnticone(t *testing.T) {
 }
 
 func Test_BlueSetFig1(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig1-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig1-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -69,7 +70,7 @@ func Test_BlueSetFig1(t *testing.T) {
 }
 
 func Test_BlueSetFig2(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -84,7 +85,7 @@ func Test_BlueSetFig2(t *testing.T) {
 }
 
 func Test_BlueSetFig4(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig4-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig4-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -99,7 +100,7 @@ func Test_BlueSetFig4(t *testing.T) {
 }
 
 func Test_OrderFig1(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig1-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig1-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -108,7 +109,7 @@ func Test_OrderFig1(t *testing.T) {
 	var i uint
 	ph.UpdateVirtualBlockOrder()
 	for i = 0; i < bd.GetBlockTotal(); i++ {
-		order = append(order, bd.getBlockByOrder(uint(i)).GetID())
+		order = append(order, bd.GetBlockByOrder(uint(i)).GetID())
 	}
 	fmt.Printf("The Fig.1 Order: ")
 	printBlockChainTag(order)
@@ -124,7 +125,7 @@ func Test_OrderFig1(t *testing.T) {
 }
 
 func Test_OrderFig2(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -133,7 +134,7 @@ func Test_OrderFig2(t *testing.T) {
 	var i uint
 	ph.UpdateVirtualBlockOrder()
 	for i = 0; i < bd.GetBlockTotal(); i++ {
-		order = append(order, bd.getBlockByOrder(uint(i)).GetID())
+		order = append(order, bd.GetBlockByOrder(uint(i)).GetID())
 	}
 	fmt.Printf("The Fig.2 Order: ")
 	printBlockChainTag(order)
@@ -149,7 +150,7 @@ func Test_OrderFig2(t *testing.T) {
 }
 
 func Test_OrderFig4(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig4-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig4-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -158,7 +159,7 @@ func Test_OrderFig4(t *testing.T) {
 	var i uint
 	ph.UpdateVirtualBlockOrder()
 	for i = 0; i < bd.GetBlockTotal(); i++ {
-		order = append(order, bd.getBlockByOrder(uint(i)).GetID())
+		order = append(order, bd.GetBlockByOrder(uint(i)).GetID())
 	}
 	fmt.Printf("The Fig.4 Order: ")
 	printBlockChainTag(order)
@@ -174,7 +175,7 @@ func Test_OrderFig4(t *testing.T) {
 }
 
 func Test_GetLayer(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -183,7 +184,7 @@ func Test_GetLayer(t *testing.T) {
 	ph := ibd.(*meerdag.Phantom)
 	ph.UpdateVirtualBlockOrder()
 	for i = 0; i < bd.GetBlockTotal(); i++ {
-		l := bd.GetLayer(bd.getBlockByOrder(uint(i)).GetID())
+		l := bd.GetLayer(bd.GetBlockByOrder(uint(i)).GetID())
 		result = fmt.Sprintf("%s%d", result, l)
 	}
 	if result != testData.PH_GetLayer.Output[0] {
@@ -192,7 +193,7 @@ func Test_GetLayer(t *testing.T) {
 }
 
 func Test_IsOnMainChain(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -202,7 +203,7 @@ func Test_IsOnMainChain(t *testing.T) {
 }
 
 func Test_LocateBlocks(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -210,11 +211,11 @@ func Test_LocateBlocks(t *testing.T) {
 	gs.SetTips([]*hash.Hash{bd.GetGenesisHash()})
 	gs.SetTotal(1)
 	gs.SetLayer(0)
-	lb := bd.locateBlocks(gs, 100)
+	lb := bd.LocateBlocks(gs, 100)
 
 	lbids := meerdag.NewIdSet()
 	for _, v := range lb {
-		lbids.Add(bd.getBlockId(v))
+		lbids.Add(bd.GetBlockId(v))
 	}
 	if !processResult(lbids, changeToIDList(testData.PH_LocateBlocks.Output)) {
 		t.FailNow()
@@ -222,7 +223,7 @@ func Test_LocateBlocks(t *testing.T) {
 }
 
 func Test_LocateMaxBlocks(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -230,10 +231,10 @@ func Test_LocateMaxBlocks(t *testing.T) {
 	gs.SetTips([]*hash.Hash{bd.GetGenesisHash(), tbMap["G"].GetHash()})
 	gs.SetTotal(4)
 	gs.SetLayer(2)
-	lb := bd.locateBlocks(gs, 4)
+	lb := bd.LocateBlocks(gs, 4)
 	lbids := meerdag.NewIdSet()
 	for _, v := range lb {
-		lbids.Add(bd.getBlockId(v))
+		lbids.Add(bd.GetBlockId(v))
 	}
 	if !processResult(lbids, changeToIDList(testData.PH_LocateMaxBlocks.Output)) {
 		t.FailNow()
@@ -241,7 +242,7 @@ func Test_LocateMaxBlocks(t *testing.T) {
 }
 
 func Test_Confirmations(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -255,13 +256,13 @@ func Test_Confirmations(t *testing.T) {
 	ph := ibd.(*meerdag.Phantom)
 	ph.UpdateVirtualBlockOrder()
 	for i := uint(0); i < bd.GetBlockTotal(); i++ {
-		blockHash := bd.getBlockByOrder(uint(i)).GetID()
+		blockHash := bd.GetBlockByOrder(uint(i)).GetID()
 		fmt.Printf("%s : %d\n", getBlockTag(blockHash), bd.GetConfirmations(blockHash))
 	}
 }
 
 func Test_IsDAG(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -279,7 +280,7 @@ func Test_IsDAG(t *testing.T) {
 }
 
 func Test_IsHourglass(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "CP_Blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "CP_Blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -289,7 +290,7 @@ func Test_IsHourglass(t *testing.T) {
 }
 
 func Test_GetMaturity(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -299,7 +300,7 @@ func Test_GetMaturity(t *testing.T) {
 }
 
 func Test_GetMainParentConcurrency(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -313,7 +314,7 @@ func Test_GetMainParentConcurrency(t *testing.T) {
 }
 
 func Test_GetBlockConcurrency(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -329,7 +330,7 @@ func Test_GetBlockConcurrency(t *testing.T) {
 }
 
 func Test_MainChainTip(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -344,17 +345,16 @@ func Test_MainChainTip(t *testing.T) {
 }
 
 func Test_Rollback(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
-	ph := ibd.(*meerdag.Phantom)
 	orders := meerdag.NewIdSet()
 	total := bd.GetBlockTotal()
-	tips := bd.tips.Clone()
+	tips := bd.GetTipsSet().Clone()
 
 	for i := uint(0); i < bd.GetBlockTotal(); i++ {
-		ib := ph.bd.getBlockById(i)
+		ib := bd.GetBlockById(i)
 		orders.AddPair(ib.GetID(), ib.GetOrder())
 	}
 
@@ -367,13 +367,13 @@ func Test_Rollback(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bd.rollback()
+	bd.Rollback()
 
 	if bd.GetBlockTotal() != total {
 		t.Fatalf("Roll back error")
 	}
 	for i := uint(0); i < bd.GetBlockTotal(); i++ {
-		ib := ph.bd.getBlockById(i)
+		ib := bd.GetBlockById(i)
 		v := orders.Get(i)
 		o, ok := v.(uint)
 		if !ok {
@@ -384,13 +384,13 @@ func Test_Rollback(t *testing.T) {
 		}
 	}
 
-	if !bd.tips.IsEqual(tips) {
+	if !bd.GetTipsSet().IsEqual(tips) {
 		t.Fatalf("Roll back error")
 	}
 }
 
 func Test_tips(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -422,14 +422,14 @@ func Test_tips(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bd.db.Close()
+	bd.DB().Close()
 
 	checkLoad(t)
 }
 
 func checkLoad(t *testing.T) {
 	cfg := common.DefaultConfig(os.TempDir())
-	db, err := loadBlockDB(cfg)
+	db, err := database.New(cfg, system.InterruptListener())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -441,7 +441,7 @@ func checkLoad(t *testing.T) {
 		}
 		return tb
 	}
-	bd = meerdag.New(meerdag.phantom, -1, db, getBlockData, meerdag.createMockBlockState, meerdag.createMockBlockStateFromBytes)
+	bd = meerdag.New(meerdag.PHANTOM, -1, db, getBlockData, meerdag.CreateMockBlockState, meerdag.CreateMockBlockStateFromBytes)
 	total, err := dbGetTotal()
 	if err != nil {
 		t.Fatal(err)

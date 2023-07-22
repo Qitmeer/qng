@@ -436,6 +436,13 @@ func (bd *MeerDAG) GetLastTime() *time.Time {
 	return &bd.lastTime
 }
 
+func (bd *MeerDAG) GetFutureSet(fs *IdSet, b IBlock) {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+
+	bd.getFutureSet(fs, b)
+}
+
 // Returns a future collection of block. This function is a recursively called function
 // So we should consider its efficiency.
 func (bd *MeerDAG) getFutureSet(fs *IdSet, b IBlock) {
@@ -580,6 +587,12 @@ func (bd *MeerDAG) recAnticone(bs *IdSet, futureSet *IdSet, anticone *IdSet, ib 
 			bd.recAnticone(bs, futureSet, anticone, pib)
 		}
 	}
+}
+
+func (bd *MeerDAG) GetAnticone(b IBlock, exclude *IdSet) *IdSet {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	return bd.getAnticone(b, exclude)
 }
 
 // This function can get anticone set for an block that you offered in the block dag,If
@@ -1235,7 +1248,7 @@ func (bd *MeerDAG) commit() error {
 	return nil
 }
 
-func (bd *MeerDAG) rollback() error {
+func (bd *MeerDAG) Rollback() error {
 	if bd.lastSnapshot.IsValid() {
 		log.Debug(fmt.Sprintf("Block DAG try to roll back ... ..."))
 

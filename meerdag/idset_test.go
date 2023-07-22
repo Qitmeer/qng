@@ -12,8 +12,8 @@ package meerdag
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/meerdag/test"
 	"testing"
+	"time"
 )
 
 func Test_AddId(t *testing.T) {
@@ -131,6 +131,37 @@ func Test_ForId(t *testing.T) {
 	}
 }
 
+// DAG block data
+type TestBlock struct {
+}
+
+// Return the hash
+func (tb *TestBlock) GetHash() *hash.Hash {
+	return &hash.ZeroHash
+}
+
+// Get all parents set,the dag block has more than one parent
+func (tb *TestBlock) GetParents() []*hash.Hash {
+	return nil
+}
+
+func (tb *TestBlock) GetMainParent() *hash.Hash {
+	return nil
+}
+
+func (tb *TestBlock) GetTimestamp() int64 {
+	return time.Now().Unix()
+}
+
+// Acquire the weight of block
+func (tb *TestBlock) GetWeight() uint64 {
+	return 1
+}
+
+func (tb *TestBlock) GetPriority() int {
+	return MaxPriority
+}
+
 func Test_SortListPriority(t *testing.T) {
 	hs := NewIdSet()
 	hl := BlockPrioritySlice{}
@@ -138,7 +169,7 @@ func Test_SortListPriority(t *testing.T) {
 	for i := uint(0); i < hashNum; i++ {
 		hashStr := fmt.Sprintf("%d", i)
 		h := hash.MustHexToDecodedHash(hashStr)
-		block := &PhantomBlock{Block: &Block{id: i, hash: h, data: &test.TestBlock{}}, blueNum: i}
+		block := &PhantomBlock{Block: &Block{id: i, hash: h, data: &TestBlock{}}, blueNum: i}
 		hs.AddPair(block.GetID(), block)
 		hl = append(hl, block)
 	}
