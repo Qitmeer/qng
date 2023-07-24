@@ -13,9 +13,7 @@ import (
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/version"
 	"github.com/jessevdk/go-flags"
 	"github.com/urfave/cli/v2"
@@ -49,6 +47,9 @@ const (
 	defaultMempoolExpiry          = int64(time.Hour)
 	defaultRPCUser                = "test"
 	defaultRPCPass                = "test"
+	defaultMinBlockPruneSize      = 2000
+	defaultMinBlockDataCache      = 2000
+	defaultMinRelayTxFee          = int64(1e4)
 )
 const (
 	defaultSigCacheMaxSize = 100000
@@ -311,7 +312,7 @@ var (
 		&cli.Int64Flag{
 			Name:        "mintxfee",
 			Usage:       "The minimum transaction fee in AtomMEER/kB.",
-			Value:       mempool.DefaultMinRelayTxFee,
+			Value:       defaultMinRelayTxFee,
 			Destination: &cfg.MinTxFee,
 		},
 		&cli.Int64Flag{
@@ -544,13 +545,13 @@ var (
 		&cli.Uint64Flag{
 			Name:        "dagcachesize",
 			Usage:       "DAG block cache size",
-			Value:       meerdag.MinBlockPruneSize,
+			Value:       defaultMinBlockPruneSize,
 			Destination: &cfg.DAGCacheSize,
 		},
 		&cli.Uint64Flag{
 			Name:        "bdcachesize",
 			Usage:       "Block data cache size",
-			Value:       meerdag.MinBlockDataCache,
+			Value:       defaultMinBlockDataCache,
 			Destination: &cfg.BlockDataCacheSize,
 		},
 		&cli.StringFlag{
@@ -996,7 +997,7 @@ func DefaultConfig(homeDir string) *config.Config {
 		RPCMaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
 		Generate:             defaultGenerate,
 		MaxPeers:             defaultMaxPeers,
-		MinTxFee:             mempool.DefaultMinRelayTxFee,
+		MinTxFee:             defaultMinRelayTxFee,
 		BlockMinSize:         defaultBlockMinSize,
 		BlockMaxSize:         defaultBlockMaxSize,
 		SigCacheMaxSize:      defaultSigCacheMaxSize,

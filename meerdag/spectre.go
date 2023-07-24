@@ -29,7 +29,7 @@ type Spectre struct {
 }
 
 func (sp *Spectre) GetName() string {
-	return spectre
+	return SPECTRE
 }
 
 func (sp *Spectre) Init(bd *MeerDAG) bool {
@@ -256,7 +256,7 @@ func (sp *Spectre) votedPast(virtualBlock IBlock) *MeerDAG {
 		vh = *virtualBlock.GetHash()
 	}
 	sb := &SpectreBlockData{hash: vh}
-	vp := New(spectre, -1, nil, nil, createMockBlockState, createMockBlockStateFromBytes)
+	vp := New(SPECTRE, -1, nil, nil, CreateMockBlockState, CreateMockBlockStateFromBytes)
 	vp.AddBlock(sb)
 	visited = NewHashSet()
 

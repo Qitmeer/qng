@@ -1,20 +1,23 @@
-package meerdag
+package test
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/Qitmeer/qng/database/legacydb"
+	"github.com/Qitmeer/qng/database"
 	l "github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/services/common"
 	"io"
 	"math/rand"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -129,11 +132,11 @@ func (tb *TestBlock) GetWeight() uint64 {
 }
 
 func (tb *TestBlock) GetPriority() int {
-	return MaxPriority
+	return meerdag.MaxPriority
 }
 
 // This is the interface for Block DAG,can use to call public function.
-var bd *MeerDAG
+var bd *meerdag.MeerDAG
 
 var randTool *rand.Rand = rand.New(rand.NewSource(roughtime.Now().UnixNano()))
 
@@ -144,15 +147,15 @@ var testData *TestData
 // This is the test data file name
 var testDataFilePath string = "./testData.json"
 
-var tbMap map[string]IBlock
+var tbMap map[string]meerdag.IBlock
 
-func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
+func InitBlockDAG(dagType string, graph string) meerdag.ConsensusAlgorithm {
 	output := io.Writer(os.Stdout)
 	glogger := l.NewGlogHandler(l.StreamHandler(output, l.TerminalFormat(false)))
 	glogger.Verbosity(l.LvlError)
 	l.Root().SetHandler(glogger)
 	blockdaglogger := l.New(l.Ctx{"module": "blockdag"})
-	UseLogger(blockdaglogger)
+	meerdag.UseLogger(blockdaglogger)
 	l.PrintOrigins(true)
 	params.ActiveNetParams = &params.PrivNetParam
 
@@ -181,17 +184,15 @@ func InitBlockDAG(dagType string, graph string) ConsensusAlgorithm {
 	if blen < 2 {
 		return nil
 	}
-
-	cfg := &config.Config{DbType: "ffldb", DataDir: "."}
+	cfg := common.DefaultConfig(os.TempDir())
 	db, err := loadBlockDB(cfg)
 	if err != nil {
 		fmt.Println(err)
 		return nil
 	}
-
-	bd = New(dagType, -1, db, nil, createMockBlockState, createMockBlockStateFromBytes)
+	bd = meerdag.New(dagType, -1, db, nil, meerdag.CreateMockBlockState, meerdag.CreateMockBlockStateFromBytes)
 	instance := bd.GetInstance()
-	tbMap = map[string]IBlock{}
+	tbMap = map[string]meerdag.IBlock{}
 	for i := 0; i < blen; i++ {
 		parents := []*hash.Hash{}
 		for _, parent := range tbd[i].Parents {
@@ -219,7 +220,7 @@ func buildBlock(tag string, parents []*hash.Hash) (*TestBlock, error) {
 	return block, nil
 }
 
-func addBlock(tag string, parents []*hash.Hash) (*TestBlock, IBlock, error) {
+func addBlock(tag string, parents []*hash.Hash) (*TestBlock, meerdag.IBlock, error) {
 	ps := parents
 	if len(parents) > 1 {
 		_, ps = bd.GetMainParentAndList(parents)
@@ -244,7 +245,7 @@ func addBlock(tag string, parents []*hash.Hash) (*TestBlock, IBlock, error) {
 	}
 }
 
-func commitBlock(tag string, block *TestBlock, ib IBlock) error {
+func commitBlock(tag string, block *TestBlock, ib meerdag.IBlock) error {
 	tbMap[tag] = ib
 	err := bd.Commit()
 	if err != nil {
@@ -299,9 +300,9 @@ func processResult(calRet interface{}, theory []uint) bool {
 				break
 			}
 		}
-	case *IdSet:
-		result := calRet.(*IdSet)
-		okResult := NewIdSet()
+	case *meerdag.IdSet:
+		result := calRet.(*meerdag.IdSet)
+		okResult := meerdag.NewIdSet()
 		okResult.AddList(theory)
 		if !result.IsEqual(okResult) {
 			ret = false
@@ -329,7 +330,7 @@ func printBlockChainTag(list []uint) {
 	fmt.Println(result)
 }
 
-func printBlockSetTag(set *IdSet) {
+func printBlockSetTag(set *meerdag.IdSet) {
 	var result string = "["
 	isFirst := true
 	for k := range set.GetMap() {
@@ -353,37 +354,15 @@ func reverseBlockList(s []uint) []uint {
 	return s
 }
 
-func loadBlockDB(cfg *config.Config) (legacydb.DB, error) {
-	dbName := "blocks_" + cfg.DbType
-	dbPath := filepath.Join(cfg.DataDir, dbName)
-	err := removeBlockDB(dbPath)
+func loadBlockDB(cfg *config.Config) (model.DataBase, error) {
+	ccfg := *cfg
+	ccfg.Cleanup = true
+	database.Cleanup(&ccfg)
+	db, err := database.New(cfg, system.InterruptListener())
 	if err != nil {
 		return nil, err
 	}
-	db, err := legacydb.Create(cfg.DbType, dbPath, params.ActiveNetParams.Net)
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
-
-func removeBlockDB(dbPath string) error {
-	fi, err := os.Stat(dbPath)
-	if err == nil {
-		if fi.IsDir() {
-			err := os.RemoveAll(dbPath)
-			if err != nil {
-				return err
-			}
-		} else {
-			err := os.Remove(dbPath)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+	return db, db.Init()
 }
 
 func getBlocksByTag(tags []string) []*hash.Hash {
@@ -399,67 +378,47 @@ func getBlocksByTag(tags []string) []*hash.Hash {
 }
 
 func exit() {
-	removeBlockDB("./blocks_ffldb")
+	database.Cleanup(common.DefaultConfig(os.TempDir()))
 }
 
 func storeBlock(block *TestBlock) error {
-	return bd.db.Update(func(dbTx legacydb.Tx) error {
-		return dbTx.StoreBlock(block.block)
-	})
+	return bd.DB().PutBlock(block.block)
 }
 
 func fetchBlock(h *hash.Hash) (*TestBlock, error) {
 	tb := &TestBlock{}
-	err := bd.db.View(func(dbTx legacydb.Tx) error {
-		blockBytes, err := dbTx.FetchBlock(h)
-		if err != nil {
-			return err
-		}
-
-		block, err := types.NewBlockFromBytes(blockBytes)
-		if err != nil {
-			return err
-		}
-		tb.block = block
-		return nil
-	})
+	block, err := bd.DB().GetBlock(h)
 	if err != nil {
 		return nil, err
 	}
+	tb.block = block
 	return tb, nil
 }
 
 func dbPutTotal(total uint) error {
 	var serializedTotal [4]byte
-	ByteOrder.PutUint32(serializedTotal[:], uint32(total))
+	meerdag.ByteOrder.PutUint32(serializedTotal[:], uint32(total))
 
-	return bd.db.Update(func(dbTx legacydb.Tx) error {
-		return dbTx.Metadata().Put([]byte("blocktotal"), serializedTotal[:])
-	})
+	return bd.DB().Put([]byte("blocktotal"), serializedTotal[:])
 }
 
 func dbGetTotal() (uint32, error) {
 	total := uint32(0)
-	err := bd.db.View(func(dbTx legacydb.Tx) error {
-		serializedTotal := dbTx.Metadata().Get([]byte("blocktotal"))
-		if serializedTotal == nil {
-			return fmt.Errorf("No data")
-		}
-		total = ByteOrder.Uint32(serializedTotal)
-		return nil
-	})
+	serializedTotal, err := bd.DB().Get([]byte("blocktotal"))
 	if err != nil {
 		return total, err
 	}
+	if serializedTotal == nil {
+		return total, fmt.Errorf("No data")
+	}
+	total = meerdag.ByteOrder.Uint32(serializedTotal)
 	return total, nil
 }
 
 func dbGetGenesis() (*hash.Hash, error) {
-	block := Block{id: 0}
-	ib := &PhantomBlock{&block, 0, NewIdSet(), NewIdSet()}
-	err := bd.db.View(func(dbTx legacydb.Tx) error {
-		return DBGetDAGBlock(dbTx, ib)
-	})
+	block := meerdag.Block{}
+	ib := &meerdag.PhantomBlock{Block: &block}
+	err := meerdag.DBGetDAGBlock(bd.DB(), ib)
 	if err != nil {
 		return nil, err
 	}

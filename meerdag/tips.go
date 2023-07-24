@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/merkle"
-	"github.com/Qitmeer/qng/database/legacydb"
 	"math"
 )
 
@@ -153,48 +152,48 @@ func (bd *MeerDAG) optimizeTips() {
 
 func (bd *MeerDAG) removeTip(b IBlock) error {
 	bd.tips.Remove(b.GetID())
+	err := DBDelDAGBlock(bd.db, b.GetID())
+	if err != nil {
+		return err
+	}
+	err = DBDelBlockIdByHash(bd.db, b.GetHash())
+	if err != nil {
+		return err
+	}
+	err = DBDelDAGTip(bd.db, b.GetID())
+	if err != nil {
+		return err
+	}
 	parents := bd.getParents(b)
-	return bd.db.Update(func(dbTx legacydb.Tx) error {
-		err := DBDelDAGBlock(dbTx, b.GetID())
-		if err != nil {
-			return err
-		}
-		err = DBDelBlockIdByHash(dbTx, b.GetHash())
-		if err != nil {
-			return err
-		}
-		err = DBDelDAGTip(dbTx, b.GetID())
-		if err != nil {
-			return err
-		}
-
-		for _, v := range parents.GetMap() {
-			block := v.(IBlock)
-			block.RemoveChild(b.GetID())
-			if !block.HasChildren() {
-				bd.tips.AddPair(block.GetID(), block)
-				err := DBPutDAGTip(dbTx, block.GetID(), block.GetID() == bd.instance.GetMainChainTipId())
-				if err != nil {
-					return err
-				}
-			}
-			err = DBPutDAGBlock(dbTx, block)
+	for _, v := range parents.GetMap() {
+		block := v.(IBlock)
+		block.RemoveChild(b.GetID())
+		if !block.HasChildren() {
+			bd.tips.AddPair(block.GetID(), block)
+			err = DBPutDAGTip(bd.db, block.GetID(), block.GetID() == bd.instance.GetMainChainTipId())
 			if err != nil {
 				return err
 			}
 		}
-		delete(bd.blocks, b.GetID())
+		err = DBPutDAGBlock(bd.db, block)
+		if err != nil {
+			return err
+		}
+	}
+	if err != nil {
+		return err
+	}
+	delete(bd.blocks, b.GetID())
 
-		ph, ok := bd.instance.(*Phantom)
-		if !ok {
-			return fmt.Errorf("MeerDAG instance error")
-		}
-		ph.diffAnticone.Remove(b.GetID())
-		if ph.virtualBlock.HasParents() {
-			ph.virtualBlock.RemoveParent(b.GetID())
-		}
-		return DBDelDiffAnticone(dbTx, b.GetID())
-	})
+	ph, ok := bd.instance.(*Phantom)
+	if !ok {
+		return fmt.Errorf("MeerDAG instance error")
+	}
+	ph.diffAnticone.Remove(b.GetID())
+	if ph.virtualBlock.HasParents() {
+		ph.virtualBlock.RemoveParent(b.GetID())
+	}
+	return DBDelDiffAnticone(bd.db, b.GetID())
 }
 
 func (bd *MeerDAG) getDiscardedTips() []IBlock {
@@ -226,4 +225,8 @@ func (bd *MeerDAG) SetTipsDisLimit(limit int64) {
 	bd.stateLock.Lock()
 	defer bd.stateLock.Unlock()
 	bd.tipsDisLimit = limit
+}
+
+func (bd *MeerDAG) GetTipsSet() *IdSet {
+	return bd.tips
 }

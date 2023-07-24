@@ -7,7 +7,6 @@ import (
 	"github.com/Qitmeer/qng/common/math"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/meerdag/anticone"
 	"io"
 )
@@ -32,7 +31,7 @@ type Phantom struct {
 }
 
 func (ph *Phantom) GetName() string {
-	return phantom
+	return PHANTOM
 }
 
 func (ph *Phantom) Init(bd *MeerDAG) bool {
@@ -600,22 +599,11 @@ func (ph *Phantom) Decode(r io.Reader) error {
 
 // load
 func (ph *Phantom) Load() error {
-	var tips []uint
-	var diffs []uint
-	err := ph.bd.db.View(func(dbTx legacydb.Tx) error {
-		ts, err := DBGetDAGTips(dbTx)
-		if err != nil {
-			return err
-		}
-		tips = ts
-		//
-		ds, err := DBGetDiffAnticone(dbTx)
-		if err != nil {
-			return err
-		}
-		diffs = ds
-		return nil
-	})
+	tips, err := DBGetDAGTips(ph.bd.db)
+	if err != nil {
+		return err
+	}
+	diffs, err := DBGetDiffAnticone(ph.bd.db)
 	if err != nil {
 		return err
 	}
@@ -814,15 +802,7 @@ func (ph *Phantom) CheckBlockOrderDB(maxDepth uint64) error {
 	}
 	for i := mainTip.GetOrder() - 1; i > 0; i-- {
 		depth++
-		var blockid uint
-		err := ph.bd.db.View(func(dbTx legacydb.Tx) error {
-			id, err := DBGetBlockIdByOrder(dbTx, i)
-			if err != nil {
-				return err
-			}
-			blockid = uint(id)
-			return nil
-		})
+		blockid, err := DBGetBlockIdByOrder(ph.bd.db, i)
 		if err != nil {
 			return err
 		}
@@ -852,8 +832,6 @@ type MainChain struct {
 }
 
 func (mc *MainChain) Has(id uint) bool {
-	result := false
-
 	if mc.commitBlocks.Has(id) {
 		opt := mc.commitBlocks.Get(id)
 		add, ok := opt.(bool)
@@ -864,41 +842,18 @@ func (mc *MainChain) Has(id uint) bool {
 		}
 	}
 
-	mc.bd.db.View(func(dbTx legacydb.Tx) error {
-		meta := dbTx.Metadata()
-		mchBucket := meta.Bucket(DagMainChainBucketName)
-		if mchBucket == nil {
-			return nil
-		}
-		result = DBHasMainChainBlock(dbTx, id)
-		return nil
-	})
-	return result
+	return DBHasMainChainBlock(mc.bd.db, id)
 }
 
 func (mc *MainChain) Add(id uint) error {
-	return mc.bd.db.Update(func(dbTx legacydb.Tx) error {
-		meta := dbTx.Metadata()
-		mchBucket := meta.Bucket(DagMainChainBucketName)
-		if mchBucket == nil {
-			return fmt.Errorf("no %s", string(DagMainChainBucketName))
-		}
-		return DBPutMainChainBlock(dbTx, id)
-	})
+	return DBPutMainChainBlock(mc.bd.db, id)
 }
 
 func (mc *MainChain) Remove(id uint) error {
 	if !mc.Has(id) {
 		return nil
 	}
-	return mc.bd.db.Update(func(dbTx legacydb.Tx) error {
-		meta := dbTx.Metadata()
-		mchBucket := meta.Bucket(DagMainChainBucketName)
-		if mchBucket == nil {
-			return fmt.Errorf("no %s", string(DagMainChainBucketName))
-		}
-		return DBRemoveMainChainBlock(dbTx, id)
-	})
+	return DBRemoveMainChainBlock(mc.bd.db, id)
 }
 
 func (mc *MainChain) commit() error {

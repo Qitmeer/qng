@@ -44,7 +44,7 @@ func (gd *GhostDAG) Init(bd *MeerDAG) bool {
 	gd.algorithm = ghostdag.New(nil, gd, gd, gd, model.KType(gd.anticoneSize), params.ActiveNetParams.GenesisHash)
 
 	//vb
-	gd.virtualBlock = &Block{hash: model.VirtualBlockHash, layer: 0, mainParent: MaxId, parents: NewIdSet(), state: createMockBlockState(uint64(MaxId))}
+	gd.virtualBlock = &Block{hash: model.VirtualBlockHash, layer: 0, mainParent: MaxId, parents: NewIdSet(), state: CreateMockBlockState(uint64(MaxId))}
 	return true
 }
 

@@ -139,11 +139,11 @@ func (b *mockBlockState) Update(block *types.SerializedBlock, prev model.BlockSt
 
 }
 
-func createMockBlockState(id uint64) model.BlockState {
+func CreateMockBlockState(id uint64) model.BlockState {
 	return &mockBlockState{id: id, status: model.StatusNone, order: uint64(MaxBlockOrder)}
 }
 
-func createMockBlockStateFromBytes(data []byte) (model.BlockState, error) {
+func CreateMockBlockStateFromBytes(data []byte) (model.BlockState, error) {
 	var bs mockBlockState
 	err := rlp.Decode(bytes.NewReader(data), &bs)
 	if err != nil {

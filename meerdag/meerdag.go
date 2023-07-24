@@ -6,7 +6,6 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/database/legacydb"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag/anticone"
 	"github.com/Qitmeer/qng/node/service"
@@ -20,13 +19,13 @@ import (
 // Some available DAG algorithm types
 const (
 	// A Scalable BlockDAG protocol
-	phantom = "phantom"
+	PHANTOM = "phantom"
 
 	// The order of all transactions is solely determined by the Tree Graph (TG)
-	conflux = "conflux"
+	CONFLUX = "conflux"
 
 	// Confirming Transactions via Recursive Elections
-	spectre = "spectre"
+	SPECTRE = "spectre"
 
 	// GHOSTDAG is an greedy algorithm implementation based on PHANTOM protocol
 	GHOSTDAG = "ghostdag"
@@ -61,11 +60,11 @@ const MinBlockPruneSize = 2000
 // It will create different BlockDAG instances
 func NewBlockDAG(dagType string) ConsensusAlgorithm {
 	switch dagType {
-	case phantom:
+	case PHANTOM:
 		return &Phantom{}
-	case conflux:
+	case CONFLUX:
 		return &Conflux{}
-	case spectre:
+	case SPECTRE:
 		return &Spectre{}
 	case GHOSTDAG:
 		return &GhostDAG{}
@@ -75,11 +74,11 @@ func NewBlockDAG(dagType string) ConsensusAlgorithm {
 
 func GetDAGTypeIndex(dagType string) byte {
 	switch dagType {
-	case phantom:
+	case PHANTOM:
 		return 0
-	case conflux:
+	case CONFLUX:
 		return 2
-	case spectre:
+	case SPECTRE:
 		return 3
 	case GHOSTDAG:
 		return 4
@@ -90,15 +89,15 @@ func GetDAGTypeIndex(dagType string) byte {
 func GetDAGTypeByIndex(dagType byte) string {
 	switch dagType {
 	case 0:
-		return phantom
+		return PHANTOM
 	case 2:
-		return conflux
+		return CONFLUX
 	case 3:
-		return spectre
+		return SPECTRE
 	case 4:
 		return GHOSTDAG
 	}
-	return phantom
+	return PHANTOM
 }
 
 // The abstract inferface is used to build and manager DAG consensus algorithm
@@ -203,7 +202,7 @@ type MeerDAG struct {
 	// blocks per second
 	blockRate float64
 
-	db legacydb.DB
+	db model.DataBase
 
 	// Rollback mechanism
 	lastSnapshot *DAGSnapshot
@@ -230,7 +229,7 @@ func (bd *MeerDAG) GetInstance() ConsensusAlgorithm {
 }
 
 // Initialize self, the function to be invoked at the beginning
-func (bd *MeerDAG) init(dagType string, blockRate float64, db legacydb.DB, getBlockData GetBlockData) ConsensusAlgorithm {
+func (bd *MeerDAG) init(dagType string, blockRate float64, db model.DataBase, getBlockData GetBlockData) ConsensusAlgorithm {
 	bd.lastTime = time.Unix(roughtime.Now().Unix(), 0)
 	bd.commitOrder = map[uint]uint{}
 	bd.getBlockData = getBlockData
@@ -245,48 +244,12 @@ func (bd *MeerDAG) init(dagType string, blockRate float64, db legacydb.DB, getBl
 	bd.instance = NewBlockDAG(dagType)
 	bd.instance.Init(bd)
 
-	err := db.Update(func(dbTx legacydb.Tx) error {
-		meta := dbTx.Metadata()
-		serializedData := meta.Get(DagInfoBucketName)
-		if serializedData == nil {
-			DBPutDAGInfo(dbTx, bd)
-			// Create the bucket that houses the block index data.
-			_, err := meta.CreateBucket(BlockIndexBucketName)
-			if err != nil {
-				return err
-			}
-
-			// Create the bucket that houses the chain block order to hash
-			// index.
-			_, err = meta.CreateBucket(OrderIdBucketName)
-			if err != nil {
-				return err
-			}
-
-			_, err = meta.CreateBucket(DagMainChainBucketName)
-			if err != nil {
-				return err
-			}
-
-			_, err = meta.CreateBucket(BlockIdBucketName)
-			if err != nil {
-				return err
-			}
-		}
-		//
-		_, err := meta.CreateBucketIfNotExists(DAGTipsBucketName)
+	serializedData, err := bd.db.GetDagInfo()
+	if err != nil && len(serializedData) <= 0 {
+		err = DBPutDAGInfo(bd)
 		if err != nil {
-			return err
+			log.Error(err.Error())
 		}
-		_, err = meta.CreateBucketIfNotExists(DiffAnticoneBucketName)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		log.Error(err.Error())
-		return nil
 	}
 	return bd.instance
 }
@@ -473,6 +436,13 @@ func (bd *MeerDAG) GetLastTime() *time.Time {
 	return &bd.lastTime
 }
 
+func (bd *MeerDAG) GetFutureSet(fs *IdSet, b IBlock) {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+
+	bd.getFutureSet(fs, b)
+}
+
 // Returns a future collection of block. This function is a recursively called function
 // So we should consider its efficiency.
 func (bd *MeerDAG) getFutureSet(fs *IdSet, b IBlock) {
@@ -617,6 +587,12 @@ func (bd *MeerDAG) recAnticone(bs *IdSet, futureSet *IdSet, anticone *IdSet, ib 
 			bd.recAnticone(bs, futureSet, anticone, pib)
 		}
 	}
+}
+
+func (bd *MeerDAG) GetAnticone(b IBlock, exclude *IdSet) *IdSet {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	return bd.getAnticone(b, exclude)
 }
 
 // This function can get anticone set for an block that you offered in the block dag,If
@@ -1187,9 +1163,7 @@ func (bd *MeerDAG) commit() error {
 	}
 	ph, ok := bd.instance.(*Phantom)
 	if needPB {
-		err := bd.db.Update(func(dbTx legacydb.Tx) error {
-			return DBPutDAGBlockIdByHash(dbTx, bd.lastSnapshot.block)
-		})
+		err := DBPutDAGBlockIdByHash(bd.db, bd.lastSnapshot.block)
 		if err != nil {
 			return err
 		}
@@ -1199,9 +1173,7 @@ func (bd *MeerDAG) commit() error {
 				k != bd.lastSnapshot.mainChainTip {
 				continue
 			}
-			err := bd.db.Update(func(dbTx legacydb.Tx) error {
-				return DBPutDAGTip(dbTx, k, k == bd.instance.GetMainChainTipId())
-			})
+			err := DBPutDAGTip(bd.db, k, k == bd.instance.GetMainChainTipId())
 			if err != nil {
 				return err
 			}
@@ -1211,9 +1183,7 @@ func (bd *MeerDAG) commit() error {
 			if bd.tips.Has(k) {
 				continue
 			}
-			err := bd.db.Update(func(dbTx legacydb.Tx) error {
-				return DBDelDAGTip(dbTx, k)
-			})
+			err := DBDelDAGTip(bd.db, k)
 			if err != nil {
 				return err
 			}
@@ -1224,9 +1194,7 @@ func (bd *MeerDAG) commit() error {
 				if bd.lastSnapshot.diffAnticone.Has(k) {
 					continue
 				}
-				err := bd.db.Update(func(dbTx legacydb.Tx) error {
-					return DBPutDiffAnticone(dbTx, k)
-				})
+				err = DBPutDiffAnticone(bd.db, k)
 				if err != nil {
 					return err
 				}
@@ -1236,9 +1204,7 @@ func (bd *MeerDAG) commit() error {
 				if ph.diffAnticone.Has(k) {
 					continue
 				}
-				err := bd.db.Update(func(dbTx legacydb.Tx) error {
-					return DBDelDiffAnticone(dbTx, k)
-				})
+				err := DBDelDiffAnticone(bd.db, k)
 				if err != nil {
 					return err
 				}
@@ -1248,41 +1214,28 @@ func (bd *MeerDAG) commit() error {
 	}
 
 	if len(bd.commitOrder) > 0 {
-		err := bd.db.Update(func(dbTx legacydb.Tx) error {
-			var e error
-			for order, id := range bd.commitOrder {
-				er := DBPutBlockIdByOrder(dbTx, order, id)
-				if er != nil {
-					log.Error(er.Error())
-					e = er
-				}
+		for order, id := range bd.commitOrder {
+			err := DBPutBlockIdByOrder(bd.db, order, id)
+			if err != nil {
+				log.Error(err.Error())
+				return err
 			}
-			return e
-		})
-		bd.commitOrder = map[uint]uint{}
-		if err != nil {
-			return err
 		}
+		bd.commitOrder = map[uint]uint{}
 	}
 
 	if !bd.commitBlock.IsEmpty() {
-		err := bd.db.Update(func(dbTx legacydb.Tx) error {
-			for _, v := range bd.commitBlock.GetMap() {
-				block, ok := v.(IBlock)
-				if !ok {
-					return fmt.Errorf("Commit block error\n")
-				}
-				e := DBPutDAGBlock(dbTx, block)
-				if e != nil {
-					return e
-				}
+		for _, v := range bd.commitBlock.GetMap() {
+			block, ok := v.(IBlock)
+			if !ok {
+				return fmt.Errorf("Commit block error\n")
 			}
-			return nil
-		})
-		bd.commitBlock.Clean()
-		if err != nil {
-			return err
+			err := DBPutDAGBlock(bd.db, block)
+			if err != nil {
+				return err
+			}
 		}
+		bd.commitBlock.Clean()
 	}
 	if !ok {
 		return nil
@@ -1295,7 +1248,7 @@ func (bd *MeerDAG) commit() error {
 	return nil
 }
 
-func (bd *MeerDAG) rollback() error {
+func (bd *MeerDAG) Rollback() error {
 	if bd.lastSnapshot.IsValid() {
 		log.Debug(fmt.Sprintf("Block DAG try to roll back ... ..."))
 
@@ -1424,7 +1377,7 @@ out:
 	log.Trace("MeerDAG handler done")
 }
 
-func New(dagType string, blockRate float64, db legacydb.DB, getBlockData GetBlockData, createBS CreateBlockState, createBSB CreateBlockStateFromBytes) *MeerDAG {
+func New(dagType string, blockRate float64, db model.DataBase, getBlockData GetBlockData, createBS CreateBlockState, createBSB CreateBlockStateFromBytes) *MeerDAG {
 	createBlockState = createBS
 	createBlockStateFromBytes = createBSB
 	md := &MeerDAG{

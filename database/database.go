@@ -7,6 +7,7 @@ import (
 	"github.com/Qitmeer/qng/core/shutdown"
 	"github.com/Qitmeer/qng/database/chaindb"
 	"github.com/Qitmeer/qng/database/legacychaindb"
+	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/meerevm/meer"
 	"os"

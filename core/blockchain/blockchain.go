@@ -293,6 +293,12 @@ func (b *BlockChain) initChainState() error {
 // genesis block.  This includes creating the necessary buckets and inserting
 // the genesis block, so it must only be called on an uninitialized database.
 func (b *BlockChain) createChainState() error {
+	// Create the initial the database chain state including creating the
+	// necessary index buckets and inserting the genesis block.
+	err := b.consensus.DatabaseContext().Init()
+	if err != nil {
+		return err
+	}
 	// Create a new node from the genesis block and set it as the best node.
 	genesisBlock := b.params.GenesisBlock
 	header := &genesisBlock.Block().Header
@@ -307,12 +313,6 @@ func (b *BlockChain) createChainState() error {
 	b.stateSnapshot = newBestState(node.GetHash(), node.Difficulty(), blockSize, numTxns,
 		time.Unix(node.GetTimestamp(), 0), numTxns, 0, b.bd.GetGraphState(), node.GetHash(), *ib.GetState().Root())
 	b.TokenTipID = 0
-	// Create the initial the database chain state including creating the
-	// necessary index buckets and inserting the genesis block.
-	err := b.consensus.DatabaseContext().Init()
-	if err != nil {
-		return err
-	}
 	b.dbInfo = common.NewDatabaseInfo(currentDatabaseVersion, serialization.CurrentCompressionVersion, currentBlockIndexVersion, roughtime.Now())
 	err = b.consensus.DatabaseContext().PutInfo(b.dbInfo)
 	if err != nil {
@@ -1062,7 +1062,7 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 
 	b.bd = meerdag.New(config.DAGType,
 		1.0/float64(par.TargetTimePerBlock/time.Second),
-		b.db, b.getBlockData, state.CreateBlockState, state.CreateBlockStateFromBytes)
+		b.consensus.DatabaseContext(), b.getBlockData, state.CreateBlockState, state.CreateBlockStateFromBytes)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
 	b.bd.SetCacheSize(config.DAGCacheSize, config.BlockDataCacheSize)
 

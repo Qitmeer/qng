@@ -13,7 +13,6 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/database/legacychaindb"
-	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/meerevm/eth"
@@ -521,29 +520,21 @@ func upgradeBlockChain(cfg *config.Config, cdb model.DataBase, interrupt <-chan 
 		for i = uint(1); i <= endNum; i++ {
 			bar.Add(1)
 			blockHash = nil
-			isEmpty := false
-			err = db.View(func(dbTx legacydb.Tx) error {
+			dblock := &meerdag.Block{}
+			dblock.SetID(i)
+			ib := &meerdag.PhantomBlock{Block: dblock}
 
-				block := &meerdag.Block{}
-				block.SetID(i)
-				ib := &meerdag.PhantomBlock{Block: block}
-				err := meerdag.DBGetDAGBlock(dbTx, ib)
-				if err != nil {
-					if err.(*meerdag.DAGError).IsEmpty() {
-						isEmpty = true
-						return nil
-					}
+			err := meerdag.DBGetDAGBlock(cdb, ib)
+			if err != nil {
+				if err.(*meerdag.DAGError).IsEmpty() {
+					continue
+				} else {
 					return err
 				}
-				blockHash = ib.GetHash()
-
-				return nil
-			})
+			}
+			blockHash = ib.GetHash()
 			if err != nil {
 				return err
-			}
-			if isEmpty {
-				continue
 			}
 
 			if blockHash == nil {

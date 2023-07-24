@@ -61,11 +61,18 @@ var (
 	utxoPrefix         = []byte("u") // utxoPrefix + outpoint data -> UtxoEntry data
 	tokenStatePrefix   = []byte("t") // tokenStatePrefix + id (uint64 big endian) -> tokenState data
 	// dag
+	// DagInfoKey is the name of the db bucket used to house the
+	// dag information
+	dagInfoKey = []byte("daginfo")
+
 	dagBlockPrefix = []byte("d") // dagBlockPrefix + id (uint64 big endian) -> dag block
 	blockIDPrefix  = []byte("i") // block hash -> block id.
 
-	mainchainTipKey = []byte("MainChainTip") // main chain tip id
+	mainchainTipKey    = []byte("MainChainTip") // main chain tip id
+	dagMainChainPrefix = []byte("m")            // dagMainChainPrefix + id (uint64 big endian) -> 0
 
+	dagTipsKey      = []byte("dagtips") // main,tip,... ...
+	diffAnticoneKey = []byte("diffanticone")
 	// index
 	txLookupPrefix = []byte("l") // txLookupPrefix + hash -> transaction lookup metadata
 
@@ -123,4 +130,9 @@ func utxoKey(opd []byte) []byte {
 // spendJournalKey = tokenStatePrefix + hash
 func tokenStateKey(id uint64) []byte {
 	return append(tokenStatePrefix, encodeBlockID(id)...)
+}
+
+// dagMainChainKey = dagMainChainPrefix + id (uint64 big endian)
+func dagMainChainKey(id uint64) []byte {
+	return append(dagMainChainPrefix, encodeBlockID(id)...)
 }

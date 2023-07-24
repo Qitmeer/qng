@@ -3,7 +3,6 @@ package meerdag
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/database/legacydb"
 	"sort"
 )
 
@@ -69,18 +68,11 @@ func (bd *MeerDAG) getBlockId(h *hash.Hash) uint {
 			return bd.lastSnapshot.block.GetID()
 		}
 	}
-	id := MaxId
-	err := bd.db.View(func(dbTx legacydb.Tx) error {
-		bid, er := DBGetBlockIdByHash(dbTx, h)
-		if er == nil {
-			id = uint(bid)
-		}
-		return er
-	})
+	bid, err := DBGetBlockIdByHash(bd.db, h)
 	if err != nil {
 		return MaxId
 	}
-	return id
+	return bid
 }
 
 // Acquire one block by hash
@@ -148,19 +140,12 @@ func (bd *MeerDAG) getBlockByOrder(order uint) IBlock {
 	if ok {
 		return bd.getBlockById(id)
 	}
-	bid := uint(MaxId)
-	err := bd.db.View(func(dbTx legacydb.Tx) error {
-		id, er := DBGetBlockIdByOrder(dbTx, order)
-		if er == nil {
-			bid = uint(id)
-		}
-		return er
-	})
+	id, err := DBGetBlockIdByOrder(bd.db, order)
 	if err != nil {
 		log.Error(err.Error())
 		return nil
 	}
-	return bd.getBlockById(bid)
+	return bd.getBlockById(id)
 }
 
 // Return the last order block
@@ -245,27 +230,20 @@ func (bd *MeerDAG) InvalidBlock(block IBlock) {
 func (bd *MeerDAG) GetIdSet(hs []*hash.Hash) *IdSet {
 	result := NewIdSet()
 
-	err := bd.db.View(func(dbTx legacydb.Tx) error {
-		for _, v := range hs {
-			if bd.lastSnapshot.block != nil {
-				if bd.lastSnapshot.block.GetHash().IsEqual(v) {
-					result.Add(bd.lastSnapshot.block.GetID())
-					continue
-				}
-			}
-			bid, er := DBGetBlockIdByHash(dbTx, v)
-			if er == nil {
-				result.Add(uint(bid))
-			} else {
-				return er
+	for _, v := range hs {
+		if bd.lastSnapshot.block != nil {
+			if bd.lastSnapshot.block.GetHash().IsEqual(v) {
+				result.Add(bd.lastSnapshot.block.GetID())
+				continue
 			}
 		}
-		return nil
-	})
-	if err != nil {
-		return nil
+		bid, err := DBGetBlockIdByHash(bd.db, v)
+		if err == nil {
+			result.Add(uint(bid))
+		} else {
+			return nil
+		}
 	}
-
 	return result
 }
 
@@ -298,6 +276,12 @@ func (bd *MeerDAG) SortBlock(src []*hash.Hash) []*hash.Hash {
 	defer bd.stateLock.Unlock()
 
 	return bd.sortBlock(src)
+}
+
+func (bd *MeerDAG) LocateBlocks(gs *GraphState, maxHashes uint) []*hash.Hash {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	return bd.locateBlocks(gs, maxHashes)
 }
 
 // Locate all eligible block by current graph state.

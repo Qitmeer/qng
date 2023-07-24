@@ -1,9 +1,12 @@
-package meerdag
+package test
 
-import "testing"
+import (
+	"github.com/Qitmeer/qng/meerdag"
+	"testing"
+)
 
 func Test_CheckBlueAndMature(t *testing.T) {
-	ibd := InitBlockDAG(phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -14,7 +17,7 @@ func Test_CheckBlueAndMature(t *testing.T) {
 }
 
 func Test_CheckBlueAndMatureMT(t *testing.T) {
-	ibd := InitBlockDAG(phantom, "PH_fig2-blocks")
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
