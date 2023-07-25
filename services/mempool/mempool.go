@@ -261,6 +261,11 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	msgTx := tx.Transaction()
 	txHash := tx.Hash()
 	start := time.Now()
+	if mp.LastUpdated().Format("2006-01-02") == time.Now().Format("2006-01-02") {
+		newDailyAllTxCount.Inc(1)
+	} else {
+		newDailyAllTxCount.Update(1)
+	}
 	// Don't accept the transaction if it already exists in the pool.  This
 	// applies to orphan transactions as well.  This check is intended to
 	// be a quick check to weed out duplicates.
