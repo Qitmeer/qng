@@ -20,4 +20,5 @@ type BlockChain interface {
 	Stop() error
 	GetBlockByOrder(order uint64) Block
 	FetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error)
+	GetBlockOrderByHash(hash *hash.Hash) (uint, error)
 }

@@ -390,6 +390,10 @@ func (cdb *ChainDB) Put(key []byte, value []byte) error {
 	return cdb.db.Put(key, value)
 }
 
+func (cdb *ChainDB) IsLegacy() bool {
+	return false
+}
+
 func New(cfg *config.Config) (*ChainDB, error) {
 	cdb := &ChainDB{
 		cfg:       cfg,

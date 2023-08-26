@@ -3,7 +3,6 @@
 package index
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/math"
@@ -24,6 +23,8 @@ type Manager struct {
 	db             legacydb.DB
 	enabledIndexes []Indexer
 	invalidtxIndex *InvalidTxIndex
+	txIndex        *TxIndex
+	txhashIndex    *TxHashIndex
 }
 
 // Ensure the Manager type implements the blockchain.IndexManager interface.
@@ -39,12 +40,8 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 	}
 	// Create the transaction and address indexes if needed.
 	var indexers []Indexer
-	if cfg.TxIndex {
-		txIndex := NewTxIndex(consensus.LegacyDB())
-		indexers = append(indexers, txIndex)
-	}
 	if cfg.AddrIndex {
-		addrIndex := NewAddrIndex(consensus.LegacyDB())
+		addrIndex := NewAddrIndex(consensus)
 		indexers = append(indexers, addrIndex)
 	}
 	for _, indexer := range indexers {
@@ -55,9 +52,13 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 		db:             consensus.LegacyDB(),
 		enabledIndexes: indexers,
 		consensus:      consensus,
+		txIndex:        NewTxIndex(consensus),
 	}
 	if cfg.InvalidTxIndex {
 		im.invalidtxIndex = NewInvalidTxIndex(consensus)
+	}
+	if cfg.TxhashIndex {
+		im.txhashIndex = NewTxHashIndex(consensus)
 	}
 	return im
 }
@@ -73,8 +74,15 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 func (m *Manager) Init() error {
 	interrupt := m.consensus.Interrupt()
 	chain := m.consensus.BlockChain()
+	m.txIndex.Init()
 	if m.invalidtxIndex != nil {
 		err := m.invalidtxIndex.Init()
+		if err != nil {
+			return err
+		}
+	}
+	if m.txhashIndex != nil {
+		err := m.txhashIndex.Init()
 		if err != nil {
 			return err
 		}
@@ -383,10 +391,18 @@ func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk
 	if err != nil {
 		return err
 	}
+	if m.txhashIndex != nil {
+		err := m.txhashIndex.ConnectBlock(block, blk)
+		if err != nil {
+			return err
+		}
+	}
 	if blk.GetState().GetStatus().KnownInvalid() {
 		if m.invalidtxIndex != nil {
 			return m.invalidtxIndex.ConnectBlock(uint64(blk.GetID()), block)
 		}
+	} else {
+		return m.txIndex.ConnectBlock(block, blk)
 	}
 	return nil
 }
@@ -412,6 +428,18 @@ func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, 
 	if err != nil {
 		return err
 	}
+
+	// TODO: Future optimization points is the attribute of KnownInvalid
+	err = m.txIndex.DisconnectBlock(block)
+	if err != nil {
+		return err
+	}
+	if m.txhashIndex != nil {
+		err := m.txhashIndex.DisconnectBlock(block)
+		if err != nil {
+			return err
+		}
+	}
 	if m.invalidtxIndex != nil {
 		return m.invalidtxIndex.DisconnectBlock(uint64(blk.GetID()), block)
 	}
@@ -426,76 +454,26 @@ func (m *Manager) UpdateMainTip(bh *hash.Hash, order uint64) error {
 }
 
 // HasTransaction
-func (m *Manager) IsDuplicateTx(dbTx legacydb.Tx, txid *hash.Hash, blockHash *hash.Hash) bool {
-	return IsDuplicateTx(dbTx, txid, blockHash)
+func (m *Manager) IsDuplicateTx(txid *hash.Hash, blockHash *hash.Hash) bool {
+	_, bh, err := m.consensus.DatabaseContext().GetTxIndexEntry(txid, false)
+	if err != nil {
+		return false
+	}
+	if bh == nil {
+		return false
+	}
+	if bh.IsEqual(blockHash) {
+		return false
+	}
+	return true
 }
 
 func (m *Manager) HasTx(txid *hash.Hash) bool {
-	hasTx := false
-	m.db.View(func(dbTx legacydb.Tx) error {
-		blockRegion, err := dbFetchTxIndexEntry(dbTx, txid)
-		if err == nil {
-			if blockRegion != nil {
-				hasTx = true
-			}
-		}
-		return nil
-	})
-	return hasTx
-}
-
-// dbFetchTx looks up the passed transaction hash in the transaction index and
-// loads it from the database.
-func DBFetchTx(dbTx legacydb.Tx, hash *hash.Hash) (*types.Transaction, error) {
-	// Look up the location of the transaction.
-	blockRegion, err := dbFetchTxIndexEntry(dbTx, hash)
-	if err != nil {
-		return nil, err
+	_, blockhash, err := m.consensus.DatabaseContext().GetTxIndexEntry(txid, false)
+	if err == nil && blockhash != nil {
+		return true
 	}
-	if blockRegion == nil {
-		return nil, fmt.Errorf("transaction %v not found in the txindex", hash)
-	}
-
-	// Load the raw transaction bytes from the database.
-	txBytes, err := dbTx.FetchBlockRegion(blockRegion)
-	if err != nil {
-		return nil, err
-	}
-
-	// Deserialize the transaction.
-	var tx types.Transaction
-	err = tx.Deserialize(bytes.NewReader(txBytes))
-	if err != nil {
-		return nil, err
-	}
-
-	return &tx, nil
-}
-
-func DBFetchTxAndBlock(dbTx legacydb.Tx, hash *hash.Hash) (*types.Transaction, *hash.Hash, error) {
-	// Look up the location of the transaction.
-	blockRegion, err := dbFetchTxIndexEntry(dbTx, hash)
-	if err != nil {
-		return nil, nil, err
-	}
-	if blockRegion == nil {
-		return nil, nil, fmt.Errorf("transaction %v not found in the txindex", hash)
-	}
-
-	// Load the raw transaction bytes from the database.
-	txBytes, err := dbTx.FetchBlockRegion(blockRegion)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Deserialize the transaction.
-	var tx types.Transaction
-	err = tx.Deserialize(bytes.NewReader(txBytes))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &tx, blockRegion.Hash, nil
+	return false
 }
 
 // dbIndexDisconnectBlock removes all of the index entries associated with the
@@ -534,10 +512,11 @@ func (m *Manager) dbIndexDisconnectBlock(dbTx legacydb.Tx, indexer Indexer, bloc
 	} else {
 		preOrder = uint32(order - 1)
 
-		prevHash, err = dbFetchBlockHashByOrder(dbTx, preOrder)
-		if err != nil {
-			return err
+		pblock := m.consensus.BlockChain().GetBlockByOrder(uint64(preOrder))
+		if pblock == nil {
+			return fmt.Errorf("No block:%d", preOrder)
 		}
+		prevHash = pblock.GetHash()
 	}
 
 	return dbPutIndexerTip(dbTx, idxKey, prevHash, preOrder)
@@ -551,15 +530,11 @@ func (m *Manager) Drop() error {
 	if err != nil {
 		return err
 	}
-	return DropTxIndex(m.db, make(chan struct{}))
+	return nil
 }
 
 func (m *Manager) TxIndex() *TxIndex {
-	indexer := m.GetIndex(txIndexName)
-	if indexer != nil {
-		return indexer.(*TxIndex)
-	}
-	return nil
+	return m.txIndex
 }
 
 func (m *Manager) AddrIndex() *AddrIndex {
@@ -572,6 +547,10 @@ func (m *Manager) AddrIndex() *AddrIndex {
 
 func (m *Manager) InvalidTxIndex() *InvalidTxIndex {
 	return m.invalidtxIndex
+}
+
+func (m *Manager) TxHashIndex() *TxHashIndex {
+	return m.txhashIndex
 }
 
 func (m *Manager) GetIndex(name string) Indexer {
@@ -664,10 +643,6 @@ func dbPutIndexerTip(dbTx legacydb.Tx, idxKey []byte, h *hash.Hash, order uint32
 
 	indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
 	return indexesBucket.Put(idxKey, serialized)
-}
-
-func DBPutIndexerTip(dbTx legacydb.Tx, idxKey []byte, h *hash.Hash, order uint32) error {
-	return dbPutIndexerTip(dbTx, idxKey, h, order)
 }
 
 // existsIndex returns whether the index keyed by idxKey exists in the database.
@@ -859,14 +834,6 @@ func dropIndex(db legacydb.DB, idxKey []byte, idxName string, interrupt <-chan s
 		return err
 	}
 
-	// Call extra index specific deinitialization for the transaction index.
-	if idxName == txIndexName {
-		err = dropBlockIDIndex(db)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Remove the index tip, index bucket, and in-progress drop flag.  Removing
 	// the index bucket also recursively removes all values saved to the index.
 	err = dropIndexMetadata(db, idxKey, idxName)
@@ -876,18 +843,4 @@ func dropIndex(db legacydb.DB, idxKey []byte, idxName string, interrupt <-chan s
 
 	log.Info(fmt.Sprintf("Dropped %s", idxName))
 	return nil
-}
-
-func IsDuplicateTx(dbTx legacydb.Tx, txid *hash.Hash, blockHash *hash.Hash) bool {
-	blockRegion, err := dbFetchTxIndexEntry(dbTx, txid)
-	if err != nil {
-		return false
-	}
-	if blockRegion == nil {
-		return false
-	}
-	if blockRegion.Hash.IsEqual(blockHash) {
-		return false
-	}
-	return true
 }

@@ -44,6 +44,7 @@ const (
 	defaultMaxInboundPeersPerHost = 25 // The default max total of inbound peer for host
 	defaultTrickleInterval        = 10 * time.Second
 	defaultInvalidTxIndex         = false
+	defaultTxhashIndex            = false
 	defaultMempoolExpiry          = int64(time.Hour)
 	defaultRPCUser                = "test"
 	defaultRPCPass                = "test"
@@ -207,11 +208,6 @@ var (
 			Name:        "nocheckpoints",
 			Usage:       "Disable built-in checkpoints.  Don't do this unless you know what you're doing.",
 			Destination: &cfg.DisableCheckpoints,
-		},
-		&cli.BoolFlag{
-			Name:        "droptxindex",
-			Usage:       "Deletes the hash-based transaction index from the database on start up and then exits",
-			Destination: &cfg.DropTxIndex,
 		},
 		&cli.BoolFlag{
 			Name:        "addrindex",
@@ -455,6 +451,11 @@ var (
 			Name:        "invalidtxindex",
 			Usage:       "invalid transaction index.",
 			Destination: &cfg.InvalidTxIndex,
+		},
+		&cli.BoolFlag{
+			Name:        "txhashindex",
+			Usage:       "Cache transaction full hash.",
+			Destination: &cfg.TxHashIndex,
 		},
 		&cli.BoolFlag{
 			Name:        "ntp",
@@ -860,18 +861,6 @@ func LoadConfig(ctx *cli.Context, parsefile bool) (*config.Config, error) {
 		return nil, err
 	}
 
-	// --addrindex and --droptxindex do not mix.
-	if cfg.AddrIndex && cfg.DropTxIndex {
-		err := fmt.Errorf("%s: the --addrindex and --droptxindex "+
-			"options may not be activated at the same time "+
-			"because the address index relies on the transaction "+
-			"index",
-			funcName)
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, err
-	}
-
 	// Check mining addresses are valid and saved parsed versions.
 	for _, strAddr := range cfg.MiningAddrs {
 		addr, err := address.DecodeAddress(strAddr)
@@ -1006,6 +995,7 @@ func DefaultConfig(homeDir string) *config.Config {
 		Banning:              true,
 		MaxInbound:           defaultMaxInboundPeersPerHost,
 		InvalidTxIndex:       defaultInvalidTxIndex,
+		TxHashIndex:          defaultTxhashIndex,
 		NTP:                  false,
 		MempoolExpiry:        defaultMempoolExpiry,
 		AcceptNonStd:         true,

@@ -80,6 +80,16 @@ func (cdb *LegacyChainDB) Init() error {
 		if err != nil {
 			return err
 		}
+
+		// index
+		_, err = meta.CreateBucket(txidByTxhashBucketName)
+		if err != nil {
+			return err
+		}
+		_, err = meta.CreateBucket(txIndexKey)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	return err
@@ -97,10 +107,6 @@ func (cdb *LegacyChainDB) DB() legacydb.DB {
 
 func (cdb *LegacyChainDB) Rebuild(mgr model.IndexManager) error {
 	err := index.DropInvalidTxIndex(cdb.db, cdb.interrupt)
-	if err != nil {
-		log.Info(err.Error())
-	}
-	err = index.DropTxIndex(cdb.db, cdb.interrupt)
 	if err != nil {
 		log.Info(err.Error())
 	}
@@ -136,22 +142,6 @@ func (cdb *LegacyChainDB) Rebuild(mgr model.IndexManager) error {
 			return err
 		}
 		_, err = meta.CreateBucket(dbnamespace.TokenBucketName)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	txIndex := mgr.(*index.Manager).TxIndex()
-	txIndex.SetCurOrder(-1)
-	err = cdb.db.Update(func(tx legacydb.Tx) error {
-		err = txIndex.Create(tx)
-		if err != nil {
-			return err
-		}
-		err = index.DBPutIndexerTip(tx, txIndex.Key(), &hash.ZeroHash, math.MaxUint32)
 		if err != nil {
 			return err
 		}
@@ -612,6 +602,10 @@ func (cdb *LegacyChainDB) Put(key []byte, value []byte) error {
 	})
 }
 
+func (cdb *LegacyChainDB) IsLegacy() bool {
+	return true
+}
+
 func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) {
 	// Load the block database.
 	db, err := LoadBlockDB(cfg)
@@ -626,13 +620,6 @@ func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) 
 	// Drop indexes and exit if requested.
 	if cfg.DropAddrIndex {
 		if err := index.DropAddrIndex(db, interrupt); err != nil {
-			log.Error(err.Error())
-			return nil, err
-		}
-		return nil, nil
-	}
-	if cfg.DropTxIndex {
-		if err := index.DropTxIndex(db, interrupt); err != nil {
 			log.Error(err.Error())
 			return nil, err
 		}

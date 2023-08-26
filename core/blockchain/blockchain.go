@@ -152,15 +152,13 @@ func (b *BlockChain) Init() error {
 	}
 	// Initialize and catch up all of the currently active optional indexes
 	// as needed.
-	if b.indexManager != nil {
-		err := b.indexManager.Init()
-		if err != nil {
-			return err
-		}
+	err := b.indexManager.Init()
+	if err != nil {
+		return err
 	}
 	b.pruner = newChainPruner(b)
 
-	err := b.initCheckPoints()
+	err = b.initCheckPoints()
 	if err != nil {
 		return err
 	}
@@ -694,15 +692,7 @@ func (b *BlockChain) ChainRUnlock() {
 }
 
 func (b *BlockChain) IsDuplicateTx(txid *hash.Hash, blockHash *hash.Hash) bool {
-	err := b.db.Update(func(dbTx legacydb.Tx) error {
-		if b.indexManager != nil {
-			if b.indexManager.IsDuplicateTx(dbTx, txid, blockHash) {
-				return nil
-			}
-		}
-		return fmt.Errorf("null")
-	})
-	return err == nil
+	return b.indexManager.IsDuplicateTx(txid, blockHash)
 }
 
 func (b *BlockChain) CalculateDAGDuplicateTxs(block *types.SerializedBlock) {
@@ -962,11 +952,9 @@ func (b *BlockChain) Rebuild() error {
 		}
 		block = blockNode.GetBody()
 		if i == 0 {
-			if b.indexManager != nil {
-				err = b.indexManager.ConnectBlock(block, nil, ib)
-				if err != nil {
-					return err
-				}
+			err = b.indexManager.ConnectBlock(block, nil, ib)
+			if err != nil {
+				return err
 			}
 			continue
 		}

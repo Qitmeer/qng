@@ -14,6 +14,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/dbnamespace"
@@ -136,7 +137,7 @@ func (node *DebugAddressNode) processAddress(blueM *map[uint]bool) error {
 			txHash := tx.Hash()
 			txFullHash := tx.Tx.TxHashFull()
 
-			txValid := isTxValid(db, txHash, &txFullHash, ib.GetHash())
+			txValid := isTxValid(node.bc.Consensus().DatabaseContext(), txHash, &txFullHash, ib.GetHash())
 			if node.cfg.DebugAddrValid {
 				if !txValid {
 					continue
@@ -263,22 +264,12 @@ func (node *DebugAddressNode) processAddress(blueM *map[uint]bool) error {
 	return nil
 }
 
-func isTxValid(db legacydb.DB, txHash *hash.Hash, txFullHash *hash.Hash, blockHash *hash.Hash) bool {
-	var preTx *types.Transaction
-	var preBlockH *hash.Hash
-	err := db.View(func(dbTx legacydb.Tx) error {
-		dtx, blockH, erro := index.DBFetchTxAndBlock(dbTx, txHash)
-		if erro != nil {
-			return erro
-		}
-		preTx = dtx
-		preBlockH = blockH
-		return nil
-	})
-
+func isTxValid(db model.DataBase, txid *hash.Hash, txFullHash *hash.Hash, blockHash *hash.Hash) bool {
+	dtx, preBlockH, err := db.GetTxIndexEntry(txid, true)
 	if err != nil {
 		return false
 	}
+	preTx := dtx.Tx
 	ptxFullHash := preTx.TxHashFull()
 
 	if !preBlockH.IsEqual(blockHash) || !txFullHash.IsEqual(&ptxFullHash) {

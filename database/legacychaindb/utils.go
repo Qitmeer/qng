@@ -1,6 +1,7 @@
 package legacychaindb
 
 import (
+	"encoding/binary"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/params"
@@ -17,6 +18,10 @@ const (
 
 var (
 	CreateIfNoExist = true
+
+	// byteOrder is the preferred byte order used for serializing numeric
+	// fields for storage in the database.
+	byteOrder = binary.LittleEndian
 )
 
 // loadBlockDB loads (or creates when needed) the block database taking into
