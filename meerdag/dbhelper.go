@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/database"
+	"math"
 )
 
 const (
@@ -67,19 +68,19 @@ func DBDelDAGBlock(dbTx database.Tx, id uint) error {
 	return bucket.Delete(serializedID[:])
 }
 
-func DBGetDAGBlockHashByID(dbTx database.Tx, id uint64) (*hash.Hash,error) {
+func DBGetDAGBlockHashByID(dbTx database.Tx, id uint64) (*hash.Hash, error) {
 	bucket := dbTx.Metadata().Bucket(BlockIndexBucketName)
 	var serializedID [4]byte
 	ByteOrder.PutUint32(serializedID[:], uint32(id))
 
 	data := bucket.Get(serializedID[:])
 	if data == nil {
-		return nil,nil
+		return nil, nil
 	}
 	if len(data) < 4+hash.HashSize {
-		return nil,fmt.Errorf("block(%d) data error",id)
+		return nil, fmt.Errorf("block(%d) data error", id)
 	}
-	return hash.NewHash(data[4:hash.HashSize+4])
+	return hash.NewHash(data[4 : hash.HashSize+4])
 }
 
 func GetOrderLogStr(order uint) string {
@@ -141,6 +142,10 @@ func DBPutBlockIdByOrder(dbTx database.Tx, order uint, id uint) error {
 }
 
 func DBGetBlockIdByOrder(dbTx database.Tx, order uint) (uint32, error) {
+	if order > math.MaxUint32 {
+		str := fmt.Sprintf("order %d is overflow", order)
+		return uint32(MaxId), &DAGError{str}
+	}
 	var serializedOrder [4]byte
 	ByteOrder.PutUint32(serializedOrder[:], uint32(order))
 
