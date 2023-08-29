@@ -175,6 +175,7 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 	m.stats.TotalEmptyGbtDuarations++
 	duration := float64(time.Now().Unix() - m.stats.LastestMempoolEmptyTimestamp)
 	m.stats.TotalMempoolEmptyDuration += duration
+	mempoolEmptyDuration.Update(time.Duration(duration) * time.Second)
 	if m.stats.TotalEmptyGbtDuarations > 0 {
 		m.stats.MempoolEmptyAvgDuration = m.stats.TotalMempoolEmptyDuration / float64(m.stats.TotalEmptyGbtDuarations)
 	}
@@ -196,6 +197,7 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 
 func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string, txcount int) {
 	m.stats.TotalSubmits++
+	totalSubmits.Update(m.stats.TotalSubmits)
 	if len(m.stats.Last100Submits) >= 100 {
 		m.stats.Last100Submits = m.stats.Last100Submits[len(m.stats.Last100Submits)-99:]
 	}
@@ -209,13 +211,15 @@ func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string, txcount int) {
 	if m.stats.TotalSubmits > 0 {
 		m.stats.SubmitAvgDuration = m.stats.TotalSubmitDuration / float64(m.stats.TotalSubmits)
 	}
-
+	submitDuration.Update(time.Duration(float64(currentReqMillSec)/1000) * time.Second)
 	if float64(currentReqMillSec)/1000 > m.stats.MaxSubmitDuration {
 		m.stats.MaxSubmitDuration = float64(currentReqMillSec) / 1000
 		m.stats.MaxSubmitDurationBlockHash = bh
 	}
+	submitTxCount.Update(int64(txcount))
 	if txcount < 1 {
 		m.stats.TotalTxEmptySubmits++
+		totalTxEmptySubmits.Update(m.stats.TotalTxEmptySubmits)
 	}
 }
 
@@ -234,6 +238,7 @@ func (m *Miner) StatsGbtRequest(currentReqMillSec int64, txcount int, longpollid
 	if m.stats.TotalGbtRequests > 0 {
 		m.stats.GbtRequestAvgDuration = m.stats.TotalGbtRequestDuration / float64(m.stats.TotalGbtRequests)
 	}
+	gbtRequestDuration.Update(time.Duration(float64(currentReqMillSec)/1000) * time.Second)
 	if float64(currentReqMillSec)/1000 > m.stats.MaxGbtRequestDuration {
 		m.stats.MaxGbtRequestDuration = float64(currentReqMillSec) / 1000
 		m.stats.MaxGbtRequestTimeLongpollid = longpollid
@@ -259,6 +264,7 @@ func (m *Miner) StatsGbt(currentReqMillSec int64, txcount int) {
 	if m.stats.TotalGbts > 0 {
 		m.stats.GbtAvgDuration = m.stats.TotalGbtDuration / float64(m.stats.TotalGbts)
 	}
+	gbtDuration.Update(time.Duration(float64(currentReqMillSec)/1000) * time.Second)
 	if float64(currentReqMillSec)/1000 > m.stats.MaxGbtDuration {
 		m.stats.MaxGbtDuration = float64(currentReqMillSec) / 1000
 	}
@@ -506,6 +512,7 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 	if reCreate {
 		m.stats.TotalGbts++ //gbt generates
 		start := time.Now().UnixMilli()
+		totalGbts.Update(m.stats.TotalGbts)
 		m.consensus.BlockChain().MeerChain().(*meer.MeerChain).MeerPool().ResetTemplate()
 		template, err := mining.NewBlockTemplate(m.policy, params.ActiveNetParams.Params, m.sigCache, m.txpool, m.timeSource, m.consensus, m.coinbaseAddress, nil, m.powType, m.coinbaseFlags)
 		if err != nil {

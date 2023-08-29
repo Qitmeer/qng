@@ -5,5 +5,6 @@ import (
 )
 
 var (
-	blockProcessTimer  = metrics.NewRegisteredTimer("blockchain/process", nil)
+	blockProcessTimer           = metrics.NewRegisteredTimer("blockchain/process", nil)
+	blockConnectedNotifications = metrics.NewRegisteredTimer("blockchain/process/connectnotifications", nil)
 )
