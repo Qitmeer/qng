@@ -8,6 +8,11 @@ package mempool
 import (
 	"container/list"
 	"fmt"
+	"math"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
@@ -17,10 +22,6 @@ import (
 	"github.com/Qitmeer/qng/core/message"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/meerevm/meer"
-	"math"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 // TxPool is used as a source of transactions that need to be mined into blocks
@@ -129,7 +130,7 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 		}
 		delete(mp.pool, *txHash)
 		// stats daily tx count
-		if mp.LastUpdated().Format("2006-01-02") != time.Now().Format("2006-01-02") {
+		if mp.LastUpdated().Day() != time.Now().Day() {
 			newDailyTxCount.Update(1)
 		}
 		atomic.StoreInt64(&mp.lastUpdated, roughtime.Now().Unix())
@@ -223,7 +224,7 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 			mp.outpoints[txIn.PreviousOut] = tx
 		}
 	}
-	if mp.LastUpdated().Format("2006-01-02") == time.Now().Format("2006-01-02") {
+	if mp.LastUpdated().Day() == time.Now().Day() {
 		newDailyTxCount.Inc(1)
 	} else {
 		newDailyTxCount.Update(1)
@@ -261,7 +262,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	msgTx := tx.Transaction()
 	txHash := tx.Hash()
 	start := time.Now()
-	if mp.LastUpdated().Format("2006-01-02") == time.Now().Format("2006-01-02") {
+	if mp.LastUpdated().Day() == time.Now().Day() {
 		newDailyAllTxCount.Inc(1)
 	} else {
 		newDailyAllTxCount.Update(1)
