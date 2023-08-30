@@ -8,7 +8,7 @@ import (
 
 type HashOrNumber struct {
 	Hash   *hash.Hash
-	Number uint64
+	Number uint32
 }
 
 func (hn *HashOrNumber) IsHash() bool {
@@ -26,9 +26,9 @@ func NewHashOrNumber(data string) (*HashOrNumber, error) {
 	if len(data) <= 0 {
 		return nil, fmt.Errorf("HashOrNumber:no input data")
 	}
-	num, err := strconv.Atoi(data)
+	num, err := strconv.ParseUint(data, 10, 32)
 	if err == nil {
-		return &HashOrNumber{Number: uint64(num)}, nil
+		return &HashOrNumber{Number: uint32(num)}, nil
 	}
 	h, err := hash.NewHashFromStr(data)
 	if err != nil {
