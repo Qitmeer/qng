@@ -8,6 +8,11 @@ package mempool
 import (
 	"container/list"
 	"fmt"
+	"math"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
@@ -17,10 +22,6 @@ import (
 	"github.com/Qitmeer/qng/core/message"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/meerevm/meer"
-	"math"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 // TxPool is used as a source of transactions that need to be mined into blocks
@@ -128,6 +129,10 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 			delete(mp.outpoints, txIn.PreviousOut)
 		}
 		delete(mp.pool, *txHash)
+		// stats daily tx count
+		if mp.LastUpdated().Day() != time.Now().Day() {
+			newDailyTxCount.Update(1)
+		}
 		atomic.StoreInt64(&mp.lastUpdated, roughtime.Now().Unix())
 		log.Trace(fmt.Sprintf("TxPool:remove tx %s", txHash))
 	}
@@ -219,6 +224,11 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 			mp.outpoints[txIn.PreviousOut] = tx
 		}
 	}
+	if mp.LastUpdated().Day() == time.Now().Day() {
+		newDailyTxCount.Inc(1)
+	} else {
+		newDailyTxCount.Update(1)
+	}
 
 	atomic.StoreInt64(&mp.lastUpdated, roughtime.Now().Unix())
 
@@ -251,7 +261,12 @@ func (mp *TxPool) AddTransaction(tx *types.Tx, height uint64, fee int64) {
 func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHighFees bool) ([]*hash.Hash, *TxDesc, error) {
 	msgTx := tx.Transaction()
 	txHash := tx.Hash()
-
+	start := time.Now()
+	if mp.LastUpdated().Day() == time.Now().Day() {
+		newDailyAllTxCount.Inc(1)
+	} else {
+		newDailyAllTxCount.Update(1)
+	}
 	// Don't accept the transaction if it already exists in the pool.  This
 	// applies to orphan transactions as well.  This check is intended to
 	// be a quick check to weed out duplicates.
@@ -274,7 +289,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		}
 		return nil, nil, err
 	}
-
+	mempoolCheckTransactionSanity.Update(time.Now().Sub(start))
+	start = time.Now()
 	// A standalone transaction must not be a coinbase transaction.
 	if tx.Tx.IsCoinBase() {
 		str := fmt.Sprintf("transaction %v is an individual coinbase",
@@ -330,7 +346,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			return nil, nil, txRuleError(rejectCode, str)
 		}
 	}
-
+	mempoolCheckTransactionStandard.Update(time.Now().Sub(start))
+	start = time.Now()
 	// The transaction may not use any of the same outputs as other
 	// transactions already in the pool as that would ultimately result in a
 	// double spend.  This check is intended to be quick and therefore only
@@ -343,6 +360,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	if err != nil {
 		return nil, nil, err
 	}
+	mempoolCheckPoolDoubleSpend.Update(time.Now().Sub(start))
+	start = time.Now()
 	// Verify crypto signatures for each input and reject the transaction if
 	// any don't verify.
 	flags, err := mp.cfg.Policy.StandardVerifyFlags()
@@ -503,7 +522,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			missingParents = append(missingParents, &hashCopy)
 		}
 	}
-
+	mempoolLookSpent.Update(time.Now().Sub(start))
+	start = time.Now()
 	if len(missingParents) > 0 {
 		return missingParents, nil, nil
 	}
@@ -540,6 +560,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		str := fmt.Sprintf("transaction %v must contain at least the utxo of base coin (MEER)", txHash)
 		return nil, nil, txRuleError(message.RejectInvalid, str)
 	}
+	mempoolCheckTransactionInputs.Update(time.Now().Sub(start))
+	start = time.Now()
 	// Don't allow transactions with non-standard inputs if the mempool config
 	// forbids their acceptance and relaying.
 	if !mp.cfg.Policy.AcceptNonStd {
@@ -581,7 +603,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			txHash, numSigOps, mp.cfg.Policy.MaxSigOpsPerTx)
 		return nil, nil, txRuleError(message.RejectNonstandard, str)
 	}
-
+	mempoolCountSigOps.Update(time.Now().Sub(start))
+	start = time.Now()
 	txFee := types.Amount{Id: types.MEERA, Value: 0}
 	if txFees != nil {
 		txFee.Value = txFees[txFee.Id]
@@ -717,6 +740,7 @@ func (mp *TxPool) fetchInputUtxos(tx *types.Tx) (*utxo.UtxoViewpoint, error) {
 // This function is safe for concurrent access.
 func (mp *TxPool) ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allowHighFees bool) ([]*types.TxDesc, error) {
 	// Protect concurrent access.
+	start := time.Now()
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
 	var err error
@@ -733,7 +757,7 @@ func (mp *TxPool) ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allow
 	if err != nil {
 		return nil, err
 	}
-
+	mempoolMaybeAcceptTransaction.Update(time.Now().Sub(start))
 	// If len(missingParents) == 0 then we know the tx is NOT an orphan.
 	if len(missingParents) == 0 {
 		// Accept any orphan transactions that depend on this
@@ -1088,6 +1112,8 @@ func (mp *TxPool) HaveAllTransactions(hashes []hash.Hash) bool {
 //
 // This function MUST be called with the mempool lock held (for reads).
 func (mp *TxPool) haveTransaction(hash *hash.Hash) bool {
+	start := time.Now()
+	defer mempoolHaveTransaction.Update(time.Now().Sub(start))
 	return mp.isTransactionInPool(hash, true) || mp.isOrphanInPool(hash)
 }
 
