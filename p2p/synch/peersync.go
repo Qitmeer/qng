@@ -46,6 +46,7 @@ type PeerSync struct {
 	processID      uint64
 	processLock    sync.Mutex
 	processWorkNum atomic.Int32
+	processwg      sync.WaitGroup
 }
 
 func (ps *PeerSync) Start() error {
@@ -70,6 +71,7 @@ func (ps *PeerSync) Stop() error {
 	log.Info("P2P PeerSync Stoping...")
 
 	close(ps.quit)
+	ps.processwg.Wait()
 	ps.wg.Wait()
 	log.Info("P2P PeerSync Stoped")
 	return nil
@@ -278,7 +280,10 @@ func (ps *PeerSync) startSync() {
 	// Start syncing from the best peer if one was selected.
 	if bestPeer != nil {
 		ps.processID++
-		ps.wg.Add(1)
+		if ps.IsInterrupt() {
+			return
+		}
+		ps.processwg.Add(1)
 		gs := bestPeer.GraphState()
 		log.Info("Syncing graph state", "cur", best.GraphState.String(), "target", gs.String(), "peer", bestPeer.GetID().String(), "processID", ps.processID)
 		// When the current height is less than a known checkpoint we
@@ -351,7 +356,7 @@ func (ps *PeerSync) startSync() {
 			}
 		}
 		ps.SetSyncPeer(nil)
-		ps.wg.Done()
+		ps.processwg.Done()
 	} else {
 		log.Trace("You're already up to date, no synchronization is required.")
 	}
