@@ -50,4 +50,11 @@ type DataBase interface {
 	DeleteDiffAnticone(id uint) error
 	Get(key []byte) ([]byte, error)
 	Put(key []byte, value []byte) error
+	PutTxIndexEntrys(sblock *types.SerializedBlock, block Block) error
+	GetTxIndexEntry(id *hash.Hash, verbose bool) (*types.Tx, *hash.Hash, error)
+	DeleteTxIndexEntrys(block *types.SerializedBlock) error
+	PutTxHashs(block *types.SerializedBlock) error
+	GetTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error)
+	DeleteTxHashs(block *types.SerializedBlock) error
+	IsLegacy() bool
 }

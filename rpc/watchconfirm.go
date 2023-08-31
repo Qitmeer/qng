@@ -1,8 +1,6 @@
 package rpc
 
 import (
-	"bytes"
-	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
@@ -47,11 +45,10 @@ func (w *WatchTxConfirmServer) Handle(wsc *wsClient, currentHeight uint64) {
 	}
 	bc := wsc.server.BC
 	indexMgr := wsc.server.consensus.IndexManager().(*index.Manager)
-	txIndex := indexMgr.TxIndex()
 
 	for tx, txconf := range *w {
 		txHash := hash.MustHexToDecodedHash(tx)
-		blockRegion, err := txIndex.TxBlockRegion(txHash)
+		mtx, blockHash, err := wsc.server.consensus.DatabaseContext().GetTxIndexEntry(&txHash, true)
 		if err != nil {
 			log.Error(err.Error(), "txhash", txHash)
 			continue
@@ -59,7 +56,7 @@ func (w *WatchTxConfirmServer) Handle(wsc *wsClient, currentHeight uint64) {
 		// Deserialize the transaction
 		var msgTx *types.Transaction
 
-		if blockRegion == nil {
+		if mtx == nil {
 			if indexMgr.InvalidTxIndex() != nil {
 				msgTx, err = indexMgr.InvalidTxIndex().Get(&txHash)
 				if err != nil {
@@ -74,30 +71,16 @@ func (w *WatchTxConfirmServer) Handle(wsc *wsClient, currentHeight uint64) {
 				}
 				continue
 			}
-		} else {
-			txBytes, err := indexMgr.GetTxBytes(blockRegion)
-			if err != nil {
+			if msgTx == nil {
 				log.Error("tx not found")
 				continue
 			}
-			msgTx = &types.Transaction{}
-			err = msgTx.Deserialize(bytes.NewReader(txBytes))
-			log.Trace("GetRawTx", "hex", hex.EncodeToString(txBytes))
-			if err != nil {
-				log.Error("Failed to deserialize transaction")
-				w.SendTxNotification(tx, 0, wsc, false, false)
-				continue
-			}
+			mtx = types.NewTx(msgTx)
 		}
-		if msgTx == nil {
-			log.Error("tx not found")
-			continue
-		}
-		mtx := types.NewTx(msgTx)
-		mtx.IsDuplicate = bc.IsDuplicateTx(mtx.Hash(), blockRegion.Hash)
-		ib := bc.BlockDAG().GetBlock(blockRegion.Hash)
+
+		ib := bc.BlockDAG().GetBlock(blockHash)
 		if ib == nil {
-			log.Error("block hash not exist", "hash", blockRegion.Hash)
+			log.Error("block hash not exist", "hash", blockHash)
 			w.SendTxNotification(tx, 0, wsc, false, false)
 			continue
 		}

@@ -59,12 +59,12 @@ func (b *BlockChain) GetBlockByOrder(order uint64) model.Block {
 // chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) BlockOrderByHash(hash *hash.Hash) (uint64, error) {
+func (b *BlockChain) GetBlockOrderByHash(hash *hash.Hash) (uint, error) {
 	ib := b.bd.GetBlock(hash)
 	if ib == nil {
-		return uint64(meerdag.MaxBlockOrder), fmt.Errorf("No block\n")
+		return meerdag.MaxBlockOrder, fmt.Errorf("No block order:%s", hash.String())
 	}
-	return uint64(ib.GetOrder()), nil
+	return ib.GetOrder(), nil
 }
 
 // OrderRange returns a range of block hashes for the given start and end

@@ -85,8 +85,8 @@ type Config struct {
 	// index
 	AddrIndex      bool `long:"addrindex" description:"Maintain a full address-based transaction index which makes the getrawtransactions RPC available"`
 	InvalidTxIndex bool `long:"invalidtxindex" description:"Cache invalid transactions."`
+	TxHashIndex    bool `long:"txhashindex" description:"Cache transaction full hash."`
 	DropAddrIndex  bool `long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
-	DropTxIndex    bool `long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
 
 	NTP bool `long:"ntp" description:"Auto sync time."`
 

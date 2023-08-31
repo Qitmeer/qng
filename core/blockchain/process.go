@@ -444,11 +444,9 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, vie
 		// Allow the index manager to call each of the currently active
 		// optional indexes with the block being connected so they can
 		// update themselves accordingly.
-		if b.indexManager != nil {
-			err := b.indexManager.ConnectBlock(block, pkss, node)
-			if err != nil {
-				return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
-			}
+		err = b.indexManager.ConnectBlock(block, pkss, node)
+		if err != nil {
+			return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 		}
 
 		// Prune fully spent entries and mark all entries in the view unmodified
@@ -461,11 +459,9 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, vie
 		}
 	} else {
 		// Atomically insert info into the database.
-		if b.indexManager != nil {
-			err := b.indexManager.ConnectBlock(block, pkss, node)
-			if err != nil {
-				return err
-			}
+		err := b.indexManager.ConnectBlock(block, pkss, node)
+		if err != nil {
+			return err
 		}
 	}
 	connectedBlocks.PushBack([]interface{}{block, b.bd.IsOnMainChain(node.GetID()), node})
@@ -492,15 +488,13 @@ func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedB
 	// Allow the index manager to call each of the currently active
 	// optional indexes with the block being disconnected so they
 	// can update themselves accordingly.
-	if b.indexManager != nil {
-		pkss := [][]byte{}
-		for _, stxo := range stxos {
-			pkss = append(pkss, stxo.PkScript)
-		}
-		err := b.indexManager.DisconnectBlock(block, pkss, ib)
-		if err != nil {
-			return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
-		}
+	pkss := [][]byte{}
+	for _, stxo := range stxos {
+		pkss = append(pkss, stxo.PkScript)
+	}
+	err = b.indexManager.DisconnectBlock(block, pkss, ib)
+	if err != nil {
+		return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 	}
 	// Prune fully spent entries and mark all entries in the view unmodified
 	// now that the modifications have been committed to the database.
@@ -698,11 +692,9 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 	if err != nil {
 		return err
 	}
-	if b.indexManager != nil {
-		err := b.indexManager.UpdateMainTip(mainTip.GetHash(), uint64(mainTip.GetOrder()))
-		if err != nil {
-			return err
-		}
+	err = b.indexManager.UpdateMainTip(mainTip.GetHash(), uint64(mainTip.GetOrder()))
+	if err != nil {
+		return err
 	}
 	// Update the state for the best block.  Notice how this replaces the
 	// entire struct instead of updating the existing one.  This effectively

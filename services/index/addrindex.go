@@ -84,6 +84,8 @@ var (
 		"by the address index")
 )
 
+type fetchAddrLevelDataFunc func(key []byte) []byte
+
 // -----------------------------------------------------------------------------
 // The address index maps addresses referenced in the blockchain to a list of
 // all the transactions involving that address.  Transactions are stored
@@ -258,7 +260,7 @@ func dbPutAddrIndexEntry(bucket internalBucket, addrKey [addrKeySize]byte, block
 // the given address key and the number of entries skipped since it could have
 // been less in the case where there are less total entries than the requested
 // number of entries to skip.
-func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, numToSkip, numRequested uint32, reverse bool, fetchBlockHash fetchBlockHashFunc) ([]legacydb.BlockRegion, uint32, error) {
+func dbFetchAddrIndexEntries(fetchAddrLevelData fetchAddrLevelDataFunc, addrKey [addrKeySize]byte, numToSkip, numRequested uint32, reverse bool, fetchBlockHash fetchBlockHashFunc) ([]legacydb.BlockRegion, uint32, error) {
 	// When the reverse flag is not set, all levels need to be fetched
 	// because numToSkip and numRequested are counted from the oldest
 	// transactions (highest level) and thus the total count is needed.
@@ -268,7 +270,7 @@ func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, n
 	var serialized []byte
 	for !reverse || len(serialized) < int(numToSkip+numRequested)*txEntrySize {
 		curLevelKey := keyForLevel(addrKey, level)
-		levelData := bucket.Get(curLevelKey[:])
+		levelData := fetchAddrLevelData(curLevelKey[:])
 		if levelData == nil {
 			// Stop when there are no more levels.
 			break
@@ -591,6 +593,8 @@ func addrToKey(addr types.Address, params *params.Params) ([addrKeySize]byte, er
 // transactions such as those which are kept in the memory pool before inclusion
 // in a block.
 type AddrIndex struct {
+	consensus model.Consensus
+
 	// The following fields are set when the instance is created and can't
 	// be changed afterwards, so there is no need to protect them with a
 	// separate mutex.
@@ -757,11 +761,10 @@ func (idx *AddrIndex) ConnectBlock(dbTx legacydb.Tx, block *types.SerializedBloc
 	}
 	// Get the internal block ID associated with the block.
 	blockHash := block.Hash()
-	blockID, err := dbFetchOrderByHash(dbTx, blockHash)
+	blockID, err := idx.consensus.BlockChain().GetBlockOrderByHash(blockHash)
 	if err != nil {
 		return err
 	}
-
 	// Build all of the address to transaction mappings in a local map.
 	addrsToTxns := make(writeIndexData)
 	idx.indexBlock(addrsToTxns, block, stxos)
@@ -774,7 +777,7 @@ func (idx *AddrIndex) ConnectBlock(dbTx legacydb.Tx, block *types.SerializedBloc
 			// since these are not from the parent. Offset the index to be
 			// correct for the location in this given block.
 			err := dbPutAddrIndexEntry(addrIdxBucket, addrKey,
-				blockID, txLocs[txIdx])
+				uint32(blockID), txLocs[txIdx])
 			if err != nil {
 				return err
 			}
@@ -824,25 +827,28 @@ func (idx *AddrIndex) TxRegionsForAddress(dbTx legacydb.Tx, addr types.Address, 
 		return nil, 0, err
 	}
 
-	var regions []legacydb.BlockRegion
-	var skipped uint32
-	err = idx.db.View(func(dbTx legacydb.Tx) error {
-		// Create closure to lookup the block hash given the ID using
-		// the database transaction.
-		fetchBlockHash := func(id []byte) (*hash.Hash, error) {
-			// Deserialize and populate the result.
-			return dbFetchBlockHashBySerializedID(dbTx, id)
+	fetchBlockHash := func(id []byte) (*hash.Hash, error) {
+		// Deserialize and populate the result.
+		order := uint64(byteOrder.Uint32(id))
+		block := idx.consensus.BlockChain().GetBlockByOrder(order)
+		if block == nil {
+			return nil, fmt.Errorf("No block:%d", order)
 		}
+		return block.GetHash(), nil
+	}
 
-		var err error
-		addrIdxBucket := dbTx.Metadata().Bucket(addrIndexKey)
-		regions, skipped, err = dbFetchAddrIndexEntries(addrIdxBucket,
-			addrKey, numToSkip, numRequested, reverse,
-			fetchBlockHash)
-		return err
-	})
-
-	return regions, skipped, err
+	fetchAddrLevelData := func(key []byte) []byte {
+		var levelData []byte
+		idx.db.View(func(dbTx legacydb.Tx) error {
+			addrIdxBucket := dbTx.Metadata().Bucket(addrIndexKey)
+			levelData = addrIdxBucket.Get(key)
+			return nil
+		})
+		return levelData
+	}
+	return dbFetchAddrIndexEntries(fetchAddrLevelData,
+		addrKey, numToSkip, numRequested, reverse,
+		fetchBlockHash)
 }
 
 // indexUnconfirmedAddresses modifies the unconfirmed (memory-only) address
@@ -956,9 +962,10 @@ func (idx *AddrIndex) UnconfirmedTxnsForAddress(addr types.Address) []*types.Tx 
 // It implements the Indexer interface which plugs into the IndexManager that in
 // turn is used by the blockchain package.  This allows the index to be
 // seamlessly maintained along with the chain.
-func NewAddrIndex(db legacydb.DB) *AddrIndex {
+func NewAddrIndex(consensus model.Consensus) *AddrIndex {
 	return &AddrIndex{
-		db:          db,
+		consensus:   consensus,
+		db:          consensus.LegacyDB(),
 		chainParams: params.ActiveNetParams.Params,
 		txnsByAddr:  make(map[[addrKeySize]byte]map[hash.Hash]*types.Tx),
 		addrsByTx:   make(map[hash.Hash]map[[addrKeySize]byte]struct{}),

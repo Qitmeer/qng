@@ -3,7 +3,6 @@ package model
 import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database/legacydb"
 )
 
 // IndexManager provides a generic interface that the is called when blocks are
@@ -28,7 +27,7 @@ type IndexManager interface {
 	UpdateMainTip(bh *hash.Hash, order uint64) error
 
 	// IsDuplicateTx
-	IsDuplicateTx(tx legacydb.Tx, txid *hash.Hash, blockHash *hash.Hash) bool
+	IsDuplicateTx(txid *hash.Hash, blockHash *hash.Hash) bool
 
 	HasTx(txid *hash.Hash) bool
 
