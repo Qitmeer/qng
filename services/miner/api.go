@@ -57,6 +57,7 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 		start := time.Now().UnixMilli()
 		log.Debug("gbtstart")
 		api.miner.stats.TotalGbtRequests++
+		totalGbtRequests.Update(api.miner.stats.TotalGbtRequests)
 		data, err := handleGetBlockTemplateRequest(api, &request)
 		if err != nil {
 			return nil, err
