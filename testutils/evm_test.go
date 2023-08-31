@@ -153,9 +153,18 @@ func TestCallErc20Contract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = tokenCall.TransferFrom(authCaller1, h.Wallet.ethAddrs[0], h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+
+	tx1, err := tokenCall.TransferFrom(authCaller1, h.Wallet.ethAddrs[0], h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 	if err == nil {
-		t.Fatal("Token Bug,TransferFrom without approve")
+		GenerateBlock(t, h, 1)
+		// check the transaction is ok or not
+		txD2, err := h.Wallet.evmClient.TransactionReceipt(context.Background(), tx1.Hash())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if txD2.Status == uint64(0x1) {
+			t.Fatal("Token Bug,TransferFrom without approve")
+		}
 	}
 	log.Println(err)
 	//  approve
