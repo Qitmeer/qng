@@ -89,11 +89,12 @@ func TestCallErc20Contract(t *testing.T) {
 		t.Fatal(err)
 	}
 	toAmount := int64(2)
+	toMeerAmount := big.NewInt(1e18).Mul(big.NewInt(1e18), big.NewInt(2))
 	for i := 0; i < 2; i++ {
 		_, _ = h.Wallet.NewAddress()
 		to := h.Wallet.ethAddrs[uint32(i+1)]
 		// send 2 meer
-		txid, err := h.Wallet.CreateLegacyTx(h.Wallet.privkeys[0], &to, 0, 21000, big.NewInt(1e18).Mul(big.NewInt(1e18), big.NewInt(2)), nil)
+		txid, err := h.Wallet.CreateLegacyTx(h.Wallet.privkeys[0], &to, 0, 21000, toMeerAmount, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -117,7 +118,7 @@ func TestCallErc20Contract(t *testing.T) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		assert.Equal(t, meerBa, big.NewInt(1e16))
+		assert.Equal(t, meerBa, toMeerAmount)
 		ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[uint32(i)])
 		if err != nil {
 			t.Fatal(err)
