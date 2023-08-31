@@ -5,12 +5,13 @@
 package testutils_test
 
 import (
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/params"
-	. "github.com/Qitmeer/qng/testutils"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/params"
+	. "github.com/Qitmeer/qng/testutils"
 )
 
 func TestHarness(t *testing.T) {

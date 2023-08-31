@@ -9,6 +9,10 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
+	"log"
+	"math/big"
+	"strings"
+
 	"github.com/Qitmeer/qng/meerevm/params"
 	"github.com/Qitmeer/qng/testutils/swap/factory"
 	"github.com/Qitmeer/qng/testutils/swap/router"
@@ -17,9 +21,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"log"
-	"math/big"
-	"strings"
 )
 
 var CHAIN_ID = params.QngPrivnetChainConfig.ChainID
@@ -89,7 +90,12 @@ func (w *testWallet) CreateRouter(factory, weth common.Address) (string, error) 
 
 func (w *testWallet) AuthTrans(privatekeybyte []byte) (*bind.TransactOpts, error) {
 	privateKey := crypto.ToECDSAUnsafe(privatekeybyte)
-	return bind.NewKeyedTransactorWithChainID(privateKey, CHAIN_ID)
+	authCaller, err := bind.NewKeyedTransactorWithChainID(privateKey, CHAIN_ID)
+	if err != nil {
+		return nil, err
+	}
+	authCaller.GasLimit = uint64(GAS_LIMIT)
+	return authCaller, nil
 }
 
 func (w *testWallet) CreateLegacyTx(fromPkByte []byte, to *common.Address, nonce uint64, gas uint64, val *big.Int, d []byte) (string, error) {
