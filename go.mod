@@ -45,6 +45,7 @@ require (
 	github.com/urfave/cli/v2 v2.17.2-0.20221006022127-8f469abc00aa
 	github.com/zeromq/goczmq v4.1.0+incompatible
 	go.opencensus.io v0.24.0
+	go.uber.org/goleak v1.2.0
 	golang.org/x/crypto v0.12.0
 	golang.org/x/net v0.14.0
 	golang.org/x/sys v0.11.0
