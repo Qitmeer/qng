@@ -20,18 +20,18 @@ func TestShutdown(t *testing.T) {
 
 	var err error
 	var wg sync.WaitGroup
-	waitTime:=time.Second*10
+	waitTime := time.Second * 10
 	wg.Add(1)
 	go func() {
 		os.Args = []string{"-A=./", "--privnet"}
 		err = qng()
-		if  err != nil {
+		if err != nil {
 			t.Error(err.Error())
 		}
 		wg.Done()
 	}()
 
-	t.Logf("It will auto shutdown after %s",waitTime)
+	t.Logf("It will auto shutdown after %s", waitTime)
 	time.Sleep(waitTime)
 	system.ShutdownRequestChannel <- struct{}{}
 	wg.Wait()
