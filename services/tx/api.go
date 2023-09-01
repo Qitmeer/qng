@@ -263,7 +263,7 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 		}
 		// Look up the location of the transaction.
 		var err error
-		tx, _, err = api.txManager.consensus.DatabaseContext().GetTxIndexEntry(&txHash, true)
+		tx, blkHash, err = api.txManager.consensus.DatabaseContext().GetTxIndexEntry(&txHash, true)
 		if err != nil {
 			return nil, errors.New("Failed to retrieve transaction location")
 		}
@@ -335,9 +335,6 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 				coinbaseAmout[mtx.Tx.TxOut[0].Amount.Id] += mtx.Tx.TxOut[0].Amount.Value
 			}
 		}
-	}
-	if tx != nil {
-		confirmations = 0
 	}
 	return marshal.MarshalJsonTransaction(mtx, api.txManager.consensus.Params(), blkHashStr, confirmations, coinbaseAmout, txsvalid)
 }
