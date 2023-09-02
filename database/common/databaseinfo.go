@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+const (
+	// currentDatabaseVersion indicates what the current database
+	// version is.
+	CurrentDatabaseVersion = 14
+)
+
 // -----------------------------------------------------------------------------
 // The database information contains information about the version and date
 // of the blockchain database.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/meerdag"
@@ -29,15 +30,27 @@ var (
 	// errNoTxHashEntry is an error that indicates a requested entry does
 	// not exist in the tx hash
 	errNoTxHashEntry = errors.New("no entry in the tx hash")
+
+	// hashByOrderIndexBucketName is the name of the db bucket used to house
+	// the block index ID -> block hash index.
+	hashByIDIndexBucketName = []byte("hashbyididx")
+
+	// errNoBlockOrderEntry is an error that indicates a requested entry does
+	// not exist in the block order index.
+	errNoBlockOrderEntry = errors.New("no entry in the block order index")
 )
 
 func (cdb *LegacyChainDB) PutTxIndexEntrys(sblock *types.SerializedBlock, block model.Block) error {
-	addEntries := func(txns []*types.Tx, txLocs []types.TxLoc, blockOrder uint32) error {
+	return cdb.doPutTxIndexEntrys(sblock, block.GetID())
+}
+
+func (cdb *LegacyChainDB) doPutTxIndexEntrys(sblock *types.SerializedBlock, blockid uint) error {
+	addEntries := func(txns []*types.Tx, txLocs []types.TxLoc, blockID uint32) error {
 		offset := 0
 		serializedValues := make([]byte, len(txns)*txEntrySize)
 		return cdb.db.Update(func(dbTx legacydb.Tx) error {
 			for i, tx := range txns {
-				putTxIndexEntry(serializedValues[offset:], blockOrder,
+				putTxIndexEntry(serializedValues[offset:], blockID,
 					txLocs[i])
 				endOffset := offset + txEntrySize
 
@@ -60,12 +73,7 @@ func (cdb *LegacyChainDB) PutTxIndexEntrys(sblock *types.SerializedBlock, block 
 	if err != nil {
 		return err
 	}
-
-	err = addEntries(sblock.Transactions(), txLocs, uint32(block.GetOrder()))
-	if err != nil {
-		return err
-	}
-	return nil
+	return addEntries(sblock.Transactions(), txLocs, uint32(blockid))
 }
 
 func (cdb *LegacyChainDB) GetTxIndexEntry(id *hash.Hash, verbose bool) (*types.Tx, *hash.Hash, error) {
@@ -92,11 +100,7 @@ func (cdb *LegacyChainDB) GetTxIndexEntry(id *hash.Hash, verbose bool) (*types.T
 	if len(serializedData) == 0 {
 		return nil, nil, nil
 	}
-	blockOrder := uint(byteOrder.Uint32(serializedData[0:4]))
-	blockid, err := cdb.GetBlockIdByOrder(blockOrder)
-	if err != nil {
-		return nil, nil, err
-	}
+	blockid := uint(byteOrder.Uint32(serializedData[0:4]))
 	blockHash, err = meerdag.DBGetDAGBlockHashByID(cdb, uint64(blockid))
 	if err != nil {
 		return nil, nil, err
@@ -236,4 +240,39 @@ func dbRemoveTxIdByHash(dbTx legacydb.Tx, txhash hash.Hash) error {
 		return nil
 	}
 	return txidByTxhash.Delete(txhash[:])
+}
+
+func dbFetchIndexerTip(dbTx legacydb.Tx, idxKey []byte) (*hash.Hash, uint32, error) {
+	indexesBucket := dbTx.Metadata().Bucket(dbnamespace.IndexTipsBucketName)
+	serialized := indexesBucket.Get(idxKey)
+	if len(serialized) < hash.HashSize+4 {
+		return nil, 0, legacydb.Error{
+			ErrorCode: legacydb.ErrCorruption,
+			Description: fmt.Sprintf("unexpected end of data for "+
+				"index %q tip", string(idxKey)),
+		}
+	}
+
+	var h hash.Hash
+	copy(h[:], serialized[:hash.HashSize])
+	order := uint32(byteOrder.Uint32(serialized[hash.HashSize:]))
+	return &h, order, nil
+}
+
+func dbFetchBlockHashBySerializedID(dbTx legacydb.Tx, serializedID []byte) (*hash.Hash, error) {
+	idIndex := dbTx.Metadata().Bucket(hashByIDIndexBucketName)
+	hashBytes := idIndex.Get(serializedID)
+	if hashBytes == nil {
+		return nil, errNoBlockOrderEntry
+	}
+
+	var hash hash.Hash
+	copy(hash[:], hashBytes)
+	return &hash, nil
+}
+
+func dbFetchBlockHashByIID(dbTx legacydb.Tx, iid uint32) (*hash.Hash, error) {
+	var serializedID [4]byte
+	byteOrder.PutUint32(serializedID[:], iid)
+	return dbFetchBlockHashBySerializedID(dbTx, serializedID[:])
 }
