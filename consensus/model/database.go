@@ -57,4 +57,5 @@ type DataBase interface {
 	GetTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error)
 	DeleteTxHashs(block *types.SerializedBlock) error
 	IsLegacy() bool
+	TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{}) error
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -392,6 +393,10 @@ func (cdb *ChainDB) Put(key []byte, value []byte) error {
 
 func (cdb *ChainDB) IsLegacy() bool {
 	return false
+}
+
+func (cdb *ChainDB) TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{}) error {
+	return nil
 }
 
 func New(cfg *config.Config) (*ChainDB, error) {

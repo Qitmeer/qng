@@ -195,11 +195,11 @@ func (b *BlockChain) initChainState() error {
 	// The database bucket for the versioning information is missing.
 	if dbInfo != nil {
 		// Don't allow downgrades of the blockchain database.
-		if dbInfo.Version() > currentDatabaseVersion {
+		if dbInfo.Version() > common.CurrentDatabaseVersion {
 			return fmt.Errorf("the current blockchain database is "+
 				"no longer compatible with this version of "+
 				"the software (%d > %d)", dbInfo.Version(),
-				currentDatabaseVersion)
+				common.CurrentDatabaseVersion)
 		}
 
 		// Don't allow downgrades of the database compression version.
@@ -227,8 +227,8 @@ func (b *BlockChain) initChainState() error {
 		return b.createChainState()
 	}
 
-	//   Upgrade the database as needed.
-	err = b.upgradeDB(b.consensus.Interrupt())
+	// Upgrade the database as needed.
+	err = b.consensus.DatabaseContext().TryUpgrade(dbInfo, b.consensus.Interrupt())
 	if err != nil {
 		return err
 	}
@@ -311,7 +311,7 @@ func (b *BlockChain) createChainState() error {
 	b.stateSnapshot = newBestState(node.GetHash(), node.Difficulty(), blockSize, numTxns,
 		time.Unix(node.GetTimestamp(), 0), numTxns, 0, b.bd.GetGraphState(), node.GetHash(), *ib.GetState().Root())
 	b.TokenTipID = 0
-	b.dbInfo = common.NewDatabaseInfo(currentDatabaseVersion, serialization.CurrentCompressionVersion, currentBlockIndexVersion, roughtime.Now())
+	b.dbInfo = common.NewDatabaseInfo(common.CurrentDatabaseVersion, serialization.CurrentCompressionVersion, currentBlockIndexVersion, roughtime.Now())
 	err = b.consensus.DatabaseContext().PutInfo(b.dbInfo)
 	if err != nil {
 		return err
