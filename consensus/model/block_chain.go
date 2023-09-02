@@ -19,6 +19,7 @@ type BlockChain interface {
 	Start() error
 	Stop() error
 	GetBlockByOrder(order uint64) Block
+	GetBlockById(id uint) Block
 	FetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error)
 	GetBlockOrderByHash(hash *hash.Hash) (uint, error)
 }

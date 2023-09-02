@@ -759,12 +759,6 @@ func (idx *AddrIndex) ConnectBlock(dbTx legacydb.Tx, block *types.SerializedBloc
 	if err != nil {
 		return err
 	}
-	// Get the internal block ID associated with the block.
-	blockHash := block.Hash()
-	blockID, err := idx.consensus.BlockChain().GetBlockOrderByHash(blockHash)
-	if err != nil {
-		return err
-	}
 	// Build all of the address to transaction mappings in a local map.
 	addrsToTxns := make(writeIndexData)
 	idx.indexBlock(addrsToTxns, block, stxos)
@@ -777,7 +771,7 @@ func (idx *AddrIndex) ConnectBlock(dbTx legacydb.Tx, block *types.SerializedBloc
 			// since these are not from the parent. Offset the index to be
 			// correct for the location in this given block.
 			err := dbPutAddrIndexEntry(addrIdxBucket, addrKey,
-				uint32(blockID), txLocs[txIdx])
+				uint32(blk.GetID()), txLocs[txIdx])
 			if err != nil {
 				return err
 			}
@@ -829,10 +823,10 @@ func (idx *AddrIndex) TxRegionsForAddress(dbTx legacydb.Tx, addr types.Address, 
 
 	fetchBlockHash := func(id []byte) (*hash.Hash, error) {
 		// Deserialize and populate the result.
-		order := uint64(byteOrder.Uint32(id))
-		block := idx.consensus.BlockChain().GetBlockByOrder(order)
+		blockid := uint(byteOrder.Uint32(id))
+		block := idx.consensus.BlockChain().GetBlockById(blockid)
 		if block == nil {
-			return nil, fmt.Errorf("No block:%d", order)
+			return nil, fmt.Errorf("No block:%d", blockid)
 		}
 		return block.GetHash(), nil
 	}

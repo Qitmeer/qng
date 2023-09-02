@@ -32,12 +32,12 @@ var (
 )
 
 func (cdb *LegacyChainDB) PutTxIndexEntrys(sblock *types.SerializedBlock, block model.Block) error {
-	addEntries := func(txns []*types.Tx, txLocs []types.TxLoc, blockOrder uint32) error {
+	addEntries := func(txns []*types.Tx, txLocs []types.TxLoc, blockID uint32) error {
 		offset := 0
 		serializedValues := make([]byte, len(txns)*txEntrySize)
 		return cdb.db.Update(func(dbTx legacydb.Tx) error {
 			for i, tx := range txns {
-				putTxIndexEntry(serializedValues[offset:], blockOrder,
+				putTxIndexEntry(serializedValues[offset:], blockID,
 					txLocs[i])
 				endOffset := offset + txEntrySize
 
@@ -61,7 +61,7 @@ func (cdb *LegacyChainDB) PutTxIndexEntrys(sblock *types.SerializedBlock, block 
 		return err
 	}
 
-	err = addEntries(sblock.Transactions(), txLocs, uint32(block.GetOrder()))
+	err = addEntries(sblock.Transactions(), txLocs, uint32(block.GetID()))
 	if err != nil {
 		return err
 	}
@@ -92,11 +92,7 @@ func (cdb *LegacyChainDB) GetTxIndexEntry(id *hash.Hash, verbose bool) (*types.T
 	if len(serializedData) == 0 {
 		return nil, nil, nil
 	}
-	blockOrder := uint(byteOrder.Uint32(serializedData[0:4]))
-	blockid, err := cdb.GetBlockIdByOrder(blockOrder)
-	if err != nil {
-		return nil, nil, err
-	}
+	blockid := uint(byteOrder.Uint32(serializedData[0:4]))
 	blockHash, err = meerdag.DBGetDAGBlockHashByID(cdb, uint64(blockid))
 	if err != nil {
 		return nil, nil, err
