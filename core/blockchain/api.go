@@ -428,7 +428,7 @@ func (api *PublicBlockAPI) makeBlock(h hash.Hash, verbose *bool, inclTx *bool, f
 			children = append(children, v.(meerdag.IBlock).GetHash())
 		}
 	}
-	api.chain.CalculateDAGDuplicateTxs(blk)
+	api.chain.SetDAGDuplicateTxs(blk, ib)
 	coinbaseFees := api.chain.CalculateFees(blk)
 	coinbaseAmout := types.AmountMap{}
 

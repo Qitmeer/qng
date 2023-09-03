@@ -514,7 +514,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		view := utxo.NewUtxoViewpoint()
 		view.SetViewpoints([]*hash.Hash{block.Hash()})
 		if !n.Block.GetState().GetStatus().KnownInvalid() {
-			b.CalculateDAGDuplicateTxs(block)
+			b.SetDAGDuplicateTxs(block, n.Block)
 			err = b.fetchInputUtxos(block, view)
 			if err != nil {
 				return err
@@ -702,6 +702,20 @@ func (b *BlockChain) CalculateDAGDuplicateTxs(block *types.SerializedBlock) {
 	}
 }
 
+// Just load from block state, so high efficiency of close range hits
+func (b *BlockChain) SetDAGDuplicateTxs(sblock *types.SerializedBlock, block model.Block) {
+	txs := sblock.Transactions()
+	dtxs := block.GetState().GetDuplicateTxs()
+	if len(dtxs) > 0 {
+		for _, txidx := range dtxs {
+			if txidx >= len(txs) {
+				continue
+			}
+			txs[txidx].IsDuplicate = true
+		}
+	}
+}
+
 func (b *BlockChain) CalculateFees(block *types.SerializedBlock) types.AmountMap {
 	transactions := block.Transactions()
 	totalAtomOut := types.AmountMap{}
@@ -755,7 +769,7 @@ func (b *BlockChain) GetFees(h *hash.Hash) types.AmountMap {
 	if bn == nil {
 		return nil
 	}
-	b.CalculateDAGDuplicateTxs(bn.GetBody())
+	b.SetDAGDuplicateTxs(bn.GetBody(), ib)
 
 	return b.CalculateFees(bn.GetBody())
 }
