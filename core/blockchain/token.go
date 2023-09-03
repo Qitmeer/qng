@@ -124,7 +124,7 @@ func (b *BlockChain) updateTokenState(node meerdag.IBlock, block *types.Serializ
 		if uint32(node.GetID()) == b.TokenTipID {
 			state := b.GetTokenState(b.TokenTipID)
 			if state != nil {
-				err := token.DBRemoveTokenState(b.consensus.DatabaseContext(), node.GetID())
+				err := token.DBRemoveTokenState(b.DB(), node.GetID())
 				if err != nil {
 					return err
 				}
@@ -165,7 +165,7 @@ func (b *BlockChain) updateTokenState(node meerdag.IBlock, block *types.Serializ
 		return err
 	}
 
-	err = token.DBPutTokenState(b.consensus.DatabaseContext(), node.GetID(), state)
+	err = token.DBPutTokenState(b.DB(), node.GetID(), state)
 	if err != nil {
 		return err
 	}
@@ -174,7 +174,7 @@ func (b *BlockChain) updateTokenState(node meerdag.IBlock, block *types.Serializ
 }
 
 func (b *BlockChain) GetTokenState(bid uint32) *token.TokenState {
-	state, err := token.DBFetchTokenState(b.consensus.DatabaseContext(), uint(bid))
+	state, err := token.DBFetchTokenState(b.DB(), uint(bid))
 	if err != nil {
 		log.Error(err.Error())
 		return nil

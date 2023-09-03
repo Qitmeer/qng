@@ -101,7 +101,7 @@ func (bc *BlockChain) fetchInputUtxos(block *types.SerializedBlock, view *utxo.U
 			txNeededSet[txIn.PreviousOut] = struct{}{}
 		}
 	}
-	err := view.FetchUtxosMain(bc.consensus.DatabaseContext(), txNeededSet)
+	err := view.FetchUtxosMain(bc.DB(), txNeededSet)
 	if err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func (b *BlockChain) FetchUtxoView(tx *types.Tx) (*utxo.UtxoViewpoint, error) {
 	view := utxo.NewUtxoViewpoint()
 	view.SetViewpoints(b.GetMiningTips(meerdag.MaxPriority))
 	b.ChainRLock()
-	err := view.FetchUtxosMain(b.consensus.DatabaseContext(), neededSet)
+	err := view.FetchUtxosMain(b.DB(), neededSet)
 	b.ChainRUnlock()
 	if err != nil {
 		return view, err
@@ -171,7 +171,7 @@ func (b *BlockChain) FetchUtxoEntry(outpoint types.TxOutPoint) (*utxo.UtxoEntry,
 	b.ChainRLock()
 	defer b.ChainRUnlock()
 
-	entry, err := utxo.DBFetchUtxoEntry(b.consensus.DatabaseContext(), outpoint)
+	entry, err := utxo.DBFetchUtxoEntry(b.DB(), outpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +191,7 @@ func (b *BlockChain) dbPutUtxoView(view *utxo.UtxoViewpoint) error {
 		// Remove the utxo entry if it is spent.
 		if entry.IsSpent() {
 			key := utxo.OutpointKey(outpoint)
-			err := b.consensus.DatabaseContext().DeleteUtxo(*key)
+			err := b.DB().DeleteUtxo(*key)
 			utxo.RecycleOutpointKey(key)
 			if err != nil {
 				return err
@@ -211,7 +211,7 @@ func (b *BlockChain) dbPutUtxoView(view *utxo.UtxoViewpoint) error {
 			return err
 		}
 		key := utxo.OutpointKey(outpoint)
-		err = b.consensus.DatabaseContext().PutUtxo(*key, serialized)
+		err = b.DB().PutUtxo(*key, serialized)
 		// NOTE: The key is intentionally not recycled here since the
 		// database interface contract prohibits modifications.  It will
 		// be garbage collected normally when the database is done with

@@ -241,8 +241,8 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	// blocks that fail to connect available for further analysis.
 	//
 	// Also, store the associated block index entry.
-	if !b.consensus.DatabaseContext().HasBlock(block.Hash()) {
-		err := dbMaybeStoreBlock(b.consensus.DatabaseContext(), block)
+	if !b.DB().HasBlock(block.Hash()) {
+		err := dbMaybeStoreBlock(b.DB(), block)
 		if err != nil {
 			panic(err.Error())
 		}
@@ -437,7 +437,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, vie
 		if err != nil {
 			return err
 		}
-		err = utxo.DBPutSpendJournalEntry(b.consensus.DatabaseContext(), block.Hash(), stxos)
+		err = utxo.DBPutSpendJournalEntry(b.DB(), block.Hash(), stxos)
 		if err != nil {
 			return err
 		}
@@ -481,7 +481,7 @@ func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedB
 	if err != nil {
 		return err
 	}
-	err = utxo.DBRemoveSpendJournalEntry(b.consensus.DatabaseContext(), block.Hash())
+	err = utxo.DBRemoveSpendJournalEntry(b.DB(), block.Hash())
 	if err != nil {
 		return err
 	}
@@ -688,7 +688,7 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 
 	// Atomically insert info into the database.
 	// Update best block state.
-	err := dbPutBestState(b.consensus.DatabaseContext(), state, pow.CalcWork(mainTipNode.Difficulty(), mainTipNode.Pow().GetPowType()))
+	err := dbPutBestState(b.DB(), state, pow.CalcWork(mainTipNode.Difficulty(), mainTipNode.Pow().GetPowType()))
 	if err != nil {
 		return err
 	}

@@ -171,7 +171,7 @@ func (a *AccountManager) rebuild(addrs []string) error {
 	}
 	ops := []*types.TxOutPoint{}
 	entrys := []*utxo.UtxoEntry{}
-	err := a.chain.DB().View(func(dbTx legacydb.Tx) error {
+	err := a.chain.Consensus().LegacyDB().View(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		utxoBucket := meta.Bucket(dbnamespace.UtxoSetBucketName)
 		cursor := utxoBucket.Cursor()

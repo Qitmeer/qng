@@ -308,7 +308,7 @@ func (b *BlockChain) fetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, 
 	}
 
 	// Load the block from the database.
-	block, err := dbFetchBlockByHash(b.consensus.DatabaseContext(), hash)
+	block, err := dbFetchBlockByHash(b.DB(), hash)
 	if err == nil && block != nil {
 		return block, nil
 	}
@@ -321,7 +321,7 @@ func (b *BlockChain) fetchBlockBytesByHash(hash *hash.Hash) ([]byte, error) {
 	if block != nil {
 		return block.Bytes()
 	}
-	return b.consensus.DatabaseContext().GetBlockBytes(hash)
+	return b.DB().GetBlockBytes(hash)
 }
 
 func (b *BlockChain) fetchHeaderByHash(hash *hash.Hash) (*types.BlockHeader, error) {
@@ -331,7 +331,7 @@ func (b *BlockChain) fetchHeaderByHash(hash *hash.Hash) (*types.BlockHeader, err
 		return &block.Block().Header, nil
 	}
 
-	header, err := dbFetchHeaderByHash(b.consensus.DatabaseContext(), hash)
+	header, err := dbFetchHeaderByHash(b.DB(), hash)
 	if err == nil && header != nil {
 		return header, nil
 	}
