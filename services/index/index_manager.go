@@ -246,7 +246,7 @@ func (m *Manager) Init() error {
 		if system.InterruptRequested(interrupt) {
 			return errInterruptRequested
 		}
-		chain.CalculateDAGDuplicateTxs(block)
+		chain.SetDAGDuplicateTxs(block, blk)
 		// Connect the block for all indexes that need it.
 		spentTxos = nil
 

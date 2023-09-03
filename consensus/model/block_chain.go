@@ -9,7 +9,7 @@ type BlockChain interface {
 	GetMainOrder() uint
 	FetchBlockByOrder(order uint64) (*types.SerializedBlock, Block, error)
 	FetchSpendJournalPKS(targetBlock *types.SerializedBlock) ([][]byte, error)
-	CalculateDAGDuplicateTxs(block *types.SerializedBlock)
+	SetDAGDuplicateTxs(sblock *types.SerializedBlock, block Block)
 	GetBlockHashByOrder(order uint) *hash.Hash
 	BlockByOrder(blockOrder uint64) (*types.SerializedBlock, error)
 	Rebuild() error
