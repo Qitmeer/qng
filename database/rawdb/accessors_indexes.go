@@ -23,12 +23,19 @@ func writeTxLookupEntry(db ethdb.KeyValueWriter, hash *hash.Hash, id uint64) err
 	return db.Put(txLookupKey(hash), serializedID[:])
 }
 
-func WriteTxLookupEntriesByBlock(db ethdb.KeyValueWriter, block *types.SerializedBlock, id uint64) {
+func WriteTxLookupEntriesByBlock(db ethdb.KeyValueWriter, block *types.SerializedBlock, id uint64) error {
 	var serializedID [4]byte
 	binary.BigEndian.PutUint64(serializedID[:], id)
 	for _, tx := range block.Transactions() {
-		db.Put(txLookupKey(tx.Hash()), serializedID[:])
+		if tx.IsDuplicate {
+			continue
+		}
+		err := db.Put(txLookupKey(tx.Hash()), serializedID[:])
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func DeleteTxLookupEntry(db ethdb.KeyValueWriter, hash *hash.Hash) error {
@@ -52,4 +59,27 @@ func ReadTransaction(db ethdb.Reader, hash *hash.Hash) (*types.Tx, uint64, *hash
 	}
 	log.Error("Transaction not found", "blockID", *blockID, "txHash", hash.String())
 	return nil, 0, nil, 0
+}
+
+// tx full hash
+func ReadTxIdByFullHash(db ethdb.Reader, full *hash.Hash) *hash.Hash {
+	data, err := db.Get(txFullHashKey(full))
+	if len(data) == 0 {
+		log.Error(err.Error())
+		return nil
+	}
+	fhash, err := hash.NewHash(data)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return fhash
+}
+
+func WriteTxIdByFullHash(db ethdb.KeyValueWriter, full *hash.Hash, id *hash.Hash) error {
+	return db.Put(txFullHashKey(full), id.Bytes())
+}
+
+func DeleteTxIdByFullHash(db ethdb.KeyValueWriter, full *hash.Hash) error {
+	return db.Delete(txFullHashKey(full))
 }

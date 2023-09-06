@@ -74,7 +74,8 @@ var (
 	dagTipsKey      = []byte("dagtips") // main,tip,... ...
 	diffAnticoneKey = []byte("diffanticone")
 	// index
-	txLookupPrefix = []byte("l") // txLookupPrefix + hash -> transaction lookup metadata
+	txLookupPrefix   = []byte("l") // txLookupPrefix + hash (id) -> transaction lookup metadata
+	txFullHashPrefix = []byte("f") // txFullHashPrefix + hash (full) -> transaction id
 
 	// snapshot
 	SnapshotBlockOrderPrefix  = []byte("o") // SnapshotBlockOrderPrefix + block order -> block id
@@ -111,6 +112,11 @@ func blockIDKey(hash *hash.Hash) []byte {
 // txLookupKey = txLookupPrefix + hash
 func txLookupKey(hash *hash.Hash) []byte {
 	return append(txLookupPrefix, hash.Bytes()...)
+}
+
+// txFullHashKey = txFullHashPrefix + hash
+func txFullHashKey(hash *hash.Hash) []byte {
+	return append(txFullHashPrefix, hash.Bytes()...)
 }
 
 func blockOrderKey(order uint64) []byte {

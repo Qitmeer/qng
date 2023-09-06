@@ -188,7 +188,7 @@ func (b *BlockChain) initChainState() error {
 
 	// Determine the state of the database.
 	var isStateInitialized bool
-	dbInfo, err := b.consensus.DatabaseContext().GetInfo()
+	dbInfo, err := b.DB().GetInfo()
 	if err != nil {
 		return err
 	}
@@ -228,14 +228,14 @@ func (b *BlockChain) initChainState() error {
 	}
 
 	// Upgrade the database as needed.
-	err = b.consensus.DatabaseContext().TryUpgrade(dbInfo, b.consensus.Interrupt())
+	err = b.DB().TryUpgrade(dbInfo, b.consensus.Interrupt())
 	if err != nil {
 		return err
 	}
 
 	var state bestChainState
 	// Attempt to load the chain state from the database.
-	serializedData, err := b.consensus.DatabaseContext().GetBestChainState()
+	serializedData, err := b.DB().GetBestChainState()
 	if err != nil {
 		return err
 	}
@@ -267,7 +267,7 @@ func (b *BlockChain) initChainState() error {
 	if mainTipNode == nil {
 		return fmt.Errorf("No main tip")
 	}
-	block, err := dbFetchBlockByHash(b.consensus.DatabaseContext(), mainTip.GetHash())
+	block, err := dbFetchBlockByHash(b.DB(), mainTip.GetHash())
 	if err != nil {
 		return err
 	}
@@ -293,7 +293,7 @@ func (b *BlockChain) initChainState() error {
 func (b *BlockChain) createChainState() error {
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
-	err := b.consensus.DatabaseContext().Init()
+	err := b.DB().Init()
 	if err != nil {
 		return err
 	}
@@ -312,7 +312,7 @@ func (b *BlockChain) createChainState() error {
 		time.Unix(node.GetTimestamp(), 0), numTxns, 0, b.bd.GetGraphState(), node.GetHash(), *ib.GetState().Root())
 	b.TokenTipID = 0
 	b.dbInfo = common.NewDatabaseInfo(common.CurrentDatabaseVersion, serialization.CurrentCompressionVersion, currentBlockIndexVersion, roughtime.Now())
-	err = b.consensus.DatabaseContext().PutInfo(b.dbInfo)
+	err = b.DB().PutInfo(b.dbInfo)
 	if err != nil {
 		return err
 	}
@@ -321,17 +321,17 @@ func (b *BlockChain) createChainState() error {
 	if err != nil {
 		return err
 	}
-	err = token.DBPutTokenState(b.consensus.DatabaseContext(), ib.GetID(), initTS)
+	err = token.DBPutTokenState(b.DB(), ib.GetID(), initTS)
 	if err != nil {
 		return err
 	}
 	// Store the current best chain state into the database.
-	err = dbPutBestState(b.consensus.DatabaseContext(), b.stateSnapshot, pow.CalcWork(header.Difficulty, header.Pow.GetPowType()))
+	err = dbPutBestState(b.DB(), b.stateSnapshot, pow.CalcWork(header.Difficulty, header.Pow.GetPowType()))
 	if err != nil {
 		return err
 	}
 	// Store the genesis block into the database.
-	err = b.consensus.DatabaseContext().PutBlock(genesisBlock)
+	err = b.DB().PutBlock(genesisBlock)
 	if err != nil {
 		return err
 	}
@@ -385,7 +385,7 @@ func (b *BlockChain) HaveBlock(hash *hash.Hash) bool {
 }
 
 func (b *BlockChain) HasBlockInDB(h *hash.Hash) bool {
-	return b.consensus.DatabaseContext().HasBlock(h)
+	return b.DB().HasBlock(h)
 }
 
 // IsCurrent returns whether or not the chain believes it is current.  Several
@@ -522,7 +522,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 
 			// Load all of the spent txos for the block from the spend
 			// journal.
-			stxos, err = utxo.DBFetchSpendJournalEntry(b.consensus.DatabaseContext(), block)
+			stxos, err = utxo.DBFetchSpendJournalEntry(b.DB(), block)
 			if err != nil {
 				return err
 			}
@@ -653,7 +653,7 @@ func (b *BlockChain) FetchSpendJournal(targetBlock *types.SerializedBlock) ([]ut
 }
 
 func (b *BlockChain) fetchSpendJournal(targetBlock *types.SerializedBlock) ([]utxo.SpentTxOut, error) {
-	spendEntries, err := utxo.DBFetchSpendJournalEntry(b.consensus.DatabaseContext(), targetBlock)
+	spendEntries, err := utxo.DBFetchSpendJournalEntry(b.DB(), targetBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -896,8 +896,8 @@ func (b *BlockChain) GetSubsidyCache() *SubsidyCache {
 	return b.subsidyCache
 }
 
-func (b *BlockChain) DB() legacydb.DB {
-	return b.db
+func (b *BlockChain) DB() model.DataBase {
+	return b.consensus.DatabaseContext()
 }
 
 func (b *BlockChain) IndexManager() model.IndexManager {
@@ -930,7 +930,7 @@ func (b *BlockChain) Rebuild() error {
 	if gib == nil {
 		return fmt.Errorf("No genesis block")
 	}
-	err = token.DBPutTokenState(b.consensus.DatabaseContext(), gib.GetID(), initTS)
+	err = token.DBPutTokenState(b.DB(), gib.GetID(), initTS)
 	if err != nil {
 		return err
 	}
@@ -1064,7 +1064,7 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 
 	b.bd = meerdag.New(config.DAGType,
 		1.0/float64(par.TargetTimePerBlock/time.Second),
-		b.consensus.DatabaseContext(), b.getBlockData, state.CreateBlockState, state.CreateBlockStateFromBytes)
+		b.DB(), b.getBlockData, state.CreateBlockState, state.CreateBlockStateFromBytes)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
 	b.bd.SetCacheSize(config.DAGCacheSize, config.BlockDataCacheSize)
 
