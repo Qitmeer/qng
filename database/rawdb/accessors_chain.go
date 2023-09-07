@@ -261,6 +261,19 @@ func DeleteUtxo(db ethdb.KeyValueWriter, opd []byte) {
 	}
 }
 
+func ForeachUtxo(db ethdb.KeyValueStore, fn func(opd []byte, data []byte) error) error {
+	it := db.NewIterator(utxoPrefix, nil)
+	defer it.Release()
+
+	for it.Next() {
+		err := fn(it.Key(), it.Value())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // tokenState
 
 func ReadTokenState(db ethdb.Reader, id uint64) []byte {

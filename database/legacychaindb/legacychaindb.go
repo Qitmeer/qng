@@ -204,6 +204,21 @@ func (cdb *LegacyChainDB) DeleteUtxo(key []byte) error {
 	})
 }
 
+func (cdb *LegacyChainDB) ForeachUtxo(fn func(key []byte, data []byte) error) error {
+	return cdb.db.View(func(dbTx legacydb.Tx) error {
+		meta := dbTx.Metadata()
+		utxoBucket := meta.Bucket(dbnamespace.UtxoSetBucketName)
+		cursor := utxoBucket.Cursor()
+		for ok := cursor.First(); ok; ok = cursor.Next() {
+			err := fn(cursor.Key(), cursor.Value())
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func (cdb *LegacyChainDB) GetTokenState(blockID uint) ([]byte, error) {
 	var data []byte
 	err := cdb.db.View(func(dbTx legacydb.Tx) error {
