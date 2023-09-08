@@ -26,7 +26,6 @@ import (
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/index"
 	"path"
 )
 
@@ -114,7 +113,6 @@ func (node *DebugAddressNode) LoadInfo() error {
 }
 
 func (node *DebugAddressNode) processAddress(blueM *map[uint]bool) error {
-	db := node.db
 	par := params.ActiveNetParams.Params
 	checkAddress := node.cfg.DebugAddress
 	tradeRecord := []*TradeRecord{}
