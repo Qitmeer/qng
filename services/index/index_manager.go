@@ -399,7 +399,7 @@ func (m *Manager) ConnectBlock(block *types.SerializedBlock, stxos [][]byte, blk
 	}
 	if blk.GetState().GetStatus().KnownInvalid() {
 		if m.invalidtxIndex != nil {
-			return m.invalidtxIndex.ConnectBlock(uint64(blk.GetID()), block)
+			return m.invalidtxIndex.ConnectBlock(block, blk)
 		}
 	} else {
 		return m.txIndex.ConnectBlock(block, blk)
@@ -441,7 +441,7 @@ func (m *Manager) DisconnectBlock(block *types.SerializedBlock, stxos [][]byte, 
 		}
 	}
 	if m.invalidtxIndex != nil {
-		return m.invalidtxIndex.DisconnectBlock(uint64(blk.GetID()), block)
+		return m.invalidtxIndex.DisconnectBlock(block, blk)
 	}
 	return nil
 }

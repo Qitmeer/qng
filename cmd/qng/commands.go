@@ -5,13 +5,11 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/database/legacychaindb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/meerevm/cmd"
 	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/services/common"
-	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/version"
 	"github.com/urfave/cli/v2"
 	"runtime"
@@ -56,13 +54,14 @@ func indexCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := legacychaindb.LoadBlockDB(cfg)
+					db, err := database.New(cfg, interrupt)
 					if err != nil {
 						log.Error("load block database", "error", err)
 						return err
 					}
 					defer db.Close()
-					return index.DropInvalidTxIndex(db, interrupt)
+
+					return db.CleanInvalidTxs()
 				},
 			},
 		},

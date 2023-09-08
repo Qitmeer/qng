@@ -8,7 +8,6 @@ package index
 import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database/legacydb"
 )
 
 const (
@@ -20,8 +19,6 @@ const (
 // querying all transactions by their hash.
 type TxIndex struct {
 	consensus model.Consensus
-
-	db legacydb.DB
 }
 
 // Init initializes the hash-based transaction index.  In particular, it finds
@@ -67,5 +64,5 @@ func (idx *TxIndex) DisconnectBlock(block *types.SerializedBlock) error {
 // turn is used by the blockchain package.  This allows the index to be
 // seamlessly maintained along with the chain.
 func NewTxIndex(consensus model.Consensus) *TxIndex {
-	return &TxIndex{consensus: consensus, db: consensus.LegacyDB()}
+	return &TxIndex{consensus: consensus}
 }

@@ -57,6 +57,14 @@ type DataBase interface {
 	PutTxHashs(block *types.SerializedBlock) error
 	GetTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error)
 	DeleteTxHashs(block *types.SerializedBlock) error
+	IsInvalidTxEmpty() bool
+	GetInvalidTxTip() (uint64, *hash.Hash, error)
+	PutInvalidTxTip(order uint64, bh *hash.Hash) error
+	PutInvalidTxs(sblock *types.SerializedBlock, block Block) error
+	DeleteInvalidTxs(sblock *types.SerializedBlock, block Block) error
+	GetInvalidTx(id *hash.Hash) (*types.Transaction, error)
+	GetInvalidTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error)
+	CleanInvalidTxs() error
 	IsLegacy() bool
 	TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{}) error
 }

@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/common/staging"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/consensus/store/invalid_tx_index"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
@@ -16,6 +18,9 @@ const (
 	// Size of a transaction entry.  It consists of 4 bytes block id + 4
 	// bytes offset + 4 bytes length.
 	txEntrySize = 4 + 4 + 4
+
+	defaultPreallocateCaches = false
+	defaultCacheSize         = 10
 )
 
 var (
@@ -184,6 +189,67 @@ func (cdb *LegacyChainDB) DeleteTxHashs(block *types.SerializedBlock) error {
 		}
 		return nil
 	})
+}
+
+func (cdb *LegacyChainDB) InvalidtxindexStore() model.InvalidTxIndexStore {
+	if cdb.invalidtxindexStore == nil {
+		var err error
+		cdb.invalidtxindexStore, err = invalid_tx_index.New(cdb.DB(), cdb, defaultCacheSize, defaultPreallocateCaches)
+		if err != nil {
+			log.Error(err.Error())
+			return nil
+		}
+	}
+	return cdb.invalidtxindexStore
+}
+
+func (cdb *LegacyChainDB) IsInvalidTxEmpty() bool {
+	return cdb.InvalidtxindexStore().IsEmpty()
+}
+
+func (cdb *LegacyChainDB) GetInvalidTxTip() (uint64, *hash.Hash, error) {
+	return cdb.InvalidtxindexStore().Tip(model.NewStagingArea())
+}
+
+func (cdb *LegacyChainDB) PutInvalidTxTip(order uint64, bh *hash.Hash) error {
+	stagingArea := model.NewStagingArea()
+	cdb.InvalidtxindexStore().StageTip(stagingArea, bh, order)
+	return staging.CommitAllChanges(cdb.DB(), stagingArea)
+}
+
+func (cdb *LegacyChainDB) PutInvalidTxs(sblock *types.SerializedBlock, block model.Block) error {
+	stagingArea := model.NewStagingArea()
+	cdb.InvalidtxindexStore().Stage(stagingArea, uint64(block.GetID()), sblock)
+	return staging.CommitAllChanges(cdb.db, stagingArea)
+}
+
+func (cdb *LegacyChainDB) DeleteInvalidTxs(sblock *types.SerializedBlock, block model.Block) error {
+	stagingArea := model.NewStagingArea()
+	cdb.InvalidtxindexStore().Delete(stagingArea, uint64(block.GetID()), sblock)
+	return staging.CommitAllChanges(cdb.DB(), stagingArea)
+}
+
+func (cdb *LegacyChainDB) GetInvalidTx(id *hash.Hash) (*types.Transaction, error) {
+	stagingArea := model.NewStagingArea()
+	return cdb.InvalidtxindexStore().Get(stagingArea, id)
+}
+
+func (cdb *LegacyChainDB) GetInvalidTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error) {
+	stagingArea := model.NewStagingArea()
+	return cdb.InvalidtxindexStore().GetIdByHash(stagingArea, fullHash)
+}
+
+func (cdb *LegacyChainDB) CleanInvalidTxs() error {
+	log.Info("Start clean invalidtx index")
+	if cdb.InvalidtxindexStore().IsEmpty() {
+		return fmt.Errorf("No data needs to be deleted")
+	}
+	tipOrder, tipHash, err := cdb.InvalidtxindexStore().Tip(model.NewStagingArea())
+	if err != nil {
+		return err
+	}
+	log.Info(fmt.Sprintf("All invalidtx index at (%s,%d) will be deleted", tipHash, tipOrder))
+	return cdb.InvalidtxindexStore().Clean()
 }
 
 // putTxIndexEntry serializes the provided values according to the format

@@ -21,6 +21,8 @@ type LegacyChainDB struct {
 
 	cfg       *config.Config
 	interrupt <-chan struct{}
+
+	invalidtxindexStore model.InvalidTxIndexStore
 }
 
 func (cdb *LegacyChainDB) Name() string {
@@ -106,7 +108,7 @@ func (cdb *LegacyChainDB) DB() legacydb.DB {
 }
 
 func (cdb *LegacyChainDB) Rebuild(mgr model.IndexManager) error {
-	err := index.DropInvalidTxIndex(cdb.db, cdb.interrupt)
+	err := cdb.CleanInvalidTxs()
 	if err != nil {
 		log.Info(err.Error())
 	}

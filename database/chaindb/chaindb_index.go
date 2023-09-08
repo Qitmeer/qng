@@ -71,3 +71,35 @@ func (cdb *ChainDB) DeleteTxHashs(block *types.SerializedBlock) error {
 	}
 	return nil
 }
+
+func (cdb *ChainDB) IsInvalidTxEmpty() bool {
+	return true
+}
+
+func (cdb *ChainDB) GetInvalidTxTip() (uint64, *hash.Hash, error) {
+	return 0, nil, nil
+}
+
+func (cdb *ChainDB) PutInvalidTxTip(order uint64, bh *hash.Hash) error {
+	return nil
+}
+
+func (cdb *ChainDB) PutInvalidTxs(sblock *types.SerializedBlock, block model.Block) error {
+	return nil
+}
+
+func (cdb *ChainDB) DeleteInvalidTxs(sblock *types.SerializedBlock, block model.Block) error {
+	return nil
+}
+
+func (cdb *ChainDB) GetInvalidTx(id *hash.Hash) (*types.Transaction, error) {
+	return nil, nil
+}
+
+func (cdb *ChainDB) GetInvalidTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error) {
+	return nil, nil
+}
+
+func (cdb *ChainDB) CleanInvalidTxs() error {
+	return nil
+}
