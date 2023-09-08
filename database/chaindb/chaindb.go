@@ -167,6 +167,10 @@ func (cdb *ChainDB) DeleteUtxo(key []byte) error {
 	return nil
 }
 
+func (cdb *ChainDB) ForeachUtxo(fn func(key []byte, data []byte) error) error {
+	return rawdb.ForeachUtxo(cdb.db, fn)
+}
+
 func (cdb *ChainDB) GetTokenState(blockID uint) ([]byte, error) {
 	return rawdb.ReadTokenState(cdb.db, uint64(blockID)), nil
 }

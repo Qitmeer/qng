@@ -9,7 +9,6 @@ import (
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
@@ -174,36 +173,31 @@ func (a *AccountManager) rebuild(addrs []string) error {
 	}
 	ops := []*types.TxOutPoint{}
 	entrys := []*utxo.UtxoEntry{}
-	err := a.chain.Consensus().LegacyDB().View(func(dbTx legacydb.Tx) error {
-		meta := dbTx.Metadata()
-		utxoBucket := meta.Bucket(dbnamespace.UtxoSetBucketName)
-		cursor := utxoBucket.Cursor()
-		for ok := cursor.First(); ok; ok = cursor.Next() {
-			op, err := parseOutpoint(cursor.Key())
-			if err != nil {
-				return err
-			}
-			serializedUtxo := cursor.Value()
-			// Deserialize the utxo entry and return it.
-			entry, err := utxo.DeserializeUtxoEntry(serializedUtxo)
-			if err != nil {
-				return err
-			}
-			if entry.IsSpent() {
-				continue
-			}
-			if len(addrs) > 0 {
-				addr, _, err := a.checkUtxoEntry(entry, addrs)
-				if err != nil {
-					return err
-				}
-				if len(addr) <= 0 {
-					continue
-				}
-			}
-			ops = append(ops, op)
-			entrys = append(entrys, entry)
+	err := a.chain.DB().ForeachUtxo(func(key []byte, data []byte) error {
+		op, err := parseOutpoint(key)
+		if err != nil {
+			return err
 		}
+		serializedUtxo := data
+		// Deserialize the utxo entry and return it.
+		entry, err := utxo.DeserializeUtxoEntry(serializedUtxo)
+		if err != nil {
+			return err
+		}
+		if entry.IsSpent() {
+			return nil
+		}
+		if len(addrs) > 0 {
+			addr, _, err := a.checkUtxoEntry(entry, addrs)
+			if err != nil {
+				return err
+			}
+			if len(addr) <= 0 {
+				return nil
+			}
+		}
+		ops = append(ops, op)
+		entrys = append(entrys, entry)
 		return nil
 	})
 	if err != nil {
