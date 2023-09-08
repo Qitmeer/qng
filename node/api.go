@@ -6,6 +6,7 @@
 package node
 
 import (
+	js "encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/common/roughtime"
@@ -14,6 +15,7 @@ import (
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -178,7 +180,7 @@ func (api *PublicBlockChainAPI) GetSubsidy() (interface{}, error) {
 		info.TotalTime = totalTime.Truncate(time.Second).String()
 
 		firstMBlock := api.node.GetBlockChain().BlockDAG().GetBlockByOrder(1)
-		startTime := time.Unix(api.node.GetBlockChain().BlockDAG().GetBlockData(firstMBlock).GetTimestamp(), 0)
+		startTime := time.Unix(api.node.GetBlockChain().GetBlockNode(firstMBlock).GetTimestamp(), 0)
 		leftTotalTime := totalTime - time.Since(startTime)
 		if leftTotalTime < 0 {
 			leftTotalTime = 0
@@ -214,7 +216,8 @@ func (api *PublicBlockChainAPI) GetMeerDAGInfo() (interface{}, error) {
 	md := api.node.GetBlockChain().BlockDAG()
 	mdr.Name = md.GetName()
 	mdr.Total = md.GetBlockTotal()
-	mdr.BlockCacheSize = fmt.Sprintf("%d / %d", md.GetBlockCacheSize(), md.GetMinBlockCacheSize())
+	mdr.BlockCacheSize = md.GetBlockCacheSize()
+	mdr.BlockCacheHeightSize = md.GetMinBlockCacheSize()
 	mdr.BlockCacheRate = fmt.Sprintf("%.2f%%", float64(md.GetBlockCacheSize())/float64(mdr.Total)*100)
 	mdr.BlockDataCacheSize = fmt.Sprintf("%d / %d", md.GetBlockDataCacheSize(), md.GetMinBlockDataCacheSize())
 	return mdr, nil
@@ -247,6 +250,14 @@ func (api *PrivateBlockChainAPI) SetRpcMaxClients(max int) (interface{}, error) 
 	return api.node.node.Config.RPCMaxClients, nil
 }
 
+func (api *PrivateBlockChainAPI) GetConfig() (interface{}, error) {
+	cs, err := js.Marshal(*api.node.node.Config)
+	if err != nil {
+		return nil, err
+	}
+	return string(cs), nil
+}
+
 type PrivateLogAPI struct {
 	node *QitmeerFull
 }
@@ -261,6 +272,6 @@ func (api *PrivateLogAPI) SetLogLevel(level string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	api.node.GetVMService().SetLogLevel(level)
+	eth.InitLog(level, api.node.node.Config.DebugPrintOrigins)
 	return level, nil
 }

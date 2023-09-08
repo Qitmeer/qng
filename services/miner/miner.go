@@ -17,6 +17,7 @@ import (
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
@@ -174,6 +175,7 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 	m.stats.TotalEmptyGbtDuarations++
 	duration := float64(time.Now().Unix() - m.stats.LastestMempoolEmptyTimestamp)
 	m.stats.TotalMempoolEmptyDuration += duration
+	mempoolEmptyDuration.Update(time.Duration(duration) * time.Second)
 	if m.stats.TotalEmptyGbtDuarations > 0 {
 		m.stats.MempoolEmptyAvgDuration = m.stats.TotalMempoolEmptyDuration / float64(m.stats.TotalEmptyGbtDuarations)
 	}
@@ -195,6 +197,7 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 
 func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string, txcount int) {
 	m.stats.TotalSubmits++
+	totalSubmits.Update(m.stats.TotalSubmits)
 	if len(m.stats.Last100Submits) >= 100 {
 		m.stats.Last100Submits = m.stats.Last100Submits[len(m.stats.Last100Submits)-99:]
 	}
@@ -208,13 +211,15 @@ func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string, txcount int) {
 	if m.stats.TotalSubmits > 0 {
 		m.stats.SubmitAvgDuration = m.stats.TotalSubmitDuration / float64(m.stats.TotalSubmits)
 	}
-
+	submitDuration.Update(time.Duration(float64(currentReqMillSec)/1000) * time.Second)
 	if float64(currentReqMillSec)/1000 > m.stats.MaxSubmitDuration {
 		m.stats.MaxSubmitDuration = float64(currentReqMillSec) / 1000
 		m.stats.MaxSubmitDurationBlockHash = bh
 	}
+	submitTxCount.Update(int64(txcount))
 	if txcount < 1 {
 		m.stats.TotalTxEmptySubmits++
+		totalTxEmptySubmits.Update(m.stats.TotalTxEmptySubmits)
 	}
 }
 
@@ -233,6 +238,7 @@ func (m *Miner) StatsGbtRequest(currentReqMillSec int64, txcount int, longpollid
 	if m.stats.TotalGbtRequests > 0 {
 		m.stats.GbtRequestAvgDuration = m.stats.TotalGbtRequestDuration / float64(m.stats.TotalGbtRequests)
 	}
+	gbtRequestDuration.Update(time.Duration(float64(currentReqMillSec)/1000) * time.Second)
 	if float64(currentReqMillSec)/1000 > m.stats.MaxGbtRequestDuration {
 		m.stats.MaxGbtRequestDuration = float64(currentReqMillSec) / 1000
 		m.stats.MaxGbtRequestTimeLongpollid = longpollid
@@ -258,6 +264,7 @@ func (m *Miner) StatsGbt(currentReqMillSec int64, txcount int) {
 	if m.stats.TotalGbts > 0 {
 		m.stats.GbtAvgDuration = m.stats.TotalGbtDuration / float64(m.stats.TotalGbts)
 	}
+	gbtDuration.Update(time.Duration(float64(currentReqMillSec)/1000) * time.Second)
 	if float64(currentReqMillSec)/1000 > m.stats.MaxGbtDuration {
 		m.stats.MaxGbtDuration = float64(currentReqMillSec) / 1000
 	}
@@ -471,7 +478,6 @@ cleanup:
 }
 
 func (m *Miner) updateBlockTemplate(force bool) error {
-
 	reCreate := false
 	//
 	if force {
@@ -498,25 +504,26 @@ func (m *Miner) updateBlockTemplate(force bool) error {
 			if lastTxUpdate.IsZero() {
 				lastTxUpdate = roughtime.Now()
 			}
-			if lastTxUpdate != m.lastTxUpdate && roughtime.Now().After(m.lastTemplate.Add(time.Second*gbtRegenerateSeconds)) {
+			if lastTxUpdate != m.lastTxUpdate && roughtime.Now().After(m.lastTemplate.Add(params.ActiveNetParams.TargetTimePerBlock*2)) {
 				reCreate = true
 			}
 		}
 	}
-
 	if reCreate {
 		m.stats.TotalGbts++ //gbt generates
 		start := time.Now().UnixMilli()
+		totalGbts.Update(m.stats.TotalGbts)
+		m.consensus.BlockChain().MeerChain().(*meer.MeerChain).MeerPool().ResetTemplate()
 		template, err := mining.NewBlockTemplate(m.policy, params.ActiveNetParams.Params, m.sigCache, m.txpool, m.timeSource, m.consensus, m.coinbaseAddress, nil, m.powType, m.coinbaseFlags)
 		if err != nil {
 			e := fmt.Errorf("Failed to create new block template: %s", err.Error())
 			log.Warn(e.Error())
-			m.consensus.VMService().ResetTemplate()
 			return e
 		}
 		m.template = template
 		m.lastTxUpdate = m.txpool.LastUpdated()
 		m.lastTemplate = time.Now()
+		m.txpool.CleanDirty()
 
 		// Get the minimum allowed timestamp for the block based on the
 		// median timestamp of the last several blocks per the chain
@@ -548,9 +555,7 @@ func (m *Miner) subscribe() {
 					case *blockchain.Notification:
 						m.handleNotifyMsg(value)
 					case int:
-						if value == event.MempoolTxAdd {
-							go m.MempoolChange()
-						} else if value == event.Initialized {
+						if value == event.Initialized {
 							if m.cfg.Generate {
 								m.StartCPUMining()
 							}
@@ -600,7 +605,7 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	}
 	// Process this block using the same rules as blocks coming from other
 	// nodes. This will in turn relay it to the network like normal.
-	IsOrphan, err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd)
+	ib, IsOrphan, err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd)
 	if err != nil {
 		// Anything other than a rule violation is an unexpected error,
 		// so log that error as an internal error.
@@ -638,8 +643,8 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	return json.SubmitBlockResult{
 		BlockHash:      block.Hash().String(),
 		CoinbaseTxID:   block.Transactions()[0].Hash().String(),
-		Order:          meerdag.GetOrderLogStr(uint(block.Order())),
-		Height:         int64(block.Height()),
+		Order:          meerdag.GetOrderLogStr(ib.GetOrder()),
+		Height:         int64(ib.GetHeight()),
 		CoinbaseAmount: coinbaseTxGenerated,
 		MinerType:      m.worker.GetType(),
 	}, nil
@@ -674,7 +679,6 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 	tHeader.Timestamp = header.Timestamp
 	tHeader.Pow = header.Pow
 	block := types.NewBlock(m.template.Block)
-	block.SetHeight(uint(m.template.Height))
 	return m.submitBlock(block)
 }
 
@@ -735,10 +739,12 @@ func (m *Miner) GetCoinbasePKAddress() *address.SecpPubKeyAddress {
 }
 
 func (m *Miner) handleStallSample() {
-	//if atomic.LoadInt32(&m.shutdown) != 0 {
-	//	return
-	//}
-	//log.Debug("Miner stall sample")
+	if m.IsShutdown() {
+		return
+	}
+	if m.txpool.Dirty() {
+		go m.MempoolChange()
+	}
 }
 
 func (m *Miner) StartCPUMining() {

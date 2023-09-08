@@ -3,8 +3,9 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/meerdag"
 	"math/big"
 	"time"
@@ -86,7 +87,7 @@ func (bcs *bestChainState) GetTotal() uint64 {
 
 // dbPutBestState uses an existing database transaction to update the best chain
 // state with the given parameters.
-func dbPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) error {
+func dbPutBestState(db model.DataBase, snapshot *BestState, workSum *big.Int) error {
 	// Serialize the current best chain state.
 	tth := hash.ZeroHash
 	if snapshot.TokenTipHash != nil {
@@ -101,7 +102,7 @@ func dbPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) err
 	})
 
 	// Store the current best chain state into the database.
-	return dbTx.Metadata().Put(dbnamespace.ChainStateKeyName, serializedData)
+	return db.PutBestChainState(serializedData)
 }
 
 // serializeBestChainState returns the serialization of the passed block best
@@ -138,8 +139,8 @@ func DeserializeBestChainState(serializedData []byte) (bestChainState, error) {
 	// and work sum length.
 	expectedMinLen := hash.HashSize + 8 + 8 + hash.HashSize + 4
 	if len(serializedData) < expectedMinLen {
-		return bestChainState{}, database.Error{
-			ErrorCode: database.ErrCorruption,
+		return bestChainState{}, legacydb.Error{
+			ErrorCode: legacydb.ErrCorruption,
 			Description: fmt.Sprintf("corrupt best chain state size; min %v "+
 				"got %v", expectedMinLen, len(serializedData)),
 		}
@@ -159,8 +160,8 @@ func DeserializeBestChainState(serializedData []byte) (bestChainState, error) {
 	// Ensure the serialized data has enough bytes to deserialize the work
 	// sum.
 	if uint32(len(serializedData[offset:])) < workSumBytesLen {
-		return bestChainState{}, database.Error{
-			ErrorCode:   database.ErrCorruption,
+		return bestChainState{}, legacydb.Error{
+			ErrorCode:   legacydb.ErrCorruption,
 			Description: "corrupt best chain state",
 		}
 	}

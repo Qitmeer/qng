@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/rpc/websocket"
 	"time"
@@ -61,19 +62,19 @@ func (s *RpcServer) handleNotifyMsg(notification *blockchain.Notification) {
 			break
 		}
 
-		if len(blockSlice) != 2 {
+		if len(blockSlice) != 3 {
 			log.Warn("Chain connected notification is wrong size slice.")
 			break
 		}
-		s.ntfnMgr.NotifyBlockConnected(blockSlice[0].(*types.SerializedBlock))
+		s.ntfnMgr.NotifyBlockConnected(blockSlice[2].(meerdag.IBlock))
 
 	case blockchain.BlockDisconnected:
-		block, ok := notification.Data.(*types.SerializedBlock)
+		blockSlice, ok := notification.Data.([]interface{})
 		if !ok {
 			log.Warn("Chain disconnected notification is not a block slice.")
 			break
 		}
-		s.ntfnMgr.NotifyBlockDisconnected(block)
+		s.ntfnMgr.NotifyBlockDisconnected(blockSlice[1].(meerdag.IBlock))
 
 	case blockchain.Reorganization:
 		rnd, ok := notification.Data.(*blockchain.ReorganizationNotifyData)
@@ -281,7 +282,7 @@ func handleRescan(wsc *wsClient, icmd interface{}) (interface{}, error) {
 
 	var (
 		err           error
-		lastBlock     *types.SerializedBlock
+		lastBlock     meerdag.IBlock
 		lastTxHash    *hash.Hash
 		lastBlockHash *hash.Hash
 	)
@@ -310,8 +311,8 @@ func handleRescan(wsc *wsClient, icmd interface{}) (interface{}, error) {
 		// notification.
 		chainTip := chain.BestSnapshot()
 		lastBlockHash = &chainTip.Hash
-		lastBlock, err = chain.FetchBlockByHash(lastBlockHash)
-		if err != nil {
+		lastBlock = chain.GetBlock(lastBlockHash)
+		if lastBlock == nil {
 			return nil, cmds.ErrRPCBlockNotFound
 		}
 	}
@@ -329,8 +330,8 @@ func handleRescan(wsc *wsClient, icmd interface{}) (interface{}, error) {
 	n := cmds.NewRescanFinishedNtfn(
 		lastBlockHash.String(),
 		lastTx,
-		lastBlock.Order(),
-		lastBlock.Block().Header.Timestamp.Unix(),
+		uint64(lastBlock.GetOrder()),
+		chain.GetBlockHeader(lastBlock).Timestamp.Unix(),
 	)
 	if mn, err := cmds.MarshalCmd(nil, n); err != nil {
 		log.Error(fmt.Sprintf("Failed to marshal rescan finished "+

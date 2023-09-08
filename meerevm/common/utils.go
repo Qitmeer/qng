@@ -5,7 +5,6 @@
 package common
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
@@ -35,13 +34,8 @@ func ReverseBytes(bs *[]byte) *[]byte {
 	return bs
 }
 
-func NewMeerEVMAddress(pubkeyHex string) (common.Address, error) {
-	pubkBytes, err := hex.DecodeString(pubkeyHex)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	publicKey, err := ecc.Secp256k1.ParsePubKey(pubkBytes)
+func NewMeerEVMAddress(pubkeyHex []byte) (common.Address, error) {
+	publicKey, err := ecc.Secp256k1.ParsePubKey(pubkeyHex)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -86,7 +80,7 @@ func FromEVMHash(h common.Hash) *hash.Hash {
 	return th
 }
 
-func ToQNGTx(tx *types.Transaction, timestamp int64, newEncoding bool) *qtypes.Transaction {
+func ToQNGTx(tx *types.Transaction, timestamp int64, newEncoding bool) *qtypes.Tx {
 	txmb, err := tx.MarshalBinary()
 	if err != nil {
 		log.Error(err.Error())
@@ -119,7 +113,7 @@ func ToQNGTx(tx *types.Transaction, timestamp int64, newEncoding bool) *qtypes.T
 		PkScript: opreturn.NewEVMTx().PKScript(),
 	})
 
-	return mtx
+	return qtypes.NewTx(mtx)
 }
 
 // Merge merges the given flag slices.

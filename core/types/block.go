@@ -28,7 +28,7 @@ const MaxBlockPayload = 1048576 // 1024*1024 (1MB)
 // possibly fit into a block.
 const MaxTxPerBlock = (MaxBlockPayload / minTxPayload) + 1
 
-//Limited parents quantity
+// Limited parents quantity
 const MaxParentsPerBlock = 50
 
 // blockHeaderLen is a constant that represents the number of bytes for a block
@@ -397,24 +397,23 @@ type SerializedBlock struct {
 	serializedBytes []byte    // Serialized bytes for the block
 	transactions    []*Tx     // Transactions
 	txnsGenerated   bool      // ALL wrapped transactions generated
-	order           uint64    //order is in the position of whole block chain.
-	height          uint      //height is in the sub dag chain.
 }
 
 // The stringer method makes SerializedBlock satisfy the Stringer interface.
 // It simplifies the message printing in the trace logs.
 func (sb *SerializedBlock) String() string {
-	return fmt.Sprintf("blockhash: %v transactions:%d txnsGenerated:%v order:%d height:%d",
-		sb.hash.String(), len(sb.transactions), sb.txnsGenerated, sb.order, sb.height)
+	return fmt.Sprintf("blockhash: %v transactions:%d txnsGenerated:%v",
+		sb.hash.String(), len(sb.transactions), sb.txnsGenerated)
 }
 
 // NewBlock returns a new instance of the serialized block given an underlying Block.
 // the block hash has been calculated and cached
 func NewBlock(block *Block) *SerializedBlock {
-	return &SerializedBlock{
+	sb := &SerializedBlock{
 		hash:  block.BlockHash(),
 		block: block,
 	}
+	return sb
 }
 
 // NewBlockFromBlockAndBytes returns a new instance of a block given
@@ -533,26 +532,6 @@ func (sb *SerializedBlock) TxLoc() ([]TxLoc, error) {
 		return nil, err
 	}
 	return txLocs, err
-}
-
-// Order returns a casted int64 order from the block header.
-//
-// This function should not be used for new code and will be
-// removed in the future.
-func (sb *SerializedBlock) Order() uint64 {
-	return sb.order
-}
-
-func (sb *SerializedBlock) SetOrder(order uint64) {
-	sb.order = order
-}
-
-func (sb *SerializedBlock) Height() uint {
-	return sb.height
-}
-
-func (sb *SerializedBlock) SetHeight(height uint) {
-	sb.height = height
 }
 
 // Transactions returns a slice of wrapped transactions for all

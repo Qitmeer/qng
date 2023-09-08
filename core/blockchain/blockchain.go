@@ -12,7 +12,6 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/serialization"
@@ -20,10 +19,13 @@ import (
 	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/common"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/eth"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/progresslog"
@@ -59,8 +61,8 @@ type BlockChain struct {
 	// separate mutex.
 	checkpointsByLayer map[uint64]*params.Checkpoint
 
-	db           database.DB
-	dbInfo       *databaseInfo
+	db           legacydb.DB
+	dbInfo       *common.DatabaseInfo
 	timeSource   model.MedianTimeSource
 	events       *event.Feed
 	sigCache     *txscript.SigCache
@@ -137,6 +139,8 @@ type BlockChain struct {
 	msgChan chan *processMsg
 	wg      sync.WaitGroup
 	quit    chan struct{}
+
+	meerChain *meer.MeerChain
 }
 
 func (b *BlockChain) Init() error {
@@ -148,23 +152,21 @@ func (b *BlockChain) Init() error {
 	}
 	// Initialize and catch up all of the currently active optional indexes
 	// as needed.
-	if b.indexManager != nil {
-		err := b.indexManager.Init()
-		if err != nil {
-			return err
-		}
+	err := b.indexManager.Init()
+	if err != nil {
+		return err
 	}
 	b.pruner = newChainPruner(b)
 
-	err := b.initCheckPoints()
+	err = b.initCheckPoints()
 	if err != nil {
 		return err
 	}
 
 	//
 	log.Info(fmt.Sprintf("DAG Type:%s", b.bd.GetName()))
-	log.Info("Blockchain database version", "chain", b.dbInfo.version, "compression", b.dbInfo.compVer,
-		"index", b.dbInfo.bidxVer)
+	log.Info("Blockchain database version", "chain", b.dbInfo.Version(), "compression", b.dbInfo.CompVer(),
+		"index", b.dbInfo.BidxVer())
 
 	tips := b.bd.GetTipsList()
 	log.Info(fmt.Sprintf("Chain state:totaltx=%d tipsNum=%d mainOrder=%d total=%d", b.BestSnapshot().TotalTxns, len(tips), b.bd.GetMainChainTip().GetOrder(), b.bd.GetBlockTotal()))
@@ -186,48 +188,38 @@ func (b *BlockChain) initChainState() error {
 
 	// Determine the state of the database.
 	var isStateInitialized bool
-	err = b.db.View(func(dbTx database.Tx) error {
-		// Fetch the database versioning information.
-		dbInfo, err := dbFetchDatabaseInfo(dbTx)
-		if err != nil {
-			return err
-		}
-
-		// The database bucket for the versioning information is missing.
-		if dbInfo == nil {
-			return nil
-		}
-
+	dbInfo, err := b.DB().GetInfo()
+	if err != nil {
+		return err
+	}
+	// The database bucket for the versioning information is missing.
+	if dbInfo != nil {
 		// Don't allow downgrades of the blockchain database.
-		if dbInfo.version > currentDatabaseVersion {
+		if dbInfo.Version() > common.CurrentDatabaseVersion {
 			return fmt.Errorf("the current blockchain database is "+
 				"no longer compatible with this version of "+
-				"the software (%d > %d)", dbInfo.version,
-				currentDatabaseVersion)
+				"the software (%d > %d)", dbInfo.Version(),
+				common.CurrentDatabaseVersion)
 		}
 
 		// Don't allow downgrades of the database compression version.
-		if dbInfo.compVer > serialization.CurrentCompressionVersion {
+		if dbInfo.CompVer() > serialization.CurrentCompressionVersion {
 			return fmt.Errorf("the current database compression "+
 				"version is no longer compatible with this "+
 				"version of the software (%d > %d)",
-				dbInfo.compVer, serialization.CurrentCompressionVersion)
+				dbInfo.CompVer(), serialization.CurrentCompressionVersion)
 		}
 
 		// Don't allow downgrades of the block index.
-		if dbInfo.bidxVer > currentBlockIndexVersion {
+		if dbInfo.BidxVer() > currentBlockIndexVersion {
 			return fmt.Errorf("the current database block index "+
 				"version is no longer compatible with this "+
 				"version of the software (%d > %d)",
-				dbInfo.bidxVer, currentBlockIndexVersion)
+				dbInfo.BidxVer(), currentBlockIndexVersion)
 		}
 
 		b.dbInfo = dbInfo
 		isStateInitialized = true
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	// Initialize the database if it has not already been done.
@@ -235,35 +227,27 @@ func (b *BlockChain) initChainState() error {
 		return b.createChainState()
 	}
 
-	//   Upgrade the database as needed.
-	err = b.upgradeDB(b.consensus.Interrupt())
+	// Upgrade the database as needed.
+	err = b.DB().TryUpgrade(dbInfo, b.consensus.Interrupt())
 	if err != nil {
 		return err
 	}
 
 	var state bestChainState
 	// Attempt to load the chain state from the database.
-	err = b.db.Update(func(dbTx database.Tx) error {
-		// Fetch the stored chain state from the database metadata.
-		// When it doesn't exist, it means the database hasn't been
-		// initialized for use with chain yet, so break out now to allow
-		// that to happen under a writable database transaction.
-		meta := dbTx.Metadata()
-		serializedData := meta.Get(dbnamespace.ChainStateKeyName)
-		if serializedData == nil {
-			return fmt.Errorf("No chain state data")
-		}
-		log.Trace("Serialized chain state: ", "serializedData", fmt.Sprintf("%x", serializedData))
-		state, err = DeserializeBestChainState(serializedData)
-		if err != nil {
-			return err
-		}
-		log.Trace(fmt.Sprintf("Load chain state:%s %d %d %s %s", state.hash.String(), state.total, state.totalTxns, state.tokenTipHash.String(), state.workSum.Text(16)))
-		return nil
-	})
+	serializedData, err := b.DB().GetBestChainState()
 	if err != nil {
 		return err
 	}
+	if serializedData == nil {
+		return fmt.Errorf("No chain state data")
+	}
+	log.Trace("Serialized chain state: ", "serializedData", fmt.Sprintf("%x", serializedData))
+	state, err = DeserializeBestChainState(serializedData)
+	if err != nil {
+		return err
+	}
+	log.Trace(fmt.Sprintf("Load chain state:%s %d %d %s %s", state.hash.String(), state.total, state.totalTxns, state.tokenTipHash.String(), state.workSum.Text(16)))
 
 	log.Info("Loading dag ...")
 	bidxStart := roughtime.Now()
@@ -283,15 +267,7 @@ func (b *BlockChain) initChainState() error {
 	if mainTipNode == nil {
 		return fmt.Errorf("No main tip")
 	}
-
-	var block *types.SerializedBlock
-	err = b.db.View(func(dbTx database.Tx) error {
-		block, err = dbFetchBlockByHash(dbTx, mainTip.GetHash())
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	block, err := dbFetchBlockByHash(b.DB(), mainTip.GetHash())
 	if err != nil {
 		return err
 	}
@@ -315,13 +291,18 @@ func (b *BlockChain) initChainState() error {
 // genesis block.  This includes creating the necessary buckets and inserting
 // the genesis block, so it must only be called on an uninitialized database.
 func (b *BlockChain) createChainState() error {
+	// Create the initial the database chain state including creating the
+	// necessary index buckets and inserting the genesis block.
+	err := b.DB().Init()
+	if err != nil {
+		return err
+	}
 	// Create a new node from the genesis block and set it as the best node.
-	genesisBlock := types.NewBlock(b.params.GenesisBlock)
-	genesisBlock.SetOrder(0)
+	genesisBlock := b.params.GenesisBlock
 	header := &genesisBlock.Block().Header
 	node := NewBlockNode(genesisBlock)
 	_, _, ib, _ := b.bd.AddBlock(node)
-	ib.GetState().SetEVM(b.VMService().GetCurHeader())
+	ib.GetState().SetEVM(b.meerChain.GetCurHeader())
 	//node.FlushToDB(b)
 	// Initialize the state related to the best block.  Since it is the
 	// genesis block, use its timestamp for the median time.
@@ -330,79 +311,32 @@ func (b *BlockChain) createChainState() error {
 	b.stateSnapshot = newBestState(node.GetHash(), node.Difficulty(), blockSize, numTxns,
 		time.Unix(node.GetTimestamp(), 0), numTxns, 0, b.bd.GetGraphState(), node.GetHash(), *ib.GetState().Root())
 	b.TokenTipID = 0
-	// Create the initial the database chain state including creating the
-	// necessary index buckets and inserting the genesis block.
-	err := b.db.Update(func(dbTx database.Tx) error {
-		meta := dbTx.Metadata()
-
-		// Create the bucket that houses information about the database's
-		// creation and version.
-		_, err := meta.CreateBucket(dbnamespace.BCDBInfoBucketName)
-		if err != nil {
-			return err
-		}
-
-		b.dbInfo = &databaseInfo{
-			version: currentDatabaseVersion,
-			compVer: serialization.CurrentCompressionVersion,
-			bidxVer: currentBlockIndexVersion,
-			created: roughtime.Now(),
-		}
-		err = dbPutDatabaseInfo(dbTx, b.dbInfo)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the spend journal data.
-		_, err = meta.CreateBucket(dbnamespace.SpendJournalBucketName)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the utxo set.  Note that the
-		// genesis block coinbase transaction is intentionally not
-		// inserted here since it is not spendable by consensus rules.
-		_, err = meta.CreateBucket(dbnamespace.UtxoSetBucketName)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket which house the token state
-		if _, err := meta.CreateBucket(dbnamespace.TokenBucketName); err != nil {
-			return err
-		}
-		initTS := token.BuildGenesisTokenState()
-		err = initTS.Commit()
-		if err != nil {
-			return err
-		}
-		err = token.DBPutTokenState(dbTx, uint32(ib.GetID()), initTS)
-		if err != nil {
-			return err
-		}
-		// Store the current best chain state into the database.
-		err = dbPutBestState(dbTx, b.stateSnapshot, pow.CalcWork(header.Difficulty, header.Pow.GetPowType()))
-		if err != nil {
-			return err
-		}
-
-		// Add genesis utxo
-		view := utxo.NewUtxoViewpoint()
-		view.SetViewpoints([]*hash.Hash{genesisBlock.Hash()})
-		for _, tx := range genesisBlock.Transactions() {
-			view.AddTxOuts(tx, genesisBlock.Hash())
-		}
-		err = b.dbPutUtxoView(dbTx, view)
-		if err != nil {
-			return err
-		}
-
-		// Store the genesis block into the database.
-		if err := dbTx.StoreBlock(genesisBlock); err != nil {
-			return err
-		}
-		return nil
-	})
+	b.dbInfo = common.NewDatabaseInfo(common.CurrentDatabaseVersion, serialization.CurrentCompressionVersion, currentBlockIndexVersion, roughtime.Now())
+	err = b.DB().PutInfo(b.dbInfo)
+	if err != nil {
+		return err
+	}
+	initTS := token.BuildGenesisTokenState()
+	err = initTS.Commit()
+	if err != nil {
+		return err
+	}
+	err = token.DBPutTokenState(b.DB(), ib.GetID(), initTS)
+	if err != nil {
+		return err
+	}
+	// Store the current best chain state into the database.
+	err = dbPutBestState(b.DB(), b.stateSnapshot, pow.CalcWork(header.Difficulty, header.Pow.GetPowType()))
+	if err != nil {
+		return err
+	}
+	// Store the genesis block into the database.
+	err = b.DB().PutBlock(genesisBlock)
+	if err != nil {
+		return err
+	}
+	// Add genesis utxo
+	err = b.dbPutUtxoViewByBlock(genesisBlock)
 	if err != nil {
 		return err
 	}
@@ -418,7 +352,7 @@ func (b *BlockChain) Start() error {
 
 	// prepare evm env
 	mainTip := b.bd.GetMainChainTip()
-	evmHead, err := b.VMService().PrepareEnvironment(mainTip.GetState())
+	evmHead, err := b.meerChain.PrepareEnvironment(mainTip.GetState())
 	if err != nil {
 		return err
 	}
@@ -427,12 +361,18 @@ func (b *BlockChain) Start() error {
 }
 
 func (b *BlockChain) Stop() error {
+	log.Info("Try to stop BlockChain")
+	close(b.quit)
+	b.wg.Wait()
+	//
 	if err := b.Service.Stop(); err != nil {
 		return err
 	}
-	close(b.quit)
-	b.wg.Wait()
 	return nil
+}
+
+func (b *BlockChain) IsShutdown() bool {
+	return b.Service.IsShutdown() || system.InterruptRequested(b.consensus.Interrupt())
 }
 
 // HaveBlock returns whether or not the chain instance has the block represented
@@ -445,17 +385,7 @@ func (b *BlockChain) HaveBlock(hash *hash.Hash) bool {
 }
 
 func (b *BlockChain) HasBlockInDB(h *hash.Hash) bool {
-	err := b.db.View(func(dbTx database.Tx) error {
-		has, er := dbTx.HasBlock(h)
-		if er != nil {
-			return er
-		}
-		if has {
-			return nil
-		}
-		return fmt.Errorf("no")
-	})
-	return err == nil
+	return b.DB().HasBlock(h)
 }
 
 // IsCurrent returns whether or not the chain believes it is current.  Several
@@ -512,61 +442,6 @@ func (b *BlockChain) TipGeneration() ([]hash.Hash, error) {
 	return tiphashs, nil
 }
 
-// BlockByHash returns the block from the main chain with the given hash.
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) BlockByHash(hash *hash.Hash) (*types.SerializedBlock, error) {
-	b.ChainRLock()
-	defer b.ChainRUnlock()
-
-	return b.fetchMainChainBlockByHash(hash)
-}
-
-// HeaderByHash returns the block header identified by the given hash or an
-// error if it doesn't exist.  Note that this will return headers from both the
-// main chain and any side chains.
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) HeaderByHash(hash *hash.Hash) (types.BlockHeader, error) {
-	block, err := b.fetchBlockByHash(hash)
-	if err != nil || block == nil {
-		return types.BlockHeader{}, fmt.Errorf("block %s is not known", hash)
-	}
-
-	return block.Block().Header, nil
-}
-
-// FetchBlockByHash searches the internal chain block stores and the database
-// in an attempt to find the requested block.
-//
-// This function differs from BlockByHash in that this one also returns blocks
-// that are not part of the main chain (if they are known).
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) FetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error) {
-	return b.fetchBlockByHash(hash)
-}
-
-func (b *BlockChain) FetchBlockBytesByHash(hash *hash.Hash) ([]byte, error) {
-	return b.fetchBlockBytesByHash(hash)
-}
-
-// fetchMainChainBlockByHash returns the block from the main chain with the
-// given hash.  It first attempts to use cache and then falls back to loading it
-// from the database.
-//
-// An error is returned if the block is either not found or not in the main
-// chain.
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) fetchMainChainBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error) {
-	if !b.MainChainHasBlock(hash) {
-		return nil, fmt.Errorf("No block in main chain")
-	}
-	block, err := b.fetchBlockByHash(hash)
-	return block, err
-}
-
 // MaximumBlockSize returns the maximum permitted block size for the block
 // AFTER the given node.
 //
@@ -577,49 +452,6 @@ func (b *BlockChain) maxBlockSize() (int64, error) {
 
 	// The max block size is not changed in any other cases.
 	return maxSize, nil
-}
-
-// fetchBlockByHash returns the block with the given hash from all known sources
-// such as the internal caches and the database.
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) fetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error) {
-	// Check orphan cache.
-	block := b.GetOrphan(hash)
-	if block != nil {
-		return block, nil
-	}
-
-	// Load the block from the database.
-	dbErr := b.db.View(func(dbTx database.Tx) error {
-		var err error
-		block, err = dbFetchBlockByHash(dbTx, hash)
-		return err
-	})
-	if dbErr == nil && block != nil {
-		return block, nil
-	}
-	return nil, fmt.Errorf("unable to find block %v db", hash)
-}
-
-func (b *BlockChain) fetchBlockBytesByHash(hash *hash.Hash) ([]byte, error) {
-	// Check orphan cache.
-	block := b.GetOrphan(hash)
-	if block != nil {
-		return block.Bytes()
-	}
-
-	var bytes []byte
-	var err error
-	// Load the block from the database.
-	err = b.db.View(func(dbTx database.Tx) error {
-		bytes, err = dbTx.FetchBlock(hash)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	return bytes, err
 }
 
 // FetchSubsidyCache returns the current subsidy cache from the blockchain.
@@ -639,7 +471,7 @@ func (b *BlockChain) FetchSubsidyCache() *SubsidyCache {
 //
 // This function MUST be called with the chain state lock held (for writes).
 
-func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, attachNodes *list.List, newBlock *types.SerializedBlock, connectedBlocks *list.List) error {
+func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, attachNodes *list.List, newBlock *BlockNode, connectedBlocks *list.List) error {
 	oldBlocks := []*hash.Hash{}
 	for e := detachNodes.Front(); e != nil; e = e.Next() {
 		ob := e.Value.(*meerdag.BlockOrderHelp)
@@ -648,7 +480,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 
 	b.sendNotification(Reorganization, &ReorganizationNotifyData{
 		OldBlocks: oldBlocks,
-		NewBlock:  newBlock.Hash(),
+		NewBlock:  newBlock.GetHash(),
 		NewOrder:  uint64(ib.GetOrder()),
 	})
 
@@ -656,7 +488,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 	// must be one of the tip of the dag.This is very important for the following understanding.
 	// In the two case, the perspective is the same.In the other words, the future can not
 	// affect the past.
-	var block *types.SerializedBlock
+	var block *BlockNode
 	var err error
 
 	for e := detachNodes.Back(); e != nil; e = e.Prev() {
@@ -670,31 +502,27 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			log.Error(er.Error())
 		}
 		//
-		block, err = b.fetchBlockByHash(n.Block.GetHash())
-		if err != nil {
-			panic(err)
+		blockNode := b.GetBlockNode(n.Block)
+		if blockNode == nil {
+			panic(fmt.Errorf("No block node:%s", n.Block.GetHash()))
 		}
+		block := blockNode.GetBody()
 		log.Debug("detach block", "hash", n.Block.GetHash().String(), "old order", n.OldOrder, "status", n.Block.GetState().GetStatus().String())
-		block.SetOrder(uint64(n.OldOrder))
 		// Load all of the utxos referenced by the block that aren't
 		// already in the view.
 		var stxos []utxo.SpentTxOut
 		view := utxo.NewUtxoViewpoint()
 		view.SetViewpoints([]*hash.Hash{block.Hash()})
 		if !n.Block.GetState().GetStatus().KnownInvalid() {
-			b.CalculateDAGDuplicateTxs(block)
-			err = b.fetchInputUtxos(b.db, block, view)
+			b.SetDAGDuplicateTxs(block, n.Block)
+			err = b.fetchInputUtxos(block, view)
 			if err != nil {
 				return err
 			}
 
 			// Load all of the spent txos for the block from the spend
 			// journal.
-
-			err = b.db.View(func(dbTx database.Tx) error {
-				stxos, err = utxo.DBFetchSpendJournalEntry(dbTx, block)
-				return err
-			})
+			stxos, err = utxo.DBFetchSpendJournalEntry(b.DB(), block)
 			if err != nil {
 				return err
 			}
@@ -720,7 +548,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 			continue
 		}
 		startState := b.bd.GetBlockByOrder(nodeBlock.GetOrder() - 1).GetState()
-		err = b.VMService().RewindTo(startState)
+		err = b.meerChain.RewindTo(startState)
 		if err != nil {
 			return err
 		}
@@ -734,13 +562,11 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		} else {
 			// If any previous nodes in attachNodes failed validation,
 			// mark this one as having an invalid ancestor.
-			block, err = b.FetchBlockByHash(nodeBlock.GetHash())
+			block = b.GetBlockNode(nodeBlock)
 
-			if err != nil {
-				return err
+			if block == nil {
+				return fmt.Errorf("No block node:%s", nodeBlock.GetHash())
 			}
-			block.SetOrder(uint64(nodeBlock.GetOrder()))
-			block.SetHeight(nodeBlock.GetHeight())
 		}
 		if !nodeBlock.IsOrdered() {
 			er := b.updateDefaultBlockState(nodeBlock)
@@ -778,8 +604,7 @@ func (b *BlockChain) reorganizeChain(ib meerdag.IBlock, detachNodes *list.List, 
 		if !nodeBlock.GetState().GetStatus().KnownInvalid() {
 			b.bd.ValidBlock(nodeBlock)
 		}
-		b.bd.UpdateWeight(nodeBlock)
-		er := b.updateBlockState(nodeBlock, block)
+		er := b.updateBlockState(nodeBlock, block.GetBody())
 		if er != nil {
 			log.Error(er.Error())
 		}
@@ -828,13 +653,7 @@ func (b *BlockChain) FetchSpendJournal(targetBlock *types.SerializedBlock) ([]ut
 }
 
 func (b *BlockChain) fetchSpendJournal(targetBlock *types.SerializedBlock) ([]utxo.SpentTxOut, error) {
-	var spendEntries []utxo.SpentTxOut
-	err := b.db.View(func(dbTx database.Tx) error {
-		var err error
-
-		spendEntries, err = utxo.DBFetchSpendJournalEntry(dbTx, targetBlock)
-		return err
-	})
+	spendEntries, err := utxo.DBFetchSpendJournalEntry(b.DB(), targetBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -873,21 +692,27 @@ func (b *BlockChain) ChainRUnlock() {
 }
 
 func (b *BlockChain) IsDuplicateTx(txid *hash.Hash, blockHash *hash.Hash) bool {
-	err := b.db.Update(func(dbTx database.Tx) error {
-		if b.indexManager != nil {
-			if b.indexManager.IsDuplicateTx(dbTx, txid, blockHash) {
-				return nil
-			}
-		}
-		return fmt.Errorf("null")
-	})
-	return err == nil
+	return b.indexManager.IsDuplicateTx(txid, blockHash)
 }
 
 func (b *BlockChain) CalculateDAGDuplicateTxs(block *types.SerializedBlock) {
 	txs := block.Transactions()
 	for _, tx := range txs {
 		tx.IsDuplicate = b.IsDuplicateTx(tx.Hash(), block.Hash())
+	}
+}
+
+// Just load from block state, so high efficiency of close range hits
+func (b *BlockChain) SetDAGDuplicateTxs(sblock *types.SerializedBlock, block model.Block) {
+	txs := sblock.Transactions()
+	dtxs := block.GetState().GetDuplicateTxs()
+	if len(dtxs) > 0 {
+		for _, txidx := range dtxs {
+			if txidx >= len(txs) {
+				continue
+			}
+			txs[txidx].IsDuplicate = true
+		}
 	}
 }
 
@@ -940,13 +765,13 @@ func (b *BlockChain) GetFees(h *hash.Hash) types.AmountMap {
 	if ib.GetState().GetStatus().KnownInvalid() {
 		return nil
 	}
-	block, err := b.FetchBlockByHash(h)
-	if err != nil {
+	bn := b.GetBlockNode(ib)
+	if bn == nil {
 		return nil
 	}
-	b.CalculateDAGDuplicateTxs(block)
+	b.SetDAGDuplicateTxs(bn.GetBody(), ib)
 
-	return b.CalculateFees(block)
+	return b.CalculateFees(bn.GetBody())
 }
 
 func (b *BlockChain) GetFeeByCoinID(h *hash.Hash, coinId types.CoinID) int64 {
@@ -961,12 +786,12 @@ func (b *BlockChain) CalcWeight(ib meerdag.IBlock, bi *meerdag.BlueInfo) int64 {
 	if ib.GetState().GetStatus().KnownInvalid() {
 		return 0
 	}
-	block, err := b.FetchBlockByHash(ib.GetHash())
-	if err != nil {
-		log.Error(fmt.Sprintf("CalcWeight:%v", err))
+	bn := b.GetBlockNode(ib)
+	if bn == nil {
+		log.Error(fmt.Sprintf("CalcWeight:%v", ib.GetHash().String()))
 		return 0
 	}
-	if b.IsDuplicateTx(block.Transactions()[0].Hash(), ib.GetHash()) {
+	if b.IsDuplicateTx(bn.GetBody().Transactions()[0].Hash(), ib.GetHash()) {
 		return 0
 	}
 	return b.subsidyCache.CalcBlockSubsidy(bi)
@@ -997,10 +822,7 @@ func (b *BlockChain) CalculateTokenStateRoot(txs []*types.Tx) *hash.Hash {
 }
 
 func (b *BlockChain) CalculateStateRoot(txs []*types.Tx) *hash.Hash {
-	var vmGenesis *hash.Hash
-	if b.VMService() != nil {
-		vmGenesis = b.VMService().Genesis(txs)
-	}
+	vmGenesis := b.calcMeerGenesis(txs)
 	tokenStateRoot := b.CalculateTokenStateRoot(txs)
 	if tokenStateRoot.IsEqual(zeroHash) {
 		if vmGenesis == nil || vmGenesis.IsEqual(zeroHash) {
@@ -1026,11 +848,11 @@ func (b *BlockChain) CalcPastMedianTime(block meerdag.IBlock) time.Time {
 	numNodes := 0
 	iterBlock := block
 	for i := 0; i < medianTimeBlocks && iterBlock != nil; i++ {
-		iterNode := b.GetBlockNode(iterBlock)
+		iterNode := b.GetBlockHeader(iterBlock)
 		if iterNode == nil {
 			break
 		}
-		timestamps[i] = iterNode.GetTimestamp()
+		timestamps[i] = iterNode.Timestamp.Unix()
 		numNodes++
 
 		iterBlock = b.bd.GetBlockById(iterBlock.GetMainParent())
@@ -1074,19 +896,12 @@ func (b *BlockChain) GetSubsidyCache() *SubsidyCache {
 	return b.subsidyCache
 }
 
-func (b *BlockChain) DB() database.DB {
-	return b.db
+func (b *BlockChain) DB() model.DataBase {
+	return b.consensus.DatabaseContext()
 }
 
 func (b *BlockChain) IndexManager() model.IndexManager {
 	return b.indexManager
-}
-
-func (b *BlockChain) VMService() model.VMI {
-	if b.consensus == nil {
-		return nil
-	}
-	return b.consensus.VMService()
 }
 
 // Return chain params
@@ -1115,25 +930,11 @@ func (b *BlockChain) Rebuild() error {
 	if gib == nil {
 		return fmt.Errorf("No genesis block")
 	}
-	err = b.db.Update(func(tx database.Tx) error {
-		err = token.DBPutTokenState(tx, uint32(gib.GetID()), initTS)
-		if err != nil {
-			return err
-		}
-		genesisBlock := types.NewBlock(params.ActiveNetParams.GenesisBlock)
-		genesisBlock.SetOrder(0)
-
-		view := utxo.NewUtxoViewpoint()
-		view.SetViewpoints([]*hash.Hash{genesisBlock.Hash()})
-		for _, tx := range genesisBlock.Transactions() {
-			view.AddTxOuts(tx, genesisBlock.Hash())
-		}
-		err = b.dbPutUtxoView(tx, view)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = token.DBPutTokenState(b.DB(), gib.GetID(), initTS)
+	if err != nil {
+		return err
+	}
+	err = b.dbPutUtxoViewByBlock(params.ActiveNetParams.GenesisBlock)
 	if err != nil {
 		return err
 	}
@@ -1141,10 +942,11 @@ func (b *BlockChain) Rebuild() error {
 	logLvl := l.Glogger().GetVerbosity()
 	bar := progressbar.Default(int64(b.GetMainOrder()), fmt.Sprintf("Rebuild:"))
 	l.Glogger().Verbosity(l.LvlCrit)
-	b.VMService().SetLogLevel(l.LvlCrit.String())
+	eth.InitLog(l.LvlCrit.String(), b.consensus.Config().DebugPrintOrigins)
+
 	defer func() {
 		l.Glogger().Verbosity(logLvl)
-		b.VMService().SetLogLevel(logLvl.String())
+		eth.InitLog(logLvl.String(), b.consensus.Config().DebugPrintOrigins)
 	}()
 
 	var block *types.SerializedBlock
@@ -1158,19 +960,15 @@ func (b *BlockChain) Rebuild() error {
 			return fmt.Errorf("No block order:%d", i)
 		}
 		err = nil
-		block, err = b.fetchBlockByHash(ib.GetHash())
-		if err != nil {
-			return err
+		blockNode := b.GetBlockNode(ib)
+		if blockNode == nil {
+			return fmt.Errorf("No block node:%s", ib.GetHash())
 		}
-		block.SetOrder(uint64(ib.GetOrder()))
-		block.SetHeight(ib.GetHeight())
-
+		block = blockNode.GetBody()
 		if i == 0 {
-			if b.indexManager != nil {
-				err = b.indexManager.ConnectBlock(block, nil, ib)
-				if err != nil {
-					return err
-				}
+			err = b.indexManager.ConnectBlock(block, nil, ib)
+			if err != nil {
+				return err
 			}
 			continue
 		}
@@ -1178,14 +976,14 @@ func (b *BlockChain) Rebuild() error {
 		view := utxo.NewUtxoViewpoint()
 		view.SetViewpoints([]*hash.Hash{ib.GetHash()})
 		stxos := []utxo.SpentTxOut{}
-		err = b.checkConnectBlock(ib, block, view, &stxos)
+		err = b.checkConnectBlock(ib, blockNode, view, &stxos)
 		if err != nil {
 			b.bd.InvalidBlock(ib)
 			stxos = []utxo.SpentTxOut{}
 			view.Clean()
 		}
 		connectedBlocks := list.New()
-		err = b.connectBlock(ib, block, view, stxos, connectedBlocks)
+		err = b.connectBlock(ib, blockNode, view, stxos, connectedBlocks)
 		if err != nil {
 			b.bd.InvalidBlock(ib)
 			return err
@@ -1193,7 +991,10 @@ func (b *BlockChain) Rebuild() error {
 		if !ib.GetState().GetStatus().KnownInvalid() {
 			b.bd.ValidBlock(ib)
 		}
-		b.bd.UpdateWeight(ib)
+		err = b.updateBlockState(ib, blockNode.GetBody())
+		if err != nil {
+			log.Error(err.Error())
+		}
 		err = b.bd.Commit()
 		if err != nil {
 			return err
@@ -1208,6 +1009,10 @@ func (b *BlockChain) GetBlockState(order uint64) model.BlockState {
 		return nil
 	}
 	return block.GetState()
+}
+
+func (b *BlockChain) Consensus() model.Consensus {
+	return b.consensus
 }
 
 // New returns a BlockChain instance using the provided configuration details.
@@ -1241,7 +1046,7 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 	b := BlockChain{
 		consensus:          consensus,
 		checkpointsByLayer: checkpointsByLayer,
-		db:                 consensus.DatabaseContext(),
+		db:                 consensus.LegacyDB(),
 		params:             par,
 		timeSource:         consensus.MedianTimeSource(),
 		events:             consensus.Events(),
@@ -1257,13 +1062,20 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
-	b.bd = meerdag.New(config.DAGType, b.CalcWeight,
+	b.bd = meerdag.New(config.DAGType,
 		1.0/float64(par.TargetTimePerBlock/time.Second),
-		b.db, b.getBlockData, state.CreateBlockState, state.CreateBlockStateFromBytes)
+		b.DB(), b.getBlockData, state.CreateBlockState, state.CreateBlockStateFromBytes)
 	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
 	b.bd.SetCacheSize(config.DAGCacheSize, config.BlockDataCacheSize)
 
 	b.InitServices()
 	b.Services().RegisterService(b.bd)
+
+	mchain, err := meer.NewMeerChain(consensus)
+	if err != nil {
+		return nil, err
+	}
+	b.meerChain = mchain
+	b.Services().RegisterService(b.meerChain)
 	return &b, nil
 }

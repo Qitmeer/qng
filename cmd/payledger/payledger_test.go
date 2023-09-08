@@ -10,7 +10,7 @@ import (
 
 func TestLockedLedger(t *testing.T) {
 	params.ActiveNetParams = &params.PrivNetParam
-	genesisTxHash := params.ActiveNetParams.Params.GenesisBlock.Transactions[1].TxHash()
+	genesisTxHash := params.ActiveNetParams.Params.GenesisBlock.Transactions()[1].Hash()
 
 	args := []string{"--modules=miner", "--modules=qitmeer"}
 	h, err := testutils.NewHarness(t, params.ActiveNetParams.Params, args...)
@@ -45,6 +45,6 @@ func TestLockedLedger(t *testing.T) {
 	spendAmt := types.Amount{Value: 50 * types.AtomsPerCoin, Id: types.MEERA}
 
 	lockTime := int64(2)
-	txid, addr := testutils.Spend(t, h, spendAmt, types.NewOutPoint(&genesisTxHash, 406), &lockTime)
+	txid, addr := testutils.Spend(t, h, spendAmt, types.NewOutPoint(genesisTxHash, 406), &lockTime)
 	t.Logf("[%v]: tx %v which spend %v has been sent, address:%s", h.Node.Id(), txid, spendAmt.String(), addr.String())
 }

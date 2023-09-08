@@ -76,7 +76,7 @@ type Params struct {
 	Bootstrap []string
 
 	// GenesisBlock defines the first block of the chain.
-	GenesisBlock *types.Block
+	GenesisBlock *types.SerializedBlock
 
 	// GenesisHash is the starting block hash.
 	GenesisHash *hash.Hash

@@ -108,7 +108,7 @@ func (api *PrivateAddressAPI) GetAddresses(privateKeyHex string) (interface{}, e
 	if err != nil {
 		return nil, err
 	}
-	eaddr, err := common.NewMeerEVMAddress(hex.EncodeToString(pubKey.SerializeUncompressed()))
+	eaddr, err := common.NewMeerEVMAddress(pubKey.SerializeUncompressed())
 	if err != nil {
 		return nil, err
 	}

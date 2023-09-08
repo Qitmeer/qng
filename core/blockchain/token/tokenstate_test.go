@@ -9,8 +9,9 @@ import (
 	"encoding/hex"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
-	_ "github.com/Qitmeer/qng/database/ffldb"
+	"github.com/Qitmeer/qng/database/legacychaindb"
+	"github.com/Qitmeer/qng/database/legacydb"
+	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/params"
 	"io/ioutil"
 	"os"
@@ -68,14 +69,14 @@ func TestTokenStateDB(t *testing.T) {
 	// clean up db file when the test is finished
 	defer os.RemoveAll(dbPath)
 
-	tokendb, err := database.Create("ffldb", dbPath, params.PrivNetParam.Net)
+	tokendb, err := legacydb.Create("ffldb", dbPath, params.PrivNetParam.Net)
 	if err != nil {
 		t.Fatalf("failed to create token state db : %v", err)
 	}
 	defer tokendb.Close()
 
 	// prepare token db.
-	err = tokendb.Update(func(dbTx database.Tx) error {
+	err = tokendb.Update(func(dbTx legacydb.Tx) error {
 		_, err := dbTx.Metadata().CreateBucketIfNotExists(dbnamespace.TokenBucketName)
 		return err
 	})
@@ -95,21 +96,16 @@ func TestTokenStateDB(t *testing.T) {
 	}
 
 	// create a fake block id for testing
-	bid := uint32(0xa)
+	bid := uint(0xa)
 
-	err = tokendb.Update(func(dbTx database.Tx) error {
-		return DBPutTokenState(dbTx, bid, ts)
-	})
+	cdb := legacychaindb.NewNaked(tokendb)
+	err = DBPutTokenState(cdb, bid, ts)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// fetch record from tokenstate db
-	var tsfromdb *TokenState
-	err = tokendb.View(func(dbTx database.Tx) error {
-		tsfromdb, err = DBFetchTokenState(dbTx, bid)
-		return err
-	})
+	tsfromdb, err := DBFetchTokenState(cdb, bid)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

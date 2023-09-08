@@ -3,6 +3,8 @@ package tx
 import (
 	"bytes"
 	"fmt"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/consensus/model"
@@ -11,16 +13,13 @@ import (
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/message"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/rpc"
-	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/Qitmeer/qng/services/mempool"
-	vmconsensus "github.com/Qitmeer/qng/vm/consensus"
-	"time"
 )
 
 type TxManager struct {
@@ -31,10 +30,10 @@ type TxManager struct {
 	txMemPool *mempool.TxPool
 
 	// notify
-	ntmgr vmconsensus.Notify
+	ntmgr model.Notify
 
 	// db
-	db database.DB
+	db legacydb.DB
 
 	//invalidTx hash->block hash
 	invalidTx map[hash.Hash]*meerdag.HashSet
@@ -70,7 +69,7 @@ func (tm *TxManager) initFeeEstimator() error {
 	}
 	// Search for a FeeEstimator state in the database. If none can be found
 	// or if it cannot be loaded, create a new one.
-	tm.db.Update(func(tx database.Tx) error {
+	tm.db.Update(func(tx legacydb.Tx) error {
 		metadata := tx.Metadata()
 		feeEstimationData := metadata.Get(mempool.EstimateFeeDatabaseKey)
 		if feeEstimationData != nil {
@@ -118,7 +117,7 @@ func (tm *TxManager) Stop() error {
 
 	if tm.feeEstimator != nil {
 		// Save fee estimator state in the database.
-		tm.db.Update(func(tx database.Tx) error {
+		tm.db.Update(func(tx legacydb.Tx) error {
 			metadata := tx.Metadata()
 			metadata.Put(mempool.EstimateFeeDatabaseKey, tm.feeEstimator.Save())
 
@@ -155,7 +154,7 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 			break
 		}
 
-		if len(blockSlice) != 2 {
+		if len(blockSlice) != 3 {
 			log.Warn("Chain connected notification is wrong size slice.")
 			break
 		}
@@ -176,7 +175,7 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 		tm.ntmgr.AnnounceNewTransactions(txds, nil)
 		// Register block with the fee estimator, if it exists.
 		if tm.FeeEstimator() != nil && blockSlice[1].(bool) {
-			err := tm.FeeEstimator().RegisterBlock(block)
+			err := tm.FeeEstimator().RegisterBlock(block, blockSlice[2].(meerdag.IBlock).GetHeight())
 
 			// If an error is somehow generated then the fee estimator
 			// has entered an invalid state. Since it doesn't know how
@@ -186,14 +185,14 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 			}
 		}
 	case blockchain.BlockDisconnected:
-		block, ok := notification.Data.(*types.SerializedBlock)
+		blockSlice, ok := notification.Data.([]interface{})
 		if !ok {
 			log.Warn("Chain disconnected notification is not a block slice.")
 			break
 		}
 		// Rollback previous block recorded by the fee estimator.
 		if tm.FeeEstimator() != nil {
-			tm.FeeEstimator().Rollback(block.Hash())
+			tm.FeeEstimator().Rollback(blockSlice[0].(*types.SerializedBlock).Hash())
 		}
 	}
 }
@@ -202,7 +201,7 @@ func (tm *TxManager) GetChain() *blockchain.BlockChain {
 	return tm.consensus.BlockChain().(*blockchain.BlockChain)
 }
 
-func NewTxManager(consensus model.Consensus, ntmgr vmconsensus.Notify) (*TxManager, error) {
+func NewTxManager(consensus model.Consensus, ntmgr model.Notify) (*TxManager, error) {
 	cfg := consensus.Config()
 	sigCache := consensus.SigCache()
 	bc := consensus.BlockChain().(*blockchain.BlockChain)
@@ -221,7 +220,7 @@ func NewTxManager(consensus model.Consensus, ntmgr vmconsensus.Notify) (*TxManag
 			MinRelayTxFee:        *amt,
 			TxTimeScope:          cfg.TxTimeScope,
 			StandardVerifyFlags: func() (txscript.ScriptFlags, error) {
-				return common.StandardScriptVerifyFlags()
+				return mempool.StandardScriptVerifyFlags()
 			},
 		},
 		ChainParams:      consensus.Params(),
@@ -248,7 +247,7 @@ func NewTxManager(consensus model.Consensus, ntmgr vmconsensus.Notify) (*TxManag
 		indexManager: consensus.IndexManager().(*index.Manager),
 		txMemPool:    txMemPool,
 		ntmgr:        ntmgr,
-		db:           consensus.DatabaseContext(),
+		db:           consensus.LegacyDB(),
 		invalidTx:    invalidTx,
 		enableFeeEst: cfg.Estimatefee}
 	consensus.BlockChain().(*blockchain.BlockChain).Subscribe(tm.handleNotifyMsg)

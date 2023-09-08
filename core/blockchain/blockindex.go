@@ -7,7 +7,6 @@ import (
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/meerdag"
 )
 
@@ -52,16 +51,24 @@ func (b *BlockChain) GetBlock(h *hash.Hash) meerdag.IBlock {
 	return b.bd.GetBlock(h)
 }
 
+func (b *BlockChain) GetBlockByOrder(order uint64) model.Block {
+	return b.bd.GetBlockByOrder(uint(order))
+}
+
+func (b *BlockChain) GetBlockById(id uint) model.Block {
+	return b.bd.GetBlockById(id)
+}
+
 // BlockOrderByHash returns the order of the block with the given hash in the
 // chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) BlockOrderByHash(hash *hash.Hash) (uint64, error) {
+func (b *BlockChain) GetBlockOrderByHash(hash *hash.Hash) (uint, error) {
 	ib := b.bd.GetBlock(hash)
 	if ib == nil {
-		return uint64(meerdag.MaxBlockOrder), fmt.Errorf("No block\n")
+		return meerdag.MaxBlockOrder, fmt.Errorf("No block order:%s", hash.String())
 	}
-	return uint64(ib.GetOrder()), nil
+	return ib.GetOrder(), nil
 }
 
 // OrderRange returns a range of block hashes for the given start and end
@@ -128,27 +135,13 @@ func (b *BlockChain) FetchBlockByOrder(order uint64) (*types.SerializedBlock, mo
 	// First find the hash associated with the provided order in the index.
 	ib := b.bd.GetBlockByOrder(uint(order))
 	if ib == nil {
-		return nil, nil, fmt.Errorf("No block\n")
+		return nil, nil, fmt.Errorf("No block:order=%d\n", order)
 	}
-
-	var blockBytes []byte
-	var err error
-	err = b.db.View(func(dbTx database.Tx) error {
-		// Load the raw block bytes from the database.
-		blockBytes, err = dbTx.FetchBlock(ib.GetHash())
-		return err
-	})
-	if err != nil {
-		return nil, nil, err
+	bn := b.GetBlockNode(ib)
+	if bn == nil {
+		return nil, nil, fmt.Errorf("No block node:hash=%s\n", ib.GetHash().String())
 	}
-	// Create the encapsulated block and set the order appropriately.
-	block, err := types.NewBlockFromBytes(blockBytes)
-	if err != nil {
-		return nil, nil, err
-	}
-	block.SetOrder(order)
-	block.SetHeight(ib.GetHeight())
-	return block, ib, nil
+	return bn.GetBody(), ib, nil
 }
 
 // BlockByHeight returns the block at the given height in the main chain.
@@ -246,4 +239,121 @@ func (b *BlockChain) GetBlockByNumber(number uint64) meerdag.IBlock {
 		section = prev
 	}
 	return nil
+}
+
+// BlockByHash returns the block from the main chain with the given hash.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) BlockByHash(hash *hash.Hash) (*types.SerializedBlock, error) {
+	b.ChainRLock()
+	defer b.ChainRUnlock()
+
+	return b.fetchMainChainBlockByHash(hash)
+}
+
+// fetchMainChainBlockByHash returns the block from the main chain with the
+// given hash.  It first attempts to use cache and then falls back to loading it
+// from the database.
+//
+// An error is returned if the block is either not found or not in the main
+// chain.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) fetchMainChainBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error) {
+	if !b.MainChainHasBlock(hash) {
+		return nil, fmt.Errorf("No block in main chain")
+	}
+	block, err := b.fetchBlockByHash(hash)
+	return block, err
+}
+
+// HeaderByHash returns the block header identified by the given hash or an
+// error if it doesn't exist.  Note that this will return headers from both the
+// main chain and any side chains.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) HeaderByHash(hash *hash.Hash) (types.BlockHeader, error) {
+	block, err := b.fetchBlockByHash(hash)
+	if err != nil || block == nil {
+		return types.BlockHeader{}, fmt.Errorf("block %s is not known", hash)
+	}
+
+	return block.Block().Header, nil
+}
+
+// FetchBlockByHash searches the internal chain block stores and the database
+// in an attempt to find the requested block.
+//
+// This function differs from BlockByHash in that this one also returns blocks
+// that are not part of the main chain (if they are known).
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) FetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error) {
+	return b.fetchBlockByHash(hash)
+}
+
+func (b *BlockChain) FetchBlockBytesByHash(hash *hash.Hash) ([]byte, error) {
+	return b.fetchBlockBytesByHash(hash)
+}
+
+// fetchBlockByHash returns the block with the given hash from all known sources
+// such as the internal caches and the database.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) fetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error) {
+	// Check orphan cache.
+	block := b.GetOrphan(hash)
+	if block != nil {
+		return block, nil
+	}
+
+	// Load the block from the database.
+	block, err := dbFetchBlockByHash(b.DB(), hash)
+	if err == nil && block != nil {
+		return block, nil
+	}
+	return nil, fmt.Errorf("unable to find block %v db", hash)
+}
+
+func (b *BlockChain) fetchBlockBytesByHash(hash *hash.Hash) ([]byte, error) {
+	// Check orphan cache.
+	block := b.GetOrphan(hash)
+	if block != nil {
+		return block.Bytes()
+	}
+	return b.DB().GetBlockBytes(hash)
+}
+
+func (b *BlockChain) fetchHeaderByHash(hash *hash.Hash) (*types.BlockHeader, error) {
+	// Check orphan cache.
+	block := b.GetOrphan(hash)
+	if block != nil {
+		return &block.Block().Header, nil
+	}
+
+	header, err := dbFetchHeaderByHash(b.DB(), hash)
+	if err == nil && header != nil {
+		return header, nil
+	}
+	return nil, fmt.Errorf("unable to find block header %v db %v", hash, err)
+}
+
+func (b *BlockChain) GetBlockHeader(ib meerdag.IBlock) *types.BlockHeader {
+	if ib == nil {
+		return nil
+	}
+	if ib.GetData() != nil {
+		bn, ok := ib.GetData().(*BlockNode)
+		if !ok {
+			log.Error("block data type error", "hash", ib.GetHash().String())
+			return nil
+		}
+		return bn.GetHeader()
+	}
+	header, err := b.fetchHeaderByHash(ib.GetHash())
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return header
 }

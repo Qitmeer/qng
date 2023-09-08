@@ -9,6 +9,7 @@ package params
 import (
 	"github.com/Qitmeer/qng/common"
 	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
 	"math/big"
@@ -37,7 +38,7 @@ var PrivNetParams = Params{
 	Bootstrap:      []string{},
 
 	// Chain parameters
-	GenesisBlock: &privNetGenesisBlock,
+	GenesisBlock: types.NewBlock(&privNetGenesisBlock),
 	GenesisHash:  &privNetGenesisHash,
 	LedgerParams: ledger.LedgerParams{
 		GenesisAmountUnit: 1000 * 1e8,

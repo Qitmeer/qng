@@ -19,7 +19,7 @@ func AmanaGenesis() *core.Genesis {
 		GasLimit:   0x47b760,
 		Difficulty: big.NewInt(1),
 		Alloc:      decodePrealloc(),
-		Timestamp:  uint64(qparams.MainNetParam.GenesisBlock.Header.Timestamp.Unix()),
+		Timestamp:  uint64(qparams.MainNetParam.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
 }
 
@@ -32,7 +32,7 @@ func AmanaTestnetGenesis() *core.Genesis {
 		GasLimit:   0x47b760,
 		Difficulty: big.NewInt(1),
 		Alloc:      decodePrealloc(),
-		Timestamp:  uint64(qparams.TestNetParam.GenesisBlock.Header.Timestamp.Unix()),
+		Timestamp:  uint64(qparams.TestNetParam.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
 }
 
@@ -45,7 +45,7 @@ func AmanaMixnetGenesis() *core.Genesis {
 		GasLimit:   0x47b760,
 		Difficulty: big.NewInt(1),
 		Alloc:      decodePrealloc(),
-		Timestamp:  uint64(qparams.MixNetParam.GenesisBlock.Header.Timestamp.Unix()),
+		Timestamp:  uint64(qparams.MixNetParam.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
 }
 
@@ -58,7 +58,7 @@ func AmanaPrivnetGenesis() *core.Genesis {
 		GasLimit:   0x47b760,
 		Difficulty: big.NewInt(1),
 		Alloc:      decodePrealloc(),
-		Timestamp:  uint64(qparams.PrivNetParam.GenesisBlock.Header.Timestamp.Unix()),
+		Timestamp:  uint64(qparams.PrivNetParam.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
 }
 

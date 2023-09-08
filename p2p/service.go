@@ -24,7 +24,6 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/services/notifymgr/notify"
-	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
@@ -83,7 +82,7 @@ type Service struct {
 	blockChain  *blockchain.BlockChain
 	timeSource  model.MedianTimeSource
 	txMemPool   *mempool.TxPool
-	notify      consensus.Notify
+	notify      model.Notify
 	rebroadcast *Rebroadcast
 
 	consensus model.Consensus
@@ -287,6 +286,7 @@ func (s *Service) IncreaseBytesSent(pid peer.ID, size int) {
 	if size <= 0 {
 		return
 	}
+	common.EgressTrafficMeter.Mark(int64(size))
 	if s.Peers() != nil {
 		pe := s.Peers().Get(pid)
 		if pe != nil {
@@ -299,6 +299,7 @@ func (s *Service) IncreaseBytesRecv(pid peer.ID, size int) {
 	if size <= 0 {
 		return
 	}
+	common.IngressTrafficMeter.Mark(int64(size))
 	if s.Peers() != nil {
 		pe := s.Peers().Get(pid)
 		if pe != nil {
@@ -454,11 +455,11 @@ func (s *Service) TimeSource() model.MedianTimeSource {
 	return s.timeSource
 }
 
-func (s *Service) SetNotify(notify consensus.Notify) {
+func (s *Service) SetNotify(notify model.Notify) {
 	s.notify = notify
 }
 
-func (s *Service) Notify() consensus.Notify {
+func (s *Service) Notify() model.Notify {
 	return s.notify
 }
 

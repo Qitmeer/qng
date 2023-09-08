@@ -4,9 +4,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 )
@@ -31,34 +32,34 @@ type invalidtxindexStagingShard struct {
 	tipHash  *hash.Hash
 }
 
-func (biss *invalidtxindexStagingShard) Commit(dbTx database.Tx) error {
+func (biss *invalidtxindexStagingShard) Commit(dbTx legacydb.Tx) error {
 	if !biss.isStaged() {
 		return nil
 	}
-	var bucket database.Bucket
-	var itxidByTxhashBucket database.Bucket
+	var bucket legacydb.Bucket
+	var itxidByTxhashBucket legacydb.Bucket
 	bucket = dbTx.Metadata().Bucket(bucketName)
 	if bucket == nil {
 		var err error
-		bucket,err=dbTx.Metadata().CreateBucketIfNotExists(bucketName)
+		bucket, err = dbTx.Metadata().CreateBucketIfNotExists(bucketName)
 		if err != nil {
 			return err
 		}
-		log.Info(fmt.Sprintf("Create bucket:%s",bucketName))
+		log.Info(fmt.Sprintf("Create bucket:%s", bucketName))
 
-		itxidByTxhashBucket,err=bucket.CreateBucketIfNotExists(itxidByTxhashBucketName)
+		itxidByTxhashBucket, err = bucket.CreateBucketIfNotExists(itxidByTxhashBucketName)
 		if err != nil {
 			return err
 		}
 	}
 	for blockid, block := range biss.toAdd {
-		err:=dbAddTxIndexEntries(bucket,itxidByTxhashBucket,block,blockid)
+		err := dbAddTxIndexEntries(bucket, itxidByTxhashBucket, block, blockid)
 		if err != nil {
 			return err
 		}
 	}
 	for blockid, block := range biss.toDelete {
-		err := dbRemoveTxIndexEntries(bucket,itxidByTxhashBucket,blockid,block)
+		err := dbRemoveTxIndexEntries(bucket, itxidByTxhashBucket, blockid, block)
 		if err != nil {
 			return err
 		}
@@ -80,7 +81,7 @@ func (biss *invalidtxindexStagingShard) isStaged() bool {
 	return len(biss.toAdd) != 0 || len(biss.toDelete) != 0 || biss.tipHash != nil
 }
 
-func dbAddTxIndexEntries(itxIndex database.Bucket,itxidByTxhash database.Bucket, block *types.SerializedBlock, blockID uint64) error {
+func dbAddTxIndexEntries(itxIndex legacydb.Bucket, itxidByTxhash legacydb.Bucket, block *types.SerializedBlock, blockID uint64) error {
 	addEntries := func(txns []*types.Tx, txLocs []types.TxLoc, blockID uint64) error {
 		offset := 0
 		serializedValues := make([]byte, len(txns)*txEntrySize)
@@ -114,11 +115,11 @@ func dbAddTxIndexEntries(itxIndex database.Bucket,itxidByTxhash database.Bucket,
 	return nil
 }
 
-func dbPutTxIndexEntry(itxIndex database.Bucket, txHash *hash.Hash, serializedData []byte) error {
+func dbPutTxIndexEntry(itxIndex legacydb.Bucket, txHash *hash.Hash, serializedData []byte) error {
 	return itxIndex.Put(txHash[:], serializedData)
 }
 
-func dbPutTxIdByHash(itxidByTxhash database.Bucket, txHash hash.Hash, txId *hash.Hash) error {
+func dbPutTxIdByHash(itxidByTxhash legacydb.Bucket, txHash hash.Hash, txId *hash.Hash) error {
 	return itxidByTxhash.Put(txHash[:], txId[:])
 }
 
@@ -132,46 +133,53 @@ func putTxIndexEntry(target []byte, blockID uint64, txLoc types.TxLoc) {
 	byteOrder.PutUint32(target[12:], uint32(txLoc.TxLen))
 }
 
-
-func dbFetchTxIndexEntry(dbTx database.Tx,itxIndex database.Bucket, txid *hash.Hash) (*database.BlockRegion, error) {
-	serializedData := itxIndex.Get(txid[:])
-	if len(serializedData) == 0 {
+func dbFetchTxIndexEntry(ldb legacydb.DB, db model.DataBase, txid *hash.Hash) (*legacydb.BlockRegion, error) {
+	var serializedData []byte
+	ldb.View(func(dbTx legacydb.Tx) error {
+		itxIndex := dbTx.Metadata().Bucket(bucketName)
+		if itxIndex == nil {
+			return nil
+		}
+		serializedData = itxIndex.Get(txid[:])
+		return nil
+	})
+	if len(serializedData) <= 0 {
 		return nil, nil
 	}
 
 	// Ensure the serialized data has enough bytes to properly deserialize.
 	if len(serializedData) < 16 {
-		return nil, database.Error{
-			ErrorCode: database.ErrCorruption,
+		return nil, legacydb.Error{
+			ErrorCode: legacydb.ErrCorruption,
 			Description: fmt.Sprintf("corrupt transaction index "+
 				"entry for %s", txid),
 		}
 	}
 
 	// Load the block hash associated with the block ID.
-	blockID,err:=serialization.DeserializeUint64(serializedData[0:4])
+	blockID, err := serialization.DeserializeUint64(serializedData[0:4])
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	h, err := meerdag.DBGetDAGBlockHashByID(dbTx,blockID)
+	h, err := meerdag.DBGetDAGBlockHashByID(db, blockID)
 	if err != nil {
-		return nil, database.Error{
-			ErrorCode: database.ErrCorruption,
+		return nil, legacydb.Error{
+			ErrorCode: legacydb.ErrCorruption,
 			Description: fmt.Sprintf("corrupt transaction index "+
 				"entry for %s: %v", txid, err),
 		}
 	}
 
 	// Deserialize the final entry.
-	region := database.BlockRegion{Hash: &hash.Hash{}}
+	region := legacydb.BlockRegion{Hash: &hash.Hash{}}
 	copy(region.Hash[:], h[:])
 	region.Offset = byteOrder.Uint32(serializedData[4:8])
 	region.Len = byteOrder.Uint32(serializedData[8:12])
 	return &region, nil
 }
 
-func dbFetchBlockIDByTxID(itxIndex database.Bucket, txid *hash.Hash) (uint64, error) {
+func dbFetchBlockIDByTxID(itxIndex legacydb.Bucket, txid *hash.Hash) (uint64, error) {
 	serializedData := itxIndex.Get(txid[:])
 	if len(serializedData) == 0 {
 		return 0, nil
@@ -179,8 +187,8 @@ func dbFetchBlockIDByTxID(itxIndex database.Bucket, txid *hash.Hash) (uint64, er
 
 	// Ensure the serialized data has enough bytes to properly deserialize.
 	if len(serializedData) < 16 {
-		return 0, database.Error{
-			ErrorCode: database.ErrCorruption,
+		return 0, legacydb.Error{
+			ErrorCode: legacydb.ErrCorruption,
 			Description: fmt.Sprintf("corrupt transaction index "+
 				"entry for %s", txid),
 		}
@@ -188,7 +196,7 @@ func dbFetchBlockIDByTxID(itxIndex database.Bucket, txid *hash.Hash) (uint64, er
 	return serialization.DeserializeUint64(serializedData[0:4])
 }
 
-func dbRemoveTxIndexEntries(itxIndex database.Bucket,itxidByTxhash database.Bucket,blockID uint64,block *types.SerializedBlock) error {
+func dbRemoveTxIndexEntries(itxIndex legacydb.Bucket, itxidByTxhash legacydb.Bucket, blockID uint64, block *types.SerializedBlock) error {
 	removeEntries := func(txns []*types.Tx) error {
 		for _, tx := range txns {
 			bid, err := dbFetchBlockIDByTxID(itxIndex, tx.Hash())
@@ -213,7 +221,7 @@ func dbRemoveTxIndexEntries(itxIndex database.Bucket,itxidByTxhash database.Buck
 	return nil
 }
 
-func dbRemoveTxIndexEntry(itxIndex database.Bucket, txHash *hash.Hash) error {
+func dbRemoveTxIndexEntry(itxIndex legacydb.Bucket, txHash *hash.Hash) error {
 	serializedData := itxIndex.Get(txHash[:])
 	if len(serializedData) == 0 {
 		return nil
@@ -221,7 +229,7 @@ func dbRemoveTxIndexEntry(itxIndex database.Bucket, txHash *hash.Hash) error {
 	return itxIndex.Delete(txHash[:])
 }
 
-func dbRemoveTxIdByHash(itxidByTxhash database.Bucket, txhash hash.Hash) error {
+func dbRemoveTxIdByHash(itxidByTxhash legacydb.Bucket, txhash hash.Hash) error {
 	serializedData := itxidByTxhash.Get(txhash[:])
 	if len(serializedData) == 0 {
 		return nil
@@ -229,18 +237,18 @@ func dbRemoveTxIdByHash(itxidByTxhash database.Bucket, txhash hash.Hash) error {
 	return itxidByTxhash.Delete(txhash[:])
 }
 
-func dbFetchTxIdByHash(dbTx database.Tx, h *hash.Hash) (*hash.Hash, error) {
+func dbFetchTxIdByHash(dbTx legacydb.Tx, h *hash.Hash) (*hash.Hash, error) {
 	bucket := dbTx.Metadata().Bucket(bucketName)
 	if bucket == nil {
-		return nil,nil
+		return nil, nil
 	}
-	itxidByTxhashBucket:=bucket.Bucket(itxidByTxhashBucketName)
+	itxidByTxhashBucket := bucket.Bucket(itxidByTxhashBucketName)
 	if itxidByTxhashBucket == nil {
-		return nil,nil
+		return nil, nil
 	}
 	serializedData := itxidByTxhashBucket.Get(h[:])
 	if serializedData == nil {
-		return nil,nil
+		return nil, nil
 	}
 	txId := hash.Hash{}
 	txId.SetBytes(serializedData[:])

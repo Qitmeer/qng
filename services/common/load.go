@@ -13,9 +13,7 @@ import (
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/version"
 	"github.com/jessevdk/go-flags"
 	"github.com/urfave/cli/v2"
@@ -46,9 +44,13 @@ const (
 	defaultMaxInboundPeersPerHost = 25 // The default max total of inbound peer for host
 	defaultTrickleInterval        = 10 * time.Second
 	defaultInvalidTxIndex         = false
+	defaultTxhashIndex            = false
 	defaultMempoolExpiry          = int64(time.Hour)
 	defaultRPCUser                = "test"
 	defaultRPCPass                = "test"
+	defaultMinBlockPruneSize      = 2000
+	defaultMinBlockDataCache      = 2000
+	defaultMinRelayTxFee          = int64(1e4)
 )
 const (
 	defaultSigCacheMaxSize = 100000
@@ -208,11 +210,6 @@ var (
 			Destination: &cfg.DisableCheckpoints,
 		},
 		&cli.BoolFlag{
-			Name:        "droptxindex",
-			Usage:       "Deletes the hash-based transaction index from the database on start up and then exits",
-			Destination: &cfg.DropTxIndex,
-		},
-		&cli.BoolFlag{
 			Name:        "addrindex",
 			Usage:       "Maintain a full address-based transaction index which makes the getrawtransactions RPC available",
 			Destination: &cfg.AddrIndex,
@@ -311,7 +308,7 @@ var (
 		&cli.Int64Flag{
 			Name:        "mintxfee",
 			Usage:       "The minimum transaction fee in AtomMEER/kB.",
-			Value:       mempool.DefaultMinRelayTxFee,
+			Value:       defaultMinRelayTxFee,
 			Destination: &cfg.MinTxFee,
 		},
 		&cli.Int64Flag{
@@ -456,6 +453,11 @@ var (
 			Destination: &cfg.InvalidTxIndex,
 		},
 		&cli.BoolFlag{
+			Name:        "txhashindex",
+			Usage:       "Cache transaction full hash.",
+			Destination: &cfg.TxHashIndex,
+		},
+		&cli.BoolFlag{
 			Name:        "ntp",
 			Usage:       "Auto sync time.",
 			Destination: &cfg.NTP,
@@ -544,13 +546,13 @@ var (
 		&cli.Uint64Flag{
 			Name:        "dagcachesize",
 			Usage:       "DAG block cache size",
-			Value:       meerdag.MinBlockPruneSize,
+			Value:       defaultMinBlockPruneSize,
 			Destination: &cfg.DAGCacheSize,
 		},
 		&cli.Uint64Flag{
 			Name:        "bdcachesize",
 			Usage:       "Block data cache size",
-			Value:       meerdag.MinBlockDataCache,
+			Value:       defaultMinBlockDataCache,
 			Destination: &cfg.BlockDataCacheSize,
 		},
 		&cli.StringFlag{
@@ -583,6 +585,40 @@ var (
 			Usage:       "Detect data consistency through P2P",
 			Destination: &cfg.Consistency,
 			Value:       true,
+		},
+		&cli.BoolFlag{
+			Name:        "metrics",
+			Usage:       "Enable metrics collection and reporting",
+			Destination: &cfg.Metrics,
+		},
+		&cli.BoolFlag{
+			Name:        "metrics.expensive",
+			Usage:       "Enable expensive metrics collection and reporting",
+			Destination: &cfg.MetricsExpensive,
+		},
+		&cli.Uint64Flag{
+			Name:        "minfreedisk",
+			Usage:       "Minimum free disk space in MB, once reached triggers auto shut down (default = 512M, 0 = disabled)",
+			Value:       512,
+			Destination: &cfg.Minfreedisk,
+		},
+		&cli.IntFlag{
+			Name:        "cache",
+			Usage:       "Megabytes of memory allocated to internal caching (default = 1024 mainnet full node)",
+			Value:       1024,
+			Destination: &cfg.Cache,
+		},
+		&cli.IntFlag{
+			Name:        "cache.database",
+			Usage:       "Percentage of cache memory allowance to use for database io",
+			Value:       50,
+			Destination: &cfg.CacheDatabase,
+		},
+		&cli.IntFlag{
+			Name:        "cache.snapshot",
+			Usage:       "Percentage of cache memory allowance to use for snapshot caching (default = 10% full mode, 20% archive mode)",
+			Value:       10,
+			Destination: &cfg.CacheSnapshot,
 		},
 	}
 )
@@ -840,18 +876,6 @@ func LoadConfig(ctx *cli.Context, parsefile bool) (*config.Config, error) {
 		return nil, err
 	}
 
-	// --addrindex and --droptxindex do not mix.
-	if cfg.AddrIndex && cfg.DropTxIndex {
-		err := fmt.Errorf("%s: the --addrindex and --droptxindex "+
-			"options may not be activated at the same time "+
-			"because the address index relies on the transaction "+
-			"index",
-			funcName)
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, err
-	}
-
 	// Check mining addresses are valid and saved parsed versions.
 	for _, strAddr := range cfg.MiningAddrs {
 		addr, err := address.DecodeAddress(strAddr)
@@ -977,7 +1001,7 @@ func DefaultConfig(homeDir string) *config.Config {
 		RPCMaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
 		Generate:             defaultGenerate,
 		MaxPeers:             defaultMaxPeers,
-		MinTxFee:             mempool.DefaultMinRelayTxFee,
+		MinTxFee:             defaultMinRelayTxFee,
 		BlockMinSize:         defaultBlockMinSize,
 		BlockMaxSize:         defaultBlockMaxSize,
 		SigCacheMaxSize:      defaultSigCacheMaxSize,
@@ -986,6 +1010,7 @@ func DefaultConfig(homeDir string) *config.Config {
 		Banning:              true,
 		MaxInbound:           defaultMaxInboundPeersPerHost,
 		InvalidTxIndex:       defaultInvalidTxIndex,
+		TxHashIndex:          defaultTxhashIndex,
 		NTP:                  false,
 		MempoolExpiry:        defaultMempoolExpiry,
 		AcceptNonStd:         true,

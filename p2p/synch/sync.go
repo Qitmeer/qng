@@ -344,6 +344,7 @@ func RegisterRPC(rpc peers.P2PRPC, basetopic string, base interface{}, handle rp
 			log.Debug("PeerSync is not running, ignore the handling", "protocol", topic)
 			return
 		}
+		common.IngressConnectMeter.Mark(1)
 		ctx, cancel := context.WithTimeout(rpc.Context(), RespTimeout)
 		defer cancel()
 
@@ -480,6 +481,7 @@ func Send(ctx context.Context, rpc peers.P2PRPC, message interface{}, baseTopic 
 	if err != nil {
 		return nil, common.NewErrorStr(common.ErrStreamBase, fmt.Sprintf("open stream on topic %v failed", topic))
 	}
+	common.EgressConnectMeter.Mark(1)
 	SetRPCStreamDeadlines(stream)
 	// do not encode anything if we are sending a metadata request
 	if message == nil {

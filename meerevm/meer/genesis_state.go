@@ -28,7 +28,7 @@ type Alloc map[common.Address]core.GenesisAccount
 
 func (g Alloc) OnRoot(common.Hash) {}
 
-func (g Alloc) OnAccount(addr common.Address, dumpAccount state.DumpAccount) {
+func (g Alloc) OnAccount(addr *common.Address, dumpAccount state.DumpAccount) {
 	balance, _ := new(big.Int).SetString(dumpAccount.Balance, 10)
 	var storage map[common.Hash]common.Hash
 	if dumpAccount.Storage != nil {
@@ -43,7 +43,7 @@ func (g Alloc) OnAccount(addr common.Address, dumpAccount state.DumpAccount) {
 		Balance: balance,
 		Nonce:   dumpAccount.Nonce,
 	}
-	g[addr] = genesisAccount
+	g[*addr] = genesisAccount
 }
 
 type GenTransaction struct {
@@ -70,7 +70,7 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 		gasUsed     = uint64(0)
 		receipts    = make(types.Receipts, 0)
 		txIndex     = 0
-		signer      = types.MakeSigner(chainConfig, new(big.Int).SetUint64(0))
+		signer      = types.MakeSigner(chainConfig, new(big.Int).SetUint64(0), 0)
 	)
 
 	gaspool.AddGas(genesis.GasLimit)
@@ -97,7 +97,6 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 	}
 	vmConfig := vm.Config{
 		Tracer: nil,
-		Debug:  false,
 	}
 	for i, tx := range txs {
 		msg, err := core.TransactionToMessage(tx.Transaction, signer, genesis.BaseFee)

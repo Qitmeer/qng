@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/common"
 	"github.com/Qitmeer/qng/common/math"
 	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
 	"math/big"
@@ -45,7 +46,7 @@ var TestNetParams = Params{
 		MaxLockHeight:     2880 * 365 * 5,
 	},
 	// Chain parameters
-	GenesisBlock: &testNetGenesisBlock,
+	GenesisBlock: types.NewBlock(&testNetGenesisBlock),
 	GenesisHash:  &testNetGenesisHash,
 	PowConfig: &pow.PowConfig{
 		Blake2bdPowLimit:             maxNetPowLimit,

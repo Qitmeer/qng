@@ -1,7 +1,6 @@
 package params
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	eparams "github.com/ethereum/go-ethereum/params"
 	"math/big"
 )
@@ -14,7 +13,6 @@ var (
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      false,
 		EIP150Block:         big.NewInt(0),
-		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
 		EIP155Block:         big.NewInt(0),
 		EIP158Block:         big.NewInt(0),
 		ByzantiumBlock:      big.NewInt(0),
@@ -33,7 +31,6 @@ var (
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      false,
 		EIP150Block:         big.NewInt(0),
-		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
 		EIP155Block:         big.NewInt(0),
 		EIP158Block:         big.NewInt(0),
 		ByzantiumBlock:      big.NewInt(0),
@@ -42,7 +39,7 @@ var (
 		IstanbulBlock:       big.NewInt(0),
 		MuirGlacierBlock:    big.NewInt(0),
 		BerlinBlock:         big.NewInt(0),
-		LondonBlock:         nil,
+		LondonBlock:         big.NewInt(22500),
 		Ethash:              new(eparams.EthashConfig),
 	}
 
@@ -52,7 +49,6 @@ var (
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      false,
 		EIP150Block:         big.NewInt(0),
-		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
 		EIP155Block:         big.NewInt(0),
 		EIP158Block:         big.NewInt(0),
 		ByzantiumBlock:      big.NewInt(0),
@@ -71,7 +67,6 @@ var (
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      false,
 		EIP150Block:         big.NewInt(0),
-		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
 		EIP155Block:         big.NewInt(0),
 		EIP158Block:         big.NewInt(0),
 		ByzantiumBlock:      big.NewInt(0),

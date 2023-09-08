@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/address"
 	j "github.com/Qitmeer/qng/core/json"
@@ -19,6 +18,7 @@ import (
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/client"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -62,7 +62,6 @@ type update struct {
 	txs   []*types.Transaction
 }
 
-//
 type undo struct {
 	utxosDestroyed map[types.TxOutPoint]*utxo
 	utxosCreated   []types.TxOutPoint
@@ -145,7 +144,7 @@ func PrivateKeyToETHAddress(privB []byte) (common2.Address, error) {
 	if err != nil {
 		return common2.Address{}, err
 	}
-	addr, err := common.NewMeerEVMAddress(hex.EncodeToString(pubkey))
+	addr, err := common.NewMeerEVMAddress(pubkey)
 
 	if err != nil {
 		return common2.Address{}, err

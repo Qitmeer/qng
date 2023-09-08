@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"testing"
+	"time"
 )
 
 func Test_AddId(t *testing.T) {
@@ -128,6 +129,37 @@ func Test_ForId(t *testing.T) {
 	for k, v := range hs.GetMap() {
 		fmt.Printf("%d - %d\n", v, k)
 	}
+}
+
+// DAG block data
+type TestBlock struct {
+}
+
+// Return the hash
+func (tb *TestBlock) GetHash() *hash.Hash {
+	return &hash.ZeroHash
+}
+
+// Get all parents set,the dag block has more than one parent
+func (tb *TestBlock) GetParents() []*hash.Hash {
+	return nil
+}
+
+func (tb *TestBlock) GetMainParent() *hash.Hash {
+	return nil
+}
+
+func (tb *TestBlock) GetTimestamp() int64 {
+	return time.Now().Unix()
+}
+
+// Acquire the weight of block
+func (tb *TestBlock) GetWeight() uint64 {
+	return 1
+}
+
+func (tb *TestBlock) GetPriority() int {
+	return MaxPriority
 }
 
 func Test_SortListPriority(t *testing.T) {

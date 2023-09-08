@@ -7,7 +7,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/params"
 	"os"
 	"path/filepath"
@@ -17,16 +17,16 @@ const (
 	dbNamePrefix = "accts"
 )
 
-func loadDB(DbType string, DataDir string, nocreate bool) (database.DB, error) {
+func loadDB(DbType string, DataDir string, nocreate bool) (legacydb.DB, error) {
 	dbPath := getDBPath(DataDir)
 	log.Trace(fmt.Sprintf("Loading acct database:%s", dbPath))
-	db, err := database.Open(DbType, dbPath, params.ActiveNetParams.Net)
+	db, err := legacydb.Open(DbType, dbPath, params.ActiveNetParams.Net)
 	if err != nil {
 		if nocreate {
 			// Return the error if it's not because the database doesn't
 			// exist.
-			if dbErr, ok := err.(database.Error); !ok || dbErr.ErrorCode !=
-				database.ErrDbDoesNotExist {
+			if dbErr, ok := err.(legacydb.Error); !ok || dbErr.ErrorCode !=
+				legacydb.ErrDbDoesNotExist {
 
 				return nil, err
 			}
@@ -35,7 +35,7 @@ func loadDB(DbType string, DataDir string, nocreate bool) (database.DB, error) {
 			if err != nil {
 				return nil, err
 			}
-			db, err = database.Create(DbType, dbPath, params.ActiveNetParams.Net)
+			db, err = legacydb.Create(DbType, dbPath, params.ActiveNetParams.Net)
 			if err != nil {
 				return nil, err
 			}
@@ -72,7 +72,7 @@ func getDBPath(dataDir string) string {
 }
 
 // info
-func DBGetACCTInfo(dbTx database.Tx) (*AcctInfo, error) {
+func DBGetACCTInfo(dbTx legacydb.Tx) (*AcctInfo, error) {
 	meta := dbTx.Metadata()
 
 	infoData := meta.Get(InfoBucketName)
@@ -87,7 +87,7 @@ func DBGetACCTInfo(dbTx database.Tx) (*AcctInfo, error) {
 	return info, nil
 }
 
-func DBPutACCTInfo(dbTx database.Tx, ai *AcctInfo) error {
+func DBPutACCTInfo(dbTx legacydb.Tx, ai *AcctInfo) error {
 	var buff bytes.Buffer
 	err := ai.Encode(&buff)
 	if err != nil {
@@ -97,7 +97,7 @@ func DBPutACCTInfo(dbTx database.Tx, ai *AcctInfo) error {
 }
 
 // balance
-func DBGetACCTBalance(dbTx database.Tx, address string) (*AcctBalance, error) {
+func DBGetACCTBalance(dbTx legacydb.Tx, address string) (*AcctBalance, error) {
 	meta := dbTx.Metadata()
 	bucket := meta.Bucket(BalanceBucketName)
 	if bucket == nil {
@@ -115,7 +115,7 @@ func DBGetACCTBalance(dbTx database.Tx, address string) (*AcctBalance, error) {
 	return balance, nil
 }
 
-func DBPutACCTBalance(dbTx database.Tx, address string, ab *AcctBalance) error {
+func DBPutACCTBalance(dbTx legacydb.Tx, address string, ab *AcctBalance) error {
 	var buff bytes.Buffer
 	err := ab.Encode(&buff)
 	if err != nil {
@@ -129,7 +129,7 @@ func DBPutACCTBalance(dbTx database.Tx, address string, ab *AcctBalance) error {
 	return bucket.Put([]byte(address), buff.Bytes())
 }
 
-func DBDelACCTBalance(dbTx database.Tx, address string) error {
+func DBDelACCTBalance(dbTx legacydb.Tx, address string) error {
 	meta := dbTx.Metadata()
 	bucket := meta.Bucket(BalanceBucketName)
 	if bucket == nil {
@@ -143,7 +143,7 @@ func GetACCTUTXOKey(address string) []byte {
 	return []byte(fmt.Sprintf("%s%s", address, AddressUTXOsSuffix))
 }
 
-func DBPutACCTUTXO(dbTx database.Tx, address string, op *types.TxOutPoint, au *AcctUTXO) error {
+func DBPutACCTUTXO(dbTx legacydb.Tx, address string, op *types.TxOutPoint, au *AcctUTXO) error {
 	var buff bytes.Buffer
 	err := au.Encode(&buff)
 	if err != nil {
@@ -163,7 +163,7 @@ func DBPutACCTUTXO(dbTx database.Tx, address string, op *types.TxOutPoint, au *A
 	return balUTXOBucket.Put(key, buff.Bytes())
 }
 
-func DBDelACCTUTXO(dbTx database.Tx, address string, op *types.TxOutPoint) error {
+func DBDelACCTUTXO(dbTx legacydb.Tx, address string, op *types.TxOutPoint) error {
 	meta := dbTx.Metadata()
 	bucket := meta.Bucket(BalanceBucketName)
 	if bucket == nil {
@@ -179,7 +179,7 @@ func DBDelACCTUTXO(dbTx database.Tx, address string, op *types.TxOutPoint) error
 	return balUTXOBucket.Delete(key)
 }
 
-func DBDelACCTUTXOs(dbTx database.Tx, address string) error {
+func DBDelACCTUTXOs(dbTx legacydb.Tx, address string) error {
 	meta := dbTx.Metadata()
 	bucket := meta.Bucket(BalanceBucketName)
 	if bucket == nil {
@@ -192,7 +192,7 @@ func DBDelACCTUTXOs(dbTx database.Tx, address string) error {
 	return bucket.DeleteBucket(bkey)
 }
 
-func DBGetACCTUTXOs(dbTx database.Tx, address string) map[string]*AcctUTXO {
+func DBGetACCTUTXOs(dbTx legacydb.Tx, address string) map[string]*AcctUTXO {
 	meta := dbTx.Metadata()
 	bucket := meta.Bucket(BalanceBucketName)
 	if bucket == nil {

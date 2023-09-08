@@ -12,12 +12,12 @@ import (
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacychaindb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/version"
-	"github.com/Qitmeer/qng/vm"
 	"github.com/schollz/progressbar/v3"
 	"github.com/urfave/cli/v2"
 	"io"
@@ -82,17 +82,11 @@ func blockchainCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := common.LoadBlockDB(cfg)
+					db, err := database.New(cfg, interrupt)
 					if err != nil {
-						log.Error("load block database", "error", err)
 						return err
 					}
-					defer func() {
-						err = db.Close()
-						if err != nil {
-							log.Error(err.Error())
-						}
-					}()
+					defer db.Close()
 					//
 					cfg.InvalidTxIndex = false
 					cfg.AddrIndex = false
@@ -102,12 +96,12 @@ func blockchainCmd() *cli.Command {
 						log.Error(err.Error())
 						return err
 					}
-					err = cons.VMService().(*vm.Service).Start()
+					err = cons.BlockChain().Start()
 					if err != nil {
 						return err
 					}
 					defer func() {
-						err = cons.VMService().(*vm.Service).Stop()
+						err = cons.BlockChain().Stop()
 						if err != nil {
 							log.Error(err.Error())
 						}
@@ -144,17 +138,11 @@ func blockchainCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := common.LoadBlockDB(cfg)
+					db, err := database.New(cfg, interrupt)
 					if err != nil {
-						log.Error("load block database", "error", err)
 						return err
 					}
-					defer func() {
-						err = db.Close()
-						if err != nil {
-							log.Error(err.Error())
-						}
-					}()
+					defer db.Close()
 					//
 					cfg.InvalidTxIndex = false
 					cfg.AddrIndex = false
@@ -164,12 +152,12 @@ func blockchainCmd() *cli.Command {
 						log.Error(err.Error())
 						return err
 					}
-					err = cons.VMService().(*vm.Service).Start()
+					err = cons.BlockChain().Start()
 					if err != nil {
 						return err
 					}
 					defer func() {
-						err = cons.VMService().(*vm.Service).Stop()
+						err = cons.BlockChain().Stop()
 						if err != nil {
 							log.Error(err.Error())
 						}
@@ -225,7 +213,7 @@ func blockchainCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := common.LoadBlockDB(cfg)
+					db, err := database.New(cfg, interrupt)
 					if err != nil {
 						log.Error("load block database", "error", err)
 						return err
@@ -396,7 +384,7 @@ func importBlockChain(consensus model.Consensus, inputPath string) error {
 		if err != nil {
 			return err
 		}
-		err = bc.FastAcceptBlock(ibdb.blk, blockchain.BFFastAdd)
+		_, err = bc.FastAcceptBlock(ibdb.blk, blockchain.BFFastAdd)
 		if err != nil {
 			return err
 		}
@@ -413,7 +401,7 @@ func importBlockChain(consensus model.Consensus, inputPath string) error {
 	return nil
 }
 
-func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan struct{}, inputPath string, end string, byID bool, aidMode bool) error {
+func upgradeBlockChain(cfg *config.Config, cdb model.DataBase, interrupt <-chan struct{}, inputPath string, end string, byID bool, aidMode bool) error {
 	// new block chain
 	var err error
 	newCfg := *cfg
@@ -421,22 +409,19 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 	if err != nil {
 		return err
 	}
-	common.CleanupBlockDB(&newCfg)
+	database.Cleanup(&newCfg)
 	time.Sleep(time.Second * 2)
 
-	newdb, err := common.LoadBlockDB(&newCfg)
+	newdb, err := database.New(&newCfg, interrupt)
 	if err != nil {
 		log.Error("load block database", "error", err)
 		return err
 	}
 	defer func() {
 		if newdb != nil {
-			err = newdb.Close()
-			if err != nil {
-				log.Error(err.Error())
-			}
+			newdb.Close()
 			time.Sleep(time.Second * 2)
-			common.CleanupBlockDB(&newCfg)
+			database.Cleanup(&newCfg)
 		}
 	}()
 	//
@@ -448,13 +433,13 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 		log.Error(err.Error())
 		return err
 	}
-	err = newcons.VMService().(*vm.Service).Start()
+	err = newcons.BlockChain().Start()
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if newcons != nil {
-			err = newcons.VMService().(*vm.Service).Stop()
+			err = newcons.BlockChain().Stop()
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -482,7 +467,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 		if er != nil {
 			return er
 		}
-		er = newbc.FastAcceptBlock(block, blockchain.BFFastAdd)
+		_, er = newbc.FastAcceptBlock(block, blockchain.BFFastAdd)
 		if er != nil {
 			return er
 		}
@@ -494,29 +479,26 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 
 	logLvl := log.Glogger().GetVerbosity()
 	//
+	db := cdb.(*legacychaindb.LegacyChainDB).DB()
 	if aidMode {
 		endNum := uint(0)
-		err := db.Update(func(dbTx database.Tx) error {
-			meta := dbTx.Metadata()
-			serializedData := meta.Get(dbnamespace.ChainStateKeyName)
-			if serializedData == nil {
-				return nil
-			}
-			log.Info("Serialized chain state: ", "serializedData", fmt.Sprintf("%x", serializedData))
-			state, err := blockchain.DeserializeBestChainState(serializedData)
-			if err != nil {
-				return err
-			}
-			log.Info(fmt.Sprintf("blocks:%d", state.GetTotal()))
-			if state.GetTotal() == 0 {
-				return fmt.Errorf("No blocks in database")
-			}
-			endNum = uint(state.GetTotal() - 1)
-			return nil
-		})
+		serializedData, err := cdb.GetBestChainState()
 		if err != nil {
 			return err
 		}
+		if serializedData == nil {
+			return nil
+		}
+		log.Info("Serialized chain state: ", "serializedData", fmt.Sprintf("%x", serializedData))
+		state, err := blockchain.DeserializeBestChainState(serializedData)
+		if err != nil {
+			return err
+		}
+		log.Info(fmt.Sprintf("blocks:%d", state.GetTotal()))
+		if state.GetTotal() == 0 {
+			return fmt.Errorf("No blocks in database")
+		}
+		endNum = uint(state.GetTotal() - 1)
 
 		if len(end) > 0 {
 			endV, err := strconv.Atoi(end)
@@ -531,57 +513,35 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 
 		bar := progressbar.Default(int64(endNum-1), "Upgrade:")
 		log.Glogger().Verbosity(log.LvlCrit)
-		newcons.VMService().SetLogLevel(log.LvlCrit.String())
-
+		eth.InitLog(log.LvlCrit.String(), cfg.DebugPrintOrigins)
 		var i uint
 		var blockHash *hash.Hash
 
 		for i = uint(1); i <= endNum; i++ {
 			bar.Add(1)
 			blockHash = nil
-			isEmpty := false
-			err = db.View(func(dbTx database.Tx) error {
+			dblock := &meerdag.Block{}
+			dblock.SetID(i)
+			ib := &meerdag.PhantomBlock{Block: dblock}
 
-				block := &meerdag.Block{}
-				block.SetID(i)
-				ib := &meerdag.PhantomBlock{Block: block}
-				err := meerdag.DBGetDAGBlock(dbTx, ib)
-				if err != nil {
-					if err.(*meerdag.DAGError).IsEmpty() {
-						isEmpty = true
-						return nil
-					}
+			err := meerdag.DBGetDAGBlock(cdb, ib)
+			if err != nil {
+				if err.(*meerdag.DAGError).IsEmpty() {
+					continue
+				} else {
 					return err
 				}
-				blockHash = ib.GetHash()
-
-				return nil
-			})
+			}
+			blockHash = ib.GetHash()
 			if err != nil {
 				return err
-			}
-			if isEmpty {
-				continue
 			}
 
 			if blockHash == nil {
 				return fmt.Errorf(fmt.Sprintf("Can't find block (%d)!", i))
 			}
 
-			var blockBytes []byte
-			err = db.View(func(dbTx database.Tx) error {
-				bb, er := dbTx.FetchBlock(blockHash)
-				if er != nil {
-					return er
-				}
-				blockBytes = bb
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-
-			block, err := types.NewBlockFromBytes(blockBytes)
+			block, err := cdb.GetBlock(blockHash)
 			if err != nil {
 				return err
 			}
@@ -597,17 +557,17 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 		}
 		fmt.Println()
 		log.Glogger().Verbosity(logLvl)
-		newcons.VMService().SetLogLevel(logLvl.String())
+		eth.InitLog(logLvl.String(), cfg.DebugPrintOrigins)
 	} else {
 		cfg.InvalidTxIndex = false
 		cfg.AddrIndex = false
-		cons := consensus.New(cfg, db, interrupt, make(chan struct{}))
+		cons := consensus.New(cfg, cdb, interrupt, make(chan struct{}))
 		err := cons.Init()
 		if err != nil {
 			log.Error(err.Error())
 			return err
 		}
-		err = cons.VMService().(*vm.Service).Start()
+		err = cons.BlockChain().Start()
 		if err != nil {
 			return err
 		}
@@ -651,7 +611,7 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 
 		bar := progressbar.Default(int64(endNum-1), "Export:")
 		log.Glogger().Verbosity(log.LvlCrit)
-		newcons.VMService().SetLogLevel(log.LvlCrit.String())
+		eth.InitLog(log.LvlCrit.String(), cfg.DebugPrintOrigins)
 
 		var i uint
 		var blockHash *hash.Hash
@@ -687,9 +647,9 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 		}
 		fmt.Println()
 		log.Glogger().Verbosity(logLvl)
-		newcons.VMService().SetLogLevel(logLvl.String())
+		eth.InitLog(logLvl.String(), cfg.DebugPrintOrigins)
 
-		err = cons.VMService().(*vm.Service).Stop()
+		err = cons.BlockChain().Stop()
 		if err != nil {
 			log.Error(err.Error())
 			return err
@@ -701,15 +661,12 @@ func upgradeBlockChain(cfg *config.Config, db database.DB, interrupt <-chan stru
 	}
 	total := newbc.BlockDAG().GetBlockTotal()
 	newbc = nil
-	err = newcons.VMService().(*vm.Service).Stop()
+	err = newcons.BlockChain().Stop()
 	if err != nil {
 		log.Error(err.Error())
 	}
 	newcons = nil
-	err = newdb.Close()
-	if err != nil {
-		log.Error(err.Error())
-	}
+	newdb.Close()
 	newdb = nil
 	//
 	log.Info(fmt.Sprintf("Gracefully shutting down the last database:%s", cfg.DataDir))

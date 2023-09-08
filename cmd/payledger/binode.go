@@ -11,39 +11,37 @@ package main
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacychaindb"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/services/common"
 	"path"
 )
 
 type BINode struct {
 	name string
 	bc   *blockchain.BlockChain
-	db   database.DB
+	db   legacydb.DB
 	cfg  *Config
 }
 
 func (node *BINode) init(cfg *Config) error {
 	node.cfg = cfg
-
+	qcfg := cfg.ToQNGConfig()
 	// Load the block database.
-	db, err := LoadBlockDB(cfg.DbType, cfg.DataDir, true)
+	db, err := database.New(qcfg, system.InterruptListener())
 	if err != nil {
 		log.Error("load block database", "error", err)
 		return err
 	}
 
-	node.db = db
+	node.db = db.(*legacychaindb.LegacyChainDB).DB()
 	//
-	ccfg := common.DefaultConfig(node.cfg.HomeDir)
-	ccfg.DataDir = cfg.DataDir
-	ccfg.DbType = cfg.DbType
-	ccfg.DAGType = cfg.DAGType
-	cons := consensus.NewPure(ccfg, db)
+	cons := consensus.NewPure(qcfg, db)
 	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
@@ -68,7 +66,7 @@ func (node *BINode) BlockChain() *blockchain.BlockChain {
 	return node.bc
 }
 
-func (node *BINode) DB() database.DB {
+func (node *BINode) DB() legacydb.DB {
 	return node.db
 }
 
@@ -93,7 +91,7 @@ func (node *BINode) statistics() error {
 
 			txfullHash := block.Transactions()[0].Tx.TxHashFull()
 
-			if isTxValid(node.db, block.Transactions()[0].Hash(), &txfullHash, ib.GetHash()) {
+			if isTxValid(node.bc.Consensus().DatabaseContext(), block.Transactions()[0].Hash(), &txfullHash, ib.GetHash()) {
 				if node.bc.BlockDAG().IsBlue(i) {
 					subsidyCount++
 					subsidy += uint64(block.Transactions()[0].Tx.TxOut[0].Amount.Value)

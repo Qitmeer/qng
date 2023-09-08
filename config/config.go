@@ -1,6 +1,8 @@
 package config
 
 import (
+	"path/filepath"
+
 	"github.com/Qitmeer/qng/core/types"
 )
 
@@ -85,8 +87,8 @@ type Config struct {
 	// index
 	AddrIndex      bool `long:"addrindex" description:"Maintain a full address-based transaction index which makes the getrawtransactions RPC available"`
 	InvalidTxIndex bool `long:"invalidtxindex" description:"Cache invalid transactions."`
+	TxHashIndex    bool `long:"txhashindex" description:"Cache transaction full hash."`
 	DropAddrIndex  bool `long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
-	DropTxIndex    bool `long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
 
 	NTP bool `long:"ntp" description:"Auto sync time."`
 
@@ -122,6 +124,17 @@ type Config struct {
 	WalletPass       string `long:"walletpass" description:"wallet password"`
 	AutoCollectEvm   bool   `long:"autocollectevm" description:"auto collect utxo to evm"`
 	MinCollectAmount int64  `long:"mincolletamount" description:"the min amount of auto collect"`
+	Metrics          bool   `long:"metrics" description:"Enable metrics collection and reporting"`
+	MetricsExpensive bool   `long:"metrics.expensive" description:"Enable expensive metrics collection and reporting"`
+
+	Minfreedisk uint64 `long:"minfreedisk" description:"Minimum free disk space in MB, once reached triggers auto shut down (default = 512M, 0 = disabled)"`
+
+	Cache         int `long:"cache" description:"Megabytes of memory allocated to internal caching (default = 1024 mainnet full node)"`
+	CacheDatabase int `long:"cache.database" description:"Percentage of cache memory allowance to use for database io"`
+	CacheSnapshot int `long:"cache.snapshot" description:"Percentage of cache memory allowance to use for snapshot caching (default = 10% full mode, 20% archive mode)"`
+
+	// TODO: It will soon be discarded in the near future
+	DevNextGDB bool `long:"devnextgdb" description:"Enable next generation databases that only exist in development mode"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {
@@ -130,6 +143,21 @@ func (c *Config) GetMinningAddrs() []types.Address {
 
 func (c *Config) SetMiningAddrs(addr types.Address) {
 	c.miningAddrs = append(c.miningAddrs, addr)
+}
+
+func (c *Config) ResolveDataPath(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(c.DataDir, path)
+}
+
+func (c *Config) DatabaseCache() int {
+	return c.Cache * c.CacheDatabase / 100
+}
+
+func (c *Config) SnapshotCache() int {
+	return c.Cache * c.CacheSnapshot / 100
 }
 
 var Cfg *Config

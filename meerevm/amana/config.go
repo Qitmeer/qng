@@ -7,10 +7,8 @@ import (
 	mconsensus "github.com/Qitmeer/qng/meerevm/amana/consensus"
 	mcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
-	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
@@ -80,9 +78,8 @@ func getDefaultPort() (int, int, int, int) {
 	}
 }
 
-func createConsensusEngine(stack *node.Node, ethashConfig *ethash.Config, cliqueConfig *params.CliqueConfig, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
-	engine := mconsensus.New(ChainConfig().Clique, db)
-	return engine
+func createConsensusEngine(config *params.ChainConfig, db ethdb.Database) (consensus.Engine, error) {
+	return mconsensus.New(config.Clique, db), nil
 }
 
 func getBootstrapNodes(port int) []*enode.Node {
@@ -115,20 +112,6 @@ func getBootstrapNodes(port int) []*enode.Node {
 		}
 	}
 	return bootstrapNodes
-}
-
-func ChainConfig() *params.ChainConfig {
-	switch qparams.ActiveNetParams.Net {
-	case protocol.MainNet:
-		return mparams.AmanaChainConfig
-	case protocol.TestNet:
-		return mparams.AmanaTestnetChainConfig
-	case protocol.MixNet:
-		return mparams.AmanaMixnetChainConfig
-	case protocol.PrivNet:
-		return mparams.AmanaPrivnetChainConfig
-	}
-	return nil
 }
 
 func Genesis() *core.Genesis {

@@ -9,7 +9,7 @@ package blockchain
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/consensus/forks"
-	"github.com/Qitmeer/qng/consensus/vm"
+	"github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"math"
 	"runtime"
@@ -74,7 +74,7 @@ out:
 			// script is available.
 			pkScript := utxo.PkScript()
 			sigScript := txIn.SignScript
-			vm, err := txscript.NewEngine(pkScript, txVI.tx.Transaction(),
+			vm, err := txscript.NewEngine(pkScript, txVI.tx,
 				txVI.txInIndex, v.flags, txscript.DefaultScriptVersion, v.sigCache)
 			if err != nil {
 				str := fmt.Sprintf("failed to parse input "+
@@ -215,7 +215,7 @@ func ValidateTransactionScripts(tx *types.Tx, utxoView *utxo.UtxoViewpoint, flag
 // the passed block using multiple goroutines.
 // txTree = true is TxTreeRegular, txTree = false is TxTreeStake.
 func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *utxo.UtxoViewpoint,
-	scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
+	scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache, height int64) error {
 
 	// Collect all of the transaction inputs and required information for
 	// validation for all transactions in the block into a single slice.
@@ -233,7 +233,7 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *u
 			continue
 		}
 		if types.IsCrossChainImportTx(tx.Tx) {
-			itx, err := vm.NewImportTx(tx.Tx)
+			itx, err := meer.NewImportTx(tx.Tx)
 			if err != nil {
 				return err
 			}
@@ -259,7 +259,7 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *u
 			if txIn.PreviousOut.OutIndex == math.MaxUint32 {
 				continue
 			}
-			if forks.IsVaildEVMUTXOUnlockTx(tx.Tx, txIn, int64(block.Height())) {
+			if forks.IsVaildEVMUTXOUnlockTx(tx.Tx, txIn, height) {
 				txIn.AmountIn.Value = types.MeerEVMForkInput
 			}
 			txVI := &txValidateItem{

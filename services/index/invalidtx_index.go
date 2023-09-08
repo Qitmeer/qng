@@ -7,17 +7,21 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/store/invalid_tx_index"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/schollz/progressbar/v3"
 )
 
 const (
-	invalidTxIndexName = "invalid tx index"
+	invalidTxIndexName       = "invalid tx index"
+	defaultPreallocateCaches = false
+	defaultCacheSize         = 10
 )
 
 type InvalidTxIndex struct {
 	consensus model.Consensus
+
+	invalidtxindexStore model.InvalidTxIndexStore
 }
 
 func (idx *InvalidTxIndex) Name() string {
@@ -25,13 +29,8 @@ func (idx *InvalidTxIndex) Name() string {
 }
 
 func (idx *InvalidTxIndex) Init() error {
-	// Data compatibility migration
-	err := dropOldInvalidTx(idx.consensus.DatabaseContext())
-	if err != nil {
-		return err
-	}
 	//
-	store := idx.consensus.InvalidTxIndexStore()
+	store := idx.invalidtxindexStore
 	if store == nil {
 		return fmt.Errorf("No invalid tx index store")
 	}
@@ -65,7 +64,7 @@ func (idx *InvalidTxIndex) Init() error {
 }
 
 func (idx *InvalidTxIndex) caughtUpFrom(startOrder uint) error {
-	store := idx.consensus.InvalidTxIndexStore()
+	store := idx.invalidtxindexStore
 	if store == nil {
 		return fmt.Errorf("No vm block index store")
 	}
@@ -85,12 +84,16 @@ func (idx *InvalidTxIndex) caughtUpFrom(startOrder uint) error {
 			if i == 0 {
 				continue
 			}
-			block, blk, err := bc.FetchBlockByOrder(uint64(i))
-			if err != nil {
-				return err
+			blk := bc.GetBlockByOrder(uint64(i))
+			if blk == nil {
+				return fmt.Errorf("No DAG block:%d", i)
 			}
 			if !blk.GetState().GetStatus().KnownInvalid() {
 				continue
+			}
+			block, err := bc.FetchBlockByHash(blk.GetHash())
+			if err != nil {
+				return err
 			}
 			err = idx.ConnectBlock(uint64(blk.GetID()), block)
 			if err != nil {
@@ -104,37 +107,37 @@ func (idx *InvalidTxIndex) caughtUpFrom(startOrder uint) error {
 }
 
 func (idx *InvalidTxIndex) ConnectBlock(bid uint64, block *types.SerializedBlock) error {
-	store := idx.consensus.InvalidTxIndexStore()
+	store := idx.invalidtxindexStore
 	if store == nil {
 		return fmt.Errorf("No vm block index store")
 	}
 	stagingArea := model.NewStagingArea()
 	store.Stage(stagingArea, bid, block)
-	return staging.CommitAllChanges(idx.consensus.DatabaseContext(), stagingArea)
+	return staging.CommitAllChanges(idx.consensus.LegacyDB(), stagingArea)
 }
 
 func (idx *InvalidTxIndex) DisconnectBlock(bid uint64, block *types.SerializedBlock) error {
-	store := idx.consensus.InvalidTxIndexStore()
+	store := idx.invalidtxindexStore
 	if store == nil {
 		return fmt.Errorf("No vm block index store")
 	}
 	stagingArea := model.NewStagingArea()
 	store.Delete(stagingArea, bid, block)
-	return staging.CommitAllChanges(idx.consensus.DatabaseContext(), stagingArea)
+	return staging.CommitAllChanges(idx.consensus.LegacyDB(), stagingArea)
 }
 
 func (idx *InvalidTxIndex) UpdateMainTip(bh *hash.Hash, order uint64) error {
-	store := idx.consensus.InvalidTxIndexStore()
+	store := idx.invalidtxindexStore
 	if store == nil {
 		return fmt.Errorf("No vm block index store")
 	}
 	stagingArea := model.NewStagingArea()
 	store.StageTip(stagingArea, bh, order)
-	return staging.CommitAllChanges(idx.consensus.DatabaseContext(), stagingArea)
+	return staging.CommitAllChanges(idx.consensus.LegacyDB(), stagingArea)
 }
 
 func (idx *InvalidTxIndex) Get(txid *hash.Hash) (*types.Transaction, error) {
-	store := idx.consensus.InvalidTxIndexStore()
+	store := idx.invalidtxindexStore
 	if store == nil {
 		return nil, fmt.Errorf("No vm block index store")
 	}
@@ -143,7 +146,7 @@ func (idx *InvalidTxIndex) Get(txid *hash.Hash) (*types.Transaction, error) {
 }
 
 func (idx *InvalidTxIndex) GetIdByHash(h *hash.Hash) (*hash.Hash, error) {
-	store := idx.consensus.InvalidTxIndexStore()
+	store := idx.invalidtxindexStore
 	if store == nil {
 		return nil, fmt.Errorf("No vm block index store")
 	}
@@ -153,14 +156,21 @@ func (idx *InvalidTxIndex) GetIdByHash(h *hash.Hash) (*hash.Hash, error) {
 
 func NewInvalidTxIndex(consensus model.Consensus) *InvalidTxIndex {
 	log.Info(fmt.Sprintf("%s is enabled", invalidTxIndexName))
+
+	invalidtxindexStore, err := invalid_tx_index.New(consensus.LegacyDB(), consensus.DatabaseContext(), defaultCacheSize, defaultPreallocateCaches)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
 	return &InvalidTxIndex{
-		consensus: consensus,
+		consensus:           consensus,
+		invalidtxindexStore: invalidtxindexStore,
 	}
 }
 
-func DropInvalidTxIndex(db database.DB, interrupt <-chan struct{}) error {
+func DropInvalidTxIndex(db legacydb.DB, interrupt <-chan struct{}) error {
 	log.Info("Start drop invalidtx index")
-	itiStore, err := invalid_tx_index.New(db, 10, false)
+	itiStore, err := invalid_tx_index.New(db, nil, 10, false)
 	if err != nil {
 		return err
 	}
@@ -173,25 +183,4 @@ func DropInvalidTxIndex(db database.DB, interrupt <-chan struct{}) error {
 	}
 	log.Info(fmt.Sprintf("All invalidtx index at (%s,%d) will be deleted", tipHash, tipOrder))
 	return itiStore.Clean()
-}
-
-// TODO: Discard in the future
-func dropOldInvalidTx(db database.DB) error {
-	var (
-		itxIndexKey             = []byte("invalid_txbyhashidx")
-		itxidByTxhashBucketName = []byte("invalid_txidbytxhash")
-	)
-	return db.Update(func(dbTx database.Tx) error {
-		meta := dbTx.Metadata()
-		if meta.Bucket(itxIndexKey) != nil {
-			err := meta.DeleteBucket(itxIndexKey)
-			if err != nil {
-				return err
-			}
-		}
-		if meta.Bucket(itxidByTxhashBucketName) != nil {
-			return meta.DeleteBucket(itxidByTxhashBucketName)
-		}
-		return nil
-	})
 }

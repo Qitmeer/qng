@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 )
 
 var byteOrder = binary.LittleEndian
@@ -284,24 +283,25 @@ func serializeSpendJournalEntry(stxos []SpentTxOut) ([]byte, error) {
 	return serialized, nil
 }
 
-// dbFetchSpendJournalEntry fetches the spend journal entry for the passed
+// DBFetchSpendJournalEntry fetches the spend journal entry for the passed
 // block and deserializes it into a slice of spent txout entries.  The provided
 // view MUST have the utxos referenced by all of the transactions available for
 // the passed block since that information is required to reconstruct the spent
 // txouts.
-func DBFetchSpendJournalEntry(dbTx database.Tx, block *types.SerializedBlock) ([]SpentTxOut, error) {
+func DBFetchSpendJournalEntry(db model.DataBase, block *types.SerializedBlock) ([]SpentTxOut, error) {
+	data, err := db.GetSpendJournal(block.Hash())
+	if err != nil {
+		return nil, err
+	}
 	// Exclude the coinbase transaction since it can't spend anything.
-	spendBucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
-	serialized := spendBucket.Get(block.Hash()[:])
 	blockTxns := block.Block().Transactions[1:]
-
-	stxos, err := deserializeSpendJournalEntry(serialized, blockTxns)
+	stxos, err := deserializeSpendJournalEntry(data, blockTxns)
 	if err != nil {
 		// Ensure any deserialization errors are returned as database
 		// corruption errors.
 		if model.IsDeserializeErr(err) {
-			return nil, database.Error{
-				ErrorCode: database.ErrCorruption,
+			return nil, legacydb.Error{
+				ErrorCode: legacydb.ErrCorruption,
 				Description: fmt.Sprintf("corrupt spend "+
 					"information for %v: %v", block.Hash(),
 					err),
@@ -318,23 +318,21 @@ func DBFetchSpendJournalEntry(dbTx database.Tx, block *types.SerializedBlock) ([
 // spend journal entry for the given block hash using the provided slice of
 // spent txouts.   The spent txouts slice must contain an entry for every txout
 // the transactions in the block spend in the order they are spent.
-func DBPutSpendJournalEntry(dbTx database.Tx, blockHash *hash.Hash, stxos []SpentTxOut) error {
+func DBPutSpendJournalEntry(db model.DataBase, blockHash *hash.Hash, stxos []SpentTxOut) error {
 	if len(stxos) == 0 {
 		return nil
 	}
-	spendBucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
 	serialized, err := serializeSpendJournalEntry(stxos)
 	if err != nil {
 		return err
 	}
-	return spendBucket.Put(blockHash[:], serialized)
+	return db.PutSpendJournal(blockHash, serialized)
 }
 
 // dbRemoveSpendJournalEntry uses an existing database transaction to remove the
 // spend journal entry for the passed block hash.
-func DBRemoveSpendJournalEntry(dbTx database.Tx, blockHash *hash.Hash) error {
-	spendBucket := dbTx.Metadata().Bucket(dbnamespace.SpendJournalBucketName)
-	return spendBucket.Delete(blockHash[:])
+func DBRemoveSpendJournalEntry(db model.DataBase, blockHash *hash.Hash) error {
+	return db.DeleteSpendJournal(blockHash)
 }
 
 func GetStxo(txIndex uint32, txInIndex uint32, stxos []SpentTxOut) *SpentTxOut {

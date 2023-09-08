@@ -121,7 +121,11 @@ func EcPubKeyToPKAddressSTDO(version string, pubkey string) {
 }
 
 func EcPubKeyToETHAddressSTDO(pubkey string) {
-	addr, err := common.NewMeerEVMAddress(pubkey)
+	pubkeyHex, err := hex.DecodeString(pubkey)
+	if err != nil {
+		ErrExit(err)
+	}
+	addr, err := common.NewMeerEVMAddress(pubkeyHex)
 
 	if err != nil {
 		ErrExit(err)
