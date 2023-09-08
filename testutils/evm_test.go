@@ -6,6 +6,11 @@ package testutils
 
 import (
 	"context"
+	"log"
+	"math/big"
+	"testing"
+	"time"
+
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/swap/factory"
@@ -15,10 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
-	"log"
-	"math/big"
-	"testing"
-	"time"
 )
 
 func TestCallErc20Contract(t *testing.T) {
@@ -88,15 +89,17 @@ func TestCallErc20Contract(t *testing.T) {
 		t.Fatal(err)
 	}
 	toAmount := int64(2)
+	toMeerAmount := big.NewInt(1e18).Mul(big.NewInt(1e18), big.NewInt(2))
 	for i := 0; i < 2; i++ {
 		_, _ = h.Wallet.NewAddress()
 		to := h.Wallet.ethAddrs[uint32(i+1)]
-		// send 0.01 meer
-		txid, err := h.Wallet.CreateLegacyTx(h.Wallet.privkeys[0], &to, 0, 21000, big.NewInt(1e16), nil)
+		// send 2 meer
+		txid, err := h.Wallet.CreateLegacyTx(h.Wallet.privkeys[0], &to, 0, 21000, toMeerAmount, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		log.Println(i, "transfer meer:", txid)
+		// send 2 token
 		tx, err := tokenCall.Transfer(authCaller, h.Wallet.ethAddrs[uint32(i+1)], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 		if err != nil {
 			t.Fatal(err)
@@ -115,7 +118,7 @@ func TestCallErc20Contract(t *testing.T) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		assert.Equal(t, meerBa, big.NewInt(1e16))
+		assert.Equal(t, meerBa, toMeerAmount)
 		ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[uint32(i)])
 		if err != nil {
 			t.Fatal(err)
@@ -150,9 +153,18 @@ func TestCallErc20Contract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = tokenCall.TransferFrom(authCaller1, h.Wallet.ethAddrs[0], h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+
+	tx1, err := tokenCall.TransferFrom(authCaller1, h.Wallet.ethAddrs[0], h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 	if err == nil {
-		t.Fatal("Token Bug,TransferFrom without approve")
+		GenerateBlock(t, h, 1)
+		// check the transaction is ok or not
+		txD2, err := h.Wallet.evmClient.TransactionReceipt(context.Background(), tx1.Hash())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if txD2.Status == uint64(0x1) {
+			t.Fatal("Token Bug,TransferFrom without approve")
+		}
 	}
 	log.Println(err)
 	//  approve
