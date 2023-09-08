@@ -4,6 +4,8 @@ import (
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacychaindb"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/meerevm/cmd"
@@ -54,7 +56,7 @@ func indexCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := common.LoadBlockDB(cfg)
+					db, err := legacychaindb.LoadBlockDB(cfg)
 					if err != nil {
 						log.Error("load block database", "error", err)
 						return err
@@ -97,7 +99,7 @@ func consensusCmd() *cli.Command {
 					if cfg.NoFileLogging {
 						log.Info("File logging disabled")
 					}
-					db, err := common.LoadBlockDB(cfg)
+					db, err := database.New(cfg, interrupt)
 					if err != nil {
 						log.Error("load block database", "error", err)
 						return err
@@ -113,6 +115,10 @@ func consensusCmd() *cli.Command {
 					err = cons.Init()
 					if err != nil {
 						log.Error(err.Error())
+						return err
+					}
+					err = cons.BlockChain().Start()
+					if err != nil {
 						return err
 					}
 					return cons.Rebuild()

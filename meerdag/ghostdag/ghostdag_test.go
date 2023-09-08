@@ -44,7 +44,7 @@ func TestGHOSTDAG(t *testing.T) {
 	}
 
 	blockGHOSTDAGDataGenesis := model.NewBlockGHOSTDAGData(0, new(big.Int), nil, nil, nil, nil)
-	genesisHeader := params.PrivNetParam.GenesisBlock.Header
+	genesisHeader := params.PrivNetParam.GenesisBlock.Block().Header
 	genesisWork := pow.CalcWork(genesisHeader.Difficulty, genesisHeader.Pow.GetPowType())
 
 	path := "./test_data.json"

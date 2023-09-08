@@ -1,14 +1,14 @@
 package model
 
 import (
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/pkg/errors"
 )
 
 // StagingShard is an interface that enables every store to have it's own Commit logic
 // See StagingArea for more details
 type StagingShard interface {
-	Commit(dbTx database.Tx) error
+	Commit(dbTx legacydb.Tx) error
 }
 
 // StagingShardID is used to identify each of the store's staging shards
@@ -47,7 +47,7 @@ func (sa *StagingArea) GetOrCreateShard(shardID StagingShardID, createFunc func(
 
 // Commit goes over all the Shards in the StagingArea and commits them, inside the provided database transaction.
 // Note: the transaction itself is not committed, this is the callers responsibility to commit it.
-func (sa *StagingArea) Commit(dbTx database.Tx) error {
+func (sa *StagingArea) Commit(dbTx legacydb.Tx) error {
 	if sa.isCommitted {
 		return errors.New("Attempt to call Commit on already committed stagingArea")
 	}

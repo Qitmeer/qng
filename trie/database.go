@@ -17,7 +17,7 @@ import (
 	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/database/statedb"
 	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/metrics"
+	"github.com/ethereum/go-ethereum/metrics"
 	"io"
 	"sync"
 	"time"

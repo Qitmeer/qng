@@ -12,17 +12,20 @@ package main
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacychaindb"
+	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/index"
 	"path"
 )
@@ -30,7 +33,7 @@ import (
 type DebugAddressNode struct {
 	name     string
 	bc       *blockchain.BlockChain
-	db       database.DB
+	db       legacydb.DB
 	cfg      *Config
 	endPoint meerdag.IBlock
 
@@ -39,21 +42,17 @@ type DebugAddressNode struct {
 
 func (node *DebugAddressNode) init(cfg *Config) error {
 	node.cfg = cfg
-
+	qcfg := cfg.ToQNGConfig()
 	// Load the block database.
-	db, err := LoadBlockDB(cfg.DbType, cfg.DataDir, true)
+	db, err := database.New(qcfg, system.InterruptListener())
 	if err != nil {
 		log.Error("load block database", "error", err)
 		return err
 	}
 
-	node.db = db
+	node.db = db.(*legacychaindb.LegacyChainDB).DB()
 	//
-	ccfg := common.DefaultConfig(node.cfg.HomeDir)
-	ccfg.DataDir = cfg.DataDir
-	ccfg.DbType = cfg.DbType
-	ccfg.DAGType = cfg.DAGType
-	cons := consensus.NewPure(ccfg, db)
+	cons := consensus.NewPure(qcfg, db)
 	err = cons.Init()
 	if err != nil {
 		log.Error(err.Error())
@@ -87,13 +86,13 @@ func (node *DebugAddressNode) BlockChain() *blockchain.BlockChain {
 	return node.bc
 }
 
-func (node *DebugAddressNode) DB() database.DB {
+func (node *DebugAddressNode) DB() legacydb.DB {
 	return node.db
 }
 
 // Load from database
 func (node *DebugAddressNode) LoadInfo() error {
-	err := node.db.View(func(dbTx database.Tx) error {
+	err := node.db.View(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		serializedData := meta.Get(DebugAddrInfoBucketName)
 		if serializedData == nil {
@@ -138,7 +137,7 @@ func (node *DebugAddressNode) processAddress(blueM *map[uint]bool) error {
 			txHash := tx.Hash()
 			txFullHash := tx.Tx.TxHashFull()
 
-			txValid := isTxValid(db, txHash, &txFullHash, ib.GetHash())
+			txValid := isTxValid(node.bc.Consensus().DatabaseContext(), txHash, &txFullHash, ib.GetHash())
 			if node.cfg.DebugAddrValid {
 				if !txValid {
 					continue
@@ -265,22 +264,12 @@ func (node *DebugAddressNode) processAddress(blueM *map[uint]bool) error {
 	return nil
 }
 
-func isTxValid(db database.DB, txHash *hash.Hash, txFullHash *hash.Hash, blockHash *hash.Hash) bool {
-	var preTx *types.Transaction
-	var preBlockH *hash.Hash
-	err := db.View(func(dbTx database.Tx) error {
-		dtx, blockH, erro := index.DBFetchTxAndBlock(dbTx, txHash)
-		if erro != nil {
-			return erro
-		}
-		preTx = dtx
-		preBlockH = blockH
-		return nil
-	})
-
+func isTxValid(db model.DataBase, txid *hash.Hash, txFullHash *hash.Hash, blockHash *hash.Hash) bool {
+	dtx, preBlockH, err := db.GetTxIndexEntry(txid, true)
 	if err != nil {
 		return false
 	}
+	preTx := dtx.Tx
 	ptxFullHash := preTx.TxHashFull()
 
 	if !preBlockH.IsEqual(blockHash) || !txFullHash.IsEqual(&ptxFullHash) {
@@ -303,7 +292,7 @@ func (node *DebugAddressNode) checkUTXO(blueM *map[uint]bool) error {
 	var count int
 	serializedUtxos := [][]byte{}
 
-	err := db.View(func(dbTx database.Tx) error {
+	err := db.View(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		utxoBucket := meta.Bucket(dbnamespace.UtxoSetBucketName)
 		cursor := utxoBucket.Cursor()

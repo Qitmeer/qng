@@ -9,10 +9,17 @@ type BlockChain interface {
 	GetMainOrder() uint
 	FetchBlockByOrder(order uint64) (*types.SerializedBlock, Block, error)
 	FetchSpendJournalPKS(targetBlock *types.SerializedBlock) ([][]byte, error)
-	CalculateDAGDuplicateTxs(block *types.SerializedBlock)
+	SetDAGDuplicateTxs(sblock *types.SerializedBlock, block Block)
 	GetBlockHashByOrder(order uint) *hash.Hash
 	BlockByOrder(blockOrder uint64) (*types.SerializedBlock, error)
 	Rebuild() error
 	GetMiningTips(expectPriority int) []*hash.Hash
 	GetBlockState(order uint64) BlockState
+	MeerChain() MeerChain
+	Start() error
+	Stop() error
+	GetBlockByOrder(order uint64) Block
+	GetBlockById(id uint) Block
+	FetchBlockByHash(hash *hash.Hash) (*types.SerializedBlock, error)
+	GetBlockOrderByHash(hash *hash.Hash) (uint, error)
 }

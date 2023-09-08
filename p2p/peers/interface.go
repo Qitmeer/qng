@@ -10,7 +10,6 @@ import (
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnode"
 	"github.com/Qitmeer/qng/services/mempool"
-	"github.com/Qitmeer/qng/vm/consensus"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
@@ -27,7 +26,7 @@ type P2P interface {
 	Metadata() *pb.MetaData
 	MetadataSeq() uint64
 	TimeSource() model.MedianTimeSource
-	Notify() consensus.Notify
+	Notify() model.Notify
 	ConnectTo(node *qnode.Node)
 	Resolve(n *qnode.Node) *qnode.Node
 	Node() *qnode.Node

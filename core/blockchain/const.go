@@ -20,10 +20,6 @@ const (
 	// database version.
 	currentBlockIndexVersion = 1
 
-	// currentDatabaseVersion indicates what the current database
-	// version is.
-	currentDatabaseVersion = 13
-
 	// blockHdrSize is the size of a block header.  This is simply the
 	// constant from wire and is only provided here for convenience since
 	// wire.MaxBlockHeaderPayload is quite long.

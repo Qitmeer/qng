@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/miner"
@@ -19,7 +20,6 @@ import (
 
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
-	qconsensus "github.com/Qitmeer/qng/vm/consensus"
 	"github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -56,15 +56,19 @@ type environment struct {
 	receipts []*types.Receipt
 }
 
+type resetTemplateMsg struct {
+	reply chan struct{}
+}
+
 type MeerPool struct {
 	wg      sync.WaitGroup
 	quit    chan struct{}
 	running int32
 
-	ctx qconsensus.Context
+	consensus model.Consensus
 
-	remoteTxsQM map[string]*qtypes.Transaction
-	remoteTxsM  map[string]*qtypes.Transaction
+	remoteTxsM  map[string]*qtypes.Tx
+	remoteQTxsM map[string]*snapshotTx
 	remoteMu    sync.RWMutex
 
 	config      *miner.Config
@@ -88,18 +92,21 @@ type MeerPool struct {
 	snapshotBlock    *types.Block
 	snapshotReceipts types.Receipts
 	snapshotState    *state.StateDB
-	snapshotQTxsM    map[string]*qtypes.Transaction
-	snapshotTxsM     map[string]*qtypes.Transaction
+	snapshotQTxsM    map[string]*snapshotTx
+	snapshotTxsM     map[string]*snapshotTx
 	// Feeds
 	pendingLogsFeed event.Feed
 
-	resetTemplate chan struct{}
+	resetTemplate chan *resetTemplateMsg
+
+	qTxPool model.TxPool
+	notify  model.Notify
 }
 
-func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux, ctx qconsensus.Context) error {
+func (m *MeerPool) init(consensus model.Consensus, config *miner.Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux) error {
 	log.Info(fmt.Sprintf("Meer pool init..."))
 
-	m.ctx = ctx
+	m.consensus = consensus
 	m.config = config
 	m.chainConfig = chainConfig
 	m.engine = engine
@@ -109,13 +116,13 @@ func (m *MeerPool) init(config *miner.Config, chainConfig *params.ChainConfig, e
 	m.txsCh = make(chan core.NewTxsEvent, txChanSize)
 	m.chainHeadCh = make(chan core.ChainHeadEvent, chainHeadChanSize)
 	m.quit = make(chan struct{})
-	m.resetTemplate = make(chan struct{})
-	m.remoteTxsQM = map[string]*qtypes.Transaction{}
-	m.remoteTxsM = map[string]*qtypes.Transaction{}
-	m.txsSub = eth.TxPool().SubscribeNewTxsEvent(m.txsCh)
+	m.resetTemplate = make(chan *resetTemplateMsg)
+	m.remoteTxsM = map[string]*qtypes.Tx{}
+	m.remoteQTxsM = map[string]*snapshotTx{}
 	m.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(m.chainHeadCh)
-	m.snapshotQTxsM = map[string]*qtypes.Transaction{}
-	m.snapshotTxsM = map[string]*qtypes.Transaction{}
+	m.txsSub = eth.TxPool().SubscribeNewTxsEvent(m.txsCh)
+	m.snapshotQTxsM = map[string]*snapshotTx{}
+	m.snapshotTxsM = map[string]*snapshotTx{}
 	return nil
 }
 
@@ -167,10 +174,10 @@ func (m *MeerPool) handler() {
 	for {
 		select {
 		case ev := <-m.txsCh:
-			if m.ctx.GetTxPool() == nil {
+			if m.qTxPool == nil {
 				continue
 			}
-			if !m.ctx.GetTxPool().IsSupportVMTx() {
+			if !m.qTxPool.IsSupportVMTx() {
 				for _, tx := range ev.Txs {
 					m.eth.TxPool().RemoveTx(tx.Hash(), false)
 				}
@@ -197,18 +204,18 @@ func (m *MeerPool) handler() {
 				}
 			}
 
-		case <-m.chainHeadCh:
-			m.updateTemplate(time.Now().Unix())
-
 		// System stopped
 		case <-m.quit:
 			return
 		case <-m.txsSub.Err():
 			return
+		case <-m.chainHeadCh:
+			m.updateTemplate(time.Now().Unix())
 		case <-m.chainHeadSub.Err():
 			return
-		case <-m.resetTemplate:
+		case msg := <-m.resetTemplate:
 			m.updateTemplate(time.Now().Unix())
+			msg.reply <- struct{}{}
 		}
 	}
 }
@@ -221,7 +228,7 @@ func (m *MeerPool) makeCurrent(parent *types.Header, header *types.Header) error
 	state.StartPrefetcher("meerpool")
 
 	env := &environment{
-		signer:    types.MakeSigner(m.chainConfig, header.Number),
+		signer:    types.MakeSigner(m.chainConfig, header.Number, header.Time),
 		state:     state,
 		ancestors: mapset.NewSet(),
 		family:    mapset.NewSet(),
@@ -259,26 +266,32 @@ func (m *MeerPool) updateSnapshot() {
 	m.snapshotReceipts = qcommon.CopyReceipts(m.current.receipts)
 	m.snapshotState = m.current.state.Copy()
 
-	m.snapshotQTxsM = map[string]*qtypes.Transaction{}
-	m.snapshotTxsM = map[string]*qtypes.Transaction{}
+	m.snapshotQTxsM = map[string]*snapshotTx{}
+	m.snapshotTxsM = map[string]*snapshotTx{}
 	if len(m.snapshotBlock.Transactions()) > 0 {
 		for _, tx := range m.snapshotBlock.Transactions() {
-			var mtx *qtypes.Transaction
+			var mtx *qtypes.Tx
 			m.remoteMu.RLock()
 			qtx, ok := m.remoteTxsM[tx.Hash().String()]
 			m.remoteMu.RUnlock()
 			if ok {
 				mtx = qtx
 			} else {
-				mtx = qcommon.ToQNGTx(tx, 0, false)
+				mtx = qcommon.ToQNGTx(tx, 0, true)
 			}
 			if mtx == nil {
 				continue
 			}
-			m.snapshotQTxsM[mtx.CachedTxHash().String()] = mtx
-			m.snapshotTxsM[tx.Hash().String()] = mtx
+			stx := &snapshotTx{tx: mtx, eHash: tx.Hash()}
+			m.snapshotQTxsM[mtx.Hash().String()] = stx
+			m.snapshotTxsM[tx.Hash().String()] = stx
 		}
 	}
+	//
+	m.remoteMu.RLock()
+	remoteSize := len(m.remoteTxsM)
+	m.remoteMu.RUnlock()
+	log.Debug("update meerpool snapshot", "size", len(m.snapshotBlock.Transactions()), "remoteSize", remoteSize)
 }
 
 func (m *MeerPool) commitTransaction(tx *types.Transaction, coinbase common.Address) ([]*types.Log, error) {
@@ -365,6 +378,14 @@ func (m *MeerPool) commitTransactions(txs *types.TransactionsByPriceAndNonce, co
 }
 
 func (m *MeerPool) updateTemplate(timestamp int64) {
+	preBlock := m.PendingBlock()
+	if preBlock != nil {
+		if preBlock.ParentHash() == m.chain.CurrentBlock().Hash() {
+			log.Debug("meerpool block template no update required")
+			return
+		}
+	}
+	log.Debug("meerpool update block template")
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -421,7 +442,7 @@ func (m *MeerPool) updateTemplate(timestamp int64) {
 	}
 
 	m.commit(false, tstart)
-	if m.ctx.GetTxPool() != nil && !m.ctx.GetTxPool().IsSupportVMTx() {
+	if m.qTxPool != nil && !m.qTxPool.IsSupportVMTx() {
 		m.updateSnapshot()
 		return
 	}
@@ -471,34 +492,35 @@ func (m *MeerPool) commit(update bool, start time.Time) error {
 	return nil
 }
 
-func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
-	if m.HasTx(tx.CachedTxHash()) {
-		return 0, fmt.Errorf("already exists:%s", tx.CachedTxHash().String())
-	}
-
+func (m *MeerPool) AddTx(tx *qtypes.Tx, local bool) (int64, error) {
 	if local {
 		log.Warn("This function is not supported for the time being: local meer tx")
 		return 0, nil
 	}
-	if !opreturn.IsMeerEVMTx(tx) {
-		return 0, fmt.Errorf("%s is not %v", tx.TxHash().String(), qtypes.TxTypeCrossChainVM)
+	if !opreturn.IsMeerEVMTx(tx.Tx) {
+		return 0, fmt.Errorf("%s is not %v", tx.Hash().String(), qtypes.TxTypeCrossChainVM)
 	}
-	txb := qcommon.ToTxHex(tx.TxIn[0].SignScript)
+	h := qcommon.ToEVMHash(&tx.Tx.TxIn[0].PreviousOut.Hash)
+	if m.eth.TxPool().Has(h) {
+		return 0, fmt.Errorf("already exists:%s (evm:%s)", tx.Hash().String(), h.String())
+	}
+	txb := qcommon.ToTxHex(tx.Tx.TxIn[0].SignScript)
 	var txmb = &types.Transaction{}
 	err := txmb.UnmarshalBinary(txb)
 	if err != nil {
 		return 0, err
 	}
 
-	err = m.eth.TxPool().AddLocal(txmb)
-	if err != nil {
-		return 0, err
+	errs := m.eth.TxPool().AddRemotesSync(types.Transactions{txmb})
+	if len(errs) > 0 && errs[0] != nil {
+		return 0, errs[0]
 	}
 	m.remoteMu.Lock()
-	m.remoteTxsQM[tx.CachedTxHash().String()] = tx
 	m.remoteTxsM[txmb.Hash().String()] = tx
+	m.remoteQTxsM[tx.Hash().String()] = &snapshotTx{tx: tx, eHash: txmb.Hash()}
+	remoteSize := len(m.remoteTxsM)
 	m.remoteMu.Unlock()
-	log.Debug(fmt.Sprintf("Meer pool:add tx %s(%s)", tx.TxHash(), txmb.Hash()))
+	log.Debug("Meer pool:add", "hash", tx.Hash(), "eHash", txmb.Hash(), "size", remoteSize)
 
 	//
 	cost := txmb.Cost()
@@ -507,11 +529,11 @@ func (m *MeerPool) AddTx(tx *qtypes.Transaction, local bool) (int64, error) {
 	return cost.Int64(), nil
 }
 
-func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, []*hash.Hash, error) {
+func (m *MeerPool) GetTxs() ([]*qtypes.Tx, []*hash.Hash, error) {
 	m.snapshotMu.RLock()
 	defer m.snapshotMu.RUnlock()
 
-	result := []*qtypes.Transaction{}
+	result := []*qtypes.Tx{}
 	mtxhs := []*hash.Hash{}
 
 	if m.snapshotBlock != nil && len(m.snapshotBlock.Transactions()) > 0 {
@@ -520,7 +542,7 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, []*hash.Hash, error) {
 			if !ok {
 				continue
 			}
-			result = append(result, qtx)
+			result = append(result, qtx.tx)
 			mtxhs = append(mtxhs, qcommon.FromEVMHash(tx.Hash()))
 		}
 	}
@@ -528,10 +550,20 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Transaction, []*hash.Hash, error) {
 	return result, mtxhs, nil
 }
 
-func (m *MeerPool) HasTx(h *hash.Hash) bool {
+// all: contain txs in pending and queue
+func (m *MeerPool) HasTx(h *hash.Hash, all bool) bool {
 	m.snapshotMu.RLock()
 	_, ok := m.snapshotQTxsM[h.String()]
 	m.snapshotMu.RUnlock()
+
+	if all && !ok {
+		m.remoteMu.RLock()
+		stx, okR := m.remoteQTxsM[h.String()]
+		m.remoteMu.RUnlock()
+		if okR && stx != nil {
+			ok = m.eth.TxPool().Has(stx.eHash)
+		}
+	}
 	return ok
 }
 
@@ -545,54 +577,46 @@ func (m *MeerPool) GetSize() int64 {
 	return 0
 }
 
-func (m *MeerPool) RemoveTx(tx *qtypes.Transaction) error {
+func (m *MeerPool) RemoveTx(tx *qtypes.Tx) error {
 	if !m.isRunning() {
 		return fmt.Errorf("meer pool is not running")
 	}
-	if !opreturn.IsMeerEVMTx(tx) {
-		return fmt.Errorf("%s is not %v", tx.TxHash().String(), qtypes.TxTypeCrossChainVM)
+	if !opreturn.IsMeerEVMTx(tx.Tx) {
+		return fmt.Errorf("%s is not %v", tx.Hash().String(), qtypes.TxTypeCrossChainVM)
 	}
 
 	m.remoteMu.Lock()
-	_, ok := m.remoteTxsQM[tx.CachedTxHash().String()]
-	if ok {
-		delete(m.remoteTxsQM, tx.CachedTxHash().String())
-		log.Debug(fmt.Sprintf("Meer pool:remove tx %s from remote", tx.TxHash()))
-	}
-
-	h := qcommon.ToEVMHash(&tx.TxIn[0].PreviousOut.Hash)
-	_, ok = m.remoteTxsM[h.String()]
+	h := qcommon.ToEVMHash(&tx.Tx.TxIn[0].PreviousOut.Hash)
+	_, ok := m.remoteTxsM[h.String()]
 	if ok {
 		delete(m.remoteTxsM, h.String())
-		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from remote", tx.TxHash(), h))
+		delete(m.remoteQTxsM, tx.Hash().String())
+		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from remote, size:%d", tx.Hash().String(), h, len(m.remoteTxsM)))
 	}
 	m.remoteMu.Unlock()
 
 	if m.eth.TxPool().Has(h) {
 		m.eth.TxPool().RemoveTx(h, false)
-		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from eth", tx.TxHash(), h))
+		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from eth", tx.Hash(), h))
 	}
 
 	return nil
 }
 
 func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
+	if m.eth.TxPool().All().LocalCount() <= 0 {
+		return nil
+	}
 	localTxs := []*qtypes.TxDesc{}
 
 	for _, tx := range txs {
 		m.snapshotMu.RLock()
 		qtx, ok := m.snapshotTxsM[tx.Hash().String()]
 		m.snapshotMu.RUnlock()
-		if !ok {
+		if !ok || qtx == nil {
 			continue
 		}
-		m.remoteMu.RLock()
-		_, okR := m.remoteTxsM[tx.Hash().String()]
-		m.remoteMu.RUnlock()
-		if okR {
-			continue
-		}
-		if qtx == nil {
+		if m.eth.TxPool().All().GetLocal(tx.Hash()) == nil {
 			continue
 		}
 		//
@@ -602,23 +626,22 @@ func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
 		fee := cost.Int64()
 
 		td := &qtypes.TxDesc{
-			Tx:       qtypes.NewTx(qtx),
+			Tx:       qtx.tx,
 			Added:    time.Now(),
-			Height:   m.ctx.GetTxPool().GetMainHeight(),
+			Height:   m.qTxPool.GetMainHeight(),
 			Fee:      fee,
-			FeePerKB: fee * 1000 / int64(qtx.SerializeSize()),
+			FeePerKB: fee * 1000 / int64(qtx.tx.Tx.SerializeSize()),
 		}
 
 		localTxs = append(localTxs, td)
-
-		m.ctx.GetTxPool().AddTransaction(td.Tx, uint64(td.Height), td.Fee)
+		m.qTxPool.AddTransaction(td.Tx, uint64(td.Height), td.Fee)
 	}
 	if len(localTxs) <= 0 {
 		return nil
 	}
 	//
-	m.ctx.GetNotify().AnnounceNewTransactions(localTxs, nil)
-	go m.ctx.GetNotify().AddRebroadcastInventory(localTxs)
+	m.notify.AnnounceNewTransactions(localTxs, nil)
+	go m.notify.AddRebroadcastInventory(localTxs)
 
 	return nil
 }
@@ -698,9 +721,22 @@ func (m *MeerPool) BuildPayload(args *miner.BuildPayloadArgs) (*miner.Payload, e
 }
 
 func (m *MeerPool) ResetTemplate() error {
-	go func() {
-		log.Debug("Try to reset meer pool")
-		m.resetTemplate <- struct{}{}
-	}()
+	log.Debug("Try to reset meer pool")
+	msg := &resetTemplateMsg{reply: make(chan struct{})}
+	m.resetTemplate <- msg
+	<-msg.reply
 	return nil
+}
+
+func (m *MeerPool) SetTxPool(tp model.TxPool) {
+	m.qTxPool = tp
+}
+
+func (m *MeerPool) SetNotify(notify model.Notify) {
+	m.notify = notify
+}
+
+type snapshotTx struct {
+	tx    *qtypes.Tx
+	eHash common.Hash
 }

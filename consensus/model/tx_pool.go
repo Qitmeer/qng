@@ -34,6 +34,6 @@ type TxPool interface {
 }
 
 type FeeEstimator interface {
-	RegisterBlock(block *types.SerializedBlock) error
+	RegisterBlock(block *types.SerializedBlock, mainheight uint) error
 	Rollback(hash *hash.Hash) error
 }

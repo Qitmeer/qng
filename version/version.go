@@ -26,8 +26,8 @@ const (
 // versioning 2.0.0 spec (http://semver.org/).
 const (
 	Major uint = 1
-	Minor uint = 0
-	Patch uint = 25
+	Minor uint = 1
+	Patch uint = 0
 )
 
 var (

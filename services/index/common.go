@@ -12,7 +12,7 @@ import (
 	"errors"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 )
 
 var (
@@ -42,7 +42,7 @@ type Indexer interface {
 
 	// Create is invoked when the indexer manager determines the index needs
 	// to be created for the first time.
-	Create(dbTx database.Tx) error
+	Create(dbTx legacydb.Tx) error
 
 	// Init is invoked when the index manager is first initializing the
 	// index.  This differs from the Create method in that it is called on
@@ -51,18 +51,18 @@ type Indexer interface {
 
 	// ConnectBlock is invoked when the index manager is notified that a new
 	// block has been connected to the main chain.
-	ConnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error
+	ConnectBlock(dbTx legacydb.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error
 
 	// DisconnectBlock is invoked when the index manager is notified that a
 	// block has been disconnected from the main chain.
-	DisconnectBlock(dbTx database.Tx, block *types.SerializedBlock, stxos [][]byte) error
+	DisconnectBlock(dbTx legacydb.Tx, block *types.SerializedBlock, stxos [][]byte) error
 }
 
 // IndexDropper provides a method to remove an index from the database. Indexers
 // may implement this for a more efficient way of deleting themselves from the
 // database rather than simply dropping a bucket.
 type IndexDropper interface {
-	DropIndex(db database.DB, interrupt <-chan struct{}) error
+	DropIndex(db legacydb.DB, interrupt <-chan struct{}) error
 }
 
 // internalBucket is an abstraction over a database bucket.  It is used to make

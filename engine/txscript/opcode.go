@@ -1060,7 +1060,7 @@ func opcodeCheckLockTimeVerify(op *ParsedOpcode, vm *Engine) error {
 		}
 		return nil
 	}
-	if types.IsMeerEVMForkInput(vm.tx.TxIn[vm.txIdx]) {
+	if types.IsMeerEVMForkInput(vm.tx.Tx.TxIn[vm.txIdx]) {
 		return nil
 	}
 	// The current transaction locktime is a uint32 resulting in a maximum
@@ -1092,7 +1092,7 @@ func opcodeCheckLockTimeVerify(op *ParsedOpcode, vm *Engine) error {
 	// which the transaction is finalized or a timestamp depending on if the
 	// value is before the txscript.LockTimeThreshold.  When it is under the
 	// threshold it is a block height.
-	err = verifyLockTime(int64(vm.tx.LockTime), LockTimeThreshold,
+	err = verifyLockTime(int64(vm.tx.Tx.LockTime), LockTimeThreshold,
 		int64(lockTime))
 	if err != nil {
 		return err
@@ -1112,7 +1112,7 @@ func opcodeCheckLockTimeVerify(op *ParsedOpcode, vm *Engine) error {
 	// NOTE: This implies that even if the transaction is not finalized due to
 	// another input being unlocked, the opcode execution will still fail when the
 	// input being used by the opcode is locked.
-	if vm.tx.TxIn[vm.txIdx].Sequence == types.MaxTxInSequenceNum {
+	if vm.tx.Tx.TxIn[vm.txIdx].Sequence == types.MaxTxInSequenceNum {
 		return errors.New("transaction input is finalized")
 	}
 
@@ -1171,16 +1171,16 @@ func opcodeCheckSequenceVerify(op *ParsedOpcode, vm *Engine) error {
 
 	// Transaction version numbers not high enough to trigger CSV rules must
 	// fail.
-	if vm.tx.Version < 2 {
+	if vm.tx.Tx.Version < 2 {
 		return fmt.Errorf("invalid transaction version: %d",
-			vm.tx.Version)
+			vm.tx.Tx.Version)
 	}
 
 	// Sequence numbers with their most significant bit set are not
 	// consensus constrained. Testing that the transaction's sequence
 	// number does not have this bit set prevents using this property
 	// to get around a CHECKSEQUENCEVERIFY check.
-	txSequence := int64(vm.tx.TxIn[vm.txIdx].Sequence)
+	txSequence := int64(vm.tx.Tx.TxIn[vm.txIdx].Sequence)
 	if types.IsSequenceLockTimeDisabled(uint32(txSequence)) {
 		return fmt.Errorf("transaction sequence has sequence "+
 			"locktime disabled bit set: 0x%x", txSequence)
@@ -2579,7 +2579,7 @@ func opcodeCheckSig(op *ParsedOpcode, vm *Engine) error {
 	var prefixHash *hash.Hash
 	if hashType&sigHashMask == SigHashAll {
 		if optimizeSigVerification {
-			prefixHash = vm.tx.CachedTxHash()
+			prefixHash = vm.tx.Hash()
 		}
 	}
 	// TODO, remove the hardcoded BTC handing
@@ -2589,7 +2589,7 @@ func opcodeCheckSig(op *ParsedOpcode, vm *Engine) error {
 		vm.dstack.PushBool(false)
 		return nil
 	} else {
-		h, err = calcSignatureHash(subScript, hashType, &vm.tx, vm.txIdx,
+		h, err = calcSignatureHash(subScript, hashType, vm.tx.Tx, vm.txIdx,
 			prefixHash)
 		if err != nil {
 			vm.dstack.PushBool(false)
@@ -2808,11 +2808,11 @@ func opcodeCheckMultiSig(op *ParsedOpcode, vm *Engine) error {
 		var prefixHash *hash.Hash
 		if hashType&sigHashMask == SigHashAll {
 			if optimizeSigVerification {
-				ph := vm.tx.CachedTxHash()
+				ph := vm.tx.Hash()
 				prefixHash = ph
 			}
 		}
-		h, err := calcSignatureHash(script, hashType, &vm.tx, vm.txIdx,
+		h, err := calcSignatureHash(script, hashType, vm.tx.Tx, vm.txIdx,
 			prefixHash)
 		if err != nil {
 			return err
@@ -2970,11 +2970,11 @@ func opcodeCheckSigAlt(op *ParsedOpcode, vm *Engine) error {
 	var prefixHash *hash.Hash
 	if hashType&sigHashMask == SigHashAll {
 		if optimizeSigVerification {
-			ph := vm.tx.CachedTxHash()
+			ph := vm.tx.Hash()
 			prefixHash = ph
 		}
 	}
-	hash, err := calcSignatureHash(subScript, hashType, &vm.tx, vm.txIdx,
+	hash, err := calcSignatureHash(subScript, hashType, vm.tx.Tx, vm.txIdx,
 		prefixHash)
 	if err != nil {
 		vm.dstack.PushBool(false)

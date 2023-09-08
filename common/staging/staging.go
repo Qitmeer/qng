@@ -2,17 +2,17 @@ package staging
 
 import (
 	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/legacydb"
 	l "github.com/Qitmeer/qng/log"
 	"sync/atomic"
 )
 
 // CommitAllChanges creates a transaction in `databaseContext`, and commits all changes in `stagingArea` through it.
-func CommitAllChanges(databaseContext database.DB, stagingArea *model.StagingArea) error {
+func CommitAllChanges(databaseContext legacydb.DB, stagingArea *model.StagingArea) error {
 	if onEnd := l.LogAndMeasureExecutionTime(log, "CommitAllChanges"); onEnd != nil {
 		defer onEnd()
 	}
-	return databaseContext.Update(func(dbTx database.Tx) error {
+	return databaseContext.Update(func(dbTx legacydb.Tx) error {
 		return stagingArea.Commit(dbTx)
 	})
 }

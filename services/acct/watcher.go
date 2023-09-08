@@ -6,7 +6,6 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
-	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/engine/txscript"
 )
 
@@ -90,10 +89,7 @@ func BuildUTXOWatcher(op []byte, au *AcctUTXO, entry *utxo.UtxoEntry, am *Accoun
 		if err != nil {
 			return nil
 		}
-		err = am.chain.DB().View(func(dbTx database.Tx) error {
-			entry, err = utxo.DBFetchUtxoEntry(dbTx, *outpoint)
-			return err
-		})
+		entry, err = utxo.DBFetchUtxoEntry(am.chain.Consensus().DatabaseContext(), *outpoint)
 		if err != nil {
 			log.Error(err.Error())
 			return nil

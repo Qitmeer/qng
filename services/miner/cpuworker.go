@@ -313,7 +313,6 @@ out:
 			}
 			if w.solveBlock() {
 				block := types.NewBlock(w.miner.template.Block)
-				block.SetHeight(uint(w.miner.template.Height))
 				info, err := w.miner.submitBlock(block)
 				if err != nil {
 					log.Error(fmt.Sprintf("Failed to submit new block:%s ,%v", block.Hash().String(), err))

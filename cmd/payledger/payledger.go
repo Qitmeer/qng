@@ -6,8 +6,8 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database"
-	_ "github.com/Qitmeer/qng/database/ffldb"
+	"github.com/Qitmeer/qng/database/legacydb"
+	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/ledger"
 	"github.com/Qitmeer/qng/log"
@@ -180,7 +180,7 @@ func buildLedger(node INode, config *Config) error {
 	log.Info(fmt.Sprintf("Cur main tip:%s", mainChainTip.GetHash().String()))
 	serializedUtxos := [][]byte{}
 	cursorKeys := [][]byte{}
-	err := node.DB().View(func(dbTx database.Tx) error {
+	err := node.DB().View(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
 		utxoBucket := meta.Bucket(dbnamespace.UtxoSetBucketName)
 		cursor := utxoBucket.Cursor()

@@ -9,6 +9,7 @@ package params
 import (
 	"github.com/Qitmeer/qng/common"
 	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
 	"math/big"
@@ -46,7 +47,7 @@ var MainNetParams = Params{
 		MaxLockHeight:     86400 / mainTargetTimePerBlock * 365 * 5, // max lock height
 	},
 	// Chain parameters
-	GenesisBlock: &genesisBlock,
+	GenesisBlock: types.NewBlock(&genesisBlock),
 	GenesisHash:  &genesisHash,
 	PowConfig: &pow.PowConfig{
 		Blake2bdPowLimit:             mainPowLimit,

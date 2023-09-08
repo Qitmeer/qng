@@ -55,7 +55,7 @@ type Conflux struct {
 }
 
 func (con *Conflux) GetName() string {
-	return conflux
+	return CONFLUX
 }
 
 func (con *Conflux) Init(bd *MeerDAG) bool {

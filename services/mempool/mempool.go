@@ -8,19 +8,20 @@ package mempool
 import (
 	"container/list"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/consensus/vm"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/blockchain/opreturn"
-	"github.com/Qitmeer/qng/core/blockchain/utxo"
-	"github.com/Qitmeer/qng/core/event"
-	"github.com/Qitmeer/qng/core/message"
-	"github.com/Qitmeer/qng/core/types"
 	"math"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/common/roughtime"
+	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
+	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/blockchain/opreturn"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
+	"github.com/Qitmeer/qng/core/message"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/meerevm/meer"
 )
 
 // TxPool is used as a source of transactions that need to be mined into blocks
@@ -40,7 +41,7 @@ type TxPool struct {
 	pennyTotal    float64 // exponentially decaying total for penny spends.
 	lastPennyUnix int64   // unix time of last ``penny spend''
 
-	notifyT *time.Timer
+	dirty atomic.Bool
 }
 
 // New returns a new memory pool for validating and storing standalone
@@ -77,7 +78,7 @@ func (mp *TxPool) TxDescs() []*TxDesc {
 	}
 	mp.mtx.RUnlock()
 
-	etxs, _, err := mp.cfg.BC.VMService().GetTxsFromMempool()
+	etxs, _, err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().GetTxs()
 	if err != nil {
 		log.Error(err.Error())
 		return descs
@@ -86,7 +87,7 @@ func (mp *TxPool) TxDescs() []*TxDesc {
 	for _, tx := range etxs {
 		txDesc := &TxDesc{
 			TxDesc: types.TxDesc{
-				Tx:     types.NewTx(tx),
+				Tx:     tx,
 				Added:  roughtime.Now(),
 				Height: mp.GetMainHeight(),
 			},
@@ -128,6 +129,10 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 			delete(mp.outpoints, txIn.PreviousOut)
 		}
 		delete(mp.pool, *txHash)
+		// stats daily tx count
+		if mp.LastUpdated().Day() != time.Now().Day() {
+			newDailyTxCount.Update(1)
+		}
 		atomic.StoreInt64(&mp.lastUpdated, roughtime.Now().Unix())
 		log.Trace(fmt.Sprintf("TxPool:remove tx %s", txHash))
 	}
@@ -145,10 +150,10 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 	defer mp.mtx.Unlock()
 
 	if opreturn.IsMeerEVMTx(tx.Tx) {
-		if mp.cfg.BC.VMService().IsShutdown() {
+		if mp.cfg.BC.IsShutdown() {
 			return
 		}
-		err := mp.cfg.BC.VMService().RemoveTxFromMempool(tx.Tx)
+		err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().RemoveTx(tx)
 		if err != nil {
 			log.Error(err.Error())
 		}
@@ -219,6 +224,11 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 			mp.outpoints[txIn.PreviousOut] = tx
 		}
 	}
+	if mp.LastUpdated().Day() == time.Now().Day() {
+		newDailyTxCount.Inc(1)
+	} else {
+		newDailyTxCount.Update(1)
+	}
 
 	atomic.StoreInt64(&mp.lastUpdated, roughtime.Now().Unix())
 
@@ -233,25 +243,9 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 		mp.cfg.FeeEstimator.ObserveTransaction(txD)
 	}
 
-	mp.notify()
+	mp.dirty.Store(true)
 
 	return txD
-}
-
-func (mp *TxPool) notify() {
-	DELAY := time.Second * 2
-	if mp.notifyT == nil {
-		mp.notifyT = time.NewTimer(DELAY)
-		go func() {
-			select {
-			case <-mp.notifyT.C:
-			}
-			mp.cfg.Events.Send(event.New(event.MempoolTxAdd))
-			mp.notifyT.Stop()
-			mp.notifyT = nil
-		}()
-		return
-	}
 }
 
 // Call addTransaction
@@ -267,7 +261,12 @@ func (mp *TxPool) AddTransaction(tx *types.Tx, height uint64, fee int64) {
 func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHighFees bool) ([]*hash.Hash, *TxDesc, error) {
 	msgTx := tx.Transaction()
 	txHash := tx.Hash()
-
+	start := time.Now()
+	if mp.LastUpdated().Day() == time.Now().Day() {
+		newDailyAllTxCount.Inc(1)
+	} else {
+		newDailyAllTxCount.Update(1)
+	}
 	// Don't accept the transaction if it already exists in the pool.  This
 	// applies to orphan transactions as well.  This check is intended to
 	// be a quick check to weed out duplicates.
@@ -283,14 +282,15 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	// Perform preliminary sanity checks on the transaction.  This makes
 	// use of chain which contains the invariant rules for what
 	// transactions are allowed into blocks.
-	err := blockchain.CheckTransactionSanity(msgTx, mp.cfg.ChainParams, nil, mp.cfg.BC)
+	err := blockchain.CheckTransactionSanity(tx, mp.cfg.ChainParams, nil, mp.cfg.BC)
 	if err != nil {
 		if cerr, ok := err.(blockchain.RuleError); ok {
 			return nil, nil, chainRuleError(cerr)
 		}
 		return nil, nil, err
 	}
-
+	mempoolCheckTransactionSanity.Update(time.Now().Sub(start))
+	start = time.Now()
 	// A standalone transaction must not be a coinbase transaction.
 	if tx.Tx.IsCoinBase() {
 		str := fmt.Sprintf("transaction %v is an individual coinbase",
@@ -346,7 +346,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			return nil, nil, txRuleError(rejectCode, str)
 		}
 	}
-
+	mempoolCheckTransactionStandard.Update(time.Now().Sub(start))
+	start = time.Now()
 	// The transaction may not use any of the same outputs as other
 	// transactions already in the pool as that would ultimately result in a
 	// double spend.  This check is intended to be quick and therefore only
@@ -359,6 +360,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	if err != nil {
 		return nil, nil, err
 	}
+	mempoolCheckPoolDoubleSpend.Update(time.Now().Sub(start))
+	start = time.Now()
 	// Verify crypto signatures for each input and reject the transaction if
 	// any don't verify.
 	flags, err := mp.cfg.Policy.StandardVerifyFlags()
@@ -416,7 +419,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		if mp.cfg.BC.HasTx(txHash) {
 			return nil, nil, fmt.Errorf("Already have transaction %v", txHash)
 		}
-		itx, err := vm.NewImportTx(tx.Tx)
+		itx, err := mmeer.NewImportTx(tx.Tx)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -438,7 +441,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			}
 			return nil, nil, err
 		}
-		fee, err := mp.cfg.BC.VMService().VerifyTx(itx)
+		fee, err := mp.cfg.BC.MeerVerifyTx(itx)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -468,7 +471,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			if mp.cfg.BC.HasTx(txHash) {
 				return nil, nil, fmt.Errorf("Already have transaction %v", txHash)
 			}
-			fee, err := mp.cfg.BC.VMService().AddTxToMempool(tx.Tx, false)
+			fee, err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().AddTx(tx, false)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -519,7 +522,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			missingParents = append(missingParents, &hashCopy)
 		}
 	}
-
+	mempoolLookSpent.Update(time.Now().Sub(start))
+	start = time.Now()
 	if len(missingParents) > 0 {
 		return missingParents, nil, nil
 	}
@@ -556,6 +560,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		str := fmt.Sprintf("transaction %v must contain at least the utxo of base coin (MEER)", txHash)
 		return nil, nil, txRuleError(message.RejectInvalid, str)
 	}
+	mempoolCheckTransactionInputs.Update(time.Now().Sub(start))
+	start = time.Now()
 	// Don't allow transactions with non-standard inputs if the mempool config
 	// forbids their acceptance and relaying.
 	if !mp.cfg.Policy.AcceptNonStd {
@@ -597,7 +603,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			txHash, numSigOps, mp.cfg.Policy.MaxSigOpsPerTx)
 		return nil, nil, txRuleError(message.RejectNonstandard, str)
 	}
-
+	mempoolCountSigOps.Update(time.Now().Sub(start))
+	start = time.Now()
 	txFee := types.Amount{Id: types.MEERA, Value: 0}
 	if txFees != nil {
 		txFee.Value = txFees[txFee.Id]
@@ -733,6 +740,7 @@ func (mp *TxPool) fetchInputUtxos(tx *types.Tx) (*utxo.UtxoViewpoint, error) {
 // This function is safe for concurrent access.
 func (mp *TxPool) ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allowHighFees bool) ([]*types.TxDesc, error) {
 	// Protect concurrent access.
+	start := time.Now()
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
 	var err error
@@ -749,7 +757,7 @@ func (mp *TxPool) ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allow
 	if err != nil {
 		return nil, err
 	}
-
+	mempoolMaybeAcceptTransaction.Update(time.Now().Sub(start))
 	// If len(missingParents) == 0 then we know the tx is NOT an orphan.
 	if len(missingParents) == 0 {
 		// Accept any orphan transactions that depend on this
@@ -1018,15 +1026,15 @@ func (mp *TxPool) FetchTransaction(txHash *hash.Hash) (*types.Tx, error) {
 		return txDesc.Tx, nil
 	}
 	er := fmt.Errorf("transaction is not in the pool")
-	etxs, _, err := mp.cfg.BC.VMService().GetTxsFromMempool()
+	etxs, _, err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().GetTxs()
 	if err != nil {
 		return nil, er
 	}
 
 	for _, tx := range etxs {
-		th := tx.TxHash()
-		if txHash.IsEqual(&th) {
-			return types.NewTx(tx), nil
+		th := tx.Hash()
+		if txHash.IsEqual(th) {
+			return tx, nil
 		}
 	}
 	return nil, er
@@ -1047,14 +1055,14 @@ func (mp *TxPool) FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error) {
 	mp.mtx.RUnlock()
 
 	er := fmt.Errorf("transaction is not in the pool")
-	etxs, _, err := mp.cfg.BC.VMService().GetTxsFromMempool()
+	etxs, _, err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().GetTxs()
 	if err != nil {
 		return nil, er
 	}
 
-	etxsM := map[string]*types.Transaction{}
+	etxsM := map[string]*types.Tx{}
 	for i := 0; i < len(etxs); i++ {
-		etxsM[etxs[i].TxHash().String()] = etxs[i]
+		etxsM[etxs[i].Hash().String()] = etxs[i]
 	}
 
 	for _, txh := range txHashs {
@@ -1062,7 +1070,7 @@ func (mp *TxPool) FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error) {
 		if !exists {
 			continue
 		}
-		result = append(result, types.NewTx(tx))
+		result = append(result, tx)
 	}
 	return result, nil
 }
@@ -1072,7 +1080,7 @@ func (mp *TxPool) FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error) {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) HaveAllTransactions(hashes []hash.Hash) bool {
-	etxs, _, _ := mp.cfg.BC.VMService().GetTxsFromMempool()
+	etxs, _, _ := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().GetTxs()
 	mp.mtx.RLock()
 	inPool := true
 	for _, h := range hashes {
@@ -1081,8 +1089,8 @@ func (mp *TxPool) HaveAllTransactions(hashes []hash.Hash) bool {
 			isinep := false
 			if len(etxs) > 0 {
 				for _, tx := range etxs {
-					th := tx.TxHash()
-					if h.IsEqual(&th) {
+					th := tx.Hash()
+					if h.IsEqual(th) {
 						isinep = true
 						break
 					}
@@ -1104,6 +1112,8 @@ func (mp *TxPool) HaveAllTransactions(hashes []hash.Hash) bool {
 //
 // This function MUST be called with the mempool lock held (for reads).
 func (mp *TxPool) haveTransaction(hash *hash.Hash) bool {
+	start := time.Now()
+	defer mempoolHaveTransaction.Update(time.Now().Sub(start))
 	return mp.isTransactionInPool(hash, true) || mp.isOrphanInPool(hash)
 }
 
@@ -1141,7 +1151,7 @@ func (mp *TxPool) isTransactionInPool(hash *hash.Hash, all bool) bool {
 	if !all {
 		return false
 	}
-	return mp.cfg.BC.VMService().HasTx(hash)
+	return mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().HasTx(hash, true)
 }
 
 // IsTransactionInPool returns whether or not the passed transaction already
@@ -1203,7 +1213,7 @@ func (mp *TxPool) MiningDescs() []*types.TxDesc {
 	}
 	mp.mtx.RUnlock()
 
-	etxs, _, err := mp.cfg.BC.VMService().GetTxsFromMempool()
+	etxs, _, err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().GetTxs()
 	if err != nil {
 		log.Error(err.Error())
 		return descs
@@ -1211,7 +1221,7 @@ func (mp *TxPool) MiningDescs() []*types.TxDesc {
 
 	for _, tx := range etxs {
 		txDesc := &types.TxDesc{
-			Tx:     types.NewTx(tx),
+			Tx:     tx,
 			Added:  roughtime.Now(),
 			Height: mp.GetMainHeight(),
 		}
@@ -1256,7 +1266,7 @@ func (mp *TxPool) Count() int {
 	count := len(mp.pool)
 	mp.mtx.RUnlock()
 
-	count += int(mp.cfg.BC.VMService().GetMempoolSize())
+	count += int(mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().GetSize())
 
 	return count
 }
@@ -1294,4 +1304,12 @@ func (mp *TxPool) AddUnconfirmedTx(tx *types.Tx, utxoView *utxo.UtxoViewpoint) {
 		pkScripts = append(pkScripts, txOut.PkScript)
 	}
 	mp.cfg.IndexManager.AddrIndex().AddUnconfirmedTx(tx, pkScripts)
+}
+
+func (mp *TxPool) Dirty() bool {
+	return mp.dirty.Load()
+}
+
+func (mp *TxPool) CleanDirty() {
+	mp.dirty.Store(false)
 }

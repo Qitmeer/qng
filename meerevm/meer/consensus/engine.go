@@ -12,27 +12,8 @@ import (
 	"sync"
 )
 
-const (
-	MaximumExtraDataSize uint64 = 512 // Maximum size extra data may be after Genesis.
-)
-
-type Config struct {
-	CacheDir         string
-	CachesInMem      int
-	CachesOnDisk     int
-	CachesLockMmap   bool
-	DatasetDir       string
-	DatasetsInMem    int
-	DatasetsOnDisk   int
-	DatasetsLockMmap bool
-
-	NotifyFull bool
-
-	Log log.Logger `toml:"-"`
-}
-
 type MeerEngine struct {
-	config Config
+	log log.Logger
 
 	threads  int
 	update   chan struct{}
@@ -42,26 +23,12 @@ type MeerEngine struct {
 	closeOnce sync.Once
 }
 
-func New(config Config, notify []string, noverify bool) *MeerEngine {
-	if config.Log == nil {
-		config.Log = log.Root()
-	}
-	if config.CachesInMem <= 0 {
-		config.Log.Warn("One MeerEngine cache must always be in memory", "requested", config.CachesInMem)
-		config.CachesInMem = 1
-	}
-	if config.CacheDir != "" && config.CachesOnDisk > 0 {
-		config.Log.Info("Disk storage enabled for MeerEngine caches", "dir", config.CacheDir, "count", config.CachesOnDisk)
-	}
-	if config.DatasetDir != "" && config.DatasetsOnDisk > 0 {
-		config.Log.Info("Disk storage enabled for MeerEngine DAGs", "dir", config.DatasetDir, "count", config.DatasetsOnDisk)
-	}
-	ethash := &MeerEngine{
-		config:   config,
+func New() *MeerEngine {
+	return &MeerEngine{
+		log:      log.Root(),
 		update:   make(chan struct{}),
 		hashrate: metrics.NewMeterForced(),
 	}
-	return ethash
 }
 
 func (me *MeerEngine) Close() error {

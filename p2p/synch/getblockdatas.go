@@ -5,6 +5,7 @@
 package synch
 
 import (
+	"container/list"
 	"context"
 	"fmt"
 	"github.com/Qitmeer/qng/common/bloom"
@@ -116,7 +117,7 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 		return nil
 	}
 	blocksReady := []*hash.Hash{}
-	blockDatas := []*BlockData{}
+	blockDatas := list.New()
 	blockDataM := map[hash.Hash]*BlockData{}
 
 	for _, b := range blocks {
@@ -128,7 +129,8 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 		}
 		blkd := &BlockData{Hash: b}
 		blockDataM[*blkd.Hash] = blkd
-		blockDatas = append(blockDatas, blkd)
+		blockDatas.PushBack(blkd)
+
 		if ps.sy.p2p.BlockChain().IsOrphan(b) {
 			ob := ps.sy.p2p.BlockChain().GetOrphan(b)
 			if ob != nil {
@@ -144,7 +146,8 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 		}
 		blocksReady = append(blocksReady, b)
 	}
-	if len(blockDatas) <= 0 {
+	blockDatasLen := blockDatas.Len()
+	if blockDatasLen <= 0 {
 		return &ProcessResult{act: ProcessResultActionContinue, orphan: false}
 	}
 	readys := len(blocksReady)
@@ -179,6 +182,7 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 				bdm, ok := blockDataM[*block.Hash()]
 				if ok {
 					bdm.Block = block
+					delete(blockDataM, *block.Hash())
 				}
 				if i+1 == len(bd.Locator) {
 					lastBlockHash = block.Hash()
@@ -203,8 +207,13 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 	behaviorFlags := blockchain.BFP2PAdd
 	add := 0
 	hasOrphan := false
+	i := 0
+	for blockDatas.Len() > 0 {
+		i++
+		be := blockDatas.Front()
+		b := be.Value.(*BlockData)
+		blockDatas.Remove(be)
 
-	for i, b := range blockDatas {
 		if ps.IsInterrupt() ||
 			!ps.IsRunning() {
 			return nil
@@ -222,7 +231,7 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 			block = b.Block
 		}
 		//
-		IsOrphan, err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags)
+		_, IsOrphan, err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags)
 		if err != nil {
 			log.Error(fmt.Sprintf("Failed to process block:hash=%s err=%s", block.Hash(), err), "processID", ps.processID)
 			continue
@@ -236,7 +245,7 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 		add++
 		ps.lastSync = time.Now()
 	}
-	log.Debug(fmt.Sprintf("getBlockDatas:%d/%d", add, len(blockDatas)), "processID", ps.processID)
+	log.Debug(fmt.Sprintf("getBlockDatas:%d/%d", add, blockDatasLen), "processID", ps.processID)
 
 	var err error
 	if add > 0 {

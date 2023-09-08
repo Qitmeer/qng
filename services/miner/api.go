@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
@@ -58,6 +57,7 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 		start := time.Now().UnixMilli()
 		log.Debug("gbtstart")
 		api.miner.stats.TotalGbtRequests++
+		totalGbtRequests.Update(api.miner.stats.TotalGbtRequests)
 		data, err := handleGetBlockTemplateRequest(api, &request)
 		if err != nil {
 			return nil, err
@@ -131,12 +131,6 @@ func (api *PublicMinerAPI) SubmitBlock(hexBlock string) (interface{}, error) {
 		return nil, fmt.Errorf("block is illegal")
 	}
 
-	height, err := blockchain.ExtractCoinbaseHeight(block.Block().Transactions[0])
-	if err != nil {
-		return nil, err
-	}
-
-	block.SetHeight(uint(height))
 	start := time.Now().UnixMilli()
 	log.Debug("submitstart", "blockhash", block.Block().BlockHash(), "txcount", len(block.Block().Transactions))
 	res, err := m.submitBlock(block)
