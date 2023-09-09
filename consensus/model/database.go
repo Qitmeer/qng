@@ -51,9 +51,9 @@ type DataBase interface {
 	DeleteDiffAnticone(id uint) error
 	Get(key []byte) ([]byte, error)
 	Put(key []byte, value []byte) error
-	PutTxIndexEntrys(sblock *types.SerializedBlock, block Block) error
-	GetTxIndexEntry(id *hash.Hash, verbose bool) (*types.Tx, *hash.Hash, error)
-	DeleteTxIndexEntrys(block *types.SerializedBlock) error
+	PutTxIdxEntrys(sblock *types.SerializedBlock, block Block) error
+	GetTxIdxEntry(id *hash.Hash, verbose bool) (*types.Tx, *hash.Hash, error)
+	DeleteTxIdxEntrys(block *types.SerializedBlock) error
 	PutTxHashs(block *types.SerializedBlock) error
 	GetTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error)
 	DeleteTxHashs(block *types.SerializedBlock) error
@@ -65,6 +65,12 @@ type DataBase interface {
 	GetInvalidTx(id *hash.Hash) (*types.Transaction, error)
 	GetInvalidTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error)
 	CleanInvalidTxs() error
+	GetAddrIdxTip() (*hash.Hash, uint, error)
+	PutAddrIdxTip(bh *hash.Hash, order uint) error
+	PutAddrIdx(sblock *types.SerializedBlock, block Block, stxos [][]byte) error
+	GetTxForAddress(addr types.Address, numToSkip, numRequested uint32, reverse bool) ([]*common.RetrievedTx, uint32, error)
+	DeleteAddrIdx(sblock *types.SerializedBlock, stxos [][]byte) error
+	CleanAddrIdx(finish bool) error
 	IsLegacy() bool
 	TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{}) error
 }

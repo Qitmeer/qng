@@ -27,7 +27,7 @@ type TxIndex struct {
 //
 // This is part of the Indexer interface.
 func (idx *TxIndex) Init() error {
-	log.Debug("Current internal block ", "block order", idx.consensus.BlockChain().GetMainOrder())
+	log.Info("Init", "index", idx.Name(), "block order", idx.consensus.BlockChain().GetMainOrder())
 	return nil
 }
 
@@ -44,7 +44,7 @@ func (idx *TxIndex) Name() string {
 //
 // This is part of the Indexer interface.
 func (idx *TxIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Block) error {
-	return idx.consensus.DatabaseContext().PutTxIndexEntrys(sblock, block)
+	return idx.consensus.DatabaseContext().PutTxIdxEntrys(sblock, block)
 }
 
 // DisconnectBlock is invoked by the index manager when a block has been
@@ -53,7 +53,7 @@ func (idx *TxIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Bloc
 //
 // This is part of the Indexer interface.
 func (idx *TxIndex) DisconnectBlock(block *types.SerializedBlock) error {
-	return idx.consensus.DatabaseContext().DeleteTxIndexEntrys(block)
+	return idx.consensus.DatabaseContext().DeleteTxIdxEntrys(block)
 }
 
 // NewTxIndex returns a new instance of an indexer that is used to create a

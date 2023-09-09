@@ -964,7 +964,7 @@ func (b *BlockChain) Rebuild() error {
 		}
 		block = blockNode.GetBody()
 		if i == 0 {
-			err = b.indexManager.ConnectBlock(block, nil, ib)
+			err = b.indexManager.ConnectBlock(block, ib, nil)
 			if err != nil {
 				return err
 			}

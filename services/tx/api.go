@@ -17,7 +17,7 @@ import (
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
-	"github.com/Qitmeer/qng/database/legacydb"
+	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
@@ -263,7 +263,7 @@ func (api *PublicTxAPI) GetRawTransaction(txHash hash.Hash, verbose bool) (inter
 		}
 		// Look up the location of the transaction.
 		var err error
-		tx, blkHash, err = api.txManager.consensus.DatabaseContext().GetTxIndexEntry(&txHash, true)
+		tx, blkHash, err = api.txManager.consensus.DatabaseContext().GetTxIdxEntry(&txHash, true)
 		if err != nil {
 			return nil, errors.New("Failed to retrieve transaction location")
 		}
@@ -500,54 +500,27 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 
 	//
 	numSkipped := uint32(0)
-	addressTxns := make([]retrievedTx, 0, numRequested)
+	addressTxns := make([]*common.RetrievedTx, 0, numRequested)
 	if reverse {
 		mpTxns, mpSkipped := api.fetchMempoolTxnsForAddress(addr,
 			uint32(numToSkip), uint32(numRequested))
 		numSkipped += mpSkipped
 		for _, tx := range mpTxns {
-			addressTxns = append(addressTxns, retrievedTx{tx: tx})
+			addressTxns = append(addressTxns, &common.RetrievedTx{Tx: tx})
 		}
 	}
 
 	// Fetch transactions from the database in the desired order if more are
 	// needed.
 	if uint(len(addressTxns)) < numRequested {
-		err = api.txManager.db.View(func(dbTx legacydb.Tx) error {
-			regions, dbSkipped, err := addrIndex.TxRegionsForAddress(
-				dbTx, addr, uint32(numToSkip)-numSkipped,
-				uint32(numRequested-uint(len(addressTxns))), reverse)
-			if err != nil {
-				return err
-			}
-
-			// Load the raw transaction bytes from the database.
-			serializedTxns, err := dbTx.FetchBlockRegions(regions)
-			if err != nil {
-				return err
-			}
-
-			// Add the transaction and the hash of the block it is
-			// contained in to the list.  Note that the transaction
-			// is left serialized here since the caller might have
-			// requested non-verbose output and hence there would be
-			// no point in deserializing it just to reserialize it
-			// later.
-			for i, serializedTx := range serializedTxns {
-				addressTxns = append(addressTxns, retrievedTx{
-					txBytes: serializedTx,
-					blkHash: regions[i].Hash,
-				})
-			}
-			numSkipped += dbSkipped
-
-			return nil
-		})
+		atxns, dbSkipped, err := addrIndex.TxRegionsForAddress(addr, uint32(numToSkip)-numSkipped,
+			uint32(numRequested-uint(len(addressTxns))), reverse)
 		if err != nil {
 			context := "Failed to load address index entries"
 			return nil, fmt.Errorf("%s %s", err.Error(), context)
 		}
-
+		numSkipped += dbSkipped
+		addressTxns = append(addressTxns, atxns...)
 	}
 
 	// Add transactions from mempool last if client did not request reverse
@@ -561,7 +534,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 				uint(len(addressTxns))))
 		numSkipped += mpSkipped
 		for _, tx := range mpTxns {
-			addressTxns = append(addressTxns, retrievedTx{tx: tx})
+			addressTxns = append(addressTxns, &common.RetrievedTx{Tx: tx})
 		}
 	}
 
@@ -575,15 +548,15 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 	for i := range addressTxns {
 		// Simply encode the raw bytes to hex when the retrieved
 		// transaction is already in serialized form.
-		rtx := &addressTxns[i]
-		if rtx.txBytes != nil {
-			hexTxns[i] = hex.EncodeToString(rtx.txBytes)
+		rtx := addressTxns[i]
+		if rtx.Bytes != nil {
+			hexTxns[i] = hex.EncodeToString(rtx.Bytes)
 			continue
 		}
 
 		// Serialize the transaction first and convert to hex when the
 		// retrieved transaction is the deserialized structure.
-		hexTxns[i], err = marshal.MessageToHex(rtx.tx.Tx)
+		hexTxns[i], err = marshal.MessageToHex(rtx.Tx.Tx)
 		if err != nil {
 			return nil, err
 		}
@@ -610,20 +583,20 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 		// retrieved transaction if it's in serialized form (which will
 		// be the case when it was lookup up from the database).
 		// Otherwise, use the existing deserialized transaction.
-		rtx := &addressTxns[i]
+		rtx := addressTxns[i]
 		var mtx *types.Tx
-		if rtx.tx == nil {
+		if rtx.Tx == nil {
 			// Deserialize the transaction.
 
 			mtxTx := &types.Transaction{}
-			err := mtxTx.Deserialize(bytes.NewReader(rtx.txBytes))
+			err := mtxTx.Deserialize(bytes.NewReader(rtx.Bytes))
 			if err != nil {
 				context := "Failed to deserialize transaction"
 				return nil, fmt.Errorf("%s %s", err.Error(), context)
 			}
 			mtx = types.NewTx(mtxTx)
 		} else {
-			mtx = types.NewTx(rtx.tx.Tx)
+			mtx = types.NewTx(rtx.Tx.Tx)
 		}
 
 		result := &srtList[i]
@@ -636,7 +609,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 		}
 
 		if mtx.Tx.IsCoinBase() {
-			amountMap := api.txManager.GetChain().GetFees(rtx.blkHash)
+			amountMap := api.txManager.GetChain().GetFees(rtx.BlkHash)
 			result.Vout = marshal.MarshJsonCoinbaseVout(mtx, filterAddrMap, params, amountMap)
 		} else {
 			result.Vout = marshal.MarshJsonVout(mtx.Tx, filterAddrMap, params)
@@ -650,7 +623,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 		// confirmations or block information).
 		var blkHeader *types.BlockHeader
 		var blkHashStr string
-		if blkHash := rtx.blkHash; blkHash != nil {
+		if blkHash := rtx.BlkHash; blkHash != nil {
 			// Fetch the header from chain.
 			header, err := api.txManager.GetChain().HeaderByHash(blkHash)
 			if err != nil {
@@ -668,7 +641,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 			result.Blocktime = blkHeader.Timestamp.Unix()
 			result.BlockHash = blkHashStr
 			result.Confirmations = uint64(api.txManager.GetChain().BlockDAG().GetConfirmations(
-				api.txManager.GetChain().BlockDAG().GetBlockId(rtx.blkHash)))
+				api.txManager.GetChain().BlockDAG().GetBlockId(rtx.BlkHash)))
 		}
 	}
 
@@ -691,12 +664,6 @@ func (api *PublicTxAPI) fetchMempoolTxnsForAddress(addr types.Address, numToSkip
 		rangeEnd = numAvailable
 	}
 	return mpTxns[numToSkip:rangeEnd], numToSkip
-}
-
-type retrievedTx struct {
-	txBytes []byte
-	blkHash *hash.Hash // Only set when transaction is in a block.
-	tx      *types.Tx
 }
 
 func (api *PublicTxAPI) createVinListPrevOut(mtx *types.Tx, chainParams *params.Params, vinExtra bool, filterAddrMap map[string]struct{}) ([]json.VinPrevOut, error) {
@@ -835,7 +802,7 @@ func (api *PublicTxAPI) fetchInputTxos(tx *types.Tx) (map[types.TxOutPoint]types
 		}
 
 		// Look up the location of the transaction.
-		otx, _, err := api.txManager.consensus.DatabaseContext().GetTxIndexEntry(&origin.Hash, true)
+		otx, _, err := api.txManager.consensus.DatabaseContext().GetTxIdxEntry(&origin.Hash, true)
 		if err != nil {
 			context := "Failed to retrieve transaction location"
 			return nil, rpc.RpcInternalError(err.Error(), context)
@@ -882,7 +849,7 @@ func (api *PublicTxAPI) GetMeerEVMTxHashByID(txid hash.Hash) (interface{}, error
 	tx, _ := api.txManager.txMemPool.FetchTransaction(&txid)
 	if tx == nil {
 		var err error
-		tx, _, err = api.txManager.consensus.DatabaseContext().GetTxIndexEntry(&txid, true)
+		tx, _, err = api.txManager.consensus.DatabaseContext().GetTxIdxEntry(&txid, true)
 		if err != nil {
 			return nil, errors.New("Failed to retrieve transaction location")
 		}
@@ -1032,7 +999,7 @@ func (api *PrivateTxAPI) TxSign(privkeyStr string, rawTxStr string, tokenPrivkey
 			}
 			txHash := redeemTx.TxIn[i].PreviousOut.Hash
 			// Look up the location of the transaction.
-			prevTx, pBlockHash, err := api.txManager.consensus.DatabaseContext().GetTxIndexEntry(&txHash, true)
+			prevTx, pBlockHash, err := api.txManager.consensus.DatabaseContext().GetTxIdxEntry(&txHash, true)
 			if err != nil {
 				return nil, errors.New("Failed to retrieve transaction location")
 			}

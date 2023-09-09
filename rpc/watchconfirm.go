@@ -48,7 +48,7 @@ func (w *WatchTxConfirmServer) Handle(wsc *wsClient, currentHeight uint64) {
 
 	for tx, txconf := range *w {
 		txHash := hash.MustHexToDecodedHash(tx)
-		mtx, blockHash, err := wsc.server.consensus.DatabaseContext().GetTxIndexEntry(&txHash, true)
+		mtx, blockHash, err := wsc.server.consensus.DatabaseContext().GetTxIdxEntry(&txHash, true)
 		if err != nil {
 			log.Error(err.Error(), "txhash", txHash)
 			continue

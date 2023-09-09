@@ -444,7 +444,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, vie
 		// Allow the index manager to call each of the currently active
 		// optional indexes with the block being connected so they can
 		// update themselves accordingly.
-		err = b.indexManager.ConnectBlock(block, pkss, node)
+		err = b.indexManager.ConnectBlock(block, node, pkss)
 		if err != nil {
 			return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 		}
@@ -459,7 +459,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, vie
 		}
 	} else {
 		// Atomically insert info into the database.
-		err := b.indexManager.ConnectBlock(block, pkss, node)
+		err := b.indexManager.ConnectBlock(block, node, pkss)
 		if err != nil {
 			return err
 		}
@@ -492,7 +492,7 @@ func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedB
 	for _, stxo := range stxos {
 		pkss = append(pkss, stxo.PkScript)
 	}
-	err = b.indexManager.DisconnectBlock(block, pkss, ib)
+	err = b.indexManager.DisconnectBlock(block, ib, pkss)
 	if err != nil {
 		return fmt.Errorf("%v. (Attempt to execute --droptxindex)", err)
 	}

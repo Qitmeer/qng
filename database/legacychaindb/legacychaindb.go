@@ -11,7 +11,7 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/services/index"
+	"github.com/Qitmeer/qng/params"
 	"math"
 )
 
@@ -23,6 +23,7 @@ type LegacyChainDB struct {
 	interrupt <-chan struct{}
 
 	invalidtxindexStore model.InvalidTxIndexStore
+	chainParams         *params.Params
 }
 
 func (cdb *LegacyChainDB) Name() string {
@@ -634,24 +635,26 @@ func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) 
 	if system.InterruptRequested(interrupt) {
 		return nil, nil
 	}
-	// Drop indexes and exit if requested.
+
+	cdb := &LegacyChainDB{
+		cfg:         cfg,
+		db:          db,
+		interrupt:   interrupt,
+		chainParams: params.ActiveNetParams.Params,
+	}
 	if cfg.DropAddrIndex {
-		if err := index.DropAddrIndex(db, interrupt); err != nil {
+		if err := cdb.CleanAddrIdx(false); err != nil {
 			log.Error(err.Error())
 			return nil, err
 		}
 		return nil, nil
-	}
-	cdb := &LegacyChainDB{
-		cfg:       cfg,
-		db:        db,
-		interrupt: interrupt,
 	}
 	return cdb, nil
 }
 
 func NewNaked(db legacydb.DB) *LegacyChainDB {
 	return &LegacyChainDB{
-		db: db,
+		db:          db,
+		chainParams: params.ActiveNetParams.Params,
 	}
 }

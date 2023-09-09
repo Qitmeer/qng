@@ -22,6 +22,7 @@ func (idx *InvalidTxIndex) Name() string {
 }
 
 func (idx *InvalidTxIndex) Init() error {
+	log.Info("Init", "index", idx.Name())
 	//
 	bc := idx.consensus.BlockChain()
 	mainOrder := bc.GetMainOrder()

@@ -15,7 +15,7 @@ type TxHashIndex struct {
 }
 
 func (idx *TxHashIndex) Init() error {
-	log.Info(idx.Name() + " init")
+	log.Info("Init", "index", idx.Name())
 	return nil
 }
 
