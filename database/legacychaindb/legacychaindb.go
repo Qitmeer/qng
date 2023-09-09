@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/core/dbnamespace"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
+	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"math"
@@ -622,6 +623,30 @@ func (cdb *LegacyChainDB) Put(key []byte, value []byte) error {
 
 func (cdb *LegacyChainDB) IsLegacy() bool {
 	return true
+}
+
+func (cdb *LegacyChainDB) GetEstimateFee() ([]byte, error) {
+	feeEstimationData := []byte{}
+	err := cdb.db.View(func(dbTx legacydb.Tx) error {
+		metadata := dbTx.Metadata()
+		feeEstimationData = metadata.Get(rawdb.EstimateFeeDatabaseKey)
+		return nil
+	})
+	return feeEstimationData, err
+}
+
+func (cdb *LegacyChainDB) PutEstimateFee(data []byte) error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		metadata := dbTx.Metadata()
+		return metadata.Put(rawdb.EstimateFeeDatabaseKey, data)
+	})
+}
+
+func (cdb *LegacyChainDB) DeleteEstimateFee() error {
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		metadata := dbTx.Metadata()
+		return metadata.Delete(rawdb.EstimateFeeDatabaseKey)
+	})
 }
 
 func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) {

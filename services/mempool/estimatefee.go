@@ -51,12 +51,6 @@ const (
 	UnminedHeight = 0x7fffffff
 )
 
-var (
-	// EstimateFeeDatabaseKey is the key that we use to
-	// store the fee estimator in the database.
-	EstimateFeeDatabaseKey = []byte("estimatefee")
-)
-
 type QitPerByte float64
 
 type MeerPerKilobyte float64

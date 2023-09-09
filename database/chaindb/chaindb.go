@@ -399,6 +399,18 @@ func (cdb *ChainDB) IsLegacy() bool {
 	return false
 }
 
+func (cdb *ChainDB) GetEstimateFee() ([]byte, error) {
+	return rawdb.ReadEstimateFee(cdb.db), nil
+}
+
+func (cdb *ChainDB) PutEstimateFee(data []byte) error {
+	return rawdb.WriteEstimateFee(cdb.db, data)
+}
+
+func (cdb *ChainDB) DeleteEstimateFee() error {
+	return rawdb.DeleteEstimateFee(cdb.db)
+}
+
 func (cdb *ChainDB) TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{}) error {
 	return nil
 }
