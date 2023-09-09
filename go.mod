@@ -25,7 +25,7 @@ require (
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
-	github.com/libp2p/go-libp2p v0.30.0
+	github.com/libp2p/go-libp2p v0.31.0
 	github.com/libp2p/go-libp2p-kad-dht v0.23.0
 	github.com/libp2p/go-libp2p-pubsub v0.9.3
 	github.com/magiconair/properties v1.8.5
@@ -176,8 +176,8 @@ require (
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/protolambda/zssz v0.1.3 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
-	github.com/quic-go/qtls-go1-20 v0.3.2 // indirect
-	github.com/quic-go/quic-go v0.37.6 // indirect
+	github.com/quic-go/qtls-go1-20 v0.3.3 // indirect
+	github.com/quic-go/quic-go v0.38.1 // indirect
 	github.com/quic-go/webtransport-go v0.5.3 // indirect
 	github.com/raulk/go-watchdog v1.3.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
