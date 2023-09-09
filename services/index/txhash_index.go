@@ -15,7 +15,7 @@ type TxHashIndex struct {
 }
 
 func (idx *TxHashIndex) Init() error {
-	log.Info(idx.Name() + " init")
+	log.Info("Init", "index", idx.Name())
 	return nil
 }
 
@@ -23,7 +23,7 @@ func (idx *TxHashIndex) Name() string {
 	return txhashIndexName
 }
 
-func (idx *TxHashIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Block) error {
+func (idx *TxHashIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error {
 	// TODO: For compatibility, it will be removed in the future
 	if idx.consensus.DatabaseContext().IsLegacy() &&
 		block.GetState().GetStatus().KnownInvalid() {
@@ -32,8 +32,8 @@ func (idx *TxHashIndex) ConnectBlock(sblock *types.SerializedBlock, block model.
 	return idx.consensus.DatabaseContext().PutTxHashs(sblock)
 }
 
-func (idx *TxHashIndex) DisconnectBlock(block *types.SerializedBlock) error {
-	return idx.consensus.DatabaseContext().DeleteTxHashs(block)
+func (idx *TxHashIndex) DisconnectBlock(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error {
+	return idx.consensus.DatabaseContext().DeleteTxHashs(sblock)
 }
 
 func (idx *TxHashIndex) GetTxIdByHash(fullHash hash.Hash) (*hash.Hash, error) {

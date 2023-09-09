@@ -8,7 +8,6 @@ package index
 import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database/legacydb"
 )
 
 const (
@@ -20,8 +19,6 @@ const (
 // querying all transactions by their hash.
 type TxIndex struct {
 	consensus model.Consensus
-
-	db legacydb.DB
 }
 
 // Init initializes the hash-based transaction index.  In particular, it finds
@@ -30,7 +27,7 @@ type TxIndex struct {
 //
 // This is part of the Indexer interface.
 func (idx *TxIndex) Init() error {
-	log.Debug("Current internal block ", "block order", idx.consensus.BlockChain().GetMainOrder())
+	log.Info("Init", "index", idx.Name(), "block order", idx.consensus.BlockChain().GetMainOrder())
 	return nil
 }
 
@@ -46,8 +43,11 @@ func (idx *TxIndex) Name() string {
 // for every transaction in the passed block.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Block) error {
-	return idx.consensus.DatabaseContext().PutTxIndexEntrys(sblock, block)
+func (idx *TxIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error {
+	if block.GetState().GetStatus().KnownInvalid() {
+		return nil
+	}
+	return idx.consensus.DatabaseContext().PutTxIdxEntrys(sblock, block)
 }
 
 // DisconnectBlock is invoked by the index manager when a block has been
@@ -55,8 +55,8 @@ func (idx *TxIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Bloc
 // hash-to-transaction mapping for every transaction in the block.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) DisconnectBlock(block *types.SerializedBlock) error {
-	return idx.consensus.DatabaseContext().DeleteTxIndexEntrys(block)
+func (idx *TxIndex) DisconnectBlock(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error {
+	return idx.consensus.DatabaseContext().DeleteTxIdxEntrys(sblock)
 }
 
 // NewTxIndex returns a new instance of an indexer that is used to create a
@@ -67,5 +67,5 @@ func (idx *TxIndex) DisconnectBlock(block *types.SerializedBlock) error {
 // turn is used by the blockchain package.  This allows the index to be
 // seamlessly maintained along with the chain.
 func NewTxIndex(consensus model.Consensus) *TxIndex {
-	return &TxIndex{consensus: consensus, db: consensus.LegacyDB()}
+	return &TxIndex{consensus: consensus}
 }

@@ -9,8 +9,12 @@ package index
 import (
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/legacydb"
+	"github.com/Qitmeer/qng/services/progresslog"
+	"math"
 	"sync"
 
 	"github.com/Qitmeer/qng/common/hash"
@@ -23,24 +27,11 @@ import (
 
 const (
 	// addrIndexName is the human-readable name for the index.
-	addrIndexName = "address index"
-
-	// level0MaxEntries is the maximum number of transactions that are
-	// stored in level 0 of an address index entry.  Subsequent levels store
-	// 2^n * level0MaxEntries entries, or in words, double the maximum of
-	// the previous level.
-	level0MaxEntries = 8
+	AddrIndexName = "address index"
 
 	// addrKeySize is the number of bytes an address key consumes in the
 	// index.  It consists of 1 byte address type + 20 bytes hash160.
-	addrKeySize = 1 + 20
-
-	// levelKeySize is the number of bytes a level key in the address index
-	// consumes.  It consists of the address key + 1 byte for the level.
-	levelKeySize = addrKeySize + 1
-
-	// levelOffset is the offset in the level key which identifes the level.
-	levelOffset = levelKeySize - 1
+	AddrKeySize = 1 + 20
 
 	// addrKeyTypePubKeyHash is the address type in an address key which
 	// represents both a pay-to-pubkey-hash and a pay-to-pubkey address.
@@ -67,10 +58,6 @@ const (
 	// the hash of a pubkey address might be the same as that of a script
 	// hash.
 	addrKeyTypeScriptHash = 3
-
-	// Size of a transaction entry.  It consists of 4 bytes block id + 4
-	// bytes offset + 4 bytes length.
-	txEntrySize = 4 + 4 + 4
 )
 
 var (
@@ -84,503 +71,55 @@ var (
 		"by the address index")
 )
 
-type fetchAddrLevelDataFunc func(key []byte) []byte
-
-// -----------------------------------------------------------------------------
-// The address index maps addresses referenced in the blockchain to a list of
-// all the transactions involving that address.  Transactions are stored
-// according to their order of appearance in the blockchain.  That is to say
-// first by block height and then by offset inside the block.  It is also
-// important to note that this implementation requires the transaction index
-// since it is needed in order to catch up old blocks due to the fact the spent
-// outputs will already be pruned from the utxo set.
-//
-// The approach used to store the index is similar to a log-structured merge
-// tree (LSM tree) and is thus similar to how leveldb works internally.
-//
-// Every address consists of one or more entries identified by a level starting
-// from 0 where each level holds a maximum number of entries such that each
-// subsequent level holds double the maximum of the previous one.  In equation
-// form, the number of entries each level holds is 2^n * firstLevelMaxSize.
-//
-// New transactions are appended to level 0 until it becomes full at which point
-// the entire level 0 entry is appended to the level 1 entry and level 0 is
-// cleared.  This process continues until level 1 becomes full at which point it
-// will be appended to level 2 and cleared and so on.
-//
-// The result of this is the lower levels contain newer transactions and the
-// transactions within each level are ordered from oldest to newest.
-//
-// The intent of this approach is to provide a balance between space efficiency
-// and indexing cost.  Storing one entry per transaction would have the lowest
-// indexing cost, but would waste a lot of space because the same address hash
-// would be duplicated for every transaction key.  On the other hand, storing a
-// single entry with all transactions would be the most space efficient, but
-// would cause indexing cost to grow quadratically with the number of
-// transactions involving the same address.  The approach used here provides
-// logarithmic insertion and retrieval.
-//
-// The serialized key format is:
-//
-//   <addr type><addr hash><level>
-//
-//   Field           Type      Size
-//   addr type       uint8     1 byte
-//   addr hash       hash160   20 bytes
-//   level           uint8     1 byte
-//   -----
-//   Total: 22 bytes
-//
-// The serialized value format is:
-//
-//   [<block id><start offset><tx length>,...]
-//
-//   Field           Type      Size
-//   block id        uint32    4 bytes
-//   start offset    uint32    4 bytes
-//   tx length       uint32    4 bytes
-//   -----
-//   Total: 12 bytes per indexed tx
-// -----------------------------------------------------------------------------
-
-// fetchBlockHashFunc defines a callback function to use in order to convert a
-// serialized block ID to an associated block hash.
-type fetchBlockHashFunc func(serializedID []byte) (*hash.Hash, error)
-
-// serializeAddrIndexEntry serializes the provided block id and transaction
-// location according to the format described in detail above.
-func serializeAddrIndexEntry(blockID uint32, txLoc types.TxLoc) []byte {
-	// Serialize the entry.
-	serialized := make([]byte, 12)
-	byteOrder.PutUint32(serialized, blockID)
-	byteOrder.PutUint32(serialized[4:], uint32(txLoc.TxStart))
-	byteOrder.PutUint32(serialized[8:], uint32(txLoc.TxLen))
-	return serialized
-}
-
-// deserializeAddrIndexEntry decodes the passed serialized byte slice into the
-// provided region struct according to the format described in detail above and
-// uses the passed block hash fetching function in order to conver the block ID
-// to the associated block hash.
-func deserializeAddrIndexEntry(serialized []byte, region *legacydb.BlockRegion, fetchBlockHash fetchBlockHashFunc) error {
-	// Ensure there are enough bytes to decode.
-	if len(serialized) < txEntrySize {
-		return model.ErrDeserialize("unexpected end of data")
-	}
-
-	hash, err := fetchBlockHash(serialized[0:4])
-	if err != nil {
-		return err
-	}
-	region.Hash = hash
-	region.Offset = byteOrder.Uint32(serialized[4:8])
-	region.Len = byteOrder.Uint32(serialized[8:12])
-	return nil
-}
-
-// keyForLevel returns the key for a specific address and level in the address
-// index entry.
-func keyForLevel(addrKey [addrKeySize]byte, level uint8) [levelKeySize]byte {
-	var key [levelKeySize]byte
-	copy(key[:], addrKey[:])
-	key[levelOffset] = level
-	return key
-}
-
-// dbPutAddrIndexEntry updates the address index to include the provided entry
-// according to the level-based scheme described in detail above.
-func dbPutAddrIndexEntry(bucket internalBucket, addrKey [addrKeySize]byte, blockID uint32, txLoc types.TxLoc) error {
-	// Start with level 0 and its initial max number of entries.
-	curLevel := uint8(0)
-	maxLevelBytes := level0MaxEntries * txEntrySize
-
-	// Simply append the new entry to level 0 and return now when it will
-	// fit.  This is the most common path.
-	newData := serializeAddrIndexEntry(blockID, txLoc)
-	level0Key := keyForLevel(addrKey, 0)
-	level0Data := bucket.Get(level0Key[:])
-	if len(level0Data)+len(newData) <= maxLevelBytes {
-		mergedData := newData
-		if len(level0Data) > 0 {
-			mergedData = make([]byte, len(level0Data)+len(newData))
-			copy(mergedData, level0Data)
-			copy(mergedData[len(level0Data):], newData)
-		}
-		return bucket.Put(level0Key[:], mergedData)
-	}
-
-	// At this point, level 0 is full, so merge each level into higher
-	// levels as many times as needed to free up level 0.
-	prevLevelData := level0Data
-	for {
-		// Each new level holds twice as much as the previous one.
-		curLevel++
-		maxLevelBytes *= 2
-
-		// Move to the next level as long as the current level is full.
-		curLevelKey := keyForLevel(addrKey, curLevel)
-		curLevelData := bucket.Get(curLevelKey[:])
-		if len(curLevelData) == maxLevelBytes {
-			prevLevelData = curLevelData
-			continue
-		}
-
-		// The current level has room for the data in the previous one,
-		// so merge the data from previous level into it.
-		mergedData := prevLevelData
-		if len(curLevelData) > 0 {
-			mergedData = make([]byte, len(curLevelData)+
-				len(prevLevelData))
-			copy(mergedData, curLevelData)
-			copy(mergedData[len(curLevelData):], prevLevelData)
-		}
-		err := bucket.Put(curLevelKey[:], mergedData)
-		if err != nil {
-			return err
-		}
-
-		// Move all of the levels before the previous one up a level.
-		for mergeLevel := curLevel - 1; mergeLevel > 0; mergeLevel-- {
-			mergeLevelKey := keyForLevel(addrKey, mergeLevel)
-			prevLevelKey := keyForLevel(addrKey, mergeLevel-1)
-			prevData := bucket.Get(prevLevelKey[:])
-			err := bucket.Put(mergeLevelKey[:], prevData)
-			if err != nil {
-				return err
-			}
-		}
-		break
-	}
-
-	// Finally, insert the new entry into level 0 now that it is empty.
-	return bucket.Put(level0Key[:], newData)
-}
-
-// dbFetchAddrIndexEntries returns block regions for transactions referenced by
-// the given address key and the number of entries skipped since it could have
-// been less in the case where there are less total entries than the requested
-// number of entries to skip.
-func dbFetchAddrIndexEntries(fetchAddrLevelData fetchAddrLevelDataFunc, addrKey [addrKeySize]byte, numToSkip, numRequested uint32, reverse bool, fetchBlockHash fetchBlockHashFunc) ([]legacydb.BlockRegion, uint32, error) {
-	// When the reverse flag is not set, all levels need to be fetched
-	// because numToSkip and numRequested are counted from the oldest
-	// transactions (highest level) and thus the total count is needed.
-	// However, when the reverse flag is set, only enough records to satisfy
-	// the requested amount are needed.
-	var level uint8
-	var serialized []byte
-	for !reverse || len(serialized) < int(numToSkip+numRequested)*txEntrySize {
-		curLevelKey := keyForLevel(addrKey, level)
-		levelData := fetchAddrLevelData(curLevelKey[:])
-		if levelData == nil {
-			// Stop when there are no more levels.
-			break
-		}
-
-		// Higher levels contain older transactions, so prepend them.
-		prepended := make([]byte, len(serialized)+len(levelData))
-		copy(prepended, levelData)
-		copy(prepended[len(levelData):], serialized)
-		serialized = prepended
-		level++
-	}
-
-	// When the requested number of entries to skip is larger than the
-	// number available, skip them all and return now with the actual number
-	// skipped.
-	numEntries := uint32(len(serialized) / txEntrySize)
-	if numToSkip >= numEntries {
-		return nil, numEntries, nil
-	}
-
-	// Nothing more to do when there are no requested entries.
-	if numRequested == 0 {
-		return nil, numToSkip, nil
-	}
-
-	// Limit the number to load based on the number of available entries,
-	// the number to skip, and the number requested.
-	numToLoad := numEntries - numToSkip
-	if numToLoad > numRequested {
-		numToLoad = numRequested
-	}
-
-	// Start the offset after all skipped entries and load the calculated
-	// number.
-	results := make([]legacydb.BlockRegion, numToLoad)
-	for i := uint32(0); i < numToLoad; i++ {
-		// Calculate the read offset according to the reverse flag.
-		var offset uint32
-		if reverse {
-			offset = (numEntries - numToSkip - i - 1) * txEntrySize
-		} else {
-			offset = (numToSkip + i) * txEntrySize
-		}
-
-		// Deserialize and populate the result.
-		err := deserializeAddrIndexEntry(serialized[offset:],
-			&results[i], fetchBlockHash)
-		if err != nil {
-			// Ensure any deserialization errors are returned as
-			// database corruption errors.
-			if model.IsDeserializeErr(err) {
-				err = legacydb.Error{
-					ErrorCode: legacydb.ErrCorruption,
-					Description: fmt.Sprintf("failed to "+
-						"deserialized address index "+
-						"for key %x: %v", addrKey, err),
-				}
-			}
-
-			return nil, 0, err
-		}
-	}
-
-	return results, numToSkip, nil
-}
-
-// minEntriesToReachLevel returns the minimum number of entries that are
-// required to reach the given address index level.
-func minEntriesToReachLevel(level uint8) int {
-	maxEntriesForLevel := level0MaxEntries
-	minRequired := 1
-	for l := uint8(1); l <= level; l++ {
-		minRequired += maxEntriesForLevel
-		maxEntriesForLevel *= 2
-	}
-	return minRequired
-}
-
-// maxEntriesForLevel returns the maximum number of entries allowed for the
-// given address index level.
-func maxEntriesForLevel(level uint8) int {
-	numEntries := level0MaxEntries
-	for l := level; l > 0; l-- {
-		numEntries *= 2
-	}
-	return numEntries
-}
-
-// dbRemoveAddrIndexEntries removes the specified number of entries from from
-// the address index for the provided key.  An assertion error will be returned
-// if the count exceeds the total number of entries in the index.
-func dbRemoveAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte, count int) error {
-	// Nothing to do if no entries are being deleted.
-	if count <= 0 {
-		return nil
-	}
-
-	// Make use of a local map to track pending updates and define a closure
-	// to apply it to the database.  This is done in order to reduce the
-	// number of database reads and because there is more than one exit
-	// path that needs to apply the updates.
-	pendingUpdates := make(map[uint8][]byte)
-	applyPending := func() error {
-		for level, data := range pendingUpdates {
-			curLevelKey := keyForLevel(addrKey, level)
-			if len(data) == 0 {
-				err := bucket.Delete(curLevelKey[:])
-				if err != nil {
-					return err
-				}
-				continue
-			}
-			err := bucket.Put(curLevelKey[:], data)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	// Loop forwards through the levels while removing entries until the
-	// specified number has been removed.  This will potentially result in
-	// entirely empty lower levels which will be backfilled below.
-	var highestLoadedLevel uint8
-	numRemaining := count
-	for level := uint8(0); numRemaining > 0; level++ {
-		// Load the data for the level from the database.
-		curLevelKey := keyForLevel(addrKey, level)
-		curLevelData := bucket.Get(curLevelKey[:])
-		if len(curLevelData) == 0 && numRemaining > 0 {
-			return model.AssertError(fmt.Sprintf("dbRemoveAddrIndexEntries "+
-				"not enough entries for address key %x to "+
-				"delete %d entries", addrKey, count))
-		}
-		pendingUpdates[level] = curLevelData
-		highestLoadedLevel = level
-
-		// Delete the entire level as needed.
-		numEntries := len(curLevelData) / txEntrySize
-		if numRemaining >= numEntries {
-			pendingUpdates[level] = nil
-			numRemaining -= numEntries
-			continue
-		}
-
-		// Remove remaining entries to delete from the level.
-		offsetEnd := len(curLevelData) - (numRemaining * txEntrySize)
-		pendingUpdates[level] = curLevelData[:offsetEnd]
-		break
-	}
-
-	// When all elements in level 0 were not removed there is nothing left
-	// to do other than updating the database.
-	if len(pendingUpdates[0]) != 0 {
-		return applyPending()
-	}
-
-	// At this point there are one or more empty levels before the current
-	// level which need to be backfilled and the current level might have
-	// had some entries deleted from it as well.  Since all levels after
-	// level 0 are required to either be empty, half full, or completely
-	// full, the current level must be adjusted accordingly by backfilling
-	// each previous levels in a way which satisfies the requirements.  Any
-	// entries that are left are assigned to level 0 after the loop as they
-	// are guaranteed to fit by the logic in the loop.  In other words, this
-	// effectively squashes all remaining entries in the current level into
-	// the lowest possible levels while following the level rules.
-	//
-	// Note that the level after the current level might also have entries
-	// and gaps are not allowed, so this also keeps track of the lowest
-	// empty level so the code below knows how far to backfill in case it is
-	// required.
-	lowestEmptyLevel := uint8(255)
-	curLevelData := pendingUpdates[highestLoadedLevel]
-	curLevelMaxEntries := maxEntriesForLevel(highestLoadedLevel)
-	for level := highestLoadedLevel; level > 0; level-- {
-		// When there are not enough entries left in the current level
-		// for the number that would be required to reach it, clear the
-		// the current level which effectively moves them all up to the
-		// previous level on the next iteration.  Otherwise, there are
-		// are sufficient entries, so update the current level to
-		// contain as many entries as possible while still leaving
-		// enough remaining entries required to reach the level.
-		numEntries := len(curLevelData) / txEntrySize
-		prevLevelMaxEntries := curLevelMaxEntries / 2
-		minPrevRequired := minEntriesToReachLevel(level - 1)
-		if numEntries < prevLevelMaxEntries+minPrevRequired {
-			lowestEmptyLevel = level
-			pendingUpdates[level] = nil
-		} else {
-			// This level can only be completely full or half full,
-			// so choose the appropriate offset to ensure enough
-			// entries remain to reach the level.
-			var offset int
-			if numEntries-curLevelMaxEntries >= minPrevRequired {
-				offset = curLevelMaxEntries * txEntrySize
-			} else {
-				offset = prevLevelMaxEntries * txEntrySize
-			}
-			pendingUpdates[level] = curLevelData[:offset]
-			curLevelData = curLevelData[offset:]
-		}
-
-		curLevelMaxEntries = prevLevelMaxEntries
-	}
-	pendingUpdates[0] = curLevelData
-	if len(curLevelData) == 0 {
-		lowestEmptyLevel = 0
-	}
-
-	// When the highest loaded level is empty, it's possible the level after
-	// it still has data and thus that data needs to be backfilled as well.
-	for len(pendingUpdates[highestLoadedLevel]) == 0 {
-		// When the next level is empty too, the is no data left to
-		// continue backfilling, so there is nothing left to do.
-		// Otherwise, populate the pending updates map with the newly
-		// loaded data and update the highest loaded level accordingly.
-		level := highestLoadedLevel + 1
-		curLevelKey := keyForLevel(addrKey, level)
-		levelData := bucket.Get(curLevelKey[:])
-		if len(levelData) == 0 {
-			break
-		}
-		pendingUpdates[level] = levelData
-		highestLoadedLevel = level
-
-		// At this point the highest level is not empty, but it might
-		// be half full.  When that is the case, move it up a level to
-		// simplify the code below which backfills all lower levels that
-		// are still empty.  This also means the current level will be
-		// empty, so the loop will perform another another iteration to
-		// potentially backfill this level with data from the next one.
-		curLevelMaxEntries := maxEntriesForLevel(level)
-		if len(levelData)/txEntrySize != curLevelMaxEntries {
-			pendingUpdates[level] = nil
-			pendingUpdates[level-1] = levelData
-			level--
-			curLevelMaxEntries /= 2
-		}
-
-		// Backfill all lower levels that are still empty by iteratively
-		// halfing the data until the lowest empty level is filled.
-		for level > lowestEmptyLevel {
-			offset := (curLevelMaxEntries / 2) * txEntrySize
-			pendingUpdates[level] = levelData[:offset]
-			levelData = levelData[offset:]
-			pendingUpdates[level-1] = levelData
-			level--
-			curLevelMaxEntries /= 2
-		}
-
-		// The lowest possible empty level is now the highest loaded
-		// level.
-		lowestEmptyLevel = highestLoadedLevel
-	}
-
-	// Apply the pending updates.
-	return applyPending()
-}
-
 // addrToKey converts known address types to an addrindex key.  An error is
 // returned for unsupported types.
-func addrToKey(addr types.Address, params *params.Params) ([addrKeySize]byte, error) {
+func AddrToKey(addr types.Address, params *params.Params) ([AddrKeySize]byte, error) {
 	switch addr := addr.(type) {
 	case *address.PubKeyHashAddress:
 		switch addr.EcType() {
 		case ecc.ECDSA_Secp256k1:
-			var result [addrKeySize]byte
+			var result [AddrKeySize]byte
 			result[0] = addrKeyTypePubKeyHash
 			copy(result[1:], addr.Hash160()[:])
 			return result, nil
 		case ecc.EdDSA_Ed25519:
-			var result [addrKeySize]byte
+			var result [AddrKeySize]byte
 			result[0] = addrKeyTypePubKeyHashEdwards
 			copy(result[1:], addr.Hash160()[:])
 			return result, nil
 		case ecc.ECDSA_SecpSchnorr:
-			var result [addrKeySize]byte
+			var result [AddrKeySize]byte
 			result[0] = addrKeyTypePubKeyHashSchnorr
 			copy(result[1:], addr.Hash160()[:])
 			return result, nil
 		}
 
 	case *address.ScriptHashAddress:
-		var result [addrKeySize]byte
+		var result [AddrKeySize]byte
 		result[0] = addrKeyTypeScriptHash
 		copy(result[1:], addr.Hash160()[:])
 		return result, nil
 
 	case *address.SecpPubKeyAddress:
-		var result [addrKeySize]byte
+		var result [AddrKeySize]byte
 		result[0] = addrKeyTypePubKeyHash
 		copy(result[1:], addr.PKHAddress().Hash160()[:])
 		return result, nil
 
 	case *address.EdwardsPubKeyAddress:
-		var result [addrKeySize]byte
+		var result [AddrKeySize]byte
 		result[0] = addrKeyTypePubKeyHashEdwards
 		copy(result[1:], addr.PKHAddress().Hash160()[:])
 		return result, nil
 
 	case *address.SecSchnorrPubKeyAddress:
-		var result [addrKeySize]byte
+		var result [AddrKeySize]byte
 		result[0] = addrKeyTypePubKeyHashSchnorr
 		copy(result[1:], addr.PKHAddress().Hash160()[:])
 		return result, nil
 	}
 
-	return [addrKeySize]byte{}, errUnsupportedAddressType
+	return [AddrKeySize]byte{}, errUnsupportedAddressType
 }
 
 // AddrIndex implements a transaction by address index.  That is to say, it
@@ -615,8 +154,8 @@ type AddrIndex struct {
 	// This allows fairly efficient updates when transactions are removed
 	// once they are included into a block.
 	unconfirmedLock sync.RWMutex
-	txnsByAddr      map[[addrKeySize]byte]map[hash.Hash]*types.Tx
-	addrsByTx       map[hash.Hash]map[[addrKeySize]byte]struct{}
+	txnsByAddr      map[[AddrKeySize]byte]map[hash.Hash]*types.Tx
+	addrsByTx       map[hash.Hash]map[[AddrKeySize]byte]struct{}
 }
 
 // Ensure the AddrIndex type implements the Indexer interface.
@@ -637,111 +176,121 @@ func (idx *AddrIndex) NeedsInputs() bool {
 // initialize for this index.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) Init(chain model.BlockChain) error {
-	// Nothing to do.
-	return nil
-}
+func (idx *AddrIndex) Init() error {
+	err := idx.DB().CleanAddrIdx(true)
+	// Finish any drops that were previously interrupted.
+	if err != nil {
+		return err
+	}
+	tipHash, tiporder, err := idx.DB().GetAddrIdxTip()
+	if err != nil {
+		return err
+	}
+	log.Info("Init", "index", idx.Name(), "tipHash", tipHash.String(), "tipOrder", tiporder)
 
-// Key returns the database key to use for the index as a byte slice.
-//
-// This is part of the Indexer interface.
-func (idx *AddrIndex) Key() []byte {
-	return addrIndexKey
+	//
+	chain := idx.consensus.BlockChain()
+	bestOrder := chain.GetMainOrder()
+	backorder := tiporder
+	// Rollback indexes to the main chain if their tip is an orphaned fork.
+	// This is fairly unlikely, but it can happen if the chain is
+	// reorganized while the index is disabled.  This has to be done in
+	// reverse order because later indexes can depend on earlier ones.
+	var spentTxos [][]byte
+
+	// Nothing to do if the index does not have any entries yet.
+	if backorder != math.MaxUint32 {
+		var block *types.SerializedBlock
+		for backorder > bestOrder {
+			// Load the block for the height since it is required to index
+			// it.
+			block, err = chain.BlockByOrder(uint64(backorder))
+			if err != nil {
+				return err
+			}
+			spentTxos = nil
+			if idx.NeedsInputs() {
+				spentTxos, err = chain.FetchSpendJournalPKS(block)
+				if err != nil {
+					return err
+				}
+			}
+			err = idx.DisconnectBlock(block, nil, spentTxos)
+			if err != nil {
+				return err
+			}
+			log.Trace(fmt.Sprintf("%s rollback order= %d", idx.Name(), backorder))
+			backorder--
+			if system.InterruptRequested(idx.consensus.Interrupt()) {
+				return errInterruptRequested
+			}
+		}
+	}
+
+	lowestOrder := int64(bestOrder)
+	if tiporder == math.MaxUint32 {
+		lowestOrder = -1
+	} else if int64(tiporder) < lowestOrder {
+		lowestOrder = int64(tiporder)
+	}
+
+	// Nothing to index if all of the indexes are caught up.
+	if lowestOrder == int64(bestOrder) {
+		return nil
+	}
+
+	// Create a progress logger for the indexing process below.
+	progressLogger := progresslog.NewBlockProgressLogger("Indexed", log)
+
+	// At this point, one or more indexes are behind the current best chain
+	// tip and need to be caught up, so log the details and loop through
+	// each block that needs to be indexed.
+	log.Info(fmt.Sprintf("Catching up indexes from order %d to %d", lowestOrder,
+		bestOrder))
+
+	for order := lowestOrder + 1; order <= int64(bestOrder); order++ {
+		if system.InterruptRequested(idx.consensus.Interrupt()) {
+			return errInterruptRequested
+		}
+
+		var block *types.SerializedBlock
+		var blk model.Block
+		// Load the block for the height since it is required to index
+		// it.
+		block, blk, err = chain.FetchBlockByOrder(uint64(order))
+		if err != nil {
+			return err
+		}
+
+		if system.InterruptRequested(idx.consensus.Interrupt()) {
+			return errInterruptRequested
+		}
+		chain.SetDAGDuplicateTxs(block, blk)
+		// Connect the block for all indexes that need it.
+		spentTxos = nil
+
+		if spentTxos == nil && idx.NeedsInputs() {
+			spentTxos, err = chain.FetchSpendJournalPKS(block)
+			if err != nil {
+				return err
+			}
+		}
+		err = idx.ConnectBlock(block, blk, spentTxos)
+		if err != nil {
+			return err
+		}
+		progressLogger.LogBlockOrder(blk.GetOrder(), block)
+	}
+
+	log.Info(fmt.Sprintf("Indexes caught up to order %d", bestOrder))
+	return nil
 }
 
 // Name returns the human-readable name of the index.
 //
 // This is part of the Indexer interface.
 func (idx *AddrIndex) Name() string {
-	return addrIndexName
-}
-
-// Create is invoked when the indexer manager determines the index needs
-// to be created for the first time.  It creates the bucket for the address
-// index.
-//
-// This is part of the Indexer interface.
-func (idx *AddrIndex) Create(dbTx legacydb.Tx) error {
-	_, err := dbTx.Metadata().CreateBucket(addrIndexKey)
-	return err
-}
-
-// writeIndexData represents the address index data to be written for one block.
-// It consists of the address mapped to an ordered list of the transactions
-// that involve the address in block.  It is ordered so the transactions can be
-// stored in the order they appear in the block.
-type writeIndexData map[[addrKeySize]byte][]int
-
-// indexPkScript extracts all standard addresses from the passed public key
-// script and maps each of them to the associated transaction using the passed
-// map.
-func (idx *AddrIndex) indexPkScript(data writeIndexData, pkScript []byte, txIdx int) {
-	// Nothing to index if the script is non-standard or otherwise doesn't
-	// contain any addresses.
-	_, addrs, _, err := txscript.ExtractPkScriptAddrs(pkScript,
-		idx.chainParams)
-	if err != nil {
-		return
-	}
-
-	if len(addrs) == 0 {
-		return
-	}
-
-	for _, addr := range addrs {
-		addrKey, err := addrToKey(addr, idx.chainParams)
-		if err != nil {
-			// Ignore unsupported address types.
-			continue
-		}
-
-		// Avoid inserting the transaction more than once.  Since the
-		// transactions are indexed serially any duplicates will be
-		// indexed in a row, so checking the most recent entry for the
-		// address is enough to detect duplicates.
-		indexedTxns := data[addrKey]
-		numTxns := len(indexedTxns)
-		if numTxns > 0 && indexedTxns[numTxns-1] == txIdx {
-			continue
-		}
-		indexedTxns = append(indexedTxns, txIdx)
-		data[addrKey] = indexedTxns
-	}
-}
-
-// indexBlock extract all of the standard addresses from all of the transactions
-// in the parent of the passed block (if they were valid) and all of the stake
-// transactions in the passed block, and maps each of them to the associated
-// transaction using the passed map.
-func (idx *AddrIndex) indexBlock(data writeIndexData, block *types.SerializedBlock, stxos [][]byte) {
-	index := 0
-	for txIdx, tx := range block.Transactions() {
-		if tx.IsDuplicate {
-			continue
-		}
-		// Coinbases do not reference any inputs.  Since the block is
-		// required to have already gone through full validation, it has
-		// already been proven on the first transaction in the block is
-		// a coinbase.
-		if txIdx != 0 {
-			if len(stxos) == 0 {
-				return
-			}
-			for range tx.Transaction().TxIn {
-				if index >= len(stxos) {
-					return
-				}
-				stxo := stxos[index]
-				index++
-				idx.indexPkScript(data, stxo, txIdx)
-			}
-		}
-
-		for _, txOut := range tx.Transaction().TxOut {
-			idx.indexPkScript(data, txOut.PkScript, txIdx)
-		}
-	}
-
+	return AddrIndexName
 }
 
 // ConnectBlock is invoked by the index manager when a new block has been
@@ -749,36 +298,26 @@ func (idx *AddrIndex) indexBlock(data writeIndexData, block *types.SerializedBlo
 // the transactions in the block involve.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) ConnectBlock(dbTx legacydb.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error {
-	if blk.GetState().GetStatus().KnownInvalid() {
-		return nil
-	}
-	// The offset and length of the transactions within the serialized
-	// block.
-	txLocs, err := block.TxLoc()
+func (idx *AddrIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error {
+	_, order, err := idx.DB().GetAddrIdxTip()
 	if err != nil {
 		return err
 	}
-	// Build all of the address to transaction mappings in a local map.
-	addrsToTxns := make(writeIndexData)
-	idx.indexBlock(addrsToTxns, block, stxos)
-
-	// Add all of the index entries for each address.
-	addrIdxBucket := dbTx.Metadata().Bucket(addrIndexKey)
-	for addrKey, txIdxs := range addrsToTxns {
-		for _, txIdx := range txIdxs {
-			// Switch to using the newest block ID for the stake transactions,
-			// since these are not from the parent. Offset the index to be
-			// correct for the location in this given block.
-			err := dbPutAddrIndexEntry(addrIdxBucket, addrKey,
-				uint32(blk.GetID()), txLocs[txIdx])
-			if err != nil {
-				return err
-			}
+	if order != math.MaxUint32 && order+1 != block.GetOrder() ||
+		order == math.MaxUint32 && block.GetOrder() != 0 {
+		return fmt.Errorf("dbIndexConnectBlock must be "+
+			"called with a block that extends the current index "+
+			"tip (%s, tip %d, block %d)", idx.Name(),
+			order, block.GetOrder())
+	}
+	if !block.GetState().GetStatus().KnownInvalid() {
+		err = idx.DB().PutAddrIdx(sblock, block, stxos)
+		if err != nil {
+			return err
 		}
 	}
-
-	return nil
+	// Update the current index tip.
+	return idx.DB().PutAddrIdxTip(sblock.Hash(), block.GetOrder())
 }
 
 // DisconnectBlock is invoked by the index manager when a block has been
@@ -786,22 +325,45 @@ func (idx *AddrIndex) ConnectBlock(dbTx legacydb.Tx, block *types.SerializedBloc
 // each transaction in the block involve.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) DisconnectBlock(dbTx legacydb.Tx, block *types.SerializedBlock, stxos [][]byte) error {
-
-	// Build all of the address to transaction mappings in a local map.
-	addrsToTxns := make(writeIndexData)
-	idx.indexBlock(addrsToTxns, block, stxos)
-
-	// Remove all of the index entries for each address.
-	bucket := dbTx.Metadata().Bucket(addrIndexKey)
-	for addrKey, txIdxs := range addrsToTxns {
-		err := dbRemoveAddrIndexEntries(bucket, addrKey, len(txIdxs))
-		if err != nil {
-			return err
-		}
+func (idx *AddrIndex) DisconnectBlock(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error {
+	// Assert that the block being disconnected is the current tip of the
+	// index.
+	curTipHash, order, err := idx.DB().GetAddrIdxTip()
+	if err != nil {
+		return err
+	}
+	if !curTipHash.IsEqual(sblock.Hash()) {
+		return fmt.Errorf("dbIndexDisconnectBlock must "+
+			"be called with the block at the current index tip "+
+			"(%s, tip %s, block %s)", idx.Name(),
+			curTipHash, sblock.Hash())
+	}
+	if order == math.MaxUint32 {
+		return fmt.Errorf("Can't disconnect root index tip")
+	}
+	// Notify the indexer with the disconnected block so it can remove all
+	// of the appropriate entries.
+	if err := idx.DB().DeleteAddrIdx(sblock, stxos); err != nil {
+		return err
 	}
 
-	return nil
+	// Update the current index tip.
+	var prevHash *hash.Hash
+	var preOrder uint
+	if order == 0 {
+		prevHash = &hash.ZeroHash
+		preOrder = math.MaxUint32
+	} else {
+		preOrder = order - 1
+
+		pblock := idx.consensus.BlockChain().GetBlockByOrder(uint64(preOrder))
+		if pblock == nil {
+			return fmt.Errorf("No block:%d", preOrder)
+		}
+		prevHash = pblock.GetHash()
+	}
+
+	return idx.DB().PutAddrIdxTip(prevHash, preOrder)
 }
 
 // TxRegionsForAddress returns a slice of block regions which identify each
@@ -815,34 +377,8 @@ func (idx *AddrIndex) DisconnectBlock(dbTx legacydb.Tx, block *types.SerializedB
 // that involve a given address.
 //
 // This function is safe for concurrent access.
-func (idx *AddrIndex) TxRegionsForAddress(dbTx legacydb.Tx, addr types.Address, numToSkip, numRequested uint32, reverse bool) ([]legacydb.BlockRegion, uint32, error) {
-	addrKey, err := addrToKey(addr, idx.chainParams)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	fetchBlockHash := func(id []byte) (*hash.Hash, error) {
-		// Deserialize and populate the result.
-		blockid := uint(byteOrder.Uint32(id))
-		block := idx.consensus.BlockChain().GetBlockById(blockid)
-		if block == nil {
-			return nil, fmt.Errorf("No block:%d", blockid)
-		}
-		return block.GetHash(), nil
-	}
-
-	fetchAddrLevelData := func(key []byte) []byte {
-		var levelData []byte
-		idx.db.View(func(dbTx legacydb.Tx) error {
-			addrIdxBucket := dbTx.Metadata().Bucket(addrIndexKey)
-			levelData = addrIdxBucket.Get(key)
-			return nil
-		})
-		return levelData
-	}
-	return dbFetchAddrIndexEntries(fetchAddrLevelData,
-		addrKey, numToSkip, numRequested, reverse,
-		fetchBlockHash)
+func (idx *AddrIndex) TxRegionsForAddress(addr types.Address, numToSkip, numRequested uint32, reverse bool) ([]*common.RetrievedTx, uint32, error) {
+	return idx.DB().GetTxForAddress(addr, numToSkip, numRequested, reverse)
 }
 
 // indexUnconfirmedAddresses modifies the unconfirmed (memory-only) address
@@ -858,7 +394,7 @@ func (idx *AddrIndex) indexUnconfirmedAddresses(pkScript []byte, tx *types.Tx) {
 
 	for _, addr := range addresses {
 		// Ignore unsupported address types.
-		addrKey, err := addrToKey(addr, idx.chainParams)
+		addrKey, err := AddrToKey(addr, idx.chainParams)
 		if err != nil {
 			continue
 		}
@@ -875,7 +411,7 @@ func (idx *AddrIndex) indexUnconfirmedAddresses(pkScript []byte, tx *types.Tx) {
 		// Add a mapping from the transaction to the address.
 		addrsByTxEntry := idx.addrsByTx[*tx.Hash()]
 		if addrsByTxEntry == nil {
-			addrsByTxEntry = make(map[[addrKeySize]byte]struct{})
+			addrsByTxEntry = make(map[[AddrKeySize]byte]struct{})
 			idx.addrsByTx[*tx.Hash()] = addrsByTxEntry
 		}
 		addrsByTxEntry[addrKey] = struct{}{}
@@ -927,7 +463,7 @@ func (idx *AddrIndex) RemoveUnconfirmedTx(hash *hash.Hash) {
 // This function is safe for concurrent access.
 func (idx *AddrIndex) UnconfirmedTxnsForAddress(addr types.Address) []*types.Tx {
 	// Ignore unsupported address types.
-	addrKey, err := addrToKey(addr, idx.chainParams)
+	addrKey, err := AddrToKey(addr, idx.chainParams)
 	if err != nil {
 		return nil
 	}
@@ -949,6 +485,10 @@ func (idx *AddrIndex) UnconfirmedTxnsForAddress(addr types.Address) []*types.Tx 
 	return nil
 }
 
+func (idx *AddrIndex) DB() model.DataBase {
+	return idx.consensus.DatabaseContext()
+}
+
 // NewAddrIndex returns a new instance of an indexer that is used to create a
 // mapping of all addresses in the blockchain to the respective transactions
 // that involve them.
@@ -959,15 +499,8 @@ func (idx *AddrIndex) UnconfirmedTxnsForAddress(addr types.Address) []*types.Tx 
 func NewAddrIndex(consensus model.Consensus) *AddrIndex {
 	return &AddrIndex{
 		consensus:   consensus,
-		db:          consensus.LegacyDB(),
 		chainParams: params.ActiveNetParams.Params,
-		txnsByAddr:  make(map[[addrKeySize]byte]map[hash.Hash]*types.Tx),
-		addrsByTx:   make(map[hash.Hash]map[[addrKeySize]byte]struct{}),
+		txnsByAddr:  make(map[[AddrKeySize]byte]map[hash.Hash]*types.Tx),
+		addrsByTx:   make(map[hash.Hash]map[[AddrKeySize]byte]struct{}),
 	}
-}
-
-// DropAddrIndex drops the address index from the provided database if it
-// exists.
-func DropAddrIndex(db legacydb.DB, interrupt <-chan struct{}) error {
-	return dropIndex(db, addrIndexKey, addrIndexName, interrupt)
 }

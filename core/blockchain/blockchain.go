@@ -20,7 +20,6 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/database/common"
-	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
@@ -61,7 +60,6 @@ type BlockChain struct {
 	// separate mutex.
 	checkpointsByLayer map[uint64]*params.Checkpoint
 
-	db           legacydb.DB
 	dbInfo       *common.DatabaseInfo
 	timeSource   model.MedianTimeSource
 	events       *event.Feed
@@ -966,7 +964,7 @@ func (b *BlockChain) Rebuild() error {
 		}
 		block = blockNode.GetBody()
 		if i == 0 {
-			err = b.indexManager.ConnectBlock(block, nil, ib)
+			err = b.indexManager.ConnectBlock(block, ib, nil)
 			if err != nil {
 				return err
 			}
@@ -1046,7 +1044,6 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 	b := BlockChain{
 		consensus:          consensus,
 		checkpointsByLayer: checkpointsByLayer,
-		db:                 consensus.LegacyDB(),
 		params:             par,
 		timeSource:         consensus.MedianTimeSource(),
 		events:             consensus.Events(),
