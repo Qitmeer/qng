@@ -149,11 +149,12 @@ func (h *Harness) connectWSNotifier() error {
 		OnRescanFinish:      h.Wallet.OnRescanFinish,
 	}
 	connCfg := &client.ConnConfig{
-		Host:       h.Node.config.rpclisten,
-		User:       h.Node.config.rpcuser,
-		Pass:       h.Node.config.rpcpass,
-		Endpoint:   "ws",
-		DisableTLS: false,
+		Host:                 h.Node.config.rpclisten,
+		User:                 h.Node.config.rpcuser,
+		Pass:                 h.Node.config.rpcpass,
+		Endpoint:             "ws",
+		DisableTLS:           false,
+		DisableAutoReconnect: true,
 	}
 	if !connCfg.DisableTLS {
 		certs, err := ioutil.ReadFile(h.Node.config.certFile)

@@ -263,7 +263,7 @@ func (node *DebugAddressNode) processAddress(blueM *map[uint]bool) error {
 }
 
 func isTxValid(db model.DataBase, txid *hash.Hash, txFullHash *hash.Hash, blockHash *hash.Hash) bool {
-	dtx, preBlockH, err := db.GetTxIndexEntry(txid, true)
+	dtx, preBlockH, err := db.GetTxIdxEntry(txid, true)
 	if err != nil {
 		return false
 	}
