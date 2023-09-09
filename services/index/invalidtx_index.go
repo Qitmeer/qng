@@ -81,7 +81,7 @@ func (idx *InvalidTxIndex) caughtUpFrom(startOrder uint) error {
 			if err != nil {
 				return err
 			}
-			err = idx.ConnectBlock(block, blk)
+			err = idx.ConnectBlock(block, blk, nil)
 			if err != nil {
 				return err
 			}
@@ -92,11 +92,14 @@ func (idx *InvalidTxIndex) caughtUpFrom(startOrder uint) error {
 	return idx.UpdateMainTip(mainHash, uint64(mainOrder))
 }
 
-func (idx *InvalidTxIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Block) error {
+func (idx *InvalidTxIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error {
+	if !block.GetState().GetStatus().KnownInvalid() {
+		return nil
+	}
 	return idx.DB().PutInvalidTxs(sblock, block)
 }
 
-func (idx *InvalidTxIndex) DisconnectBlock(sblock *types.SerializedBlock, block model.Block) error {
+func (idx *InvalidTxIndex) DisconnectBlock(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error {
 	return idx.DB().DeleteInvalidTxs(sblock, block)
 }
 

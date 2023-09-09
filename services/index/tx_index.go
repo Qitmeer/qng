@@ -43,7 +43,10 @@ func (idx *TxIndex) Name() string {
 // for every transaction in the passed block.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Block) error {
+func (idx *TxIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error {
+	if block.GetState().GetStatus().KnownInvalid() {
+		return nil
+	}
 	return idx.consensus.DatabaseContext().PutTxIdxEntrys(sblock, block)
 }
 
@@ -52,8 +55,8 @@ func (idx *TxIndex) ConnectBlock(sblock *types.SerializedBlock, block model.Bloc
 // hash-to-transaction mapping for every transaction in the block.
 //
 // This is part of the Indexer interface.
-func (idx *TxIndex) DisconnectBlock(block *types.SerializedBlock) error {
-	return idx.consensus.DatabaseContext().DeleteTxIdxEntrys(block)
+func (idx *TxIndex) DisconnectBlock(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error {
+	return idx.consensus.DatabaseContext().DeleteTxIdxEntrys(sblock)
 }
 
 // NewTxIndex returns a new instance of an indexer that is used to create a

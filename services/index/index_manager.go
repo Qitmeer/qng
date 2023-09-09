@@ -8,7 +8,6 @@ import (
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database/legacydb"
 )
 
 // Manager defines an index manager that manages multiple optional indexes and
@@ -17,11 +16,7 @@ import (
 type Manager struct {
 	consensus      model.Consensus
 	cfg            *Config
-	db             legacydb.DB
 	enabledIndexes []Indexer
-	invalidtxIndex *InvalidTxIndex
-	txIndex        *TxIndex
-	txhashIndex    *TxHashIndex
 }
 
 // Ensure the Manager type implements the blockchain.IndexManager interface.
@@ -37,25 +32,24 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 	}
 	// Create the transaction and address indexes if needed.
 	var indexers []Indexer
+	indexers = append(indexers, NewTxIndex(consensus))
 	if cfg.AddrIndex {
 		addrIndex := NewAddrIndex(consensus)
 		indexers = append(indexers, addrIndex)
+	}
+	if cfg.InvalidTxIndex {
+		indexers = append(indexers, NewInvalidTxIndex(consensus))
+	}
+	if cfg.TxhashIndex {
+		indexers = append(indexers, NewTxHashIndex(consensus))
 	}
 	for _, indexer := range indexers {
 		log.Info(fmt.Sprintf("%s is enabled", indexer.Name()))
 	}
 	im := &Manager{
 		cfg:            cfg,
-		db:             consensus.LegacyDB(),
 		enabledIndexes: indexers,
 		consensus:      consensus,
-		txIndex:        NewTxIndex(consensus),
-	}
-	if cfg.InvalidTxIndex {
-		im.invalidtxIndex = NewInvalidTxIndex(consensus)
-	}
-	if cfg.TxhashIndex {
-		im.txhashIndex = NewTxHashIndex(consensus)
 	}
 	return im
 }
@@ -70,23 +64,9 @@ func NewManager(cfg *Config, consensus model.Consensus) *Manager {
 // This is part of the blockchain.IndexManager interface.
 func (m *Manager) Init() error {
 	interrupt := m.consensus.Interrupt()
-	m.txIndex.Init()
-	if m.invalidtxIndex != nil {
-		err := m.invalidtxIndex.Init()
-		if err != nil {
-			return err
-		}
-	}
-	if m.txhashIndex != nil {
-		err := m.txhashIndex.Init()
-		if err != nil {
-			return err
-		}
-	}
 	if system.InterruptRequested(interrupt) {
 		return errInterruptRequested
 	}
-
 	// Initialize each of the enabled indexes.
 	for _, indexer := range m.enabledIndexes {
 		if err := indexer.Init(); err != nil {
@@ -108,20 +88,6 @@ func (m *Manager) ConnectBlock(sblock *types.SerializedBlock, block model.Block,
 			return err
 		}
 	}
-
-	if m.txhashIndex != nil {
-		err := m.txhashIndex.ConnectBlock(sblock, block)
-		if err != nil {
-			return err
-		}
-	}
-	if block.GetState().GetStatus().KnownInvalid() {
-		if m.invalidtxIndex != nil {
-			return m.invalidtxIndex.ConnectBlock(sblock, block)
-		}
-	} else {
-		return m.txIndex.ConnectBlock(sblock, block)
-	}
 	return nil
 }
 
@@ -140,27 +106,13 @@ func (m *Manager) DisconnectBlock(sblock *types.SerializedBlock, block model.Blo
 			return err
 		}
 	}
-
-	// TODO: Future optimization points is the attribute of KnownInvalid
-	err := m.txIndex.DisconnectBlock(sblock)
-	if err != nil {
-		return err
-	}
-	if m.txhashIndex != nil {
-		err := m.txhashIndex.DisconnectBlock(sblock)
-		if err != nil {
-			return err
-		}
-	}
-	if m.invalidtxIndex != nil {
-		return m.invalidtxIndex.DisconnectBlock(sblock, block)
-	}
 	return nil
 }
 
 func (m *Manager) UpdateMainTip(bh *hash.Hash, order uint64) error {
-	if m.invalidtxIndex != nil {
-		return m.invalidtxIndex.UpdateMainTip(bh, order)
+	invalidtxIndex := m.InvalidTxIndex()
+	if invalidtxIndex != nil {
+		return invalidtxIndex.UpdateMainTip(bh, order)
 	}
 	return nil
 }
@@ -189,7 +141,11 @@ func (m *Manager) HasTx(txid *hash.Hash) bool {
 }
 
 func (m *Manager) TxIndex() *TxIndex {
-	return m.txIndex
+	indexer := m.GetIndex(txIndexName)
+	if indexer != nil {
+		return indexer.(*TxIndex)
+	}
+	return nil
 }
 
 func (m *Manager) AddrIndex() *AddrIndex {
@@ -201,11 +157,19 @@ func (m *Manager) AddrIndex() *AddrIndex {
 }
 
 func (m *Manager) InvalidTxIndex() *InvalidTxIndex {
-	return m.invalidtxIndex
+	indexer := m.GetIndex(invalidTxIndexName)
+	if indexer != nil {
+		return indexer.(*InvalidTxIndex)
+	}
+	return nil
 }
 
 func (m *Manager) TxHashIndex() *TxHashIndex {
-	return m.txhashIndex
+	indexer := m.GetIndex(txhashIndexName)
+	if indexer != nil {
+		return indexer.(*TxHashIndex)
+	}
+	return nil
 }
 
 func (m *Manager) GetIndex(name string) Indexer {
