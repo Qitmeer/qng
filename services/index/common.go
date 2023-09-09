@@ -12,7 +12,6 @@ import (
 	"errors"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database/legacydb"
 )
 
 var (
@@ -34,42 +33,19 @@ type NeedsInputser interface {
 // Indexer provides a generic interface for an indexer that is managed by an
 // index manager such as the Manager type provided by this package.
 type Indexer interface {
-	// Key returns the key of the index as a byte slice.
-	Key() []byte
-
 	// Name returns the human-readable name of the index.
 	Name() string
-
-	// Create is invoked when the indexer manager determines the index needs
-	// to be created for the first time.
-	Create(dbTx legacydb.Tx) error
 
 	// Init is invoked when the index manager is first initializing the
 	// index.  This differs from the Create method in that it is called on
 	// every load, including the case the index was just created.
-	Init(chain model.BlockChain) error
+	Init() error
 
 	// ConnectBlock is invoked when the index manager is notified that a new
 	// block has been connected to the main chain.
-	ConnectBlock(dbTx legacydb.Tx, block *types.SerializedBlock, stxos [][]byte, blk model.Block) error
+	ConnectBlock(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error
 
 	// DisconnectBlock is invoked when the index manager is notified that a
 	// block has been disconnected from the main chain.
-	DisconnectBlock(dbTx legacydb.Tx, block *types.SerializedBlock, stxos [][]byte) error
-}
-
-// IndexDropper provides a method to remove an index from the database. Indexers
-// may implement this for a more efficient way of deleting themselves from the
-// database rather than simply dropping a bucket.
-type IndexDropper interface {
-	DropIndex(db legacydb.DB, interrupt <-chan struct{}) error
-}
-
-// internalBucket is an abstraction over a database bucket.  It is used to make
-// the code easier to test since it allows mock objects in the tests to only
-// implement these functions instead of everything a database.Bucket supports.
-type internalBucket interface {
-	Get(key []byte) []byte
-	Put(key []byte, value []byte) error
-	Delete(key []byte) error
+	DisconnectBlock(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error
 }

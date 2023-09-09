@@ -4,15 +4,17 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/Qitmeer/qng/meerdag"
+	"math"
 )
 
-func (cdb *ChainDB) PutTxIndexEntrys(sblock *types.SerializedBlock, block model.Block) error {
+func (cdb *ChainDB) PutTxIdxEntrys(sblock *types.SerializedBlock, block model.Block) error {
 	return rawdb.WriteTxLookupEntriesByBlock(cdb.db, sblock, uint64(block.GetID()))
 }
 
-func (cdb *ChainDB) GetTxIndexEntry(id *hash.Hash, verbose bool) (*types.Tx, *hash.Hash, error) {
+func (cdb *ChainDB) GetTxIdxEntry(id *hash.Hash, verbose bool) (*types.Tx, *hash.Hash, error) {
 	if !verbose {
 		blockID := rawdb.ReadTxLookupEntry(cdb.db, id)
 		if blockID == nil {
@@ -28,9 +30,9 @@ func (cdb *ChainDB) GetTxIndexEntry(id *hash.Hash, verbose bool) (*types.Tx, *ha
 	return tx, blockhash, nil
 }
 
-func (cdb *ChainDB) DeleteTxIndexEntrys(block *types.SerializedBlock) error {
+func (cdb *ChainDB) DeleteTxIdxEntrys(block *types.SerializedBlock) error {
 	for _, tx := range block.Transactions() {
-		_, blockHash, _ := cdb.GetTxIndexEntry(tx.Hash(), false)
+		_, blockHash, _ := cdb.GetTxIdxEntry(tx.Hash(), false)
 		if blockHash != nil && !blockHash.IsEqual(block.Hash()) {
 			continue
 		}
@@ -69,5 +71,61 @@ func (cdb *ChainDB) DeleteTxHashs(block *types.SerializedBlock) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (cdb *ChainDB) IsInvalidTxEmpty() bool {
+	return true
+}
+
+func (cdb *ChainDB) GetInvalidTxTip() (uint64, *hash.Hash, error) {
+	return 0, nil, nil
+}
+
+func (cdb *ChainDB) PutInvalidTxTip(order uint64, bh *hash.Hash) error {
+	return nil
+}
+
+func (cdb *ChainDB) PutInvalidTxs(sblock *types.SerializedBlock, block model.Block) error {
+	return nil
+}
+
+func (cdb *ChainDB) DeleteInvalidTxs(sblock *types.SerializedBlock, block model.Block) error {
+	return nil
+}
+
+func (cdb *ChainDB) GetInvalidTx(id *hash.Hash) (*types.Transaction, error) {
+	return nil, nil
+}
+
+func (cdb *ChainDB) GetInvalidTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error) {
+	return nil, nil
+}
+
+func (cdb *ChainDB) CleanInvalidTxs() error {
+	return nil
+}
+
+func (cdb *ChainDB) GetAddrIdxTip() (*hash.Hash, uint, error) {
+	return nil, math.MaxUint32, nil
+}
+
+func (cdb *ChainDB) PutAddrIdxTip(bh *hash.Hash, order uint) error {
+	return nil
+}
+
+func (cdb *ChainDB) PutAddrIdx(sblock *types.SerializedBlock, block model.Block, stxos [][]byte) error {
+	return nil
+}
+
+func (cdb *ChainDB) GetTxForAddress(addr types.Address, numToSkip, numRequested uint32, reverse bool) ([]*common.RetrievedTx, uint32, error) {
+	return nil, 0, nil
+}
+
+func (cdb *ChainDB) DeleteAddrIdx(sblock *types.SerializedBlock, stxos [][]byte) error {
+	return nil
+}
+
+func (cdb *ChainDB) CleanAddrIdx(finish bool) error {
 	return nil
 }
