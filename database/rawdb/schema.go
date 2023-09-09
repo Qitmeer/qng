@@ -80,6 +80,10 @@ var (
 	// snapshot
 	SnapshotBlockOrderPrefix  = []byte("o") // SnapshotBlockOrderPrefix + block order -> block id
 	SnapshotBlockStatusPrefix = []byte("s") // SnapshotBlockStatusPrefix + block id -> block status
+
+	// EstimateFeeDatabaseKey is the key that we use to
+	// store the fee estimator in the database.
+	EstimateFeeDatabaseKey = []byte("estimatefee")
 )
 
 // encodeBlockID encodes a block id as big endian uint64

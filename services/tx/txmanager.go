@@ -6,7 +6,6 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/node/service"
@@ -24,9 +23,6 @@ type TxManager struct {
 
 	// notify
 	ntmgr model.Notify
-
-	// db
-	db legacydb.DB
 
 	//invalidTx hash->block hash
 	invalidTx map[hash.Hash]*meerdag.HashSet
@@ -62,25 +58,22 @@ func (tm *TxManager) initFeeEstimator() error {
 	}
 	// Search for a FeeEstimator state in the database. If none can be found
 	// or if it cannot be loaded, create a new one.
-	tm.db.Update(func(tx legacydb.Tx) error {
-		metadata := tx.Metadata()
-		feeEstimationData := metadata.Get(mempool.EstimateFeeDatabaseKey)
-		if feeEstimationData != nil {
-			// delete it from the database so that we don't try to restore the
-			// same thing again somehow.
-			metadata.Delete(mempool.EstimateFeeDatabaseKey)
+	feeEstimationData, err := tm.consensus.DatabaseContext().GetEstimateFee()
+	if err != nil {
+		return err
+	}
+	if feeEstimationData != nil {
+		// delete it from the database so that we don't try to restore the
+		// same thing again somehow.
+		tm.consensus.DatabaseContext().DeleteEstimateFee()
+		// If there is an error, log it and make a new fee estimator.
+		var err error
+		tm.feeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
 
-			// If there is an error, log it and make a new fee estimator.
-			var err error
-			tm.feeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
-
-			if err != nil {
-				log.Error(fmt.Sprintf("Failed to restore fee estimator %v", err))
-			}
+		if err != nil {
+			log.Error(fmt.Sprintf("Failed to restore fee estimator %v", err))
 		}
-
-		return nil
-	})
+	}
 
 	// If no feeEstimator has been found, or if the one that has been found
 	// is behind somehow, create a new one and start over.
@@ -110,12 +103,7 @@ func (tm *TxManager) Stop() error {
 
 	if tm.feeEstimator != nil {
 		// Save fee estimator state in the database.
-		tm.db.Update(func(tx legacydb.Tx) error {
-			metadata := tx.Metadata()
-			metadata.Put(mempool.EstimateFeeDatabaseKey, tm.feeEstimator.Save())
-
-			return nil
-		})
+		return tm.consensus.DatabaseContext().PutEstimateFee(tm.feeEstimator.Save())
 	}
 
 	return nil
@@ -240,7 +228,6 @@ func NewTxManager(consensus model.Consensus, ntmgr model.Notify) (*TxManager, er
 		indexManager: consensus.IndexManager().(*index.Manager),
 		txMemPool:    txMemPool,
 		ntmgr:        ntmgr,
-		db:           consensus.LegacyDB(),
 		invalidTx:    invalidTx,
 		enableFeeEst: cfg.Estimatefee}
 	consensus.BlockChain().(*blockchain.BlockChain).Subscribe(tm.handleNotifyMsg)

@@ -73,4 +73,7 @@ type DataBase interface {
 	CleanAddrIdx(finish bool) error
 	IsLegacy() bool
 	TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{}) error
+	GetEstimateFee() ([]byte, error)
+	PutEstimateFee(data []byte) error
+	DeleteEstimateFee() error
 }

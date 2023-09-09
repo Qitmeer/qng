@@ -4,7 +4,6 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/event"
-	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
@@ -16,7 +15,6 @@ type Consensus interface {
 	GenesisHash() *hash.Hash
 	Config() *config.Config
 	DatabaseContext() DataBase
-	LegacyDB() legacydb.DB //TODO: Will be deleted in the future
 	BlockChain() BlockChain
 	IndexManager() IndexManager
 	Events() *event.Feed

@@ -7,8 +7,6 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/database/legacychaindb"
-	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerevm/amana"
@@ -69,11 +67,6 @@ func (s *consensus) Init() error {
 
 func (s *consensus) DatabaseContext() model.DataBase {
 	return s.databaseContext
-}
-
-// TODO: Will be deleted in the future, will be completely replaced by DatabaseContext in the future
-func (s *consensus) LegacyDB() legacydb.DB {
-	return s.databaseContext.(*legacychaindb.LegacyChainDB).DB()
 }
 
 func (s *consensus) Config() *config.Config {
