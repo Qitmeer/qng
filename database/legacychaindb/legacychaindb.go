@@ -337,9 +337,16 @@ func (cdb *LegacyChainDB) GetHeader(hash *hash.Hash) (*types.BlockHeader, error)
 }
 
 func (cdb *LegacyChainDB) PutBlock(block *types.SerializedBlock) error {
-	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+	err := cdb.db.Update(func(dbTx legacydb.Tx) error {
 		return dbTx.StoreBlock(block)
 	})
+	if err != nil {
+		if legacydb.IsError(err, legacydb.ErrBlockExists) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (cdb *LegacyChainDB) HasBlock(hash *hash.Hash) bool {

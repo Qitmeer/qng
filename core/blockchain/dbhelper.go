@@ -5,7 +5,6 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database/legacydb"
 )
 
 // dbFetchBlockByHash uses an existing database transaction to retrieve the raw
@@ -26,9 +25,6 @@ func dbFetchHeaderByHash(db model.DataBase, hash *hash.Hash) (*types.BlockHeader
 func dbMaybeStoreBlock(db model.DataBase, block *types.SerializedBlock) error {
 	err := db.PutBlock(block)
 	if err != nil {
-		if legacydb.IsError(err, legacydb.ErrBlockExists) {
-			return nil
-		}
 		return err
 	}
 	return nil
