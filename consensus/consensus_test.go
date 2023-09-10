@@ -22,12 +22,13 @@ func TestAloneConsensus(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer db.Close()
+
 	cons := NewPure(cfg, db)
 	err = cons.Init()
 	if err != nil {
 		t.Error(err)
 	}
+	db.Close()
 	// remove temporary data
 	err = os.RemoveAll(cfg.HomeDir)
 	if err != nil {
