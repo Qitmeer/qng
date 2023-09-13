@@ -16,6 +16,14 @@ GOFLAGS_RELEASE_QX = -ldflags "$(LDFLAG_RELEASE)"
 VERSION=$(shell ./build/bin/qng --version | grep ^QNG | cut -d' ' -f3|cut -d'+' -f1)
 GOBIN = ./build/bin
 
+# Automatic detection operating system
+ifeq ($(OS),Windows_NT)
+    # Windows Environment
+    OUTPUT_SUFFIX=.exe
+else
+    OUTPUT_SUFFIX=
+endif
+
 UNIX_EXECUTABLES := \
 	build/release/darwin/amd64/bin/$(EXECUTABLE) \
 	build/release/darwin/arm64/bin/$(EXECUTABLE) \
@@ -68,12 +76,12 @@ qng: qng-build
 qng-build:
     ifeq ($(ZMQ),TRUE)
 		@echo "Enalbe ZMQ"
-		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) -tags=zmq "github.com/Qitmeer/qng/cmd/qng"
+		@go build -o $(GOBIN)/qng$(OUTPUT_SUFFIX) $(GOFLAGS_DEV) -tags=zmq "github.com/Qitmeer/qng/cmd/qng"
     else ifeq ($(DEBUG),ON)
 		@echo "Enable DEBUG"
-		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) -gcflags="all=-N -l" "github.com/Qitmeer/qng/cmd/qng"
+		@go build -o $(GOBIN)/qng$(OUTPUT_SUFFIX) $(GOFLAGS_DEV) -gcflags="all=-N -l" "github.com/Qitmeer/qng/cmd/qng"
     else
-		@go build -o $(GOBIN)/qng $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qng"
+		@go build -o $(GOBIN)/qng$(OUTPUT_SUFFIX) $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qng"
     endif
 qx:
 	@go build -o $(GOBIN)/qx $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qx"
