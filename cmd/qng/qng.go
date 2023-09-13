@@ -6,6 +6,11 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+	"runtime/debug"
+	"runtime/pprof"
+
 	"github.com/Qitmeer/qng/common/profiling"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/system"
@@ -18,10 +23,6 @@ import (
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/version"
 	"github.com/urfave/cli/v2"
-	"os"
-	"runtime"
-	"runtime/debug"
-	"runtime/pprof"
 )
 
 func main() {

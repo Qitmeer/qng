@@ -4,9 +4,10 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/meerevm/eth"
-	"io/ioutil"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
@@ -288,6 +289,6 @@ func accountImport(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("Could not create the account: %v", err)
 	}
-	fmt.Printf("Address: {%x}\n", acct.Address)
+	fmt.Printf("PKAAddress: {%x}\n", acct.Address)
 	return nil
 }

@@ -257,18 +257,16 @@ func (this *QitmeerRobot) SubmitWork() {
 							this.InvalidShares++
 						}
 					}
-					this.SubmitLock.Unlock()
-					if err != ErrLimitWork { // limit wait block connect
-						time.AfterFunc(1*time.Second, func() {
-							this.SubmitLock.Lock()
-							r := this.Work.Get()
-							this.SubmitLock.Unlock()
-							if this.Work.Block != nil {
-								common.MinerLoger.Info("Change Task", "height", this.Work.Block.Height)
-							}
-							this.NotifyWork(r)
-						})
-					}
+					//this.SubmitLock.Unlock()
+					time.AfterFunc(1*time.Second, func() {
+						//this.SubmitLock.Lock()
+						r := this.Work.Get()
+						this.SubmitLock.Unlock()
+						if this.Work.Block != nil {
+							common.MinerLoger.Info("Change Task", "height", this.Work.Block.Height)
+						}
+						this.NotifyWork(r)
+					})
 				} else {
 					if !this.Pool { // solo
 						this.PendingLock.Lock()

@@ -3,12 +3,17 @@ package node
 
 import (
 	"fmt"
+	"path/filepath"
+	"reflect"
+	"time"
+
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/common/system/disk"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
+	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/amana"
@@ -25,10 +30,8 @@ import (
 	"github.com/Qitmeer/qng/services/mining"
 	"github.com/Qitmeer/qng/services/notifymgr"
 	"github.com/Qitmeer/qng/services/tx"
+	"github.com/Qitmeer/qng/services/wallet"
 	ecommon "github.com/ethereum/go-ethereum/common"
-	"path/filepath"
-	"reflect"
-	"time"
 )
 
 // QitmeerFull implements the qitmeer full node service.
@@ -136,14 +139,24 @@ func (qm *QitmeerFull) RegisterNotifyMgr() error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
+func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config, events *event.Feed) error {
 	// account manager
-	acctmgr, err := acct.New(qm.GetBlockChain(), cfg)
+	acctmgr, err := acct.New(qm.GetBlockChain(), cfg, events)
 	if err != nil {
 		return err
 	}
 	qm.GetBlockChain().Acct = acctmgr
 	qm.Services().RegisterService(acctmgr)
+	return nil
+}
+
+func (qm *QitmeerFull) RegisterWalletService(cfg *config.Config, evm *meer.MeerChain, _am *acct.AccountManager, _tm *tx.TxManager, events *event.Feed) error {
+	// account manager
+	walletmgr, err := wallet.New(cfg, evm, _am, _tm, events)
+	if err != nil {
+		return err
+	}
+	qm.Services().RegisterService(walletmgr)
 	return nil
 }
 
@@ -174,6 +187,16 @@ func (qm *QitmeerFull) GetPeerServer() *p2p.Service {
 	return service
 }
 
+// return wallet manager
+func (qm *QitmeerFull) GetWalletServer() *wallet.WalletManager {
+	var service *wallet.WalletManager
+	if err := qm.Services().FetchService(&service); err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return service
+}
+
 func (qm *QitmeerFull) GetRpcServer() *rpc.RpcServer {
 	var service *rpc.RpcServer
 	if err := qm.Services().FetchService(&service); err != nil {
@@ -185,6 +208,15 @@ func (qm *QitmeerFull) GetRpcServer() *rpc.RpcServer {
 
 func (qm *QitmeerFull) GetTxManager() *tx.TxManager {
 	var service *tx.TxManager
+	if err := qm.Services().FetchService(&service); err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return service
+}
+
+func (qm *QitmeerFull) GetAccountManager() *acct.AccountManager {
+	var service *acct.AccountManager
 	if err := qm.Services().FetchService(&service); err != nil {
 		log.Error(err.Error())
 		return nil
@@ -286,8 +318,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	}
 	// init address api
 	qm.addressApi = address.NewAddressApi(cfg, node.Params, qm.GetBlockChain())
-
-	if err := qm.RegisterAccountService(cfg); err != nil {
+	if err := qm.RegisterAccountService(cfg, node.consensus.Events()); err != nil {
 		return nil, err
 	}
 
@@ -296,7 +327,9 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 			return nil, err
 		}
 	}
-
+	if err := qm.RegisterWalletService(cfg, bc.MeerChain().(*meer.MeerChain), qm.GetAccountManager(), txManager, node.consensus.Events()); err != nil {
+		return nil, err
+	}
 	apis, err := qm.RegisterRpcService()
 	if err != nil {
 		return nil, err
