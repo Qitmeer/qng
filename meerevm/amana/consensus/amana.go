@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/meerevm/bridge"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"io"
 	"math/big"
 	"math/rand"
@@ -329,7 +330,7 @@ func (c *Amana) verifyCascadingFields(chain econsensus.ChainHeaderReader, header
 		if err := misc.VerifyGaslimit(parent.GasLimit, header.GasLimit); err != nil {
 			return err
 		}
-	} else if err := misc.VerifyEip1559Header(chain.Config(), parent, header); err != nil {
+	} else if err := eip1559.VerifyEIP1559Header(chain.Config(), parent, header); err != nil {
 		// Verify the header's EIP-1559 attributes.
 		return err
 	}

@@ -1,11 +1,12 @@
 package meer
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/consensus/model"
 	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/misc"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -30,7 +31,7 @@ func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB
 		Time:       uint64(timestamp),
 	}
 	if cfg.Genesis.Config.IsLondon(header.Number) {
-		header.BaseFee = misc.CalcBaseFee(cfg.Genesis.Config, parent.Header())
+		header.BaseFee = eip1559.CalcBaseFee(cfg.Genesis.Config, parent.Header())
 		if !cfg.Genesis.Config.IsLondon(parent.Number()) {
 			parentGasLimit := parent.GasLimit() * cfg.Genesis.Config.ElasticityMultiplier()
 			header.GasLimit = core.CalcGasLimit(parentGasLimit, parentGasLimit)
@@ -103,4 +104,26 @@ func BuildEVMBlock(block *qtypes.SerializedBlock) (*mmeer.Block, error) {
 		}
 	}
 	return result, nil
+}
+
+const (
+	commitInterruptNone int32 = iota
+	commitInterruptNewHead
+	commitInterruptResubmit
+	commitInterruptTimeout
+)
+
+// signalToErr converts the interruption signal to a concrete error type for return.
+// The given signal must be a valid interruption signal.
+func signalToErr(signal int32) error {
+	switch signal {
+	case commitInterruptNewHead:
+		return errBlockInterruptedByNewHead
+	case commitInterruptResubmit:
+		return errBlockInterruptedByRecommit
+	case commitInterruptTimeout:
+		return errBlockInterruptedByTimeout
+	default:
+		panic(fmt.Errorf("undefined signal %d", signal))
+	}
 }

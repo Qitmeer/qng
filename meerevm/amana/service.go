@@ -59,10 +59,7 @@ func (q *AmanaService) Start() error {
 		return err
 	}
 	//
-	rpcClient, err := q.chain.Node().Attach()
-	if err != nil {
-		log.Error(fmt.Sprintf("Failed to attach to self: %v", err))
-	}
+	rpcClient := q.chain.Node().Attach()
 	client := ethclient.NewClient(rpcClient)
 
 	blockNum, err := client.BlockNumber(q.Context())

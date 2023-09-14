@@ -159,7 +159,7 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 	}
 	statedb.IntermediateRoot(chainConfig.IsEIP158(vmContext.BlockNumber))
 	// Commit block
-	_, err := statedb.Commit(chainConfig.IsEIP158(vmContext.BlockNumber))
+	_, err := statedb.Commit(vmContext.BlockNumber.Uint64(), chainConfig.IsEIP158(vmContext.BlockNumber))
 	if err != nil {
 		return nil, fmt.Errorf("could not commit state: %v", err)
 	}
@@ -181,7 +181,7 @@ func MakePreState(db ethdb.Database, accounts core.GenesisAlloc) *state.StateDB 
 		}
 	}
 	// Commit and re-open to start with a clean state.
-	root, _ := statedb.Commit(false)
+	root, _ := statedb.Commit(0, false)
 	statedb, _ = state.New(root, sdb, nil)
 	return statedb
 }

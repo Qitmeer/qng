@@ -132,15 +132,15 @@ func prepare(ctx *cli.Context, cfg *Config) {
 
 	if ctx.IsSet(utils.MetricsEnableInfluxDBFlag.Name) {
 		if !ctx.IsSet(utils.MetricsInfluxDBDatabaseFlag.Name) {
-			ctx.Set(utils.MetricsInfluxDBDatabaseFlag.Name,"qng")
+			ctx.Set(utils.MetricsInfluxDBDatabaseFlag.Name, "qng")
 		}
 	}
 	if ctx.IsSet(utils.MetricsEnableInfluxDBV2Flag.Name) {
 		if !ctx.IsSet(utils.MetricsInfluxDBBucketFlag.Name) {
-			ctx.Set(utils.MetricsInfluxDBBucketFlag.Name,"qng")
+			ctx.Set(utils.MetricsInfluxDBBucketFlag.Name, "qng")
 		}
 		if !ctx.IsSet(utils.MetricsInfluxDBOrganizationFlag.Name) {
-			ctx.Set(utils.MetricsInfluxDBOrganizationFlag.Name,"qng")
+			ctx.Set(utils.MetricsInfluxDBOrganizationFlag.Name, "qng")
 		}
 	}
 
@@ -303,10 +303,7 @@ func startNode(ctx *cli.Context, stack *node.Node, backend *eth.EthAPIBackend) e
 	events := make(chan accounts.WalletEvent, 16)
 	stack.AccountManager().Subscribe(events)
 
-	rpcClient, err := stack.Attach()
-	if err != nil {
-		utils.Fatalf("Failed to attach to self: %v", err)
-	}
+	rpcClient := stack.Attach()
 	ethClient := ethclient.NewClient(rpcClient)
 
 	go func() {
@@ -368,7 +365,7 @@ func startNode(ctx *cli.Context, stack *node.Node, backend *eth.EthAPIBackend) e
 		}
 
 		gasprice := ethereum.GlobalBig(ctx, utils.MinerGasPriceFlag.Name)
-		backend.TxPool().SetGasPrice(gasprice)
+		backend.TxPool().SetGasTip(gasprice)
 		if err := backend.StartMining(); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
