@@ -54,10 +54,7 @@ func (b *MeerChain) Start() error {
 		return err
 	}
 	//
-	rpcClient, err := b.chain.Node().Attach()
-	if err != nil {
-		log.Error(fmt.Sprintf("Failed to attach to self: %v", err))
-	}
+	rpcClient := b.chain.Node().Attach()
 	client := ethclient.NewClient(rpcClient)
 
 	blockNum, err := client.BlockNumber(b.Context())

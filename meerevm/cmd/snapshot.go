@@ -31,18 +31,9 @@ import (
 )
 
 var (
-	// emptyRoot is the known root hash of an empty trie.
-	emptyRoot = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-
-	// emptyCode is the known hash of the empty EVM bytecode.
-	emptyCode = crypto.Keccak256(nil)
-)
-
-var (
 	snapshotCommand = &cli.Command{
 		Name:        "snapshot",
 		Usage:       "A set of commands based on the snapshot",
-		Category:    "MISCELLANEOUS COMMANDS",
 		Description: "",
 		Subcommands: []*cli.Command{
 			{
@@ -50,9 +41,7 @@ var (
 				Usage:     "Prune stale ethereum state data based on the snapshot",
 				ArgsUsage: "<root>",
 				Action:    pruneState,
-				Category:  "MISCELLANEOUS COMMANDS",
 				Flags: qcommon.Merge([]cli.Flag{
-					utils.CacheTrieJournalFlag,
 					utils.BloomFilterSizeFlag,
 				}, utils.NetworkFlags, utils.DatabasePathFlags),
 				Description: `
@@ -64,10 +53,7 @@ two version states are available: genesis and the specific one.
 
 The default pruning target is the HEAD-127 state.
 
-WARNING: It's necessary to delete the trie clean cache after the pruning.
-If you specify another directory for the trie clean cache via "--cache.trie.journal"
-during the use of Geth, please also specify it here for correct deletion. Otherwise
-the trie clean cache with default directory will be deleted.
+WARNING: it's only supported in hash mode(--state.scheme=hash)".
 `,
 			},
 			{
@@ -75,8 +61,9 @@ the trie clean cache with default directory will be deleted.
 				Usage:     "Recalculate state hash based on the snapshot for verification",
 				ArgsUsage: "<root>",
 				Action:    verifyState,
-				Category:  "MISCELLANEOUS COMMANDS",
-				Flags:     qcommon.Merge(utils.NetworkFlags, utils.DatabasePathFlags),
+				Flags: qcommon.Merge([]cli.Flag{
+					utils.StateSchemeFlag,
+				}, utils.NetworkFlags, utils.DatabasePathFlags),
 				Description: `
 geth snapshot verify-state <state-root>
 will traverse the whole accounts and storages set based on the specified
@@ -85,12 +72,35 @@ In other words, this command does the snapshot to trie conversion.
 `,
 			},
 			{
+				Name:      "check-dangling-storage",
+				Usage:     "Check that there is no 'dangling' snap storage",
+				ArgsUsage: "<root>",
+				Action:    checkDanglingStorage,
+				Flags:     qcommon.Merge(utils.NetworkFlags, utils.DatabasePathFlags),
+				Description: `
+geth snapshot check-dangling-storage <state-root> traverses the snap storage 
+data, and verifies that all snapshot storage data has a corresponding account. 
+`,
+			},
+			{
+				Name:      "inspect-account",
+				Usage:     "Check all snapshot layers for the a specific account",
+				ArgsUsage: "<address | hash>",
+				Action:    checkAccount,
+				Flags:     qcommon.Merge(utils.NetworkFlags, utils.DatabasePathFlags),
+				Description: `
+geth snapshot inspect-account <address | hash> checks all snapshot layers and prints out
+information about the specified address. 
+`,
+			},
+			{
 				Name:      "traverse-state",
-				Usage:     "Traverse the state with given root hash for verification",
+				Usage:     "Traverse the state with given root hash and perform quick verification",
 				ArgsUsage: "<root>",
 				Action:    traverseState,
-				Category:  "MISCELLANEOUS COMMANDS",
-				Flags:     qcommon.Merge(utils.NetworkFlags, utils.DatabasePathFlags),
+				Flags: qcommon.Merge([]cli.Flag{
+					utils.StateSchemeFlag,
+				}, utils.NetworkFlags, utils.DatabasePathFlags),
 				Description: `
 geth snapshot traverse-state <state-root>
 will traverse the whole state from the given state root and will abort if any
@@ -102,11 +112,12 @@ It's also usable without snapshot enabled.
 			},
 			{
 				Name:      "traverse-rawstate",
-				Usage:     "Traverse the state with given root hash for verification",
+				Usage:     "Traverse the state with given root hash and perform detailed verification",
 				ArgsUsage: "<root>",
 				Action:    traverseRawState,
-				Category:  "MISCELLANEOUS COMMANDS",
-				Flags:     qcommon.Merge(utils.NetworkFlags, utils.DatabasePathFlags),
+				Flags: qcommon.Merge([]cli.Flag{
+					utils.StateSchemeFlag,
+				}, utils.NetworkFlags, utils.DatabasePathFlags),
 				Description: `
 geth snapshot traverse-rawstate <state-root>
 will traverse the whole state from the given root and will abort if any referenced
@@ -122,7 +133,6 @@ It's also usable without snapshot enabled.
 				Usage:     "Dump a specific block from storage (same as 'geth dump' but using snapshots)",
 				ArgsUsage: "[? <blockHash> | <blockNum>]",
 				Action:    dumpState,
-				Category:  "MISCELLANEOUS COMMANDS",
 				Flags: qcommon.Merge([]cli.Flag{
 					utils.ExcludeCodeFlag,
 					utils.ExcludeStorageFlag,
@@ -142,15 +152,18 @@ block is used.
 )
 
 func pruneState(ctx *cli.Context) error {
-	stack, config := makeConfigNode(ctx, config.Cfg)
+	stack, _ := makeConfigNode(ctx, config.Cfg)
 	defer stack.Close()
 
 	chaindb := utils.MakeChainDatabase(ctx, stack, false)
 
 	defer chaindb.Close()
+
+	if rawdb.ReadStateScheme(chaindb) != rawdb.HashScheme {
+		log.Crit("Offline pruning is not required for path scheme")
+	}
 	prunerconfig := pruner.Config{
 		Datadir:   stack.ResolvePath(""),
-		Cachedir:  stack.ResolvePath(config.Eth.TrieCleanCacheJournal),
 		BloomSize: ctx.Uint64(utils.BloomFilterSizeFlag.Name),
 	}
 	pruner, err := pruner.NewPruner(chaindb, prunerconfig)
@@ -188,13 +201,16 @@ func verifyState(ctx *cli.Context) error {
 		log.Error("Failed to load head block")
 		return errors.New("no head block")
 	}
-	snapconfig := snapshot.Config{
+	triedb := utils.MakeTrieDatabase(ctx, chaindb, false, true)
+	defer triedb.Close()
+
+	snapConfig := snapshot.Config{
 		CacheSize:  256,
 		Recovery:   false,
 		NoBuild:    true,
 		AsyncBuild: false,
 	}
-	snaptree, err := snapshot.New(snapconfig, chaindb, trie.NewDatabase(chaindb), headBlock.Root())
+	snaptree, err := snapshot.New(snapConfig, chaindb, triedb, headBlock.Root())
 	if err != nil {
 		log.Error("Failed to open snapshot tree", "err", err)
 		return err
@@ -219,6 +235,15 @@ func verifyState(ctx *cli.Context) error {
 	return snapshot.CheckDanglingStorage(chaindb)
 }
 
+// checkDanglingStorage iterates the snap storage data, and verifies that all
+// storage also has corresponding account data.
+func checkDanglingStorage(ctx *cli.Context) error {
+	stack, _ := makeConfigNode(ctx, config.Cfg)
+	defer stack.Close()
+
+	return snapshot.CheckDanglingStorage(utils.MakeChainDatabase(ctx, stack, true))
+}
+
 // traverseState is a helper function used for pruning verification.
 // Basically it just iterates the trie, ensure all nodes and associated
 // contract codes are present.
@@ -227,6 +252,11 @@ func traverseState(ctx *cli.Context) error {
 	defer stack.Close()
 
 	chaindb := utils.MakeChainDatabase(ctx, stack, true)
+	defer chaindb.Close()
+
+	triedb := utils.MakeTrieDatabase(ctx, chaindb, false, true)
+	defer triedb.Close()
+
 	headBlock := rawdb.ReadHeadBlock(chaindb)
 	if headBlock == nil {
 		log.Error("Failed to load head block")
@@ -251,7 +281,6 @@ func traverseState(ctx *cli.Context) error {
 		root = headBlock.Root()
 		log.Info("Start traversing the state", "root", root, "number", headBlock.NumberU64())
 	}
-	triedb := trie.NewDatabase(chaindb)
 	t, err := trie.NewStateTrie(trie.StateTrieID(root), triedb)
 	if err != nil {
 		log.Error("Failed to open trie", "root", root, "err", err)
@@ -264,7 +293,12 @@ func traverseState(ctx *cli.Context) error {
 		lastReport time.Time
 		start      = time.Now()
 	)
-	accIter := trie.NewIterator(t.NodeIterator(nil))
+	acctIt, err := t.NodeIterator(nil)
+	if err != nil {
+		log.Error("Failed to open iterator", "root", root, "err", err)
+		return err
+	}
+	accIter := trie.NewIterator(acctIt)
 	for accIter.Next() {
 		accounts += 1
 		var acc types.StateAccount
@@ -279,7 +313,12 @@ func traverseState(ctx *cli.Context) error {
 				log.Error("Failed to open storage trie", "root", acc.Root, "err", err)
 				return err
 			}
-			storageIter := trie.NewIterator(storageTrie.NodeIterator(nil))
+			storageIt, err := storageTrie.NodeIterator(nil)
+			if err != nil {
+				log.Error("Failed to open storage iterator", "root", acc.Root, "err", err)
+				return err
+			}
+			storageIter := trie.NewIterator(storageIt)
 			for storageIter.Next() {
 				slots += 1
 			}
@@ -317,6 +356,11 @@ func traverseRawState(ctx *cli.Context) error {
 	defer stack.Close()
 
 	chaindb := utils.MakeChainDatabase(ctx, stack, true)
+	defer chaindb.Close()
+
+	triedb := utils.MakeTrieDatabase(ctx, chaindb, false, true)
+	defer triedb.Close()
+
 	headBlock := rawdb.ReadHeadBlock(chaindb)
 	if headBlock == nil {
 		log.Error("Failed to load head block")
@@ -341,7 +385,6 @@ func traverseRawState(ctx *cli.Context) error {
 		root = headBlock.Root()
 		log.Info("Start traversing the state", "root", root, "number", headBlock.NumberU64())
 	}
-	triedb := trie.NewDatabase(chaindb)
 	t, err := trie.NewStateTrie(trie.StateTrieID(root), triedb)
 	if err != nil {
 		log.Error("Failed to open trie", "root", root, "err", err)
@@ -357,7 +400,16 @@ func traverseRawState(ctx *cli.Context) error {
 		hasher     = crypto.NewKeccakState()
 		got        = make([]byte, 32)
 	)
-	accIter := t.NodeIterator(nil)
+	accIter, err := t.NodeIterator(nil)
+	if err != nil {
+		log.Error("Failed to open iterator", "root", root, "err", err)
+		return err
+	}
+	reader, err := triedb.Reader(root)
+	if err != nil {
+		log.Error("State is non-existent", "root", root)
+		return nil
+	}
 	for accIter.Next(true) {
 		nodes += 1
 		node := accIter.Hash()
@@ -365,7 +417,7 @@ func traverseRawState(ctx *cli.Context) error {
 		// Check the present for non-empty hash node(embedded node doesn't
 		// have their own hash).
 		if node != (common.Hash{}) {
-			blob := rawdb.ReadLegacyTrieNode(chaindb, node)
+			blob, _ := reader.Node(common.Hash{}, accIter.Path(), node)
 			if len(blob) == 0 {
 				log.Error("Missing trie node(account)", "hash", node)
 				return errors.New("missing account")
@@ -394,7 +446,11 @@ func traverseRawState(ctx *cli.Context) error {
 					log.Error("Failed to open storage trie", "root", acc.Root, "err", err)
 					return errors.New("missing storage trie")
 				}
-				storageIter := storageTrie.NodeIterator(nil)
+				storageIter, err := storageTrie.NodeIterator(nil)
+				if err != nil {
+					log.Error("Failed to open storage iterator", "root", acc.Root, "err", err)
+					return err
+				}
 				for storageIter.Next(true) {
 					nodes += 1
 					node := storageIter.Hash()
@@ -402,7 +458,7 @@ func traverseRawState(ctx *cli.Context) error {
 					// Check the presence for non-empty hash node(embedded node doesn't
 					// have their own hash).
 					if node != (common.Hash{}) {
-						blob := rawdb.ReadLegacyTrieNode(chaindb, node)
+						blob, _ := reader.Node(common.BytesToHash(accIter.LeafKey()), storageIter.Path(), node)
 						if len(blob) == 0 {
 							log.Error("Missing trie node(storage)", "hash", node)
 							return errors.New("missing storage")
@@ -462,13 +518,16 @@ func dumpState(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	triedb := utils.MakeTrieDatabase(ctx, db, false, true)
+	defer triedb.Close()
+
 	snapConfig := snapshot.Config{
 		CacheSize:  256,
 		Recovery:   false,
 		NoBuild:    true,
 		AsyncBuild: false,
 	}
-	snaptree, err := snapshot.New(snapConfig, db, trie.NewDatabase(db), root)
+	snaptree, err := snapshot.New(snapConfig, db, triedb, root)
 	if err != nil {
 		return err
 	}
@@ -489,14 +548,14 @@ func dumpState(ctx *cli.Context) error {
 		Root common.Hash `json:"root"`
 	}{root})
 	for accIt.Next() {
-		account, err := snapshot.FullAccount(accIt.Account())
+		account, err := types.FullAccount(accIt.Account())
 		if err != nil {
 			return err
 		}
 		da := &state.DumpAccount{
 			Balance:   account.Balance.String(),
 			Nonce:     account.Nonce,
-			Root:      account.Root,
+			Root:      account.Root.Bytes(),
 			CodeHash:  account.CodeHash,
 			SecureKey: accIt.Hash().Bytes(),
 		}
@@ -530,6 +589,38 @@ func dumpState(ctx *cli.Context) error {
 	return nil
 }
 
+// checkAccount iterates the snap data layers, and looks up the given account
+// across all layers.
+func checkAccount(ctx *cli.Context) error {
+	if ctx.NArg() != 1 {
+		return errors.New("need <address|hash> arg")
+	}
+	var (
+		hash common.Hash
+		addr common.Address
+	)
+	switch arg := ctx.Args().First(); len(arg) {
+	case 40, 42:
+		addr = common.HexToAddress(arg)
+		hash = crypto.Keccak256Hash(addr.Bytes())
+	case 64, 66:
+		hash = common.HexToHash(arg)
+	default:
+		return errors.New("malformed address or hash")
+	}
+	stack, _ := makeConfigNode(ctx, config.Cfg)
+	defer stack.Close()
+	chaindb := utils.MakeChainDatabase(ctx, stack, true)
+	defer chaindb.Close()
+	start := time.Now()
+	log.Info("Checking difflayer journal", "address", addr, "hash", hash)
+	if err := snapshot.CheckJournalAccount(chaindb, hash); err != nil {
+		return err
+	}
+	log.Info("Checked the snapshot journalled storage", "time", common.PrettyDuration(time.Since(start)))
+	return nil
+}
+
 func parseDumpConfig(ctx *cli.Context, stack *node.Node) (*state.DumpConfig, ethdb.Database, common.Hash, error) {
 	db := utils.MakeChainDatabase(ctx, stack, true)
 	var header *types.Header
@@ -546,12 +637,12 @@ func parseDumpConfig(ctx *cli.Context, stack *node.Node) (*state.DumpConfig, eth
 				return nil, nil, common.Hash{}, fmt.Errorf("block %x not found", hash)
 			}
 		} else {
-			number, err := strconv.Atoi(arg)
+			number, err := strconv.ParseUint(arg, 10, 64)
 			if err != nil {
 				return nil, nil, common.Hash{}, err
 			}
-			if hash := rawdb.ReadCanonicalHash(db, uint64(number)); hash != (common.Hash{}) {
-				header = rawdb.ReadHeader(db, hash, uint64(number))
+			if hash := rawdb.ReadCanonicalHash(db, number); hash != (common.Hash{}) {
+				header = rawdb.ReadHeader(db, hash, number)
 			} else {
 				return nil, nil, common.Hash{}, fmt.Errorf("header for block %d not found", number)
 			}
