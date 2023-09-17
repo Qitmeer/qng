@@ -61,7 +61,7 @@ func indexCmd() *cli.Command {
 					}
 					defer db.Close()
 
-					return db.CleanInvalidTxs()
+					return db.CleanInvalidTxIdx()
 				},
 			},
 		},

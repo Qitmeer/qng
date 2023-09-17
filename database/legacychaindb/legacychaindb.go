@@ -110,7 +110,11 @@ func (cdb *LegacyChainDB) DB() legacydb.DB {
 }
 
 func (cdb *LegacyChainDB) Rebuild(mgr model.IndexManager) error {
-	err := cdb.CleanInvalidTxs()
+	err := cdb.CleanInvalidTxIdx()
+	if err != nil {
+		log.Info(err.Error())
+	}
+	err = cdb.CleanAddrIdx(false)
 	if err != nil {
 		log.Info(err.Error())
 	}

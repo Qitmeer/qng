@@ -138,7 +138,24 @@ func (cdb *ChainDB) ResolveAncient(name string, ancient string) string {
 }
 
 func (cdb *ChainDB) Rebuild(mgr model.IndexManager) error {
-	return fmt.Errorf("No support Rebuild:%s", cdb.Name())
+	err := cdb.CleanInvalidTxIdx()
+	if err != nil {
+		return err
+	}
+	err = cdb.CleanAddrIdx(false)
+	if err != nil {
+		return err
+	}
+
+	err = rawdb.CleanSpendJournal(cdb.db)
+	if err != nil {
+		return err
+	}
+	err = rawdb.CleanUtxo(cdb.db)
+	if err != nil {
+		return err
+	}
+	return rawdb.CleanTokenState(cdb.db)
 }
 
 func (cdb *ChainDB) GetSpendJournal(bh *hash.Hash) ([]byte, error) {
