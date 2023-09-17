@@ -75,7 +75,7 @@ func (cdb *ChainDB) DeleteTxHashs(block *types.SerializedBlock) error {
 }
 
 func (cdb *ChainDB) IsInvalidTxEmpty() bool {
-	return true
+	return rawdb.IsInvalidTxEmpty(cdb.db)
 }
 
 func (cdb *ChainDB) GetInvalidTxTip() (uint64, *hash.Hash, error) {
@@ -87,23 +87,31 @@ func (cdb *ChainDB) PutInvalidTxTip(order uint64, bh *hash.Hash) error {
 }
 
 func (cdb *ChainDB) PutInvalidTxs(sblock *types.SerializedBlock, block model.Block) error {
-	return nil
+	return rawdb.WriteInvalidTxLookupEntriesByBlock(cdb.db, sblock, uint64(block.GetID()))
 }
 
 func (cdb *ChainDB) DeleteInvalidTxs(sblock *types.SerializedBlock, block model.Block) error {
+	for _, tx := range sblock.Transactions() {
+		err := rawdb.DeleteTxLookupEntry(cdb.db, tx.Hash())
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 func (cdb *ChainDB) GetInvalidTx(id *hash.Hash) (*types.Transaction, error) {
-	return nil, nil
+	tx, _, _, _ := rawdb.ReadInvalidTransaction(cdb.db, id)
+	return tx.Tx, nil
 }
 
 func (cdb *ChainDB) GetInvalidTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error) {
-	return nil, nil
+	txid := rawdb.ReadInvalidTxIdByFullHash(cdb.db, fullHash)
+	return txid, nil
 }
 
 func (cdb *ChainDB) CleanInvalidTxs() error {
-	return nil
+	return rawdb.CleanInvalidTxs(cdb.db)
 }
 
 func (cdb *ChainDB) GetAddrIdxTip() (*hash.Hash, uint, error) {

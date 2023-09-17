@@ -83,3 +83,102 @@ func WriteTxIdByFullHash(db ethdb.KeyValueWriter, full *hash.Hash, id *hash.Hash
 func DeleteTxIdByFullHash(db ethdb.KeyValueWriter, full *hash.Hash) error {
 	return db.Delete(txFullHashKey(full))
 }
+
+// invalid tx index
+func ReadInvalidTxLookupEntry(db ethdb.Reader, hash *hash.Hash) *uint64 {
+	data, err := db.Get(invalidtxLookupKey(hash))
+	if len(data) == 0 {
+		log.Error(err.Error())
+		return nil
+	}
+	id := binary.BigEndian.Uint64(data)
+	return &id
+}
+
+func writeInvalidTxLookupEntry(db ethdb.KeyValueWriter, hash *hash.Hash, id uint64) error {
+	var serializedID [4]byte
+	binary.BigEndian.PutUint64(serializedID[:], id)
+	return db.Put(invalidtxLookupKey(hash), serializedID[:])
+}
+
+func WriteInvalidTxLookupEntriesByBlock(db ethdb.KeyValueWriter, block *types.SerializedBlock, id uint64) error {
+	var serializedID [4]byte
+	binary.BigEndian.PutUint64(serializedID[:], id)
+	for _, tx := range block.Transactions() {
+		err := db.Put(invalidtxLookupKey(tx.Hash()), serializedID[:])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func DeleteInvalidTxLookupEntry(db ethdb.KeyValueWriter, hash *hash.Hash) error {
+	return db.Delete(invalidtxLookupKey(hash))
+}
+
+func ReadInvalidTransaction(db ethdb.Reader, hash *hash.Hash) (*types.Tx, uint64, *hash.Hash, int) {
+	blockID := ReadInvalidTxLookupEntry(db, hash)
+	if blockID == nil {
+		return nil, 0, nil, 0
+	}
+	body := ReadBodyByID(db, *blockID)
+	if body == nil {
+		log.Error("Transaction referenced missing", "blockID", *blockID, "txHash", hash.String())
+		return nil, 0, nil, 0
+	}
+	for txIndex, tx := range body.Transactions() {
+		if tx.Hash().IsEqual(hash) {
+			return tx, *blockID, body.Hash(), txIndex
+		}
+	}
+	log.Error("Transaction not found", "blockID", *blockID, "txHash", hash.String())
+	return nil, 0, nil, 0
+}
+
+func IsInvalidTxEmpty(db ethdb.Iteratee) bool {
+	it:= db.NewIterator(invalidtxLookupPrefix, nil)
+	for it.Next() {
+		return false
+	}
+	return true
+}
+
+func CleanInvalidTxs(db ethdb.Database) error {
+	it:= db.NewIterator(invalidtxLookupPrefix, nil)
+	total:=0
+	defer func() {
+		log.Debug("Clean invalid transactions","total",total)
+	}()
+	for it.Next() {
+		err:=db.Delete(it.Key())
+		if err != nil {
+			return err
+		}
+		total++
+	}
+	return nil
+}
+
+// tx full hash
+func ReadInvalidTxIdByFullHash(db ethdb.Reader, full *hash.Hash) *hash.Hash {
+	data, err := db.Get(invalidtxFullHashKey(full))
+	if len(data) == 0 {
+		log.Error(err.Error())
+		return nil
+	}
+	fhash, err := hash.NewHash(data)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return fhash
+}
+
+func WriteInvalidTxIdByFullHash(db ethdb.KeyValueWriter, full *hash.Hash, id *hash.Hash) error {
+	return db.Put(invalidtxFullHashKey(full), id.Bytes())
+}
+
+func DeleteInvalidTxIdByFullHash(db ethdb.KeyValueWriter, full *hash.Hash) error {
+	return db.Delete(invalidtxFullHashKey(full))
+}

@@ -77,6 +77,10 @@ var (
 	txLookupPrefix   = []byte("l") // txLookupPrefix + hash (id) -> transaction lookup metadata
 	txFullHashPrefix = []byte("f") // txFullHashPrefix + hash (full) -> transaction id
 
+	// invalid tx index
+	invalidtxLookupPrefix   = []byte("L") // invalidtxLookupPrefix + hash (id) -> transaction lookup metadata
+	invalidtxFullHashPrefix = []byte("F") // invalidtxFullHashPrefix + hash (full) -> transaction id
+
 	// snapshot
 	SnapshotBlockOrderPrefix  = []byte("o") // SnapshotBlockOrderPrefix + block order -> block id
 	SnapshotBlockStatusPrefix = []byte("s") // SnapshotBlockStatusPrefix + block id -> block status
@@ -145,4 +149,14 @@ func tokenStateKey(id uint64) []byte {
 // dagMainChainKey = dagMainChainPrefix + id (uint64 big endian)
 func dagMainChainKey(id uint64) []byte {
 	return append(dagMainChainPrefix, encodeBlockID(id)...)
+}
+
+// invalidtxLookupKey = invalidtxLookupPrefix + hash
+func invalidtxLookupKey(hash *hash.Hash) []byte {
+	return append(invalidtxLookupPrefix, hash.Bytes()...)
+}
+
+// invalidtxFullHashKey = invalidtxFullHashPrefix + hash
+func invalidtxFullHashKey(hash *hash.Hash) []byte {
+	return append(invalidtxFullHashPrefix, hash.Bytes()...)
 }
