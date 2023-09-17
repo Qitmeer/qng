@@ -37,6 +37,9 @@ func (idx *InvalidTxIndex) Init() error {
 		if err != nil {
 			return err
 		}
+		if tipHash == nil {
+			return nil
+		}
 		if tipOrder != uint64(mainOrder) || !mainHash.IsEqual(tipHash) {
 			if tipOrder < uint64(mainOrder) {
 				// It shows that the data is encounter
