@@ -30,10 +30,10 @@ func (idx *InvalidTxIndex) Init() error {
 	if mainHash == nil {
 		return fmt.Errorf("No block in order:%d", mainOrder)
 	}
-	if idx.DB().IsInvalidTxEmpty() {
+	if idx.DB().IsInvalidTxIdxEmpty() {
 		return idx.caughtUpFrom(0)
 	} else {
-		tipOrder, tipHash, err := idx.DB().GetInvalidTxTip()
+		tipOrder, tipHash, err := idx.DB().GetInvalidTxIdxTip()
 		if err != nil {
 			return err
 		}
@@ -107,7 +107,7 @@ func (idx *InvalidTxIndex) DisconnectBlock(sblock *types.SerializedBlock, block 
 }
 
 func (idx *InvalidTxIndex) UpdateMainTip(bh *hash.Hash, order uint64) error {
-	return idx.DB().PutInvalidTxTip(order, bh)
+	return idx.DB().PutInvalidTxIdxTip(order, bh)
 }
 
 func (idx *InvalidTxIndex) Get(txid *hash.Hash) (*types.Transaction, error) {

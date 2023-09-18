@@ -237,6 +237,22 @@ func DeleteSpendJournal(db ethdb.KeyValueWriter, hash *hash.Hash) {
 	}
 }
 
+func CleanSpendJournal(db ethdb.Database) error {
+	it := db.NewIterator(spendJournalPrefix, nil)
+	total := 0
+	defer func() {
+		log.Debug("Clean spend journal", "total", total)
+	}()
+	for it.Next() {
+		err := db.Delete(it.Key())
+		if err != nil {
+			return err
+		}
+		total++
+	}
+	return nil
+}
+
 // utxo
 
 func ReadUtxo(db ethdb.Reader, opd []byte) []byte {
@@ -274,6 +290,22 @@ func ForeachUtxo(db ethdb.KeyValueStore, fn func(opd []byte, data []byte) error)
 	return nil
 }
 
+func CleanUtxo(db ethdb.Database) error {
+	it := db.NewIterator(utxoPrefix, nil)
+	total := 0
+	defer func() {
+		log.Debug("Clean utxo", "total", total)
+	}()
+	for it.Next() {
+		err := db.Delete(it.Key())
+		if err != nil {
+			return err
+		}
+		total++
+	}
+	return nil
+}
+
 // tokenState
 
 func ReadTokenState(db ethdb.Reader, id uint64) []byte {
@@ -296,4 +328,20 @@ func DeleteTokenState(db ethdb.KeyValueWriter, id uint64) {
 	if err := db.Delete(tokenStateKey(id)); err != nil {
 		log.Crit("Failed to delete hash to token state mapping", "err", err)
 	}
+}
+
+func CleanTokenState(db ethdb.Database) error {
+	it := db.NewIterator(tokenStatePrefix, nil)
+	total := 0
+	defer func() {
+		log.Debug("Clean token state", "total", total)
+	}()
+	for it.Next() {
+		err := db.Delete(it.Key())
+		if err != nil {
+			return err
+		}
+		total++
+	}
+	return nil
 }

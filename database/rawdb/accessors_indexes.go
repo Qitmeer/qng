@@ -137,7 +137,7 @@ func ReadInvalidTransaction(db ethdb.Reader, hash *hash.Hash) (*types.Tx, uint64
 }
 
 func IsInvalidTxEmpty(db ethdb.Iteratee) bool {
-	it:= db.NewIterator(invalidtxLookupPrefix, nil)
+	it := db.NewIterator(invalidtxLookupPrefix, nil)
 	for it.Next() {
 		return false
 	}
@@ -145,13 +145,13 @@ func IsInvalidTxEmpty(db ethdb.Iteratee) bool {
 }
 
 func CleanInvalidTxs(db ethdb.Database) error {
-	it:= db.NewIterator(invalidtxLookupPrefix, nil)
-	total:=0
+	it := db.NewIterator(invalidtxLookupPrefix, nil)
+	total := 0
 	defer func() {
-		log.Debug("Clean invalid transactions","total",total)
+		log.Debug("Clean invalid transactions", "total", total)
 	}()
 	for it.Next() {
-		err:=db.Delete(it.Key())
+		err := db.Delete(it.Key())
 		if err != nil {
 			return err
 		}
@@ -181,4 +181,20 @@ func WriteInvalidTxIdByFullHash(db ethdb.KeyValueWriter, full *hash.Hash, id *ha
 
 func DeleteInvalidTxIdByFullHash(db ethdb.KeyValueWriter, full *hash.Hash) error {
 	return db.Delete(invalidtxFullHashKey(full))
+}
+
+func CleanInvalidTxHashs(db ethdb.Database) error {
+	it := db.NewIterator(invalidtxFullHashPrefix, nil)
+	total := 0
+	defer func() {
+		log.Debug("Clean the hash of invalid transactions", "total", total)
+	}()
+	for it.Next() {
+		err := db.Delete(it.Key())
+		if err != nil {
+			return err
+		}
+		total++
+	}
+	return nil
 }

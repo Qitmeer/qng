@@ -74,15 +74,15 @@ func (cdb *ChainDB) DeleteTxHashs(block *types.SerializedBlock) error {
 	return nil
 }
 
-func (cdb *ChainDB) IsInvalidTxEmpty() bool {
+func (cdb *ChainDB) IsInvalidTxIdxEmpty() bool {
 	return rawdb.IsInvalidTxEmpty(cdb.db)
 }
 
-func (cdb *ChainDB) GetInvalidTxTip() (uint64, *hash.Hash, error) {
+func (cdb *ChainDB) GetInvalidTxIdxTip() (uint64, *hash.Hash, error) {
 	return 0, nil, nil
 }
 
-func (cdb *ChainDB) PutInvalidTxTip(order uint64, bh *hash.Hash) error {
+func (cdb *ChainDB) PutInvalidTxIdxTip(order uint64, bh *hash.Hash) error {
 	return nil
 }
 
@@ -110,8 +110,12 @@ func (cdb *ChainDB) GetInvalidTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error
 	return txid, nil
 }
 
-func (cdb *ChainDB) CleanInvalidTxs() error {
-	return rawdb.CleanInvalidTxs(cdb.db)
+func (cdb *ChainDB) CleanInvalidTxIdx() error {
+	err := rawdb.CleanInvalidTxs(cdb.db)
+	if err != nil {
+		return err
+	}
+	return rawdb.CleanInvalidTxHashs(cdb.db)
 }
 
 func (cdb *ChainDB) GetAddrIdxTip() (*hash.Hash, uint, error) {

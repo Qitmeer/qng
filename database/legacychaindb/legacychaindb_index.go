@@ -217,15 +217,15 @@ func (cdb *LegacyChainDB) InvalidtxindexStore() model.InvalidTxIndexStore {
 	return cdb.invalidtxindexStore
 }
 
-func (cdb *LegacyChainDB) IsInvalidTxEmpty() bool {
+func (cdb *LegacyChainDB) IsInvalidTxIdxEmpty() bool {
 	return cdb.InvalidtxindexStore().IsEmpty()
 }
 
-func (cdb *LegacyChainDB) GetInvalidTxTip() (uint64, *hash.Hash, error) {
+func (cdb *LegacyChainDB) GetInvalidTxIdxTip() (uint64, *hash.Hash, error) {
 	return cdb.InvalidtxindexStore().Tip(model.NewStagingArea())
 }
 
-func (cdb *LegacyChainDB) PutInvalidTxTip(order uint64, bh *hash.Hash) error {
+func (cdb *LegacyChainDB) PutInvalidTxIdxTip(order uint64, bh *hash.Hash) error {
 	stagingArea := model.NewStagingArea()
 	cdb.InvalidtxindexStore().StageTip(stagingArea, bh, order)
 	return staging.CommitAllChanges(cdb.DB(), stagingArea)
@@ -253,7 +253,7 @@ func (cdb *LegacyChainDB) GetInvalidTxIdByHash(fullHash *hash.Hash) (*hash.Hash,
 	return cdb.InvalidtxindexStore().GetIdByHash(stagingArea, fullHash)
 }
 
-func (cdb *LegacyChainDB) CleanInvalidTxs() error {
+func (cdb *LegacyChainDB) CleanInvalidTxIdx() error {
 	log.Info("Start clean invalidtx index")
 	if cdb.InvalidtxindexStore().IsEmpty() {
 		return fmt.Errorf("No data needs to be deleted")
