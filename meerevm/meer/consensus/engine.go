@@ -7,7 +7,6 @@ package consensus
 import (
 	"github.com/Qitmeer/qng/log"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/rpc"
 	"sync"
 )
@@ -15,9 +14,8 @@ import (
 type MeerEngine struct {
 	log log.Logger
 
-	threads  int
-	update   chan struct{}
-	hashrate metrics.Meter
+	threads int
+	update  chan struct{}
 
 	lock      sync.Mutex
 	closeOnce sync.Once
@@ -25,9 +23,8 @@ type MeerEngine struct {
 
 func New() *MeerEngine {
 	return &MeerEngine{
-		log:      log.Root(),
-		update:   make(chan struct{}),
-		hashrate: metrics.NewMeterForced(),
+		log:    log.Root(),
+		update: make(chan struct{}),
 	}
 }
 
@@ -52,10 +49,6 @@ func (me *MeerEngine) SetThreads(threads int) {
 	case me.update <- struct{}{}:
 	default:
 	}
-}
-
-func (me *MeerEngine) Hashrate() float64 {
-	return me.hashrate.Rate1()
 }
 
 func (me *MeerEngine) APIs(chain consensus.ChainHeaderReader) []rpc.API {
