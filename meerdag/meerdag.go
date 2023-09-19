@@ -245,7 +245,7 @@ func (bd *MeerDAG) init(dagType string, blockRate float64, db model.DataBase, ge
 	bd.instance.Init(bd)
 
 	serializedData, err := bd.db.GetDagInfo()
-	if err != nil && len(serializedData) <= 0 {
+	if len(serializedData) <= 0 {
 		err = DBPutDAGInfo(bd)
 		if err != nil {
 			log.Error(err.Error())

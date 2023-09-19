@@ -68,7 +68,7 @@ func ReadBlockID(db ethdb.Reader, hash *hash.Hash) *uint64 {
 }
 
 func WriteBlockID(db ethdb.KeyValueWriter, hash *hash.Hash, id uint64) {
-	var serializedID [4]byte
+	var serializedID [8]byte
 	binary.BigEndian.PutUint64(serializedID[:], id)
 	if err := db.Put(blockIDKey(hash), serializedID[:]); err != nil {
 		log.Error("Failed to store block id to hash mapping", "err", err)
@@ -97,7 +97,7 @@ func ReadBlockHashByID(db ethdb.Reader, id uint64) (*hash.Hash, error) {
 func ReadMainChainTip(db ethdb.Reader) *uint64 {
 	data, err := db.Get(mainchainTipKey)
 	if err != nil {
-		log.Error(err.Error())
+		log.Debug("main chain tip", "err", err.Error())
 		return nil
 	}
 	number := binary.BigEndian.Uint64(data)
@@ -144,7 +144,9 @@ func DeleteMainChain(db ethdb.KeyValueWriter, id uint64) {
 func ReadDAGInfo(db ethdb.Reader) []byte {
 	data, err := db.Get(dagInfoKey)
 	if len(data) == 0 {
-		log.Error(err.Error())
+		if err != nil {
+			log.Debug("dag info", "err", err.Error())
+		}
 		return nil
 	}
 	return data
@@ -161,7 +163,7 @@ func WriteDAGInfo(db ethdb.KeyValueWriter, data []byte) error {
 func ReadDAGTips(db ethdb.Reader) []uint64 {
 	data, err := db.Get(dagTipsKey)
 	if len(data) == 0 {
-		log.Error(err.Error())
+		log.Debug("dag tips", "err", err.Error())
 		return nil
 	}
 	var tips []uint64

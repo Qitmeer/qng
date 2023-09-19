@@ -218,7 +218,9 @@ func DeleteBlock(db ethdb.KeyValueWriter, hash *hash.Hash) {
 func ReadSpendJournal(db ethdb.Reader, hash *hash.Hash) []byte {
 	data, err := db.Get(spendJournalKey(hash))
 	if len(data) == 0 {
-		log.Error(err.Error())
+		if err != nil {
+			log.Debug("spend journal", "err", err.Error())
+		}
 		return nil
 	}
 	return data

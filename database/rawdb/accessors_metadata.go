@@ -92,7 +92,7 @@ func WriteDatabaseBlockIndexVersion(db ethdb.KeyValueWriter, version uint32) err
 }
 
 func ReadDatabaseCreate(db ethdb.KeyValueReader) *time.Time {
-	var create int64
+	var create uint64
 
 	enc, _ := db.Get(CreatedKey)
 	if len(enc) == 0 {
@@ -101,12 +101,12 @@ func ReadDatabaseCreate(db ethdb.KeyValueReader) *time.Time {
 	if err := rlp.DecodeBytes(enc, &create); err != nil {
 		return nil
 	}
-	ct := time.Unix(create, 0)
+	ct := time.Unix(int64(create), 0)
 	return &ct
 }
 
 func WriteDatabaseCreate(db ethdb.KeyValueWriter, create time.Time) error {
-	enc, err := rlp.EncodeToBytes(create.Unix())
+	enc, err := rlp.EncodeToBytes(uint64(create.Unix()))
 	if err != nil {
 		log.Error("Failed to encode database create time", "err", err)
 		return err
@@ -203,7 +203,7 @@ func UpdateUncleanShutdownMarker(db ethdb.KeyValueStore) {
 func ReadBestChainState(db ethdb.Reader) []byte {
 	data, err := db.Get(bestChainStateKey)
 	if err != nil {
-		log.Error(err.Error())
+		log.Debug("best chain state", "err", err.Error())
 		return nil
 	}
 	return data
@@ -220,7 +220,7 @@ func WriteBestChainState(db ethdb.KeyValueWriter, data []byte) error {
 func ReadEstimateFee(db ethdb.Reader) []byte {
 	data, err := db.Get(EstimateFeeDatabaseKey)
 	if err != nil {
-		log.Error(err.Error())
+		log.Debug("estimate fee", "err", err.Error())
 		return nil
 	}
 	return data
