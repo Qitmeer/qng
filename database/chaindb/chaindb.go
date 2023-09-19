@@ -9,6 +9,8 @@ import (
 	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/node"
 	"path/filepath"
@@ -17,7 +19,7 @@ import (
 )
 
 var (
-	DBDirectoryName = "chaindata"
+	DBDirectoryName = "meerchain"
 )
 
 type ChainDB struct {
@@ -438,5 +440,12 @@ func New(cfg *config.Config) (*ChainDB, error) {
 		databases: make(map[*closeTrackingDB]struct{}),
 	}
 	cdb.closedState.Store(false)
+
+	var err error
+	cdb.db, err = cdb.OpenDatabaseWithFreezer(DBDirectoryName, ethconfig.Defaults.DatabaseCache,
+		utils.MakeDatabaseHandles(0), "", "qng/", false)
+	if err != nil {
+		return nil, err
+	}
 	return cdb, nil
 }

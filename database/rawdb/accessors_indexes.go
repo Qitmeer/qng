@@ -10,7 +10,7 @@ import (
 func ReadTxLookupEntry(db ethdb.Reader, hash *hash.Hash) *uint64 {
 	data, err := db.Get(txLookupKey(hash))
 	if len(data) == 0 {
-		log.Error(err.Error())
+		log.Debug("tx lookup entry", "err", err.Error())
 		return nil
 	}
 	id := binary.BigEndian.Uint64(data)
@@ -18,13 +18,13 @@ func ReadTxLookupEntry(db ethdb.Reader, hash *hash.Hash) *uint64 {
 }
 
 func writeTxLookupEntry(db ethdb.KeyValueWriter, hash *hash.Hash, id uint64) error {
-	var serializedID [4]byte
+	var serializedID [8]byte
 	binary.BigEndian.PutUint64(serializedID[:], id)
 	return db.Put(txLookupKey(hash), serializedID[:])
 }
 
 func WriteTxLookupEntriesByBlock(db ethdb.KeyValueWriter, block *types.SerializedBlock, id uint64) error {
-	var serializedID [4]byte
+	var serializedID [8]byte
 	binary.BigEndian.PutUint64(serializedID[:], id)
 	for _, tx := range block.Transactions() {
 		if tx.IsDuplicate {
@@ -96,13 +96,13 @@ func ReadInvalidTxLookupEntry(db ethdb.Reader, hash *hash.Hash) *uint64 {
 }
 
 func writeInvalidTxLookupEntry(db ethdb.KeyValueWriter, hash *hash.Hash, id uint64) error {
-	var serializedID [4]byte
+	var serializedID [8]byte
 	binary.BigEndian.PutUint64(serializedID[:], id)
 	return db.Put(invalidtxLookupKey(hash), serializedID[:])
 }
 
 func WriteInvalidTxLookupEntriesByBlock(db ethdb.KeyValueWriter, block *types.SerializedBlock, id uint64) error {
-	var serializedID [4]byte
+	var serializedID [8]byte
 	binary.BigEndian.PutUint64(serializedID[:], id)
 	for _, tx := range block.Transactions() {
 		err := db.Put(invalidtxLookupKey(tx.Hash()), serializedID[:])
