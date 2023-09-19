@@ -97,9 +97,6 @@ func (mp *TxPool) TxDescs() []*TxDesc {
 
 	return descs
 }
-func (mp *TxPool) Cfg() Config {
-	return mp.cfg
-}
 
 // removeTransaction is the internal function which implements the public
 // RemoveTransaction.  See the comment for RemoveTransaction for more details.
