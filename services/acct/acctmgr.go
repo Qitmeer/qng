@@ -31,6 +31,10 @@ type AccountManager struct {
 	events   *event.Feed
 }
 
+func (a *AccountManager) SetEvents(evs *event.Feed) {
+	a.events = evs
+}
+
 func (a *AccountManager) Start() error {
 	if err := a.Service.Start(); err != nil {
 		return err
@@ -53,6 +57,7 @@ func (a *AccountManager) Stop() error {
 	if a.db != nil {
 		if err := a.db.Close(); err != nil {
 			log.Error(err.Error())
+
 		}
 	}
 	return nil
@@ -482,10 +487,7 @@ func (a *AccountManager) Apply(add bool, op *types.TxOutPoint, entry interface{}
 	if !a.cfg.AcctMode {
 		return nil
 	}
-	a.utxoops = append(a.utxoops, &UTXOOP{add: add, op: &types.TxOutPoint{
-		Hash:     (*op).Hash,
-		OutIndex: (*op).OutIndex,
-	}, entry: entry.(*utxo.UtxoEntry)})
+	a.utxoops = append(a.utxoops, &UTXOOP{add: add, op: op, entry: entry.(*utxo.UtxoEntry)})
 	return nil
 }
 
@@ -650,14 +652,13 @@ func (a *AccountManager) APIs() []api.API {
 	}
 }
 
-func New(chain *blockchain.BlockChain, cfg *config.Config, _events *event.Feed) (*AccountManager, error) {
+func New(chain *blockchain.BlockChain, cfg *config.Config) (*AccountManager, error) {
 	a := AccountManager{
 		chain:    chain,
 		cfg:      cfg,
 		info:     NewAcctInfo(),
 		utxoops:  []*UTXOOP{},
 		watchers: map[string]*AcctBalanceWatcher{},
-		events:   _events,
 	}
 	return &a, nil
 }

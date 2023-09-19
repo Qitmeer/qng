@@ -7,6 +7,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
+	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
 )
@@ -75,11 +76,11 @@ func (aw *AcctBalanceWatcher) Update(am *AccountManager) error {
 			if err != nil {
 				return err
 			}
-			am.events.Send(types.AutoCollectUtxo{
+			am.events.Send(event.New(&types.AutoCollectUtxo{
 				Op:      *op,
 				Address: aw.address,
 				Amount:  w.GetBalance(),
-			})
+			}))
 		}
 	}
 	return nil

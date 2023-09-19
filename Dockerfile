@@ -1,4 +1,4 @@
-FROM golang:1.20.8-alpine3.18 AS base
+FROM golang:1.19.8-alpine3.17 AS base
 WORKDIR /qng
 
 COPY . /qng

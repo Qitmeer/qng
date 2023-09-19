@@ -13,7 +13,6 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
-	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/amana"
@@ -139,9 +138,9 @@ func (qm *QitmeerFull) RegisterNotifyMgr() error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config, events *event.Feed) error {
+func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	// account manager
-	acctmgr, err := acct.New(qm.GetBlockChain(), cfg, events)
+	acctmgr, err := acct.New(qm.GetBlockChain(), cfg)
 	if err != nil {
 		return err
 	}
@@ -150,12 +149,7 @@ func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config, events *event.
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterWalletService(cfg *config.Config, evm *meer.MeerChain, _am *acct.AccountManager, _tm *tx.TxManager, events *event.Feed) error {
-	// account manager
-	walletmgr, err := wallet.New(cfg, evm, _am, _tm, events)
-	if err != nil {
-		return err
-	}
+func (qm *QitmeerFull) RegisterWalletService(walletmgr *wallet.WalletManager) error {
 	qm.Services().RegisterService(walletmgr)
 	return nil
 }
@@ -217,6 +211,15 @@ func (qm *QitmeerFull) GetTxManager() *tx.TxManager {
 
 func (qm *QitmeerFull) GetAccountManager() *acct.AccountManager {
 	var service *acct.AccountManager
+	if err := qm.Services().FetchService(&service); err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return service
+}
+
+func (qm *QitmeerFull) GetWalletManager() *wallet.WalletManager {
+	var service *wallet.WalletManager
 	if err := qm.Services().FetchService(&service); err != nil {
 		log.Error(err.Error())
 		return nil
@@ -318,16 +321,20 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	}
 	// init address api
 	qm.addressApi = address.NewAddressApi(cfg, node.Params, qm.GetBlockChain())
-	if err := qm.RegisterAccountService(cfg, node.consensus.Events()); err != nil {
+	if err := qm.RegisterAccountService(cfg); err != nil {
 		return nil, err
 	}
-
+	qm.GetAccountManager().SetEvents(node.consensus.Events())
 	if qm.node.consensus.AmanaService() != nil {
 		if err := qm.Services().RegisterService(qm.node.consensus.AmanaService()); err != nil {
 			return nil, err
 		}
 	}
-	if err := qm.RegisterWalletService(cfg, bc.MeerChain().(*meer.MeerChain), qm.GetAccountManager(), txManager, node.consensus.Events()); err != nil {
+	walletmgr, err := wallet.New(cfg, bc.MeerChain().(*meer.MeerChain), qm.GetAccountManager(), txManager, node.consensus.Events())
+	if err != nil {
+		return nil, err
+	}
+	if err := qm.RegisterWalletService(walletmgr); err != nil {
 		return nil, err
 	}
 	apis, err := qm.RegisterRpcService()

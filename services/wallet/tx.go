@@ -178,7 +178,7 @@ func (a *WalletManager) sendTxWithUtxos(fromAddress string, amount int64, output
 	}
 	b, _ := ejson.Marshal(leftOutput)
 	serializedSize := len(serializedTx) + len(b)
-	minFee := mempool.CalcMinRequiredTxRelayFee(int64(serializedSize),
+	minFee := mempool.CalcFee(int64(serializedSize),
 		types.Amount{Value: a.cfg.MinTxFee, Id: types.MEERA})
 	leftAmount := sum - amount - minFee
 
