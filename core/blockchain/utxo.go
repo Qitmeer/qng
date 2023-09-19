@@ -182,12 +182,13 @@ func (b *BlockChain) FetchUtxoEntry(outpoint types.TxOutPoint) (*utxo.UtxoEntry,
 }
 
 func (b *BlockChain) dbPutUtxoView(view *utxo.UtxoViewpoint) error {
-	for outpoint, entry := range view.Entries() {
+	for op, en := range view.Entries() {
+		outpoint := op
+		entry := en
 		// No need to update the database if the entry was not modified.
 		if entry == nil || !entry.IsModified() {
 			continue
 		}
-
 		// Remove the utxo entry if it is spent.
 		if entry.IsSpent() {
 			key := utxo.OutpointKey(outpoint)
