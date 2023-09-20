@@ -605,6 +605,11 @@ var (
 			Value:       10,
 			Destination: &cfg.CacheSnapshot,
 		},
+		&cli.BoolFlag{
+			Name:        "devnextgdb",
+			Usage:       "Enable next generation databases that only exist in development mode",
+			Destination: &cfg.DevNextGDB,
+		},
 	}
 )
 
