@@ -33,7 +33,7 @@ func dbCmd() *cli.Command {
 					},
 					&cli.StringFlag{
 						Name:        "start",
-						Aliases:     []string{"e"},
+						Aliases:     []string{"s"},
 						Usage:       "start",
 						Destination: &start,
 					},
