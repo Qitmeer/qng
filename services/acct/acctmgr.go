@@ -652,13 +652,14 @@ func (a *AccountManager) APIs() []api.API {
 	}
 }
 
-func New(chain *blockchain.BlockChain, cfg *config.Config) (*AccountManager, error) {
+func New(chain *blockchain.BlockChain, cfg *config.Config, _events *event.Feed) (*AccountManager, error) {
 	a := AccountManager{
 		chain:    chain,
 		cfg:      cfg,
 		info:     NewAcctInfo(),
 		utxoops:  []*UTXOOP{},
 		watchers: map[string]*AcctBalanceWatcher{},
+		events:   _events,
 	}
 	return &a, nil
 }

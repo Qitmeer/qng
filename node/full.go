@@ -140,7 +140,7 @@ func (qm *QitmeerFull) RegisterNotifyMgr() error {
 
 func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	// account manager
-	acctmgr, err := acct.New(qm.GetBlockChain(), cfg)
+	acctmgr, err := acct.New(qm.GetBlockChain(), cfg, qm.node.consensus.Events())
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,12 @@ func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	return nil
 }
 
-func (qm *QitmeerFull) RegisterWalletService(walletmgr *wallet.WalletManager) error {
+func (qm *QitmeerFull) RegisterWalletService(cfg *config.Config) error {
+	walletmgr, err := wallet.New(cfg, qm.node.consensus.BlockChain().MeerChain().(*meer.MeerChain),
+		qm.GetAccountManager(), qm.GetTxManager(), qm.node.consensus.Events())
+	if err != nil {
+		return err
+	}
 	qm.Services().RegisterService(walletmgr)
 	return nil
 }
@@ -305,19 +310,15 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	if err := qm.RegisterAccountService(cfg); err != nil {
 		return nil, err
 	}
-	qm.GetAccountManager().SetEvents(node.consensus.Events())
 	if qm.node.consensus.AmanaService() != nil {
 		if err := qm.Services().RegisterService(qm.node.consensus.AmanaService()); err != nil {
 			return nil, err
 		}
 	}
-	walletmgr, err := wallet.New(cfg, bc.MeerChain().(*meer.MeerChain), qm.GetAccountManager(), txManager, node.consensus.Events())
-	if err != nil {
+	if err := qm.RegisterWalletService(cfg); err != nil {
 		return nil, err
 	}
-	if err := qm.RegisterWalletService(walletmgr); err != nil {
-		return nil, err
-	}
+
 	apis, err := qm.RegisterRpcService()
 	if err != nil {
 		return nil, err
