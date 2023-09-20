@@ -1,12 +1,15 @@
 package rawdb
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"github.com/olekukonko/tablewriter"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -354,6 +357,138 @@ func (s *stat) Count() string {
 // InspectDatabase traverses the entire database and checks the size
 // of all different categories of data.
 func InspectDatabase(db ethdb.Database, keyPrefix, keyStart []byte) error {
+	it := db.NewIterator(keyPrefix, keyStart)
+	defer it.Release()
+
+	var (
+		count  int64
+		start  = time.Now()
+		logged = time.Now()
+
+		// Key-value store statistics
+		headers             stat
+		bodies              stat
+		spendJournal        stat
+		utxo                stat
+		tokenState          stat
+		dagBlock            stat
+		blockID             stat
+		dagMainChain        stat
+		txLookup            stat
+		txFullHash          stat
+		invalidtxLookup     stat
+		invalidtxFullHash   stat
+		SnapshotBlockOrder  stat
+		SnapshotBlockStatus stat
+
+		// Meta- and unaccounted data
+		metadata    stat
+		unaccounted stat
+		// Totals
+		total common.StorageSize
+	)
+	// Inspect key-value database first.
+	for it.Next() {
+		var (
+			key  = it.Key()
+			size = common.StorageSize(len(key) + len(it.Value()))
+		)
+		total += size
+		switch {
+		case bytes.HasPrefix(key, headerPrefix) && len(key) == (len(headerPrefix)+common.HashLength):
+			headers.Add(size)
+		case bytes.HasPrefix(key, blockPrefix) && len(key) == (len(blockPrefix)+common.HashLength):
+			bodies.Add(size)
+		case bytes.HasPrefix(key, spendJournalPrefix) && len(key) == (len(spendJournalPrefix)+common.HashLength):
+			spendJournal.Add(size)
+		case bytes.HasPrefix(key, utxoPrefix):
+			utxo.Add(size)
+		case bytes.HasPrefix(key, tokenStatePrefix) && len(key) == (len(tokenStatePrefix)+8):
+			tokenState.Add(size)
+		case bytes.HasPrefix(key, dagBlockPrefix) && len(key) == (len(dagBlockPrefix)+8):
+			dagBlock.Add(size)
+		case bytes.HasPrefix(key, blockIDPrefix) && len(key) == (len(blockIDPrefix)+common.HashLength):
+			blockID.Add(size)
+		case bytes.HasPrefix(key, dagMainChainPrefix) && len(key) == (len(dagMainChainPrefix)+8):
+			dagMainChain.Add(size)
+		case bytes.HasPrefix(key, txLookupPrefix) && len(key) == (len(txLookupPrefix)+common.HashLength):
+			txLookup.Add(size)
+		case bytes.HasPrefix(key, txFullHashPrefix) && len(key) == (len(txFullHashPrefix)+common.HashLength):
+			txFullHash.Add(size)
+		case bytes.HasPrefix(key, invalidtxLookupPrefix) && len(key) == (len(invalidtxLookupPrefix)+common.HashLength):
+			invalidtxLookup.Add(size)
+		case bytes.HasPrefix(key, invalidtxFullHashPrefix) && len(key) == (len(invalidtxFullHashPrefix)+common.HashLength):
+			invalidtxFullHash.Add(size)
+
+		case bytes.HasPrefix(key, SnapshotBlockOrderPrefix) && len(key) == (len(SnapshotBlockOrderPrefix)+8):
+			SnapshotBlockOrder.Add(size)
+		case bytes.HasPrefix(key, SnapshotBlockStatusPrefix) && len(key) == (len(SnapshotBlockStatusPrefix)+8):
+			SnapshotBlockStatus.Add(size)
+
+		default:
+			var accounted bool
+			for _, meta := range [][]byte{VersionKey, CompressionVersionKey, BlockIndexVersionKey, CreatedKey,
+				snapshotDisabledKey, SnapshotRootKey, snapshotJournalKey, snapshotGeneratorKey, snapshotRecoveryKey, snapshotSyncStatusKey,
+				badBlockKey, uncleanShutdownKey, bestChainStateKey, dagInfoKey, mainchainTipKey, dagTipsKey, diffAnticoneKey, EstimateFeeDatabaseKey,
+			} {
+				if bytes.Equal(key, meta) {
+					metadata.Add(size)
+					accounted = true
+					break
+				}
+			}
+			if !accounted {
+				unaccounted.Add(size)
+			}
+		}
+		count++
+		if count%1000 == 0 && time.Since(logged) > 8*time.Second {
+			log.Info("Inspecting database", "count", count, "elapsed", common.PrettyDuration(time.Since(start)))
+			logged = time.Now()
+		}
+	}
+	// Display the database statistic of key-value store.
+	stats := [][]string{
+		{"Key-Value store", "Headers", headers.Size(), headers.Count()},
+		{"Key-Value store", "Bodies", bodies.Size(), bodies.Count()},
+		{"Key-Value store", "SpendJournal", spendJournal.Size(), spendJournal.Count()},
+		{"Key-Value store", "UTXO", utxo.Size(), utxo.Count()},
+		{"Key-Value store", "TokenState", tokenState.Size(), tokenState.Count()},
+		{"Key-Value store", "DAGBlock", dagBlock.Size(), dagBlock.Count()},
+		{"Key-Value store", "BlockID", blockID.Size(), blockID.Count()},
+		{"Key-Value store", "DAGMainChain", dagMainChain.Size(), dagMainChain.Count()},
+		{"Key-Value store", "TxLookup", txLookup.Size(), txLookup.Count()},
+		{"Key-Value store", "TxFullHash", txFullHash.Size(), txFullHash.Count()},
+		{"Key-Value store", "InvalidTxLookup", invalidtxLookup.Size(), invalidtxLookup.Count()},
+		{"Key-Value store", "InvalidTxFullHash", invalidtxFullHash.Size(), invalidtxFullHash.Count()},
+		{"Key-Value store", "SnapshotBlockOrder", SnapshotBlockOrder.Size(), SnapshotBlockOrder.Count()},
+		{"Key-Value store", "SnapshotBlockStatus", SnapshotBlockStatus.Size(), SnapshotBlockStatus.Count()},
+	}
+	// Inspect all registered append-only file store then.
+	ancients, err := inspectFreezers(db)
+	if err != nil {
+		return err
+	}
+	for _, ancient := range ancients {
+		for _, table := range ancient.sizes {
+			stats = append(stats, []string{
+				fmt.Sprintf("Ancient store (%s)", strings.Title(ancient.name)),
+				strings.Title(table.name),
+				table.size.String(),
+				fmt.Sprintf("%d", ancient.count()),
+			})
+		}
+		total += ancient.size()
+	}
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Database", "Category", "Size", "Items"})
+	table.SetFooter([]string{"", "Total", total.String(), " "})
+	table.AppendBulk(stats)
+	table.Render()
+
+	if unaccounted.size > 0 {
+		log.Error("Database contains unaccounted data", "size", unaccounted.size, "count", unaccounted.count)
+	}
 	return nil
 }
 

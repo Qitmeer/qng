@@ -66,7 +66,7 @@ var (
 	dagInfoKey = []byte("daginfo")
 
 	dagBlockPrefix = []byte("d") // dagBlockPrefix + id (uint64 big endian) -> dag block
-	blockIDPrefix  = []byte("i") // block hash -> block id.
+	blockIDPrefix  = []byte("i") // blockIDPrefix + block hash -> block id.
 
 	mainchainTipKey    = []byte("MainChainTip") // main chain tip id
 	dagMainChainPrefix = []byte("m")            // dagMainChainPrefix + id (uint64 big endian) -> 0

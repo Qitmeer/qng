@@ -50,6 +50,10 @@ func (cdb *ChainDB) Close() {
 	cdb.closeDatabases()
 }
 
+func (cdb ChainDB) DB() ethdb.Database {
+	return cdb.db
+}
+
 // wrapDatabase ensures the database will be auto-closed when Node is closed.
 func (cdb *ChainDB) wrapDatabase(db ethdb.Database) ethdb.Database {
 	wrapper := &closeTrackingDB{db, cdb}
