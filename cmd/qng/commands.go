@@ -21,6 +21,7 @@ func commands() []*cli.Command {
 	cmds = append(cmds, consensusCmd())
 	cmds = append(cmds, blockchainCmd())
 	cmds = append(cmds, cmd.Commands...)
+	cmds = append(cmds, dbCmd())
 
 	for _, cmd := range cmds {
 		cmd.Before = loadConfig

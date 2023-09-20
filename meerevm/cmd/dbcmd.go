@@ -38,7 +38,7 @@ var (
 Remove blockchain and state databases`,
 	}
 	dbCommand = &cli.Command{
-		Name:      "db",
+		Name:      "evmdb",
 		Usage:     "Low level database operations",
 		ArgsUsage: "",
 		Category:  "DATABASE COMMANDS",

@@ -70,24 +70,6 @@ func inspectFreezers(db ethdb.Database) ([]freezerInfo, error) {
 				return nil, err
 			}
 			infos = append(infos, info)
-
-		case stateFreezerName:
-			datadir, err := db.AncientDatadir()
-			if err != nil {
-				return nil, err
-			}
-			f, err := NewStateFreezer(datadir, true)
-			if err != nil {
-				return nil, err
-			}
-			defer f.Close()
-
-			info, err := inspect(stateFreezerName, stateFreezerNoSnappy, f)
-			if err != nil {
-				return nil, err
-			}
-			infos = append(infos, info)
-
 		default:
 			return nil, fmt.Errorf("unknown freezer, supported ones: %v", freezers)
 		}
