@@ -9,10 +9,10 @@ import (
 	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/node"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -30,6 +30,8 @@ type ChainDB struct {
 	// All open databases
 	databases   map[*closeTrackingDB]struct{}
 	closedState atomic.Bool
+
+	hasInit bool
 }
 
 func (cdb *ChainDB) Name() string {
@@ -37,6 +39,10 @@ func (cdb *ChainDB) Name() string {
 }
 
 func (cdb *ChainDB) Init() error {
+	log.Info("Init", "name", cdb.Name())
+	if cdb.hasInit {
+		return fmt.Errorf("%s: Need to thoroughly clean up old data", cdb.Name())
+	}
 	return nil
 }
 
@@ -89,7 +95,7 @@ func (cdb *ChainDB) OpenDatabaseWithFreezer(name string, cache, handles int, anc
 		db = rawdb.NewMemoryDatabase()
 	} else {
 		db, err = rawdb.Open(rawdb.OpenOptions{
-			Type:              node.DefaultConfig.DBEngine,
+			Type:              cdb.DBEngine(),
 			Directory:         cdb.cfg.ResolveDataPath(name),
 			AncientsDirectory: cdb.ResolveAncient(name, ancient),
 			Namespace:         namespace,
@@ -118,7 +124,7 @@ func (cdb *ChainDB) OpenDatabase(name string, cache, handles int, namespace stri
 		db = rawdb.NewMemoryDatabase()
 	} else {
 		db, err = rawdb.Open(rawdb.OpenOptions{
-			Type:      node.DefaultConfig.DBEngine,
+			Type:      cdb.DBEngine(),
 			Directory: cdb.cfg.ResolveDataPath(name),
 			Namespace: namespace,
 			Cache:     cache,
@@ -438,10 +444,18 @@ func (cdb *ChainDB) TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{
 	return nil
 }
 
+func (cdb *ChainDB) DBEngine() string {
+	if cdb.cfg.DbType == "ffldb" {
+		return "leveldb"
+	}
+	return cdb.cfg.DbType
+}
+
 func New(cfg *config.Config) (*ChainDB, error) {
 	cdb := &ChainDB{
 		cfg:       cfg,
 		databases: make(map[*closeTrackingDB]struct{}),
+		hasInit:   meer.Exist(cfg),
 	}
 	cdb.closedState.Store(false)
 
