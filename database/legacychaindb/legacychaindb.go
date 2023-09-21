@@ -12,6 +12,7 @@ import (
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
 	"math"
 )
@@ -25,6 +26,8 @@ type LegacyChainDB struct {
 
 	invalidtxindexStore model.InvalidTxIndexStore
 	chainParams         *params.Params
+
+	hasInit bool
 }
 
 func (cdb *LegacyChainDB) Name() string {
@@ -32,6 +35,11 @@ func (cdb *LegacyChainDB) Name() string {
 }
 
 func (cdb *LegacyChainDB) Init() error {
+	log.Info("Init", "name", cdb.Name())
+	if cdb.hasInit {
+		return fmt.Errorf("%s: Need to thoroughly clean up old data", cdb.Name())
+	}
+
 	var err error
 	err = cdb.db.Update(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
@@ -677,6 +685,7 @@ func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) 
 		db:          db,
 		interrupt:   interrupt,
 		chainParams: params.ActiveNetParams.Params,
+		hasInit:     meer.Exist(cfg),
 	}
 	if cfg.DropAddrIndex {
 		if err := cdb.CleanAddrIdx(false); err != nil {

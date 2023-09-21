@@ -9,6 +9,7 @@ import (
 	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -29,6 +30,8 @@ type ChainDB struct {
 	// All open databases
 	databases   map[*closeTrackingDB]struct{}
 	closedState atomic.Bool
+
+	hasInit bool
 }
 
 func (cdb *ChainDB) Name() string {
@@ -36,6 +39,10 @@ func (cdb *ChainDB) Name() string {
 }
 
 func (cdb *ChainDB) Init() error {
+	log.Info("Init", "name", cdb.Name())
+	if cdb.hasInit {
+		return fmt.Errorf("%s: Need to thoroughly clean up old data", cdb.Name())
+	}
 	return nil
 }
 
@@ -448,6 +455,7 @@ func New(cfg *config.Config) (*ChainDB, error) {
 	cdb := &ChainDB{
 		cfg:       cfg,
 		databases: make(map[*closeTrackingDB]struct{}),
+		hasInit:   meer.Exist(cfg),
 	}
 	cdb.closedState.Store(false)
 
