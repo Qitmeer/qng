@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/node"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -89,7 +88,7 @@ func (cdb *ChainDB) OpenDatabaseWithFreezer(name string, cache, handles int, anc
 		db = rawdb.NewMemoryDatabase()
 	} else {
 		db, err = rawdb.Open(rawdb.OpenOptions{
-			Type:              node.DefaultConfig.DBEngine,
+			Type:              cdb.DBEngine(),
 			Directory:         cdb.cfg.ResolveDataPath(name),
 			AncientsDirectory: cdb.ResolveAncient(name, ancient),
 			Namespace:         namespace,
@@ -118,7 +117,7 @@ func (cdb *ChainDB) OpenDatabase(name string, cache, handles int, namespace stri
 		db = rawdb.NewMemoryDatabase()
 	} else {
 		db, err = rawdb.Open(rawdb.OpenOptions{
-			Type:      node.DefaultConfig.DBEngine,
+			Type:      cdb.DBEngine(),
 			Directory: cdb.cfg.ResolveDataPath(name),
 			Namespace: namespace,
 			Cache:     cache,
@@ -436,6 +435,13 @@ func (cdb *ChainDB) DeleteEstimateFee() error {
 
 func (cdb *ChainDB) TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{}) error {
 	return nil
+}
+
+func (cdb *ChainDB) DBEngine() string {
+	if cdb.cfg.DbType == "ffldb" {
+		return "leveldb"
+	}
+	return cdb.cfg.DbType
 }
 
 func New(cfg *config.Config) (*ChainDB, error) {
