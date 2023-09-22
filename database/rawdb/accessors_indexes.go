@@ -164,7 +164,7 @@ func CleanInvalidTxs(db ethdb.Database) error {
 func ReadInvalidTxIdByFullHash(db ethdb.Reader, full *hash.Hash) *hash.Hash {
 	data, err := db.Get(invalidtxFullHashKey(full))
 	if len(data) == 0 {
-		log.Error(err.Error())
+		log.Debug("read invalid tx id", "err", err.Error())
 		return nil
 	}
 	fhash, err := hash.NewHash(data)

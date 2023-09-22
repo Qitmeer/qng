@@ -260,7 +260,7 @@ func CleanSpendJournal(db ethdb.Database) error {
 func ReadUtxo(db ethdb.Reader, opd []byte) []byte {
 	data, err := db.Get(utxoKey(opd))
 	if len(data) == 0 {
-		log.Error(err.Error())
+		log.Debug("read utxo", "err", err.Error())
 		return nil
 	}
 	return data
@@ -313,7 +313,7 @@ func CleanUtxo(db ethdb.Database) error {
 func ReadTokenState(db ethdb.Reader, id uint64) []byte {
 	data, err := db.Get(tokenStateKey(id))
 	if len(data) == 0 {
-		log.Error(err.Error())
+		log.Debug("read token state", "err", err.Error())
 		return nil
 	}
 	return data
