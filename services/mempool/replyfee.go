@@ -33,3 +33,7 @@ func calcMinRequiredTxRelayFee(serializedSize int64, minRelayTxFee types.Amount)
 
 	return minFee
 }
+
+func CalcFee(serializedSize int64, minRelayTxFee types.Amount) int64 {
+	return calcMinRequiredTxRelayFee(serializedSize, minRelayTxFee)
+}

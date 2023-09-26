@@ -9,18 +9,19 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/cmd/miner/common"
-	"github.com/Qitmeer/qng/cmd/miner/core"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/rpc/client"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Qitmeer/qng/cmd/miner/common"
+	"github.com/Qitmeer/qng/cmd/miner/core"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/rpc/client"
+	"github.com/Qitmeer/qng/rpc/client/cmds"
 )
 
 const (
