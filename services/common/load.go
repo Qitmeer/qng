@@ -6,6 +6,14 @@ package common
 
 import (
 	"fmt"
+	"net"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/Qitmeer/qng/common/profiling"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/util"
@@ -15,15 +23,9 @@ import (
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/version"
+	gp "github.com/howeyc/gopass"
 	"github.com/jessevdk/go-flags"
 	"github.com/urfave/cli/v2"
-	"net"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -610,6 +612,16 @@ var (
 			Usage:       "Enable next generation databases that only exist in development mode",
 			Destination: &cfg.DevNextGDB,
 		},
+		&cli.BoolFlag{
+			Name:        "autocollectevm",
+			Usage:       "auto collect miner coinbase utxo to evm",
+			Destination: &cfg.AutoCollectEvm,
+		},
+		&cli.StringFlag{
+			Name:        "walletpass",
+			Usage:       "wallet password",
+			Destination: &cfg.WalletPass,
+		},
 	}
 )
 
@@ -910,7 +922,10 @@ func LoadConfig(ctx *cli.Context, parsefile bool) (*config.Config, error) {
 	if cfg.NTP {
 		roughtime.Init()
 	}
-
+	if cfg.AutoCollectEvm {
+		s3, _ := gp.GetPasswdPrompt("please input your pass unlock your wallet:", true, os.Stdin, os.Stdout)
+		cfg.WalletPass = string(s3)
+	}
 	return cfg, nil
 }
 

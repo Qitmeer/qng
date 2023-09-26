@@ -3,6 +3,10 @@ package node
 
 import (
 	"fmt"
+	"path/filepath"
+	"reflect"
+	"time"
+
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/common/system/disk"
 	"github.com/Qitmeer/qng/config"
@@ -25,10 +29,8 @@ import (
 	"github.com/Qitmeer/qng/services/mining"
 	"github.com/Qitmeer/qng/services/notifymgr"
 	"github.com/Qitmeer/qng/services/tx"
+	"github.com/Qitmeer/qng/services/wallet"
 	ecommon "github.com/ethereum/go-ethereum/common"
-	"path/filepath"
-	"reflect"
-	"time"
 )
 
 // QitmeerFull implements the qitmeer full node service.
@@ -138,12 +140,22 @@ func (qm *QitmeerFull) RegisterNotifyMgr() error {
 
 func (qm *QitmeerFull) RegisterAccountService(cfg *config.Config) error {
 	// account manager
-	acctmgr, err := acct.New(qm.GetBlockChain(), cfg)
+	acctmgr, err := acct.New(qm.GetBlockChain(), cfg, qm.node.consensus.Events())
 	if err != nil {
 		return err
 	}
 	qm.GetBlockChain().Acct = acctmgr
 	qm.Services().RegisterService(acctmgr)
+	return nil
+}
+
+func (qm *QitmeerFull) RegisterWalletService(cfg *config.Config) error {
+	walletmgr, err := wallet.New(cfg, qm.node.consensus.BlockChain().MeerChain().(*meer.MeerChain),
+		qm.GetAccountManager(), qm.GetTxManager(), qm.node.consensus.Events())
+	if err != nil {
+		return err
+	}
+	qm.Services().RegisterService(walletmgr)
 	return nil
 }
 
@@ -185,6 +197,15 @@ func (qm *QitmeerFull) GetRpcServer() *rpc.RpcServer {
 
 func (qm *QitmeerFull) GetTxManager() *tx.TxManager {
 	var service *tx.TxManager
+	if err := qm.Services().FetchService(&service); err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return service
+}
+
+func (qm *QitmeerFull) GetAccountManager() *acct.AccountManager {
+	var service *acct.AccountManager
 	if err := qm.Services().FetchService(&service); err != nil {
 		log.Error(err.Error())
 		return nil
@@ -286,15 +307,16 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 	}
 	// init address api
 	qm.addressApi = address.NewAddressApi(cfg, node.Params, qm.GetBlockChain())
-
 	if err := qm.RegisterAccountService(cfg); err != nil {
 		return nil, err
 	}
-
 	if qm.node.consensus.AmanaService() != nil {
 		if err := qm.Services().RegisterService(qm.node.consensus.AmanaService()); err != nil {
 			return nil, err
 		}
+	}
+	if err := qm.RegisterWalletService(cfg); err != nil {
+		return nil, err
 	}
 
 	apis, err := qm.RegisterRpcService()

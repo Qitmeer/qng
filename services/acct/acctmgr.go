@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
+	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/engine/txscript"
@@ -26,6 +28,11 @@ type AccountManager struct {
 	info     *AcctInfo
 	utxoops  []*UTXOOP
 	watchers map[string]*AcctBalanceWatcher
+	events   *event.Feed
+}
+
+func (a *AccountManager) SetEvents(evs *event.Feed) {
+	a.events = evs
 }
 
 func (a *AccountManager) Start() error {
@@ -50,6 +57,7 @@ func (a *AccountManager) Stop() error {
 	if a.db != nil {
 		if err := a.db.Close(); err != nil {
 			log.Error(err.Error())
+
 		}
 	}
 	return nil
@@ -247,6 +255,7 @@ func (a *AccountManager) checkUtxoEntry(entry *utxo.UtxoEntry, tracks []string) 
 }
 
 func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *utxo.UtxoEntry) error {
+
 	addrStr, scriptClass, err := a.checkUtxoEntry(entry, a.info.addrs)
 	if err != nil {
 		return err
@@ -610,6 +619,9 @@ func (a *AccountManager) AddAddress(addr string) error {
 	}
 	return a.rebuild([]string{addr})
 }
+func (a *AccountManager) GetChain() *blockchain.BlockChain {
+	return a.chain
+}
 
 func (a *AccountManager) cleanBalanceDB(dbTx legacydb.Tx, addr string) error {
 	er := DBDelACCTBalance(dbTx, addr)
@@ -640,13 +652,14 @@ func (a *AccountManager) APIs() []api.API {
 	}
 }
 
-func New(chain *blockchain.BlockChain, cfg *config.Config) (*AccountManager, error) {
+func New(chain *blockchain.BlockChain, cfg *config.Config, _events *event.Feed) (*AccountManager, error) {
 	a := AccountManager{
 		chain:    chain,
 		cfg:      cfg,
 		info:     NewAcctInfo(),
 		utxoops:  []*UTXOOP{},
 		watchers: map[string]*AcctBalanceWatcher{},
+		events:   _events,
 	}
 	return &a, nil
 }
