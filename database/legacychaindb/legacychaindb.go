@@ -117,8 +117,16 @@ func (cdb *LegacyChainDB) DB() legacydb.DB {
 	return cdb.db
 }
 
+func (cdb *LegacyChainDB) DBEngine() string {
+	return cdb.cfg.DbType
+}
+
 func (cdb *LegacyChainDB) Snapshot() error {
 	return nil
+}
+
+func (cdb *LegacyChainDB) SnapshotInfo() string {
+	return "No support"
 }
 
 func (cdb *LegacyChainDB) Rebuild(mgr model.IndexManager) error {

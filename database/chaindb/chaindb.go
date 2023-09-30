@@ -67,11 +67,25 @@ func (cdb *ChainDB) DB() ethdb.Database {
 	return cdb.db
 }
 
+func (cdb *ChainDB) DBEngine() string {
+	if cdb.cfg.DbType == "ffldb" {
+		return "leveldb"
+	}
+	return cdb.cfg.DbType
+}
+
 func (cdb *ChainDB) Snapshot() error {
 	if cdb.cfg.SnapshotCache() > 0 {
 		cdb.diff = newDiffLayer(cdb, cdb.cfg.SnapshotCache())
 	}
 	return nil
+}
+
+func (cdb *ChainDB) SnapshotInfo() string {
+	if cdb.diff == nil {
+		return "not active"
+	}
+	return fmt.Sprintf("mem=%s,objects=%d", cdb.diff.memorySize().String(), cdb.diff.objects())
 }
 
 // wrapDatabase ensures the database will be auto-closed when Node is closed.
@@ -551,13 +565,6 @@ func (cdb *ChainDB) DeleteEstimateFee() error {
 
 func (cdb *ChainDB) TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{}) error {
 	return nil
-}
-
-func (cdb *ChainDB) DBEngine() string {
-	if cdb.cfg.DbType == "ffldb" {
-		return "leveldb"
-	}
-	return cdb.cfg.DbType
 }
 
 func New(cfg *config.Config) (*ChainDB, error) {

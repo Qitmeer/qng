@@ -209,7 +209,7 @@ func (dl *diffLayer) flatten() error {
 			var err error
 			if tide.add {
 				err = rawdb.WriteTxLookupEntry(dl.db, tide.tx.Hash(), uint64(tide.blockid))
-			}else {
+			} else {
 				err = rawdb.DeleteTxLookupEntry(dl.db, tide.tx.Hash())
 			}
 			if err != nil {
@@ -521,7 +521,7 @@ func (dl *diffLayer) GetDAGBlockIdByHash(bh *hash.Hash) (uint, error) {
 	if len(dl.dagBlocks) > 0 {
 		data, ok := dl.blockidByHash[*bh]
 		if ok {
-			if data == meerdag.MaxId {
+			if data != meerdag.MaxId {
 				return data, nil
 			} else {
 				return meerdag.MaxId, nil
@@ -801,6 +801,14 @@ func (dl *diffLayer) memorySize() common.StorageSize {
 	return common.StorageSize(dl.memory.Load())
 }
 
+func (dl *diffLayer) objects() int {
+	dl.lock.RLock()
+	defer dl.lock.RUnlock()
+
+	return len(dl.spendJournal) + len(dl.utxo) + len(dl.tokenState) + len(dl.blocks) + len(dl.dagBlocks) +
+		len(dl.blockidByHash) + len(dl.mainchain) + len(dl.blockidByOrder) + len(dl.tips) + len(dl.txIdxEntrys)
+}
+
 func newDiffLayer(cdb *ChainDB, cache int) *diffLayer {
 	dl := &diffLayer{
 		cdb:   cdb,
@@ -811,7 +819,7 @@ func newDiffLayer(cdb *ChainDB, cache int) *diffLayer {
 	}
 	dl.stale.Store(false)
 	dl.memory.Store(0)
-	log.Info("New diff layer")
+	log.Info("New diff layer", "cache", common.StorageSize(dl.cache).String())
 	dl.wg.Add(1)
 	go dl.handler()
 	return dl

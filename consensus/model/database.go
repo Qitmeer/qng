@@ -77,4 +77,6 @@ type DataBase interface {
 	PutEstimateFee(data []byte) error
 	DeleteEstimateFee() error
 	Snapshot() error
+	SnapshotInfo() string
+	DBEngine() string
 }

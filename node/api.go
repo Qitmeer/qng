@@ -222,6 +222,17 @@ func (api *PublicBlockChainAPI) GetMeerDAGInfo() (interface{}, error) {
 	return mdr, nil
 }
 
+func (api *PublicBlockChainAPI) GetDatabaseInfo() (interface{}, error) {
+	info, _ := api.node.db.GetInfo()
+	ret := json.OrderedResult{
+		json.KV{Key: "name", Val: api.node.db.Name()},
+		json.KV{Key: "info", Val: info.String()},
+		json.KV{Key: "engine", Val: api.node.db.DBEngine()},
+		json.KV{Key: "snapshot", Val: api.node.db.SnapshotInfo()},
+	}
+	return ret, nil
+}
+
 type PrivateBlockChainAPI struct {
 	node *QitmeerFull
 }
