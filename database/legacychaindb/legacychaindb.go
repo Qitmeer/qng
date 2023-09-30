@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/dbnamespace"
+	"github.com/Qitmeer/qng/core/shutdown"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/database/rawdb"
@@ -27,7 +28,8 @@ type LegacyChainDB struct {
 	invalidtxindexStore model.InvalidTxIndexStore
 	chainParams         *params.Params
 
-	hasInit bool
+	hasInit         bool
+	shutdownTracker *shutdown.Tracker
 }
 
 func (cdb *LegacyChainDB) Name() string {
@@ -680,6 +682,14 @@ func (cdb *LegacyChainDB) DeleteEstimateFee() error {
 	})
 }
 
+func (cdb *LegacyChainDB) StartTrack(info string) error {
+	return cdb.shutdownTracker.Wait(info)
+}
+
+func (cdb *LegacyChainDB) StopTrack() error {
+	return cdb.shutdownTracker.Done()
+}
+
 func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) {
 	// Load the block database.
 	db, err := LoadBlockDB(cfg)
@@ -693,11 +703,12 @@ func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) 
 	}
 
 	cdb := &LegacyChainDB{
-		cfg:         cfg,
-		db:          db,
-		interrupt:   interrupt,
-		chainParams: params.ActiveNetParams.Params,
-		hasInit:     meer.Exist(cfg),
+		cfg:             cfg,
+		db:              db,
+		interrupt:       interrupt,
+		chainParams:     params.ActiveNetParams.Params,
+		hasInit:         meer.Exist(cfg),
+		shutdownTracker: shutdown.NewTracker(cfg.DataDir),
 	}
 	if cfg.DropAddrIndex {
 		if err := cdb.CleanAddrIdx(false); err != nil {
@@ -705,6 +716,10 @@ func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) 
 			return nil, err
 		}
 		return nil, nil
+	}
+	err = cdb.shutdownTracker.Check()
+	if err != nil {
+		return nil, err
 	}
 	return cdb, nil
 }

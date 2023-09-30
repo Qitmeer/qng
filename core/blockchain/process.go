@@ -247,7 +247,8 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 			panic(err.Error())
 		}
 	}
-	err := b.shutdownTracker.Wait(ib.GetHash())
+
+	err := b.DB().StartTrack(ib.GetHash().String())
 	if err != nil {
 		panic(err.Error())
 	}
@@ -263,7 +264,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	if err != nil {
 		panic(err.Error())
 	}
-	err = b.shutdownTracker.Done()
+	err = b.DB().StopTrack()
 	if err != nil {
 		panic(err.Error())
 	}

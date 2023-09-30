@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/core/shutdown"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/rawdb"
@@ -32,7 +33,8 @@ type ChainDB struct {
 
 	hasInit bool
 
-	diff *diffLayer
+	diff            *diffLayer
+	shutdownTracker *shutdown.Tracker
 }
 
 func (cdb *ChainDB) Name() string {
@@ -567,17 +569,36 @@ func (cdb *ChainDB) TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{
 	return nil
 }
 
+func (cdb *ChainDB) StartTrack(info string) error {
+	if cdb.diff != nil {
+		return nil
+	}
+	return cdb.shutdownTracker.Wait(info)
+}
+
+func (cdb *ChainDB) StopTrack() error {
+	if cdb.diff != nil {
+		return nil
+	}
+	return cdb.shutdownTracker.Done()
+}
+
 func New(cfg *config.Config) (*ChainDB, error) {
 	cdb := &ChainDB{
-		cfg:       cfg,
-		databases: make(map[*closeTrackingDB]struct{}),
-		hasInit:   meer.Exist(cfg),
+		cfg:             cfg,
+		databases:       make(map[*closeTrackingDB]struct{}),
+		hasInit:         meer.Exist(cfg),
+		shutdownTracker: shutdown.NewTracker(cfg.DataDir),
 	}
 	cdb.closedState.Store(false)
 
 	var err error
 	cdb.db, err = cdb.OpenDatabaseWithFreezer(DBDirectoryName, cfg.DatabaseCache(),
 		utils.MakeDatabaseHandles(0), "", "qng/", false)
+	if err != nil {
+		return nil, err
+	}
+	err = cdb.shutdownTracker.Check()
 	if err != nil {
 		return nil, err
 	}

@@ -79,4 +79,6 @@ type DataBase interface {
 	Snapshot() error
 	SnapshotInfo() string
 	DBEngine() string
+	StartTrack(info string) error
+	StopTrack() error
 }
