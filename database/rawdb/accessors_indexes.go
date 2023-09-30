@@ -17,7 +17,7 @@ func ReadTxLookupEntry(db ethdb.Reader, hash *hash.Hash) *uint64 {
 	return &id
 }
 
-func writeTxLookupEntry(db ethdb.KeyValueWriter, hash *hash.Hash, id uint64) error {
+func WriteTxLookupEntry(db ethdb.KeyValueWriter, hash *hash.Hash, id uint64) error {
 	var serializedID [8]byte
 	binary.BigEndian.PutUint64(serializedID[:], id)
 	return db.Put(txLookupKey(hash), serializedID[:])

@@ -204,6 +204,20 @@ func (dl *diffLayer) flatten() error {
 		}
 	}
 
+	if len(dl.txIdxEntrys) > 0 {
+		for _, tide := range dl.txIdxEntrys {
+			var err error
+			if tide.add {
+				err = rawdb.WriteTxLookupEntry(dl.db, tide.tx.Hash(), uint64(tide.blockid))
+			}else {
+				err = rawdb.DeleteTxLookupEntry(dl.db, tide.tx.Hash())
+			}
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+	}
+
 	dl.memory.Store(0)
 	log.Info("End flatten diff layer", "cost", time.Since(start))
 	return nil
