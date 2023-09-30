@@ -2,7 +2,6 @@ package shutdown
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
 	"io/ioutil"
 	"os"
 	"path"
@@ -25,13 +24,12 @@ func (t *Tracker) Check() error {
 	if len(bhbs) <= 0 {
 		return nil
 	}
-	bh := hash.MustHexToHash(string(bhbs))
-	err = fmt.Errorf("Illegal withdrawal at block:%s, you can cleanup your block data base by '--cleanup'.", bh.String())
+	err = fmt.Errorf("Illegal withdrawal at block:%s, you can cleanup your block data base by '--cleanup'.", string(bhbs))
 	log.Error(err.Error())
 	return err
 }
 
-func (t *Tracker) Wait(bh *hash.Hash) error {
+func (t *Tracker) Wait(info string) error {
 	outFile, err := os.OpenFile(t.filePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
 	if err != nil {
 		return err
@@ -40,7 +38,7 @@ func (t *Tracker) Wait(bh *hash.Hash) error {
 		outFile.Close()
 	}()
 	//
-	_, err = outFile.WriteString(bh.String())
+	_, err = outFile.WriteString(info)
 	if err != nil {
 		return err
 	}

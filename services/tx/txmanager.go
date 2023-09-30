@@ -67,7 +67,7 @@ func (tm *TxManager) initFeeEstimator() error {
 	// or if it cannot be loaded, create a new one.
 	feeEstimationData, err := tm.consensus.DatabaseContext().GetEstimateFee()
 	if err != nil {
-		return err
+		log.Warn(err.Error())
 	}
 	if feeEstimationData != nil {
 		// delete it from the database so that we don't try to restore the

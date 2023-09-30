@@ -15,7 +15,6 @@ import (
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/core/shutdown"
 	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
@@ -128,8 +127,6 @@ type BlockChain struct {
 
 	Acct model.Acct
 
-	shutdownTracker *shutdown.Tracker
-
 	consensus model.Consensus
 
 	progressLogger *progresslog.BlockProgressLogger
@@ -179,11 +176,6 @@ func (b *BlockChain) Init() error {
 // database.  When the db does not yet contain any chain state, both it and the
 // chain state are initialized to the genesis block.
 func (b *BlockChain) initChainState() error {
-	err := b.shutdownTracker.Check()
-	if err != nil {
-		return err
-	}
-
 	// Determine the state of the database.
 	var isStateInitialized bool
 	dbInfo, err := b.DB().GetInfo()
@@ -355,7 +347,8 @@ func (b *BlockChain) Start() error {
 		return err
 	}
 	log.Info("prepare evm environment", "mainTipOrder", mainTip.GetOrder(), "mainTipHash", mainTip.GetHash().String(), "hash", evmHead.Hash().String(), "number", evmHead.Number.Uint64(), "root", evmHead.Root.String())
-	return nil
+
+	return b.DB().Snapshot()
 }
 
 func (b *BlockChain) Stop() error {
@@ -1051,7 +1044,6 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		indexManager:       consensus.IndexManager(),
 		orphans:            make(map[hash.Hash]*orphanBlock),
 		CacheNotifications: []*Notification{},
-		shutdownTracker:    shutdown.NewTracker(config.DataDir),
 		headerList:         list.New(),
 		progressLogger:     progresslog.NewBlockProgressLogger("Processed", log),
 		msgChan:            make(chan *processMsg),

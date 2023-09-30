@@ -604,7 +604,7 @@ var (
 		&cli.IntFlag{
 			Name:        "cache.snapshot",
 			Usage:       "Percentage of cache memory allowance to use for snapshot caching (default = 10% full mode, 20% archive mode)",
-			Value:       10,
+			Value:       0,
 			Destination: &cfg.CacheSnapshot,
 		},
 		&cli.BoolFlag{

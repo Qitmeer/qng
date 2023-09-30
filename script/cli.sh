@@ -729,6 +729,11 @@ function dag_info(){
   get_result "$data"
 }
 
+function database_info(){
+  local data='{"jsonrpc":"2.0","method":"getDatabaseInfo","params":[],"id":1}'
+  get_result "$data"
+}
+
 function get_stateroot(){
   local order=$1
   local verbose=$2
@@ -826,6 +831,7 @@ function usage(){
   echo "  getaddresses <private key>"
   echo "  modules"
   echo "  daginfo"
+  echo "  dbinfo"
   echo "  config"
   echo "block  :"
   echo "  block <order|hash>"
@@ -1551,6 +1557,10 @@ elif [ "$1" == "remotegbt" ]; then
 elif [ "$1" == "daginfo" ]; then
   shift
   dag_info $@
+
+elif [ "$1" == "dbinfo" ]; then
+  shift
+  database_info $@
 
 elif [ "$1" == "stateroot" ]; then
   shift
