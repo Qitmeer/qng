@@ -117,6 +117,10 @@ func (cdb *LegacyChainDB) DB() legacydb.DB {
 	return cdb.db
 }
 
+func (cdb *LegacyChainDB) Snapshot() error {
+	return nil
+}
+
 func (cdb *LegacyChainDB) Rebuild(mgr model.IndexManager) error {
 	err := cdb.CleanInvalidTxIdx()
 	if err != nil {

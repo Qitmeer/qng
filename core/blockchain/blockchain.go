@@ -355,7 +355,8 @@ func (b *BlockChain) Start() error {
 		return err
 	}
 	log.Info("prepare evm environment", "mainTipOrder", mainTip.GetOrder(), "mainTipHash", mainTip.GetHash().String(), "hash", evmHead.Hash().String(), "number", evmHead.Number.Uint64(), "root", evmHead.Root.String())
-	return nil
+
+	return b.DB().Snapshot()
 }
 
 func (b *BlockChain) Stop() error {

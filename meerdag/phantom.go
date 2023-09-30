@@ -627,7 +627,8 @@ func (ph *Phantom) Load() error {
 	for _, da := range diffs {
 		dab := ph.getBlock(da)
 		if dab == nil {
-			return fmt.Errorf("Can't find tip:%d", da)
+			log.Warn("Can't find tip", "block id", da)
+			continue
 		}
 		ph.diffAnticone.AddPair(da, dab)
 	}
