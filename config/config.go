@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/Qitmeer/qng/core/types"
 	"path/filepath"
+
+	"github.com/Qitmeer/qng/core/types"
 )
 
 type Config struct {
@@ -39,6 +40,7 @@ type Config struct {
 	TrackHeapLimit     int      `long:"trackheaplimit" description:"track heap when limit in gigabytes (default:7G)"`
 	DebugLevel         string   `short:"d" long:"debuglevel" description:"Logging level {trace, debug, info, warn, error, critical} "`
 	DebugPrintOrigins  bool     `long:"printorigin" description:"Print log debug location (file:line) "`
+
 	// MemPool Config
 	NoRelayPriority  bool    `long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
 	FreeTxRelayLimit float64 `long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
@@ -129,6 +131,9 @@ type Config struct {
 
 	// TODO: It will soon be discarded in the near future
 	DevNextGDB bool `long:"devnextgdb" description:"Enable next generation databases that only exist in development mode"`
+	// wallet
+	WalletPass     string
+	AutoCollectEvm bool `long:"autocollectevm" description:"auto collect utxo to evm"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {

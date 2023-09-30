@@ -216,5 +216,12 @@ type Amout struct {
 	CoinId uint16 `json:"coinid"`
 	Amount int64  `json:"amount"`
 }
+type AmountV3 struct {
+	CoinId         uint16 `json:"coinid"`
+	Amount         int64  `json:"amount"`
+	TargetLockTime int64  `json:"targetLockTime"`
+}
 
 type AdreesAmount map[string]Amout
+
+type AddressAmountV3 map[string]AmountV3
