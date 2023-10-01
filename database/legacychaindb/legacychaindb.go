@@ -683,10 +683,16 @@ func (cdb *LegacyChainDB) DeleteEstimateFee() error {
 }
 
 func (cdb *LegacyChainDB) StartTrack(info string) error {
+	if cdb.shutdownTracker == nil {
+		return nil
+	}
 	return cdb.shutdownTracker.Wait(info)
 }
 
 func (cdb *LegacyChainDB) StopTrack() error {
+	if cdb.shutdownTracker == nil {
+		return nil
+	}
 	return cdb.shutdownTracker.Done()
 }
 

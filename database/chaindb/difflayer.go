@@ -76,8 +76,10 @@ func (dl *diffLayer) close() error {
 }
 
 func (dl *diffLayer) flatten() error {
-	dl.cdb.shutdownTracker.Wait("difflayer")
-	defer dl.cdb.shutdownTracker.Done()
+	if dl.cdb.shutdownTracker != nil {
+		dl.cdb.shutdownTracker.Wait("difflayer")
+		defer dl.cdb.shutdownTracker.Done()
+	}
 
 	dl.lock.Lock()
 	defer dl.lock.Unlock()
