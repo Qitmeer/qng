@@ -35,6 +35,7 @@ type ChainDB struct {
 
 	diff            *diffLayer
 	shutdownTracker *shutdown.Tracker
+	ancient         bool
 }
 
 func (cdb *ChainDB) Name() string {
@@ -170,6 +171,9 @@ func (cdb *ChainDB) OpenDatabase(name string, cache, handles int, namespace stri
 }
 
 func (cdb *ChainDB) ResolveAncient(name string, ancient string) string {
+	if !cdb.ancient {
+		return ""
+	}
 	switch {
 	case ancient == "":
 		ancient = filepath.Join(cdb.cfg.ResolveDataPath(name), "ancient")
@@ -573,22 +577,31 @@ func (cdb *ChainDB) StartTrack(info string) error {
 	if cdb.diff != nil {
 		return nil
 	}
-	return cdb.shutdownTracker.Wait(info)
+	if cdb.shutdownTracker != nil {
+		return cdb.shutdownTracker.Wait(info)
+	}
+	return nil
 }
 
 func (cdb *ChainDB) StopTrack() error {
 	if cdb.diff != nil {
 		return nil
 	}
-	return cdb.shutdownTracker.Done()
+	if cdb.shutdownTracker != nil {
+		return cdb.shutdownTracker.Done()
+	}
+	return nil
 }
 
 func New(cfg *config.Config) (*ChainDB, error) {
 	cdb := &ChainDB{
-		cfg:             cfg,
-		databases:       make(map[*closeTrackingDB]struct{}),
-		hasInit:         meer.Exist(cfg),
-		shutdownTracker: shutdown.NewTracker(cfg.DataDir),
+		cfg:       cfg,
+		databases: make(map[*closeTrackingDB]struct{}),
+		hasInit:   meer.Exist(cfg),
+		ancient:   true,
+	}
+	if len(cfg.DataDir) > 0 {
+		cdb.shutdownTracker = shutdown.NewTracker(cfg.DataDir)
 	}
 	cdb.closedState.Store(false)
 
@@ -598,7 +611,26 @@ func New(cfg *config.Config) (*ChainDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = cdb.shutdownTracker.Check()
+	if cdb.shutdownTracker != nil {
+		err = cdb.shutdownTracker.Check()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return cdb, nil
+}
+
+func NewNaked(cfg *config.Config) (*ChainDB, error) {
+	cdb := &ChainDB{
+		cfg:       cfg,
+		databases: make(map[*closeTrackingDB]struct{}),
+		hasInit:   false,
+	}
+	cdb.closedState.Store(false)
+
+	var err error
+	cdb.db, err = cdb.OpenDatabaseWithFreezer(DBDirectoryName, cfg.DatabaseCache(),
+		utils.MakeDatabaseHandles(0), "", "qng/", false)
 	if err != nil {
 		return nil, err
 	}
