@@ -318,7 +318,16 @@ func (cdb *ChainDB) PutBlock(block *types.SerializedBlock) error {
 	if cdb.diff != nil {
 		return cdb.diff.PutBlock(block)
 	}
-	return rawdb.WriteBlock(cdb.db, block)
+	return cdb.writeBlockToBatch(block)
+}
+
+func (cdb *ChainDB) writeBlockToBatch(block *types.SerializedBlock) error {
+	batch := cdb.db.NewBatch()
+	err := rawdb.WriteBlock(batch, block)
+	if err != nil {
+		return err
+	}
+	return batch.Write()
 }
 
 func (cdb *ChainDB) HasBlock(hash *hash.Hash) bool {

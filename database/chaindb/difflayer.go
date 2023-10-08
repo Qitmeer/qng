@@ -86,12 +86,14 @@ func (dl *diffLayer) flatten() error {
 
 	start := time.Now()
 	log.Info("Start flatten diff layer", "memory", dl.memorySize().String())
+
+	batch := dl.db.NewBatch()
 	if len(dl.spendJournal) > 0 {
 		for k, v := range dl.spendJournal {
 			if len(v) <= 0 {
-				rawdb.DeleteSpendJournal(dl.db, &k)
+				rawdb.DeleteSpendJournal(batch, &k)
 			} else {
-				err := rawdb.WriteSpendJournal(dl.db, &k, v)
+				err := rawdb.WriteSpendJournal(batch, &k, v)
 				if err != nil {
 					log.Error(err.Error())
 				}
@@ -103,9 +105,9 @@ func (dl *diffLayer) flatten() error {
 	if len(dl.utxo) > 0 {
 		for k, v := range dl.utxo {
 			if len(v) <= 0 {
-				rawdb.DeleteUtxo(dl.db, []byte(k))
+				rawdb.DeleteUtxo(batch, []byte(k))
 			} else {
-				err := rawdb.WriteUtxo(dl.db, []byte(k), v)
+				err := rawdb.WriteUtxo(batch, []byte(k), v)
 				if err != nil {
 					log.Error(err.Error())
 				}
@@ -117,9 +119,9 @@ func (dl *diffLayer) flatten() error {
 	if len(dl.tokenState) > 0 {
 		for k, v := range dl.tokenState {
 			if len(v) <= 0 {
-				rawdb.DeleteTokenState(dl.db, uint64(k))
+				rawdb.DeleteTokenState(batch, uint64(k))
 			} else {
-				err := rawdb.WriteTokenState(dl.db, uint64(k), v)
+				err := rawdb.WriteTokenState(batch, uint64(k), v)
 				if err != nil {
 					log.Error(err.Error())
 				}
@@ -129,7 +131,7 @@ func (dl *diffLayer) flatten() error {
 	}
 
 	if len(dl.bestChainState) > 0 {
-		err := rawdb.WriteBestChainState(dl.db, dl.bestChainState)
+		err := rawdb.WriteBestChainState(batch, dl.bestChainState)
 		if err != nil {
 			log.Error(err.Error())
 		}
@@ -137,7 +139,7 @@ func (dl *diffLayer) flatten() error {
 
 	if len(dl.blocks) > 0 {
 		for _, v := range dl.blocks {
-			err := rawdb.WriteBlock(dl.db, v)
+			err := rawdb.WriteBlock(batch, v)
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -148,9 +150,9 @@ func (dl *diffLayer) flatten() error {
 	if len(dl.dagBlocks) > 0 {
 		for k, v := range dl.dagBlocks {
 			if len(v) <= 0 {
-				rawdb.DeleteDAGBlock(dl.db, uint64(k))
+				rawdb.DeleteDAGBlock(batch, uint64(k))
 			} else {
-				err := rawdb.WriteDAGBlockRaw(dl.db, k, v)
+				err := rawdb.WriteDAGBlockRaw(batch, k, v)
 				if err != nil {
 					log.Error(err.Error())
 				}
@@ -162,9 +164,9 @@ func (dl *diffLayer) flatten() error {
 	if len(dl.blockidByHash) > 0 {
 		for k, v := range dl.blockidByHash {
 			if v == meerdag.MaxId {
-				rawdb.DeleteBlockID(dl.db, &k)
+				rawdb.DeleteBlockID(batch, &k)
 			} else {
-				rawdb.WriteBlockID(dl.db, &k, uint64(v))
+				rawdb.WriteBlockID(batch, &k, uint64(v))
 			}
 		}
 		dl.blockidByHash = map[hash.Hash]uint{}
@@ -173,9 +175,9 @@ func (dl *diffLayer) flatten() error {
 	if len(dl.mainchain) > 0 {
 		for k, v := range dl.mainchain {
 			if !v {
-				rawdb.DeleteMainChain(dl.db, uint64(k))
+				rawdb.DeleteMainChain(batch, uint64(k))
 			} else {
-				err := rawdb.WriteMainChain(dl.db, uint64(k))
+				err := rawdb.WriteMainChain(batch, uint64(k))
 				if err != nil {
 					log.Error(err.Error())
 				}
@@ -186,7 +188,7 @@ func (dl *diffLayer) flatten() error {
 
 	if len(dl.blockidByOrder) > 0 {
 		for k, v := range dl.blockidByOrder {
-			err := rawdb.WriteBlockOrderSnapshot(dl.db, uint64(k), uint64(v))
+			err := rawdb.WriteBlockOrderSnapshot(batch, uint64(k), uint64(v))
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -203,26 +205,32 @@ func (dl *diffLayer) flatten() error {
 		for i := 0; i < len(tips); i++ {
 			result = append(result, uint64(tips[i]))
 		}
-		err = rawdb.WriteDAGTips(dl.db, result)
+		err = rawdb.WriteDAGTips(batch, result)
 		if err != nil {
 			log.Error(err.Error())
 		}
+		dl.tips = map[uint]bool{}
 	}
 
 	if len(dl.txIdxEntrys) > 0 {
 		for _, tide := range dl.txIdxEntrys {
 			var err error
 			if tide.add {
-				err = rawdb.WriteTxLookupEntry(dl.db, tide.tx.Hash(), uint64(tide.blockid))
+				err = rawdb.WriteTxLookupEntry(batch, tide.tx.Hash(), uint64(tide.blockid))
 			} else {
-				err = rawdb.DeleteTxLookupEntry(dl.db, tide.tx.Hash())
+				err = rawdb.DeleteTxLookupEntry(batch, tide.tx.Hash())
 			}
 			if err != nil {
 				log.Error(err.Error())
 			}
 		}
+		dl.txIdxEntrys = map[hash.Hash]*diffTxIdxEntry{}
 	}
 
+	err := batch.Write()
+	if err != nil {
+		log.Error(err.Error())
+	}
 	dl.memory.Store(0)
 	log.Info("End flatten diff layer", "cost", time.Since(start))
 	return nil

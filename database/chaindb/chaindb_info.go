@@ -26,17 +26,22 @@ func (cdb *ChainDB) GetInfo() (*common.DatabaseInfo, error) {
 }
 
 func (cdb *ChainDB) PutInfo(di *common.DatabaseInfo) error {
-	err := rawdb.WriteDatabaseVersion(cdb.db, di.Version())
+	batch := cdb.db.NewBatch()
+	err := rawdb.WriteDatabaseVersion(batch, di.Version())
 	if err != nil {
 		return err
 	}
-	err = rawdb.WriteDatabaseCompressionVersion(cdb.db, di.CompVer())
+	err = rawdb.WriteDatabaseCompressionVersion(batch, di.CompVer())
 	if err != nil {
 		return err
 	}
-	err = rawdb.WriteDatabaseBlockIndexVersion(cdb.db, di.BidxVer())
+	err = rawdb.WriteDatabaseBlockIndexVersion(batch, di.BidxVer())
 	if err != nil {
 		return err
 	}
-	return rawdb.WriteDatabaseCreate(cdb.db, di.Created())
+	err = rawdb.WriteDatabaseCreate(batch, di.Created())
+	if err != nil {
+		return err
+	}
+	return batch.Write()
 }
