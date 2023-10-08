@@ -31,31 +31,33 @@ func (cdb *ChainDB) GetTxIdxEntry(id *hash.Hash, verbose bool) (*types.Tx, *hash
 }
 
 func (cdb *ChainDB) DeleteTxIdxEntrys(block *types.SerializedBlock) error {
+	batch := cdb.db.NewBatch()
 	for _, tx := range block.Transactions() {
 		_, blockHash, _ := cdb.GetTxIdxEntry(tx.Hash(), false)
 		if blockHash != nil && !blockHash.IsEqual(block.Hash()) {
 			continue
 		}
-		err := rawdb.DeleteTxLookupEntry(cdb.db, tx.Hash())
+		err := rawdb.DeleteTxLookupEntry(batch, tx.Hash())
 		if err != nil {
 			return err
 		}
 	}
-	return nil
+	return batch.Write()
 }
 
 func (cdb *ChainDB) PutTxHashs(block *types.SerializedBlock) error {
+	batch := cdb.db.NewBatch()
 	for _, tx := range block.Transactions() {
 		if tx.IsDuplicate {
 			continue
 		}
 		fhash := tx.Tx.TxHashFull()
-		err := rawdb.WriteTxIdByFullHash(cdb.db, &fhash, tx.Hash())
+		err := rawdb.WriteTxIdByFullHash(batch, &fhash, tx.Hash())
 		if err != nil {
 			return err
 		}
 	}
-	return nil
+	return batch.Write()
 }
 
 func (cdb *ChainDB) GetTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error) {
@@ -87,17 +89,23 @@ func (cdb *ChainDB) PutInvalidTxIdxTip(order uint64, bh *hash.Hash) error {
 }
 
 func (cdb *ChainDB) PutInvalidTxs(sblock *types.SerializedBlock, block model.Block) error {
-	return rawdb.WriteInvalidTxLookupEntriesByBlock(cdb.db, sblock, uint64(block.GetID()))
+	batch := cdb.db.NewBatch()
+	err := rawdb.WriteInvalidTxLookupEntriesByBlock(cdb.db, sblock, uint64(block.GetID()))
+	if err != nil {
+		return err
+	}
+	return batch.Write()
 }
 
 func (cdb *ChainDB) DeleteInvalidTxs(sblock *types.SerializedBlock, block model.Block) error {
+	batch := cdb.db.NewBatch()
 	for _, tx := range sblock.Transactions() {
-		err := rawdb.DeleteTxLookupEntry(cdb.db, tx.Hash())
+		err := rawdb.DeleteTxLookupEntry(batch, tx.Hash())
 		if err != nil {
 			return err
 		}
 	}
-	return nil
+	return batch.Write()
 }
 
 func (cdb *ChainDB) GetInvalidTx(id *hash.Hash) (*types.Transaction, error) {
