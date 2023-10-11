@@ -20,6 +20,7 @@ type DataBase interface {
 	PutUtxo(key []byte, data []byte) error
 	DeleteUtxo(key []byte) error
 	ForeachUtxo(fn func(key []byte, data []byte) error) error
+	UpdateUtxo(opts []*common.UtxoOpt) error
 	GetTokenState(blockID uint) ([]byte, error)
 	PutTokenState(blockID uint, data []byte) error
 	DeleteTokenState(blockID uint) error

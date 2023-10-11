@@ -257,6 +257,27 @@ func (cdb *ChainDB) ForeachUtxo(fn func(key []byte, data []byte) error) error {
 	return rawdb.ForeachUtxo(cdb.db, fn)
 }
 
+func (cdb *ChainDB) UpdateUtxo(opts []*common.UtxoOpt) error {
+	if len(opts) <= 0 {
+		return nil
+	}
+	if cdb.diff != nil {
+		return cdb.diff.UpdateUtxo(opts)
+	}
+	batch := cdb.db.NewBatch()
+	for _, opt := range opts {
+		if opt.Add {
+			err := rawdb.WriteUtxo(batch, opt.Key, opt.Data)
+			if err != nil {
+				return err
+			}
+		} else {
+			rawdb.DeleteUtxo(batch, opt.Key)
+		}
+	}
+	return batch.Write()
+}
+
 func (cdb *ChainDB) GetTokenState(blockID uint) ([]byte, error) {
 	if cdb.diff != nil {
 		return cdb.diff.GetTokenState(blockID)

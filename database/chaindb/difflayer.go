@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
+	com "github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/ethereum/go-ethereum/common"
@@ -347,6 +348,26 @@ func (dl *diffLayer) ForeachUtxo(fn func(key []byte, data []byte) error) error {
 		return fn(key, data)
 	}
 	return rawdb.ForeachUtxo(dl.db, fun)
+}
+
+func (dl *diffLayer) UpdateUtxo(opts []*com.UtxoOpt) error {
+	dl.lock.Lock()
+	defer dl.lock.Unlock()
+
+	if dl.utxo == nil {
+		dl.utxo = map[string][]byte{}
+	}
+
+	for _, opt := range opts {
+		if opt.Add {
+			dl.utxo[string(opt.Key)] = opt.Data
+			dl.memory.Add(uint64(len(opt.Data) + len(opt.Key)))
+		} else {
+			dl.utxo[string(opt.Key)] = nil
+			dl.memory.Add(uint64(len(opt.Key)))
+		}
+	}
+	return nil
 }
 
 func (dl *diffLayer) GetTokenState(blockID uint) ([]byte, error) {
