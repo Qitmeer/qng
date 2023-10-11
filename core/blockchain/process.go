@@ -434,7 +434,7 @@ func (b *BlockChain) connectBlock(node meerdag.IBlock, blockNode *BlockNode, vie
 		// Update the utxo set using the state of the utxo view.  This
 		// entails removing all of the utxos spent and adding the new
 		// ones created by the block.
-		err = b.dbPutUtxoView(view)
+		err = b.dbUpdateUtxoView(view)
 		if err != nil {
 			return err
 		}
@@ -478,7 +478,7 @@ func (b *BlockChain) disconnectBlock(ib meerdag.IBlock, block *types.SerializedB
 	// Update the utxo set using the state of the utxo view.  This
 	// entails restoring all of the utxos spent and removing the new
 	// ones created by the block.
-	err := b.dbPutUtxoView(view)
+	err := b.dbUpdateUtxoView(view)
 	if err != nil {
 		return err
 	}

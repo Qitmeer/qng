@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/meerdag"
 )
@@ -238,5 +239,45 @@ func (b *BlockChain) dbPutUtxoViewByBlock(block *types.SerializedBlock) error {
 	for _, tx := range block.Transactions() {
 		view.AddTxOuts(tx, block.Hash())
 	}
-	return b.dbPutUtxoView(view)
+	return b.dbUpdateUtxoView(view)
+}
+
+func (b *BlockChain) dbUpdateUtxoView(view *utxo.UtxoViewpoint) error {
+	opts := []*common.UtxoOpt{}
+	for op, en := range view.Entries() {
+		outpoint := op
+		entry := en
+		// No need to update the database if the entry was not modified.
+		if entry == nil || !entry.IsModified() {
+			continue
+		}
+		// Remove the utxo entry if it is spent.
+		if entry.IsSpent() {
+			key := utxo.OutpointKey(outpoint)
+			opts = append(opts, &common.UtxoOpt{Add: false, Key: *key})
+			utxo.RecycleOutpointKey(key)
+			if b.Acct != nil {
+				err := b.Acct.Apply(false, &outpoint, entry)
+				if err != nil {
+					log.Error(err.Error())
+				}
+			}
+			continue
+		}
+
+		// Serialize and store the utxo entry.
+		serialized, err := utxo.SerializeUtxoEntry(entry)
+		if err != nil {
+			return err
+		}
+		key := utxo.OutpointKey(outpoint)
+		opts = append(opts, &common.UtxoOpt{Add: true, Key: *key, Data: serialized})
+		if b.Acct != nil {
+			err = b.Acct.Apply(true, &outpoint, entry)
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+	}
+	return b.DB().UpdateUtxo(opts)
 }
