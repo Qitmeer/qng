@@ -13,7 +13,6 @@ import (
 	"golang.org/x/exp/slices"
 	"os"
 	"testing"
-	"time"
 )
 
 func TestChainCloseClosesDB(t *testing.T) {
