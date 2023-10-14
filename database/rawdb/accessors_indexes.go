@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"math"
 )
 
 func ReadTxLookupEntry(db ethdb.Reader, hash *hash.Hash) *uint64 {
@@ -188,6 +189,46 @@ func CleanInvalidTxHashs(db ethdb.Database) error {
 	total := 0
 	defer func() {
 		log.Debug("Clean the hash of invalid transactions", "total", total)
+	}()
+	for it.Next() {
+		err := db.Delete(it.Key())
+		if err != nil {
+			return err
+		}
+		total++
+	}
+	return nil
+}
+
+// addr index
+func ReadAddrIdxTip(db ethdb.Reader) (*hash.Hash, uint, error) {
+	serialized, _ := db.Get(addridxTipKey)
+	if len(serialized) < hash.HashSize+4 {
+		return &hash.ZeroHash, math.MaxUint32, nil
+	}
+
+	var h hash.Hash
+	copy(h[:], serialized[:hash.HashSize])
+	order := uint32(binary.BigEndian.Uint32(serialized[hash.HashSize:]))
+	return &h, uint(order), nil
+}
+
+func WriteAddrIdxTip(db ethdb.KeyValueWriter, bh *hash.Hash, order uint) error {
+	serialized := make([]byte, hash.HashSize+4)
+	copy(serialized, bh[:])
+	binary.BigEndian.PutUint32(serialized[hash.HashSize:], uint32(order))
+	return db.Put(addridxTipKey, serialized)
+}
+
+func CleanAddrIdx(db ethdb.Database) error {
+	err := db.Delete(addridxTipKey)
+	if err != nil {
+		return err
+	}
+	it := db.NewIterator(AddridxPrefix, nil)
+	total := 0
+	defer func() {
+		log.Debug("Clean addr index", "total", total)
 	}()
 	for it.Next() {
 		err := db.Delete(it.Key())

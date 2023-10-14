@@ -81,6 +81,10 @@ var (
 	invalidtxLookupPrefix   = []byte("L") // invalidtxLookupPrefix + hash (id) -> transaction lookup metadata
 	invalidtxFullHashPrefix = []byte("F") // invalidtxFullHashPrefix + hash (full) -> transaction id
 
+	// addr index
+	addridxTipKey = []byte("addrtip") // block hash+order
+	AddridxPrefix = []byte("A")
+
 	// snapshot
 	SnapshotBlockOrderPrefix  = []byte("o") // SnapshotBlockOrderPrefix + block order -> block id
 	SnapshotBlockStatusPrefix = []byte("s") // SnapshotBlockStatusPrefix + block id -> block status
