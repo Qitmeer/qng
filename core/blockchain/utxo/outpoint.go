@@ -29,3 +29,12 @@ var outpointKeyPool = sync.Pool{
 func RecycleOutpointKey(key *[]byte) {
 	outpointKeyPool.Put(key)
 }
+
+func OutpointKeyNoPool(outpoint types.TxOutPoint) []byte {
+	idx := uint64(outpoint.OutIndex)
+	size := hash.HashSize + serialization.SerializeSizeVLQ(idx)
+	key := make([]byte, size, size)
+	copy(key, outpoint.Hash[:])
+	serialization.PutVLQ(key[hash.HashSize:], idx)
+	return key
+}

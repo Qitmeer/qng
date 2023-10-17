@@ -253,9 +253,8 @@ func (b *BlockChain) dbUpdateUtxoView(view *utxo.UtxoViewpoint) error {
 		}
 		// Remove the utxo entry if it is spent.
 		if entry.IsSpent() {
-			key := utxo.OutpointKey(outpoint)
-			opts = append(opts, &common.UtxoOpt{Add: false, Key: *key})
-			utxo.RecycleOutpointKey(key)
+			opts = append(opts, &common.UtxoOpt{Add: false, Key: utxo.OutpointKeyNoPool(outpoint)})
+
 			if b.Acct != nil {
 				err := b.Acct.Apply(false, &outpoint, entry)
 				if err != nil {
@@ -270,8 +269,7 @@ func (b *BlockChain) dbUpdateUtxoView(view *utxo.UtxoViewpoint) error {
 		if err != nil {
 			return err
 		}
-		key := utxo.OutpointKey(outpoint)
-		opts = append(opts, &common.UtxoOpt{Add: true, Key: *key, Data: serialized})
+		opts = append(opts, &common.UtxoOpt{Add: true, Key: utxo.OutpointKeyNoPool(outpoint), Data: serialized})
 		if b.Acct != nil {
 			err = b.Acct.Apply(true, &outpoint, entry)
 			if err != nil {
