@@ -67,18 +67,18 @@ func (cdb *LegacyChainDB) TryUpgrade(di *common.DatabaseInfo, interrupt <-chan s
 		if system.InterruptRequested(interrupt) {
 			return fmt.Errorf("interrupt upgrade database")
 		}
+		blockid, err = cdb.GetBlockIdByOrder(uint(i))
+		if err != nil {
+			return err
+		}
 		err = cdb.db.View(func(dbTx legacydb.Tx) error {
-			blockhash, err = dbFetchBlockHashByIID(dbTx, i)
+			blockhash, err = dbFetchBlockHashByIID(dbTx, uint32(blockid))
 			return err
 		})
 		if err != nil {
 			return err
 		}
 		sb, err = cdb.GetBlock(blockhash)
-		if err != nil {
-			return err
-		}
-		blockid, err = cdb.GetDAGBlockIdByHash(blockhash)
 		if err != nil {
 			return err
 		}
