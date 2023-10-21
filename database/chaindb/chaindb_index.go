@@ -14,14 +14,14 @@ import (
 
 func (cdb *ChainDB) PutTxIdxEntrys(sblock *types.SerializedBlock, block model.Block) error {
 	if cdb.diff != nil {
-		return cdb.diff.PutTxIdxEntrys(sblock,block)
+		return cdb.diff.PutTxIdxEntrys(sblock, block)
 	}
 	return rawdb.WriteTxLookupEntriesByBlock(cdb.db, sblock, uint64(block.GetID()))
 }
 
 func (cdb *ChainDB) GetTxIdxEntry(id *hash.Hash, verbose bool) (*types.Tx, *hash.Hash, error) {
 	if cdb.diff != nil {
-		return cdb.diff.GetTxIdxEntry(id,verbose)
+		return cdb.diff.GetTxIdxEntry(id, verbose)
 	}
 	if !verbose {
 		blockID := rawdb.ReadTxLookupEntry(cdb.db, id)
