@@ -8,6 +8,7 @@ import (
 	com "github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"sync"
@@ -44,12 +45,17 @@ type diffLayer struct {
 }
 
 func (dl *diffLayer) handler() {
-	timer := time.NewTicker(time.Minute)
+	timer := time.NewTicker(params.ActiveNetParams.TargetTimePerBlock)
 out:
 	for {
 		select {
 		case <-timer.C:
-			if dl.memory.Load() >= dl.cache {
+			dl.lock.RLock()
+			bcSize := len(dl.blocks)
+			dl.lock.RUnlock()
+
+			if dl.memory.Load() >= dl.cache ||
+				bcSize >= meerdag.MinBlockDataCache {
 				err := dl.flatten()
 				if err != nil {
 					log.Error(err.Error())
@@ -782,9 +788,11 @@ func (dl *diffLayer) GetTxIdxEntry(id *hash.Hash, verbose bool) (*types.Tx, *has
 	if len(dl.txIdxEntrys) > 0 {
 		for _, dtie := range dl.txIdxEntrys {
 			if !dtie.add {
+				dl.lock.Unlock()
 				return nil, nil, nil
 			}
 			if dtie.tx.Hash().IsEqual(id) {
+				dl.lock.Unlock()
 				return dtie.tx, dtie.blockhash, nil
 			}
 		}

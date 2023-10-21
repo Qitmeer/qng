@@ -13,10 +13,16 @@ import (
 )
 
 func (cdb *ChainDB) PutTxIdxEntrys(sblock *types.SerializedBlock, block model.Block) error {
+	if cdb.diff != nil {
+		return cdb.diff.PutTxIdxEntrys(sblock, block)
+	}
 	return rawdb.WriteTxLookupEntriesByBlock(cdb.db, sblock, uint64(block.GetID()))
 }
 
 func (cdb *ChainDB) GetTxIdxEntry(id *hash.Hash, verbose bool) (*types.Tx, *hash.Hash, error) {
+	if cdb.diff != nil {
+		return cdb.diff.GetTxIdxEntry(id, verbose)
+	}
 	if !verbose {
 		blockID := rawdb.ReadTxLookupEntry(cdb.db, id)
 		if blockID == nil {
@@ -33,6 +39,9 @@ func (cdb *ChainDB) GetTxIdxEntry(id *hash.Hash, verbose bool) (*types.Tx, *hash
 }
 
 func (cdb *ChainDB) DeleteTxIdxEntrys(block *types.SerializedBlock) error {
+	if cdb.diff != nil {
+		return cdb.diff.DeleteTxIdxEntrys(block)
+	}
 	batch := cdb.db.NewBatch()
 	for _, tx := range block.Transactions() {
 		_, blockHash, _ := cdb.GetTxIdxEntry(tx.Hash(), false)
