@@ -782,9 +782,11 @@ func (dl *diffLayer) GetTxIdxEntry(id *hash.Hash, verbose bool) (*types.Tx, *has
 	if len(dl.txIdxEntrys) > 0 {
 		for _, dtie := range dl.txIdxEntrys {
 			if !dtie.add {
+				dl.lock.Unlock()
 				return nil, nil, nil
 			}
 			if dtie.tx.Hash().IsEqual(id) {
+				dl.lock.Unlock()
 				return dtie.tx, dtie.blockhash, nil
 			}
 		}
