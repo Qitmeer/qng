@@ -68,7 +68,7 @@ func makeConfig(cfg *config.Config) (*eth.Config, error) {
 			return nil, nil
 		}
 	} else {
-		ecfg, err = meer.MakeConfig(cfg.DataDir)
+		ecfg, err = meer.MakeConfig(cfg)
 		if err != nil {
 			log.Error(err.Error())
 			return nil, nil

@@ -129,6 +129,7 @@ type Config struct {
 	CacheDatabase int `long:"cache.database" description:"Percentage of cache memory allowance to use for database io"`
 	CacheSnapshot int `long:"cache.snapshot" description:"Percentage of cache memory allowance to use for snapshot caching (default = 10% full mode, 20% archive mode)"`
 
+	EVMTrieTimeout int `long:"evmtrietimeout" description:"Set the interval time(seconds) for flush evm trie to disk"`
 	// TODO: It will soon be discarded in the near future
 	DevNextGDB bool `long:"devnextgdb" description:"Enable next generation databases that only exist in development mode"`
 	// wallet

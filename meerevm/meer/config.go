@@ -22,6 +22,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"net"
 	"path/filepath"
+	"time"
 )
 
 var (
@@ -44,7 +45,8 @@ var (
 	}, utils.NetworkFlags...)
 )
 
-func MakeConfig(datadir string) (*eth.Config, error) {
+func MakeConfig(cfg *config.Config) (*eth.Config, error) {
+	datadir := cfg.DataDir
 	genesis := Genesis()
 
 	etherbase := common.Address{}
@@ -61,6 +63,10 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	econfig.Miner.External = &MeerPool{}
 
 	econfig.TxPool.NoLocals = false
+
+	if cfg.EVMTrieTimeout > 0 {
+		econfig.TrieTimeout = time.Second * time.Duration(cfg.EVMTrieTimeout)
+	}
 
 	nodeConf := node.DefaultConfig
 
@@ -97,7 +103,7 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 }
 
 func MakeParams(cfg *config.Config) (*eth.Config, []string, error) {
-	ecfg, err := MakeConfig(cfg.DataDir)
+	ecfg, err := MakeConfig(cfg)
 	if err != nil {
 		return ecfg, nil, err
 	}
