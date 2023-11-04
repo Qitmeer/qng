@@ -622,6 +622,11 @@ var (
 			Usage:       "wallet password",
 			Destination: &cfg.WalletPass,
 		},
+		&cli.IntFlag{
+			Name:        "evmtrietimeout",
+			Usage:       "Set the interval time(seconds) for flush evm trie to disk",
+			Destination: &cfg.EVMTrieTimeout,
+		},
 	}
 )
 
