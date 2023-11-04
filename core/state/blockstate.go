@@ -101,6 +101,10 @@ func (b *BlockState) GetDuplicateTxs() []int {
 	return b.duplicateTxs
 }
 
+func (b *BlockState) GetDuplicateTxsSize() int {
+	return len(b.duplicateTxs)
+}
+
 func (b *BlockState) SetEVM(header *etypes.Header) {
 	b.evmNumber = header.Number.Uint64()
 	b.evmHash = header.Hash()
