@@ -106,7 +106,9 @@ func (dl *diffLayer) flatten() error {
 				}
 			}
 		}
-		dl.spendJournal = map[hash.Hash][]byte{}
+		for k := range dl.spendJournal {
+			delete(dl.spendJournal, k)
+		}
 	}
 
 	if len(dl.utxo) > 0 {
@@ -120,7 +122,9 @@ func (dl *diffLayer) flatten() error {
 				}
 			}
 		}
-		dl.utxo = map[string][]byte{}
+		for k := range dl.utxo {
+			delete(dl.utxo, k)
+		}
 	}
 
 	if len(dl.tokenState) > 0 {
@@ -134,7 +138,9 @@ func (dl *diffLayer) flatten() error {
 				}
 			}
 		}
-		dl.tokenState = map[uint][]byte{}
+		for k := range dl.tokenState {
+			delete(dl.tokenState, k)
+		}
 	}
 
 	if len(dl.bestChainState) > 0 {
@@ -151,7 +157,9 @@ func (dl *diffLayer) flatten() error {
 				log.Error(err.Error())
 			}
 		}
-		dl.blocks = map[hash.Hash]*types.SerializedBlock{}
+		for k := range dl.blocks {
+			delete(dl.blocks, k)
+		}
 	}
 
 	if len(dl.dagBlocks) > 0 {
@@ -165,7 +173,9 @@ func (dl *diffLayer) flatten() error {
 				}
 			}
 		}
-		dl.dagBlocks = map[uint][]byte{}
+		for k := range dl.dagBlocks {
+			delete(dl.dagBlocks, k)
+		}
 	}
 
 	if len(dl.blockidByHash) > 0 {
@@ -176,7 +186,9 @@ func (dl *diffLayer) flatten() error {
 				rawdb.WriteBlockID(batch, &k, uint64(v))
 			}
 		}
-		dl.blockidByHash = map[hash.Hash]uint{}
+		for k := range dl.blockidByHash {
+			delete(dl.blockidByHash, k)
+		}
 	}
 
 	if len(dl.mainchain) > 0 {
@@ -190,7 +202,9 @@ func (dl *diffLayer) flatten() error {
 				}
 			}
 		}
-		dl.mainchain = map[uint]bool{}
+		for k := range dl.mainchain {
+			delete(dl.mainchain, k)
+		}
 	}
 
 	if len(dl.blockidByOrder) > 0 {
@@ -200,7 +214,9 @@ func (dl *diffLayer) flatten() error {
 				log.Error(err.Error())
 			}
 		}
-		dl.blockidByOrder = map[uint]uint{}
+		for k := range dl.blockidByOrder {
+			delete(dl.blockidByOrder, k)
+		}
 	}
 
 	if len(dl.tips) > 0 {
@@ -216,7 +232,9 @@ func (dl *diffLayer) flatten() error {
 		if err != nil {
 			log.Error(err.Error())
 		}
-		dl.tips = map[uint]bool{}
+		for k := range dl.tips {
+			delete(dl.tips, k)
+		}
 	}
 
 	if len(dl.txIdxEntrys) > 0 {
@@ -231,7 +249,9 @@ func (dl *diffLayer) flatten() error {
 				log.Error(err.Error())
 			}
 		}
-		dl.txIdxEntrys = map[hash.Hash]*diffTxIdxEntry{}
+		for k := range dl.txIdxEntrys {
+			delete(dl.txIdxEntrys, k)
+		}
 	}
 
 	err := batch.Write()
