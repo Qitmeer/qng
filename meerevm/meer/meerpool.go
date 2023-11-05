@@ -135,7 +135,7 @@ func (m *MeerPool) init(consensus model.Consensus, config *miner.Config, chainCo
 			break
 		}
 	}
-	m.txsSub = m.eth.TxPool().SubscribeNewTxsEvent(m.txsCh)
+	m.txsSub = m.eth.TxPool().SubscribeTransactions(m.txsCh, true)
 	m.snapshotQTxsM = map[string]*snapshotTx{}
 	m.snapshotTxsM = map[string]*snapshotTx{}
 	return nil
