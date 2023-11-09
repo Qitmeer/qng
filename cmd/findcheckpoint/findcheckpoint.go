@@ -7,6 +7,7 @@ import (
 	"github.com/Qitmeer/qng/consensus"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/database"
+	"github.com/Qitmeer/qng/database/chaindb"
 	"github.com/Qitmeer/qng/database/legacychaindb"
 	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/log"
@@ -32,6 +33,7 @@ func main() {
 	qcfg := cfg.ToQNGConfig()
 	// Load the block database.
 	legacychaindb.CreateIfNoExist = false
+	chaindb.CreateIfNoExist = false
 	db, err := database.New(qcfg, system.InterruptListener())
 	if err != nil {
 		log.Error("load block database", "error", err)
