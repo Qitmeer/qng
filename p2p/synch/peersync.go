@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/meerdag"
@@ -318,8 +319,10 @@ func (ps *PeerSync) startSync() {
 		startTime := time.Now()
 		ps.lastSync = startTime
 		longSyncMod := false
+
 		if gs.GetTotal() >= best.GraphState.GetTotal()+MaxBlockLocatorsPerMsg {
 			longSyncMod = true
+			ps.sy.p2p.Consensus().Events().Send(event.New(event.DownloaderStart))
 		}
 		refresh := true
 		add := 0
@@ -354,6 +357,9 @@ func (ps *PeerSync) startSync() {
 					log.Info("You're up to date now.")
 				}
 			}
+		}
+		if longSyncMod {
+			ps.sy.p2p.Consensus().Events().Send(event.New(event.DownloaderEnd))
 		}
 		ps.SetSyncPeer(nil)
 		ps.processwg.Done()
