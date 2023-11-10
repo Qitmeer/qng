@@ -5,8 +5,10 @@
 package event
 
 const (
-	MempoolTxAdd = int(0x01)
-	Initialized  = int(0x02)
+	MempoolTxAdd    = int(0x01)
+	Initialized     = int(0x02)
+	DownloaderStart = int(0x03)
+	DownloaderEnd   = int(0x04)
 )
 
 type Event struct {

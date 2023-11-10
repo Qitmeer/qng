@@ -20,6 +20,7 @@ import (
 
 var (
 	DBDirectoryName = "meerchain"
+	CreateIfNoExist = true
 )
 
 type ChainDB struct {
@@ -114,6 +115,13 @@ func (cdb *ChainDB) CloseDatabases() (errors []error) {
 }
 
 func (cdb *ChainDB) OpenDatabaseWithFreezer(name string, cache, handles int, ancient string, namespace string, readonly bool) (ethdb.Database, error) {
+	if !CreateIfNoExist {
+		existingDb := rawdb.PreexistingDatabase(cdb.cfg.ResolveDataPath(name))
+		if len(existingDb) <= 0 {
+			return nil, ErrDBAbsent
+		}
+	}
+
 	cdb.lock.Lock()
 	defer cdb.lock.Unlock()
 	if cdb.closedState.Load() {

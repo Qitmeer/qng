@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	qevent "github.com/Qitmeer/qng/core/event"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/ethereum/go-ethereum/common"
@@ -109,6 +110,8 @@ type MeerPool struct {
 	notify  model.Notify
 
 	interrupt *atomic.Int32
+
+	syncing atomic.Bool // The indicator whether the node is still syncing.
 }
 
 func (m *MeerPool) init(consensus model.Consensus, config *miner.Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux) error {
@@ -152,6 +155,7 @@ func (m *MeerPool) Start() {
 	m.quit = make(chan struct{})
 	m.wg.Add(1)
 	go m.handler()
+	m.subscribe()
 
 	m.updateTemplate(nil, time.Now().Unix())
 }
@@ -514,6 +518,9 @@ func (m *MeerPool) makeEnv(parent *types.Header, header *types.Header, coinbase 
 }
 
 func (m *MeerPool) updateTemplate(interrupt *atomic.Int32, timestamp int64) {
+	if m.syncing.Load() {
+		return
+	}
 	preBlock := m.PendingBlock()
 	if preBlock != nil {
 		if preBlock.ParentHash() == m.chain.CurrentBlock().Hash() {
@@ -835,6 +842,36 @@ func (m *MeerPool) SetTxPool(tp model.TxPool) {
 
 func (m *MeerPool) SetNotify(notify model.Notify) {
 	m.notify = notify
+}
+
+func (m *MeerPool) subscribe() {
+	ch := make(chan *qevent.Event)
+	sub := m.consensus.Events().Subscribe(ch)
+	go func() {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case ev := <-ch:
+				if ev.Data != nil {
+					switch value := ev.Data.(type) {
+					case int:
+						if value == qevent.DownloaderStart {
+							m.syncing.Store(true)
+						} else if value == qevent.DownloaderEnd {
+							m.syncing.Store(false)
+							m.ResetTemplate()
+						}
+					}
+				}
+				if ev.Ack != nil {
+					ev.Ack <- struct{}{}
+				}
+			case <-m.quit:
+				log.Info("Close MeerPool Event Subscribe")
+				return
+			}
+		}
+	}()
 }
 
 type snapshotTx struct {
