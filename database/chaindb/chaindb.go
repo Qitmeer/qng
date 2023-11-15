@@ -607,10 +607,6 @@ func (cdb *ChainDB) DeleteEstimateFee() error {
 	return rawdb.DeleteEstimateFee(cdb.db)
 }
 
-func (cdb *ChainDB) TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{}) error {
-	return nil
-}
-
 func (cdb *ChainDB) StartTrack(info string) error {
 	if cdb.diff != nil {
 		return nil

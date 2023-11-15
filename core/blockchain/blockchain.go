@@ -330,6 +330,11 @@ func (b *BlockChain) createChainState() error {
 	if err != nil {
 		return err
 	}
+	// genesis tx index
+	err = b.DB().PutTxIdxEntrys(genesisBlock, ib)
+	if err != nil {
+		return err
+	}
 	return b.bd.Commit()
 }
 
