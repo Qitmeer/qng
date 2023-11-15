@@ -73,6 +73,16 @@ func (m *Manager) Init() error {
 			return err
 		}
 	}
+	if m.consensus.BlockChain().GetMainOrder() == 0 {
+		sblock, block, err := m.consensus.BlockChain().FetchBlockByOrder(0)
+		if err != nil {
+			return err
+		}
+		err = m.ConnectBlock(sblock, block, nil)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
