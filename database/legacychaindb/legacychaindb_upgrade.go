@@ -11,12 +11,23 @@ import (
 	"github.com/Qitmeer/qng/database/legacydb"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/params"
 	"github.com/schollz/progressbar/v3"
 	"math"
 )
 
 func (cdb *LegacyChainDB) TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{}) error {
 	if di.Version() == common.CurrentDatabaseVersion {
+		// To fix old data, re index old genesis transaction data.
+		txId := params.ActiveNetParams.GenesisBlock.Transactions()[0].Hash()
+		_, blockHash, err := cdb.GetTxIdxEntry(txId, false)
+		if err != nil {
+			return err
+		}
+		if blockHash == nil {
+			log.Info("Re index genesis transaction for legacy database")
+			return cdb.doPutTxIndexEntrys(params.ActiveNetParams.GenesisBlock, 0)
+		}
 		return nil
 	} else if di.Version() > 13 {
 		return fmt.Errorf("The data is temporarily incompatible.")
