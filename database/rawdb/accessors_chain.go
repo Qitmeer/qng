@@ -284,7 +284,8 @@ func ForeachUtxo(db ethdb.KeyValueStore, fn func(opd []byte, data []byte) error)
 	defer it.Release()
 
 	for it.Next() {
-		err := fn(it.Key(), it.Value())
+		op := it.Key()[len(utxoPrefix):]
+		err := fn(op, it.Value())
 		if err != nil {
 			return err
 		}
