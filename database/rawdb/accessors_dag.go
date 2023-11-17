@@ -37,7 +37,7 @@ func ReadDAGBlock(db ethdb.Reader, id uint64) meerdag.IBlock {
 		log.Error(err.Error())
 		return nil
 	}
-	return block
+	return ib
 }
 
 func WriteDAGBlockRaw(db ethdb.KeyValueWriter, id uint, data []byte) error {

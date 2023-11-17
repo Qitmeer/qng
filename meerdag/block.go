@@ -81,7 +81,6 @@ type IBlock interface {
 	// GetState
 	GetState() model.BlockState
 
-	// TODO:
 	Bytes() []byte
 
 	// Setting the order of block

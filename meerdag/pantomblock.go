@@ -1,6 +1,7 @@
 package meerdag
 
 import (
+	"bytes"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"io"
 )
@@ -228,4 +229,14 @@ func (pb *PhantomBlock) CleanDiffAnticone() {
 	if pb.redDiffAnticone != nil {
 		pb.redDiffAnticone.Clean()
 	}
+}
+
+func (pb *PhantomBlock) Bytes() []byte {
+	var buff bytes.Buffer
+	err := pb.Encode(&buff)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return buff.Bytes()
 }
