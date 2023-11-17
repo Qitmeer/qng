@@ -115,12 +115,12 @@ func (f *chainFreezer) freeze(db ethdb.KeyValueStore) {
 		frozen := f.frozen.Load()
 		switch {
 		case *mt < threshold:
-			log.Debug("Current full block not old enough", "DAG_ID", *mt, "hash", mb.GetHash(), "delay", threshold)
+			log.Debug("Current full block not old enough", "tip", *mt, "hash", mb.GetHash(), "delay", threshold)
 			backoff = true
 			continue
 
 		case *mt-threshold <= frozen:
-			log.Debug("Ancient blocks frozen already", "DAG_ID", *mt, "hash", mb.GetHash(), "frozen", frozen)
+			log.Debug("Ancient blocks frozen already", "tip", *mt, "hash", mb.GetHash(), "frozen", frozen)
 			backoff = true
 			continue
 		}
@@ -159,13 +159,13 @@ func (f *chainFreezer) freeze(db ethdb.KeyValueStore) {
 			log.Crit("Failed to delete frozen canonical blocks", "err", err)
 		}
 		batch.Reset()
-
+		frozen = f.frozen.Load()
 		// Log something friendly for the user
 		context := []interface{}{
 			"blocks", frozen - first, "elapsed", common.PrettyDuration(time.Since(start)), "DAG_ID", frozen - 1,
 		}
 		if n := len(ancients); n > 0 {
-			context = append(context, []interface{}{"hash", ancients[n-1].GetHash()}...)
+			context = append(context, []interface{}{"hash", ancients[n-1].GetHash(), "order", ancients[n-1].GetOrder()}...)
 		}
 		log.Debug("Deep froze chain segment", context...)
 

@@ -158,11 +158,11 @@ type GetBlockData func(*hash.Hash) IBlockData
 
 type CreateBlockState func(id uint64) model.BlockState
 
-var createBlockState CreateBlockState
+var createBlockState CreateBlockState = CreateMockBlockState
 
 type CreateBlockStateFromBytes func(data []byte) (model.BlockState, error)
 
-var createBlockStateFromBytes CreateBlockStateFromBytes
+var createBlockStateFromBytes CreateBlockStateFromBytes = CreateMockBlockStateFromBytes
 
 // The general foundation framework of Block DAG implement
 type MeerDAG struct {
@@ -1377,9 +1377,7 @@ out:
 	log.Trace("MeerDAG handler done")
 }
 
-func New(dagType string, blockRate float64, db model.DataBase, getBlockData GetBlockData, createBS CreateBlockState, createBSB CreateBlockStateFromBytes) *MeerDAG {
-	createBlockState = createBS
-	createBlockStateFromBytes = createBSB
+func New(dagType string, blockRate float64, db model.DataBase, getBlockData GetBlockData) *MeerDAG {
 	md := &MeerDAG{
 		quit:           make(chan struct{}),
 		blockDataCache: map[uint]time.Time{},
@@ -1388,4 +1386,9 @@ func New(dagType string, blockRate float64, db model.DataBase, getBlockData GetB
 	}
 	md.init(dagType, blockRate, db, getBlockData)
 	return md
+}
+
+func SetBlockStateFactory(createBS CreateBlockState, createBSB CreateBlockStateFromBytes) {
+	createBlockState = createBS
+	createBlockStateFromBytes = createBSB
 }

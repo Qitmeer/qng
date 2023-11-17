@@ -441,7 +441,7 @@ func checkLoad(t *testing.T) {
 		}
 		return tb
 	}
-	bd = meerdag.New(meerdag.PHANTOM, -1, db, getBlockData, meerdag.CreateMockBlockState, meerdag.CreateMockBlockStateFromBytes)
+	bd = meerdag.New(meerdag.PHANTOM, -1, db, getBlockData)
 	total, err := dbGetTotal()
 	if err != nil {
 		t.Fatal(err)

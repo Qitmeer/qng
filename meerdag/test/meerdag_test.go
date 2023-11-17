@@ -190,7 +190,7 @@ func InitBlockDAG(dagType string, graph string) meerdag.ConsensusAlgorithm {
 		fmt.Println(err)
 		return nil
 	}
-	bd = meerdag.New(dagType, -1, db, nil, meerdag.CreateMockBlockState, meerdag.CreateMockBlockStateFromBytes)
+	bd = meerdag.New(dagType, -1, db, nil)
 	instance := bd.GetInstance()
 	tbMap = map[string]meerdag.IBlock{}
 	for i := 0; i < blen; i++ {
