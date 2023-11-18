@@ -256,7 +256,7 @@ func (sp *Spectre) votedPast(virtualBlock IBlock) *MeerDAG {
 		vh = *virtualBlock.GetHash()
 	}
 	sb := &SpectreBlockData{hash: vh}
-	vp := New(SPECTRE, -1, nil, nil, CreateMockBlockState, CreateMockBlockStateFromBytes)
+	vp := New(SPECTRE, -1, nil, nil)
 	vp.AddBlock(sb)
 	visited = NewHashSet()
 

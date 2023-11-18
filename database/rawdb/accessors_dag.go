@@ -29,13 +29,15 @@ func ReadDAGBlock(db ethdb.Reader, id uint64) meerdag.IBlock {
 	if len(data) == 0 {
 		return nil
 	}
-	var block meerdag.IBlock
-	err := block.Decode(bytes.NewReader(data))
+	block := &meerdag.Block{}
+	block.SetID(uint(id))
+	ib := &meerdag.PhantomBlock{Block: block}
+	err := ib.Decode(bytes.NewReader(data))
 	if err != nil {
 		log.Error(err.Error())
 		return nil
 	}
-	return block
+	return ib
 }
 
 func WriteDAGBlockRaw(db ethdb.KeyValueWriter, id uint, data []byte) error {
@@ -95,31 +97,14 @@ func ReadBlockHashByID(db ethdb.Reader, id uint64) (*hash.Hash, error) {
 // main chain
 
 func ReadMainChainTip(db ethdb.Reader) *uint64 {
-	data, err := db.Get(mainchainTipKey)
-	if err != nil {
-		log.Debug("main chain tip", "err", err.Error())
+	tips := ReadDAGTips(db)
+	if len(tips) <= 0 {
 		return nil
 	}
-	number := binary.BigEndian.Uint64(data)
-	return &number
-}
-
-func WriteMainChainTip(db ethdb.KeyValueWriter, mainchaintip uint64) error {
-	err := db.Put(mainchainTipKey, encodeBlockID(mainchaintip))
-	if err != nil {
-		log.Error(err.Error())
-		return err
+	if tips[0] == uint64(meerdag.MaxId) {
+		return nil
 	}
-	return nil
-}
-
-func DeleteMainChainTip(db ethdb.KeyValueWriter) error {
-	err := db.Delete(mainchainTipKey)
-	if err != nil {
-		log.Error(err.Error())
-		return err
-	}
-	return nil
+	return &tips[0]
 }
 
 func ReadMainChain(db ethdb.Reader, id uint64) bool {
