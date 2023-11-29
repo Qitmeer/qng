@@ -7,9 +7,10 @@
 package params
 
 import (
-	"github.com/Qitmeer/qng/core/types"
 	"math/big"
 	"time"
+
+	"github.com/Qitmeer/qng/core/types"
 
 	"github.com/Qitmeer/qng/common"
 	"github.com/Qitmeer/qng/core/protocol"
@@ -23,10 +24,10 @@ import (
 var testMixNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 242), common.Big1)
 
 // target time per block unit second(s)
-const mixTargetTimePerBlock = 15
+const mixTargetTimePerBlock = 1
 
-// Difficulty check interval is about 30*15 = 7.5 mins
-const mixWorkDiffWindowSize = 30
+// The DAA should take the median of 2640 blocks, so in order to do that we need 2641 window size.
+const mixWorkDiffWindowSize = 2641
 
 // testPowNetParams defines the network parameters for the test network.
 var MixNetParams = Params{

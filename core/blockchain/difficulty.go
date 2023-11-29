@@ -8,12 +8,14 @@ package blockchain
 
 import (
 	"fmt"
+	"math/big"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/meerdag"
-	"math/big"
-	"time"
 )
 
 // bigZero is 0 represented as a big.Int.  It is defined here to avoid
@@ -92,6 +94,9 @@ func (b *BlockChain) findPrevTestNetDifficulty(startBlock meerdag.IBlock, powIns
 // the exported version uses the current best chain as the previous block node
 // while this function accepts any block node.
 func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTime time.Time, powInstance pow.IPow) (uint32, error) {
+	if powInstance.GetPowType() == pow.MEERXKECCAKV1 {
+		return b.dm.RequiredDifficulty(b.getBlockWindows(block, powInstance.GetPowType(), int(b.params.WorkDiffWindowSize)), powInstance)
+	}
 	baseTarget := powInstance.GetSafeDiff(0)
 	originCurrentBlock := block
 	// Genesis block.
@@ -300,6 +305,50 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 		"diff", fmt.Sprintf("(%064x)", nextDiffBig))
 
 	return nextDiffBits, nil
+}
+
+// blockWindow returns a blockWindow of the given size that contains the
+// blocks in the past of startingNode, the sorting is unspecified.
+// If the number of blocks in the past of startingNode is less then windowSize,
+// the window will be padded by genesis blocks to achieve a size of windowSize.
+func (b *BlockChain) getBlockWindows(oldBlock meerdag.IBlock, powType pow.PowType, windowSize int) model.BlockWindow {
+	windows := make(model.BlockWindow, 0, windowSize)
+	count := 0
+	for i := uint64(0); ; i++ {
+		// Get the previous node while staying at the genesis block as
+		// needed.
+		if oldBlock == nil || !oldBlock.HasParents() {
+			break
+		}
+
+		for id := range oldBlock.GetParents().GetMap() {
+			if count >= windowSize {
+				return windows
+			}
+			oldBlock = b.bd.GetBlockById(id)
+			if oldBlock == nil {
+				continue
+			}
+			oldBlock = b.getPowTypeNode(oldBlock, powType)
+			if oldBlock == nil {
+				continue
+			}
+
+			on := b.GetBlockHeader(oldBlock)
+			if on == nil {
+				continue
+			}
+			windows = append(windows, model.DifficultyBlock{
+				TimeInMilliseconds: on.Timestamp.UnixMilli(),
+				Bits:               on.Difficulty,
+				Hash:               on.BlockHash(),
+				BlueWork:           b.BlockDAG().IsBlue(oldBlock.GetID()),
+			})
+			count++
+		}
+
+	}
+	return windows
 }
 
 // stats current pow count in nodesToTraverse

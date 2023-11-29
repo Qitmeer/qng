@@ -13,6 +13,7 @@ import (
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/consensus/difficultymanager"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/token"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
@@ -137,7 +138,7 @@ type BlockChain struct {
 	quit    chan struct{}
 
 	meerChain *meer.MeerChain
-	dm        *model.DifficultyManager
+	dm        model.DifficultyManager
 }
 
 func (b *BlockChain) Init() error {
@@ -1055,6 +1056,7 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		progressLogger:     progresslog.NewBlockProgressLogger("Processed", log),
 		msgChan:            make(chan *processMsg),
 		quit:               make(chan struct{}),
+		dm:                 difficultymanager.New(par),
 	}
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
