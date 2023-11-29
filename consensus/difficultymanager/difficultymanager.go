@@ -4,13 +4,12 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kaspanet/kaspad/infrastructure/logger"
-	"github.com/kaspanet/kaspad/util/math"
+	"github.com/Qitmeer/qng/common/util/math"
+	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/params"
 
-	"github.com/kaspanet/kaspad/util/difficulty"
-
-	"github.com/kaspanet/kaspad/domain/consensus/model"
-	"github.com/kaspanet/kaspad/domain/consensus/model/externalapi"
+	"github.com/Qitmeer/qng/consensus/model/externalapi"
 )
 
 // DifficultyManager provides a method to resolve the
@@ -29,36 +28,13 @@ type difficultyManager struct {
 	disableDifficultyAdjustment    bool
 	targetTimePerBlock             time.Duration
 	genesisBits                    uint32
+	cfg                            *params.Params
 }
 
 // New instantiates a new DifficultyManager
-func New(databaseContext model.DBReader,
-	ghostdagManager model.GHOSTDAGManager,
-	ghostdagStore model.GHOSTDAGDataStore,
-	headerStore model.BlockHeaderStore,
-	daaBlocksStore model.DAABlocksStore,
-	dagTopologyManager model.DAGTopologyManager,
-	dagTraversalManager model.DAGTraversalManager,
-	powMax *big.Int,
-	difficultyAdjustmentWindowSize int,
-	disableDifficultyAdjustment bool,
-	targetTimePerBlock time.Duration,
-	genesisHash *externalapi.DomainHash,
-	genesisBits uint32) model.DifficultyManager {
+func New(cfg *params.Params) model.DifficultyManager {
 	return &difficultyManager{
-		databaseContext:                databaseContext,
-		ghostdagManager:                ghostdagManager,
-		ghostdagStore:                  ghostdagStore,
-		headerStore:                    headerStore,
-		daaBlocksStore:                 daaBlocksStore,
-		dagTopologyManager:             dagTopologyManager,
-		dagTraversalManager:            dagTraversalManager,
-		powMax:                         powMax,
-		difficultyAdjustmentWindowSize: difficultyAdjustmentWindowSize,
-		disableDifficultyAdjustment:    disableDifficultyAdjustment,
-		targetTimePerBlock:             targetTimePerBlock,
-		genesisHash:                    genesisHash,
-		genesisBits:                    genesisBits,
+		cfg: cfg,
 	}
 }
 
@@ -73,9 +49,6 @@ func (dm *difficultyManager) StageDAADataAndReturnRequiredDifficulty(
 	stagingArea *model.StagingArea,
 	blockHash *externalapi.DomainHash,
 	isBlockWithTrustedData bool) (uint32, error) {
-
-	onEnd := logger.LogAndMeasureExecutionTime(log, "StageDAADataAndReturnRequiredDifficulty")
-	defer onEnd()
 
 	targetsWindow, windowHashes, err := dm.blockWindow(stagingArea, blockHash, dm.difficultyAdjustmentWindowSize)
 	if err != nil {
@@ -132,9 +105,9 @@ func (dm *difficultyManager) requiredDifficultyFromTargetsWindow(targetsWindow b
 		Div(newTarget, div.SetInt64(dm.targetTimePerBlock.Milliseconds())).
 		Div(newTarget, div.SetUint64(uint64(len(targetsWindow))))
 	if newTarget.Cmp(dm.powMax) > 0 {
-		return difficulty.BigToCompact(dm.powMax), nil
+		return pow.BigToCompact(dm.powMax), nil
 	}
-	newTargetBits := difficulty.BigToCompact(newTarget)
+	newTargetBits := pow.BigToCompact(newTarget)
 	return newTargetBits, nil
 }
 
@@ -142,9 +115,6 @@ func (dm *difficultyManager) stageDAAScoreAndAddedBlocks(stagingArea *model.Stag
 	blockHash *externalapi.DomainHash,
 	windowHashes []*externalapi.DomainHash,
 	isBlockWithTrustedData bool) error {
-
-	onEnd := logger.LogAndMeasureExecutionTime(log, "stageDAAScoreAndAddedBlocks")
-	defer onEnd()
 
 	daaScore, addedBlocks, err := dm.calculateDaaScoreAndAddedBlocks(stagingArea, blockHash, windowHashes, isBlockWithTrustedData)
 	if err != nil {

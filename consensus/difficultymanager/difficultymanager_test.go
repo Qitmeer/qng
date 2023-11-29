@@ -4,16 +4,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaspanet/kaspad/util/difficulty"
-
+	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/kaspanet/kaspad/util/mstime"
 
-	"github.com/kaspanet/kaspad/domain/consensus/utils/consensushashing"
+	"github.com/Qitmeer/qng/consensus/utils/consensushashing"
 
-	"github.com/kaspanet/kaspad/domain/consensus"
-	"github.com/kaspanet/kaspad/domain/consensus/model"
-	"github.com/kaspanet/kaspad/domain/consensus/model/externalapi"
-	"github.com/kaspanet/kaspad/domain/consensus/utils/testutils"
+	"github.com/Qitmeer/qng/consensus"
+	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/consensus/model/externalapi"
+	"github.com/Qitmeer/qng/consensus/utils/testutils"
 	"github.com/kaspanet/kaspad/domain/dagconfig"
 )
 
@@ -352,7 +351,7 @@ func TestDAAScore(t *testing.T) {
 }
 
 func compareBits(a uint32, b uint32) int {
-	aTarget := difficulty.CompactToBig(a)
-	bTarget := difficulty.CompactToBig(b)
+	aTarget := pow.CompactToBig(a)
+	bTarget := pow.CompactToBig(b)
 	return aTarget.Cmp(bTarget)
 }

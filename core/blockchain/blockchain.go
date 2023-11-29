@@ -5,6 +5,10 @@ package blockchain
 import (
 	"container/list"
 	"fmt"
+	"sort"
+	"sync"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/system"
@@ -28,9 +32,6 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/progresslog"
 	"github.com/schollz/progressbar/v3"
-	"sort"
-	"sync"
-	"time"
 )
 
 const (
@@ -136,6 +137,7 @@ type BlockChain struct {
 	quit    chan struct{}
 
 	meerChain *meer.MeerChain
+	dm        *model.DifficultyManager
 }
 
 func (b *BlockChain) Init() error {

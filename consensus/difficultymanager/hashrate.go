@@ -3,8 +3,8 @@ package difficultymanager
 import (
 	"math/big"
 
-	"github.com/kaspanet/kaspad/domain/consensus/model"
-	"github.com/kaspanet/kaspad/domain/consensus/model/externalapi"
+	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/consensus/model/externalapi"
 	"github.com/kaspanet/kaspad/infrastructure/logger"
 	"github.com/pkg/errors"
 )

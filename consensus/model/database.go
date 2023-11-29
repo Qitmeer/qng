@@ -83,3 +83,60 @@ type DataBase interface {
 	StartTrack(info string) error
 	StopTrack() error
 }
+
+// DBCursor iterates over database entries given some bucket.
+type DBCursor interface {
+	// Next moves the iterator to the next key/value pair. It returns whether the
+	// iterator is exhausted. Panics if the cursor is closed.
+	Next() bool
+
+	// First moves the iterator to the first key/value pair. It returns false if
+	// such a pair does not exist. Panics if the cursor is closed.
+	First() bool
+
+	// Seek moves the iterator to the first key/value pair whose key is greater
+	// than or equal to the given key. It returns ErrNotFound if such pair does not
+	// exist.
+	Seek(key DBKey) error
+
+	// Key returns the key of the current key/value pair, or ErrNotFound if done.
+	// The caller should not modify the contents of the returned key, and
+	// its contents may change on the next call to Next.
+	Key() (DBKey, error)
+
+	// Value returns the value of the current key/value pair, or ErrNotFound if done.
+	// The caller should not modify the contents of the returned slice, and its
+	// contents may change on the next call to Next.
+	Value() ([]byte, error)
+
+	// Close releases associated resources.
+	Close() error
+}
+
+// DBReader defines a proxy over domain data access
+type DBReader interface {
+	// Get gets the value for the given key. It returns
+	// ErrNotFound if the given key does not exist.
+	Get(key DBKey) ([]byte, error)
+
+	// Has returns true if the database does contains the
+	// given key.
+	Has(key DBKey) (bool, error)
+
+	// Cursor begins a new cursor over the given bucket.
+	Cursor(bucket DBBucket) (DBCursor, error)
+}
+
+// DBKey is an interface for a database key
+type DBKey interface {
+	Bytes() []byte
+	Bucket() DBBucket
+	Suffix() []byte
+}
+
+// DBBucket is an interface for a database bucket
+type DBBucket interface {
+	Bucket(bucketBytes []byte) DBBucket
+	Key(suffix []byte) DBKey
+	Path() []byte
+}

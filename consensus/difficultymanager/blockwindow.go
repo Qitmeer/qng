@@ -1,11 +1,12 @@
 package difficultymanager
 
 import (
-	"github.com/kaspanet/kaspad/domain/consensus/model"
-	"github.com/kaspanet/kaspad/domain/consensus/model/externalapi"
-	"github.com/kaspanet/kaspad/util/difficulty"
 	"math"
 	"math/big"
+
+	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/consensus/model/externalapi"
+	"github.com/Qitmeer/qng/core/types/pow"
 )
 
 type difficultyBlock struct {
@@ -95,7 +96,7 @@ func (window blockWindow) averageTarget() *big.Int {
 	averageTarget := new(big.Int)
 	targetTmp := new(big.Int)
 	for _, block := range window {
-		difficulty.CompactToBigWithDestination(block.Bits, targetTmp)
+		pow.CompactToBigWithDestination(block.Bits, targetTmp)
 		averageTarget.Add(averageTarget, targetTmp)
 	}
 	return averageTarget.Div(averageTarget, big.NewInt(int64(len(window))))
