@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/Qitmeer/qng/common/util/math"
-	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/params"
 )
@@ -21,7 +20,7 @@ type difficultyManager struct {
 }
 
 // New instantiates a new DifficultyManager
-func New(cfg *params.Params) model.DifficultyManager {
+func New(cfg *params.Params) DifficultyManager {
 	return &difficultyManager{
 		powMax:                         cfg.PowConfig.MeerXKeccakV1PowLimit,
 		difficultyAdjustmentWindowSize: int(cfg.WorkDiffWindowSize),
@@ -32,14 +31,14 @@ func New(cfg *params.Params) model.DifficultyManager {
 }
 
 // RequiredDifficulty returns the difficulty required for some block
-func (dm *difficultyManager) RequiredDifficulty(targetsWindow model.BlockWindow, powInstance pow.IPow) (uint32, error) {
+func (dm *difficultyManager) RequiredDifficulty(targetsWindow BlockWindow, powInstance pow.IPow) (uint32, error) {
 	if powInstance.GetPowType() != pow.MEERXKECCAKV1 || len(targetsWindow) < 1 {
 		return dm.genesisBits, nil
 	}
 	return dm.requiredDifficultyFromTargetsWindow(targetsWindow)
 }
 
-func (dm *difficultyManager) requiredDifficultyFromTargetsWindow(targetsWindow model.BlockWindow) (uint32, error) {
+func (dm *difficultyManager) requiredDifficultyFromTargetsWindow(targetsWindow BlockWindow) (uint32, error) {
 	if dm.disableDifficultyAdjustment {
 		return dm.genesisBits, nil
 	}
