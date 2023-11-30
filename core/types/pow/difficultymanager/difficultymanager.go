@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/Qitmeer/qng/common/util/math"
+	"github.com/Qitmeer/qng/common/math"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/params"
 )
@@ -66,7 +66,7 @@ func (dm *difficultyManager) requiredDifficultyFromTargetsWindow(targetsWindow B
 	newTarget := targetsWindow.AverageTarget()
 	newTarget.
 		// We need to clamp the timestamp difference to 1 so that we'll never get a 0 target.
-		Mul(newTarget, div.SetInt64(math.MaxInt64(windowMaxTimeStamp-windowMinTimestamp, 1))).
+		Mul(newTarget, div.SetInt64(math.MaxInt64Val(windowMaxTimeStamp-windowMinTimestamp, 1))).
 		Div(newTarget, div.SetInt64(dm.targetTimePerBlock.Milliseconds())).
 		Div(newTarget, div.SetUint64(uint64(len(targetsWindow))))
 	if newTarget.Cmp(dm.powMax) > 0 {

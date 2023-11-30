@@ -9,7 +9,7 @@ func MinInt(x, y int) int {
 }
 
 // MaxInt64 returns the bigger of x or y.
-func MaxInt64(x, y int64) int64 {
+func MaxInt64Val(x, y int64) int64 {
 	if x > y {
 		return x
 	}
