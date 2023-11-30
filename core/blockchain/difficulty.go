@@ -321,8 +321,9 @@ func (b *BlockChain) getBlockWindows(oldBlock meerdag.IBlock, powType pow.PowTyp
 		if oldBlock == nil || !oldBlock.HasParents() {
 			break
 		}
-
-		for id := range oldBlock.GetParents().GetMap() {
+		ids := oldBlock.GetParents().SortList(false)
+		for i := 0; i < len(ids); i++ {
+			id := ids[i]
 			if count >= windowSize {
 				return windows
 			}
