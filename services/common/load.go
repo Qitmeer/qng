@@ -627,6 +627,11 @@ var (
 			Usage:       "Set the interval time(seconds) for flush evm trie to disk",
 			Destination: &cfg.EVMTrieTimeout,
 		},
+		&cli.StringFlag{
+			Name:        "state.scheme",
+			Usage:       "Scheme to use for storing ethereum state ('hash' or 'path')",
+			Destination: &cfg.StateScheme,
+		},
 	}
 )
 

@@ -67,6 +67,9 @@ func MakeConfig(cfg *config.Config) (*eth.Config, error) {
 	if cfg.EVMTrieTimeout > 0 {
 		econfig.TrieTimeout = time.Second * time.Duration(cfg.EVMTrieTimeout)
 	}
+	if len(cfg.StateScheme) > 0 {
+		econfig.StateScheme = cfg.StateScheme
+	}
 
 	nodeConf := node.DefaultConfig
 
