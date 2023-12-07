@@ -456,3 +456,90 @@ func checkLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func Test_ForeachFig1(t *testing.T) {
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig1-blocks")
+	if ibd == nil {
+		t.FailNow()
+	}
+	ph := ibd.(*meerdag.Phantom)
+	order := []uint{bd.GetMainChainTip().GetID()}
+
+	ph.UpdateVirtualBlockOrder()
+
+	err := bd.Foreach(bd.GetMainChainTip(), meerdag.MaxId, meerdag.All, func(block meerdag.IBlock) error {
+		t.Logf("block id:%d hash:%s order:%d", block.GetID(), block.GetHash().String(), block.GetOrder())
+		order = append(order, block.GetID())
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	order = reverseBlockList(order)
+	target := changeToIDList(testData.PH_OrderFig1.Output)
+	for i := 0; i < len(order); i++ {
+		if order[i] != target[i] {
+			t.FailNow()
+		}
+	}
+	fmt.Printf("The Fig.1 Order from mainTip: ")
+	printBlockChainTag(order)
+}
+
+func Test_ForeachFig2(t *testing.T) {
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
+	if ibd == nil {
+		t.FailNow()
+	}
+	ph := ibd.(*meerdag.Phantom)
+	order := []uint{bd.GetMainChainTip().GetID()}
+
+	ph.UpdateVirtualBlockOrder()
+
+	err := bd.Foreach(bd.GetMainChainTip(), meerdag.MaxId, meerdag.All, func(block meerdag.IBlock) error {
+		t.Logf("block id:%d hash:%s order:%d", block.GetID(), block.GetHash().String(), block.GetOrder())
+		order = append(order, block.GetID())
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	order = reverseBlockList(order)
+	target := changeToIDList(testData.PH_OrderFig2.Output)
+	for i := 0; i < len(order); i++ {
+		if order[i] != target[i] {
+			t.FailNow()
+		}
+	}
+	fmt.Printf("The Fig.1 Order from mainTip: ")
+	printBlockChainTag(order)
+}
+
+func Test_ForeachFig4(t *testing.T) {
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig4-blocks")
+	if ibd == nil {
+		t.FailNow()
+	}
+	ph := ibd.(*meerdag.Phantom)
+	order := []uint{bd.GetMainChainTip().GetID()}
+
+	ph.UpdateVirtualBlockOrder()
+
+	err := bd.Foreach(bd.GetMainChainTip(), meerdag.MaxId, meerdag.All, func(block meerdag.IBlock) error {
+		t.Logf("block id:%d hash:%s order:%d", block.GetID(), block.GetHash().String(), block.GetOrder())
+		order = append(order, block.GetID())
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	order = reverseBlockList(order)
+	target := changeToIDList(testData.PH_OrderFig4.Output)
+	for i := 0; i < len(order); i++ {
+		if order[i] != target[i] {
+			t.FailNow()
+		}
+	}
+	fmt.Printf("The Fig.1 Order from mainTip: ")
+	printBlockChainTag(order)
+}
