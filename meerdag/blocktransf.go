@@ -464,7 +464,7 @@ func (bd *MeerDAG) Foreach(start IBlock, depth uint, filter FilterType, fn func(
 				}
 				block := bd.GetBlockById(das[i])
 				if block == nil {
-					return fmt.Errorf("No block:id=%s", das[i])
+					return fmt.Errorf("No block:id=%d", das[i])
 				}
 				pBlock := block.(*PhantomBlock)
 				ret, err := fn(pBlock)
