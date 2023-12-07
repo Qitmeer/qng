@@ -467,10 +467,10 @@ func Test_ForeachFig1(t *testing.T) {
 
 	ph.UpdateVirtualBlockOrder()
 
-	err := bd.Foreach(bd.GetMainChainTip(), meerdag.MaxId, meerdag.All, func(block meerdag.IBlock) error {
+	err := bd.Foreach(bd.GetMainChainTip(), meerdag.MaxId, meerdag.All, func(block meerdag.IBlock) (bool, error) {
 		t.Logf("block id:%d hash:%s order:%d", block.GetID(), block.GetHash().String(), block.GetOrder())
 		order = append(order, block.GetID())
-		return nil
+		return true, nil
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -496,10 +496,10 @@ func Test_ForeachFig2(t *testing.T) {
 
 	ph.UpdateVirtualBlockOrder()
 
-	err := bd.Foreach(bd.GetMainChainTip(), meerdag.MaxId, meerdag.All, func(block meerdag.IBlock) error {
+	err := bd.Foreach(bd.GetMainChainTip(), meerdag.MaxId, meerdag.All, func(block meerdag.IBlock) (bool, error) {
 		t.Logf("block id:%d hash:%s order:%d", block.GetID(), block.GetHash().String(), block.GetOrder())
 		order = append(order, block.GetID())
-		return nil
+		return true, nil
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -525,10 +525,10 @@ func Test_ForeachFig4(t *testing.T) {
 
 	ph.UpdateVirtualBlockOrder()
 
-	err := bd.Foreach(bd.GetMainChainTip(), meerdag.MaxId, meerdag.All, func(block meerdag.IBlock) error {
+	err := bd.Foreach(bd.GetMainChainTip(), meerdag.MaxId, meerdag.All, func(block meerdag.IBlock) (bool, error) {
 		t.Logf("block id:%d hash:%s order:%d", block.GetID(), block.GetHash().String(), block.GetOrder())
 		order = append(order, block.GetID())
-		return nil
+		return true, nil
 	})
 	if err != nil {
 		t.Fatal(err)

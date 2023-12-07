@@ -433,7 +433,7 @@ func (bd *MeerDAG) GetLayer(id uint) uint {
 	return bd.GetBlockById(id).GetLayer()
 }
 
-func (bd *MeerDAG) Foreach(start IBlock, depth uint, filter FilterType, fn func(block IBlock) error) error {
+func (bd *MeerDAG) Foreach(start IBlock, depth uint, filter FilterType, fn func(block IBlock) (bool, error)) error {
 	if _, ok := bd.instance.(*Phantom); !ok {
 		return fmt.Errorf("Not support Foreach:%s", bd.instance.GetName())
 	}
@@ -442,13 +442,15 @@ func (bd *MeerDAG) Foreach(start IBlock, depth uint, filter FilterType, fn func(
 	cur := start
 	for count < depth && cur != nil {
 		if cur.GetID() != start.GetID() {
-			err := fn(cur)
+			ret, err := fn(cur)
 			if err != nil {
 				return err
 			}
-			count++
-			if count >= depth {
-				break
+			if ret {
+				count++
+				if count >= depth {
+					break
+				}
 			}
 		}
 		if cur.GetID() == 0 {
@@ -465,11 +467,13 @@ func (bd *MeerDAG) Foreach(start IBlock, depth uint, filter FilterType, fn func(
 					return fmt.Errorf("No block:id=%s", das[i])
 				}
 				pBlock := block.(*PhantomBlock)
-				err := fn(pBlock)
+				ret, err := fn(pBlock)
 				if err != nil {
 					return err
 				}
-				count++
+				if ret {
+					count++
+				}
 			}
 		}
 
