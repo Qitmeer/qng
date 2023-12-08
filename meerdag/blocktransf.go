@@ -479,7 +479,7 @@ func (bd *MeerDAG) Foreach(start IBlock, depth uint, filter FilterType, fn func(
 
 		mp := bd.GetBlockById(cur.GetMainParent())
 		if mp == nil {
-			return fmt.Errorf("No block:id=%s", cur.GetMainParent())
+			return fmt.Errorf("No block:id=%d", cur.GetMainParent())
 		}
 		cur = mp
 	}
