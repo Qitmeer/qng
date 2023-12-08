@@ -4,6 +4,20 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"sort"
+	"time"
+)
+
+type FilterType byte
+
+const (
+	// all
+	All FilterType = 0
+
+	// only blocks in blue set
+	Blue FilterType = 1
+
+	// only blocks in red set
+	Red FilterType = 2
 )
 
 // Is there a block in DAG?
@@ -417,4 +431,61 @@ func (bd *MeerDAG) locateBlocksFuzzy(gs *GraphState, maxHashes uint) []*hash.Has
 // You can imagine that this is the main chain.
 func (bd *MeerDAG) GetLayer(id uint) uint {
 	return bd.GetBlockById(id).GetLayer()
+}
+
+func (bd *MeerDAG) Foreach(start IBlock, depth uint, filter FilterType, fn func(block IBlock) (bool, error)) error {
+	if _, ok := bd.instance.(*Phantom); !ok {
+		return fmt.Errorf("Not support Foreach:%s", bd.instance.GetName())
+	}
+	count := uint(0)
+	cost := time.Now()
+	cur := start
+	for count < depth && cur != nil {
+		if cur.GetID() != start.GetID() {
+			ret, err := fn(cur)
+			if err != nil {
+				return err
+			}
+			if ret {
+				count++
+				if count >= depth {
+					break
+				}
+			}
+		}
+		if cur.GetID() == 0 {
+			break
+		}
+		das := cur.(*PhantomBlock).GetDiffAnticoneList(filter)
+		if len(das) > 0 {
+			for i := len(das) - 1; i >= 0; i-- {
+				if das[i] == MaxId {
+					continue
+				}
+				block := bd.GetBlockById(das[i])
+				if block == nil {
+					return fmt.Errorf("No block:id=%d", das[i])
+				}
+				pBlock := block.(*PhantomBlock)
+				ret, err := fn(pBlock)
+				if err != nil {
+					return err
+				}
+				if ret {
+					count++
+				}
+			}
+		}
+
+		mp := bd.GetBlockById(cur.GetMainParent())
+		if mp == nil {
+			return fmt.Errorf("No block:id=%d", cur.GetMainParent())
+		}
+		cur = mp
+	}
+	if count == 0 {
+		return nil
+	}
+	log.Trace("Foreach dag blocks", "count", count, "depth", depth, "time", time.Since(cost))
+	return nil
 }

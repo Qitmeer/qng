@@ -7,4 +7,6 @@ type Block interface {
 	GetHash() *hash.Hash
 	GetState() BlockState
 	GetOrder() uint
+	HasParents() bool
+	GetMainParent() uint
 }
