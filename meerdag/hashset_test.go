@@ -7,6 +7,7 @@ import (
 )
 
 func Test_Add(t *testing.T) {
+	t.Parallel()
 	hs := NewHashSet()
 	hs.Add(&hash.ZeroHash)
 
@@ -16,6 +17,7 @@ func Test_Add(t *testing.T) {
 }
 
 func Test_AddSet(t *testing.T) {
+	t.Parallel()
 	hs := NewHashSet()
 	other := NewHashSet()
 	other.Add(&hash.ZeroHash)
@@ -27,6 +29,7 @@ func Test_AddSet(t *testing.T) {
 }
 
 func Test_AddPair(t *testing.T) {
+	t.Parallel()
 	var intData int = 123
 	hs := NewHashSet()
 	hs.AddPair(&hash.ZeroHash, int(intData))
@@ -37,6 +40,7 @@ func Test_AddPair(t *testing.T) {
 }
 
 func Test_Remove(t *testing.T) {
+	t.Parallel()
 	hs := NewHashSet()
 	hs.Add(&hash.ZeroHash)
 	hs.Remove(&hash.ZeroHash)
@@ -47,6 +51,7 @@ func Test_Remove(t *testing.T) {
 }
 
 func Test_RemoveSet(t *testing.T) {
+	t.Parallel()
 	hs := NewHashSet()
 	other := NewHashSet()
 	other.Add(&hash.ZeroHash)
@@ -60,6 +65,7 @@ func Test_RemoveSet(t *testing.T) {
 }
 
 func Test_SortList(t *testing.T) {
+	t.Parallel()
 	hs := NewHashSet()
 	hl := HashSlice{}
 	var hashNum int = 5
@@ -86,6 +92,7 @@ func Test_SortList(t *testing.T) {
 }
 
 func Test_For(t *testing.T) {
+	t.Parallel()
 	hs := NewHashSet()
 	var hashNum int = 5
 	for i := 0; i < hashNum; i++ {

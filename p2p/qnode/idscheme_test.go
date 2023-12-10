@@ -24,6 +24,7 @@ var (
 )
 
 func TestEmptyNodeID(t *testing.T) {
+	t.Parallel()
 	var r qnr.Record
 	if addr := ValidSchemes.NodeAddr(&r); addr != nil {
 		t.Errorf("wrong address on empty record: got %v, want %v", addr, nil)
@@ -36,6 +37,7 @@ func TestEmptyNodeID(t *testing.T) {
 
 // Checks that failure to sign leaves the record unmodified.
 func TestSignError(t *testing.T) {
+	t.Parallel()
 	invalidKey := &ecdsa.PrivateKey{D: new(big.Int), PublicKey: *pubkey}
 
 	var r qnr.Record
@@ -51,6 +53,7 @@ func TestSignError(t *testing.T) {
 
 // TestGetSetSecp256k1 tests encoding/decoding and setting/getting of the Secp256k1 key.
 func TestGetSetSecp256k1(t *testing.T) {
+	t.Parallel()
 	var r qnr.Record
 	if err := SignV4(&r, privkey); err != nil {
 		t.Fatal(err)

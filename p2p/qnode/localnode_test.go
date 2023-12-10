@@ -21,6 +21,7 @@ func newLocalNodeForTesting() (*LocalNode, *DB) {
 }
 
 func TestLocalNode(t *testing.T) {
+	t.Parallel()
 	ln, db := newLocalNodeForTesting()
 	defer db.Close()
 
@@ -38,6 +39,7 @@ func TestLocalNode(t *testing.T) {
 }
 
 func TestLocalNodeSeqPersist(t *testing.T) {
+	t.Parallel()
 	ln, db := newLocalNodeForTesting()
 	defer db.Close()
 
@@ -68,6 +70,7 @@ func TestLocalNodeSeqPersist(t *testing.T) {
 
 // This test checks behavior of the endpoint predictor.
 func TestLocalNodeEndpoint(t *testing.T) {
+	t.Parallel()
 	var (
 		fallback  = &net.UDPAddr{IP: net.IP{127, 0, 0, 1}, Port: 80}
 		predicted = &net.UDPAddr{IP: net.IP{127, 0, 1, 2}, Port: 81}

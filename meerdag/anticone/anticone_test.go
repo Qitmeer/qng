@@ -9,6 +9,7 @@ import (
 )
 
 func TestSigma(t *testing.T) {
+	t.Parallel()
 	k := 1
 	factor := 0.9
 	sum := 0.0
@@ -25,6 +26,7 @@ func TestSigma(t *testing.T) {
 }
 
 func TestAntiCone(t *testing.T) {
+	t.Parallel()
 	result := []int{12, 8, 6, 5, 4, 4, 4, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2}
 	index := 0
 	for i := 5; i < 100; i += 5 {
@@ -37,6 +39,7 @@ func TestAntiCone(t *testing.T) {
 }
 
 func TestShowParamsAntiCone(t *testing.T) {
+	t.Parallel()
 	rate := 1.0 / float64(params.TestNetParams.TargetTimePerBlock/time.Second)
 	fmt.Printf("testnet:%d\n", GetSize(BlockDelay, rate, SecurityLevel))
 

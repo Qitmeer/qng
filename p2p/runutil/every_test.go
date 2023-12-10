@@ -12,6 +12,7 @@ import (
 )
 
 func TestEveryRuns(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	lock := sync.RWMutex{}
