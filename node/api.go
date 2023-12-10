@@ -8,12 +8,17 @@ package node
 import (
 	js "encoding/json"
 	"fmt"
+	"math/big"
+	"strconv"
+	"time"
+
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/core/types/pow/difficultymanager"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/params"
@@ -21,9 +26,6 @@ import (
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/version"
-	"math/big"
-	"strconv"
-	"time"
 )
 
 func (nf *QitmeerFull) apis() []api.API {
@@ -58,7 +60,7 @@ func NewPublicBlockChainAPI(node *QitmeerFull) *PublicBlockChainAPI {
 func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 	best := api.node.GetBlockChain().BestSnapshot()
 	node := api.node.GetBlockChain().BlockDAG().GetBlock(&best.Hash)
-	powNodes := api.node.GetBlockChain().GetCurrentPowDiff(node, pow.MEERXKECCAKV1)
+	powNodes := difficultymanager.NewDiffManager(api.node.GetBlockChain().Consensus().BlockChain(), api.node.GetBlockChain().ChainParams()).GetCurrentPowDiff(node, pow.MEERXKECCAKV1)
 	ret := &json.InfoNodeResult{
 		ID:              api.node.GetPeerServer().PeerID().String(),
 		Version:         int32(1000000*version.Major + 10000*version.Minor + 100*version.Patch),

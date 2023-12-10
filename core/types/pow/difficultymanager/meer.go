@@ -4,19 +4,18 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockchain
+package difficultymanager
 
 import (
 	"fmt"
 	"math/big"
 	"time"
 
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
-
-	"github.com/Qitmeer/qng/core/types/pow/difficultymanager"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/params"
 )
 
 // bigZero is 0 represented as a big.Int.  It is defined here to avoid
@@ -27,21 +26,26 @@ var bigZero = big.NewInt(0)
 // testnet difficulty).
 const maxShift = uint(256)
 
-// calcEasiestDifficulty calculates the easiest possible difficulty that a block
+type meerDiff struct {
+	b   model.BlockChain
+	cfg *params.Params
+}
+
+// CalcEasiestDifficulty calculates the easiest possible difficulty that a block
 // can have given starting difficulty bits and a duration.  It is mainly used to
 // verify that claimed proof of work by a block is sane as compared to a
 // known good checkpoint.
-func (b *BlockChain) calcEasiestDifficulty(bits uint32, duration time.Duration, powInstance pow.IPow) uint32 {
+func (m *meerDiff) CalcEasiestDifficulty(bits uint32, duration time.Duration, powInstance pow.IPow) uint32 {
 	// Convert types used in the calculations below.
 	durationVal := int64(duration)
-	adjustmentFactor := big.NewInt(b.params.RetargetAdjustmentFactor)
-	maxRetargetTimespan := int64(b.params.TargetTimespan) *
-		b.params.RetargetAdjustmentFactor
+	adjustmentFactor := big.NewInt(m.cfg.RetargetAdjustmentFactor)
+	maxRetargetTimespan := int64(m.cfg.TargetTimespan) *
+		m.cfg.RetargetAdjustmentFactor
 	target := powInstance.GetSafeDiff(0)
 	// The test network rules allow minimum difficulty blocks once too much
 	// time has elapsed without mining a block.
-	if b.params.ReduceMinDifficulty {
-		if durationVal > int64(b.params.MinDiffReductionTime) {
+	if m.cfg.ReduceMinDifficulty {
+		if durationVal > int64(m.cfg.MinDiffReductionTime) {
 			return pow.BigToCompact(target)
 		}
 	}
@@ -70,34 +74,31 @@ func (b *BlockChain) calcEasiestDifficulty(bits uint32, duration time.Duration, 
 // did not have the special testnet minimum difficulty rule applied.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) findPrevTestNetDifficulty(startBlock meerdag.IBlock, powInstance pow.IPow) uint32 {
+func (m *meerDiff) findPrevTestNetDifficulty(startBlock model.Block, powInstance pow.IPow) uint32 {
 	// Search backwards through the chain for the last block without
 	// the special rule applied.
 	target := powInstance.GetSafeDiff(0)
 	lastBits := pow.BigToCompact(target)
-	blocksPerRetarget := uint64(b.params.WorkDiffWindowSize * b.params.WorkDiffWindows)
+	blocksPerRetarget := uint64(m.cfg.WorkDiffWindowSize * m.cfg.WorkDiffWindows)
 	iterBlock := startBlock
 	if iterBlock == nil ||
 		uint64(iterBlock.GetHeight())%blocksPerRetarget == 0 {
 		return lastBits
 	}
 	var iterNode *types.BlockHeader
-	iterNode = b.GetBlockHeader(iterBlock)
+	iterNode = m.b.GetBlockHeader(iterBlock)
 	if iterNode.Difficulty != pow.BigToCompact(target) {
 		return lastBits
 	}
 	return iterNode.Difficulty
 }
 
-// calcNextRequiredDifficulty calculates the required difficulty for the block
+// RequiredDifficulty calculates the required difficulty for the block
 // after the passed previous block node based on the difficulty retarget rules.
-// This function differs from the exported CalcNextRequiredDifficulty in that
+// This function differs from the exported RequiredDifficulty in that
 // the exported version uses the current best chain as the previous block node
 // while this function accepts any block node.
-func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTime time.Time, powInstance pow.IPow) (uint32, error) {
-	if powInstance.GetPowType() == pow.MEERXKECCAKV1 {
-		return difficultymanager.New(b.params).RequiredDifficulty(b.getBlockWindows(block, powInstance.GetPowType(), int(b.params.WorkDiffWindowSize)), powInstance)
-	}
+func (m *meerDiff) RequiredDifficulty(block model.Block, newBlockTime time.Time, powInstance pow.IPow) (uint32, error) {
 	baseTarget := powInstance.GetSafeDiff(0)
 	originCurrentBlock := block
 	// Genesis block.
@@ -105,11 +106,11 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 		return pow.BigToCompact(baseTarget), nil
 	}
 
-	block = b.getPowTypeNode(block, powInstance.GetPowType())
+	block = m.getPowTypeNode(block, powInstance.GetPowType())
 	if block == nil {
 		return pow.BigToCompact(baseTarget), nil
 	}
-	curNode := b.GetBlockHeader(block)
+	curNode := m.b.GetBlockHeader(block)
 	if curNode == nil {
 		return pow.BigToCompact(baseTarget), nil
 	}
@@ -117,21 +118,21 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 	// just return this.
 	oldDiff := curNode.Difficulty
 	oldDiffBig := pow.CompactToBig(curNode.Difficulty)
-	windowsSizeBig := big.NewInt(b.params.WorkDiffWindowSize)
+	windowsSizeBig := big.NewInt(m.cfg.WorkDiffWindowSize)
 	// percent is *100 * 2^32
 	windowsSizeBig.Mul(windowsSizeBig, powInstance.PowPercent())
 	windowsSizeBig.Div(windowsSizeBig, big.NewInt(100))
 	windowsSizeBig.Rsh(windowsSizeBig, 32)
 	needAjustCount := int64(windowsSizeBig.Uint64())
 	// We're not at a retarget point, return the oldDiff.
-	if !b.needAjustPowDifficulty(block, powInstance.GetPowType(), needAjustCount) {
+	if !m.needAjustPowDifficulty(block, powInstance.GetPowType(), needAjustCount) {
 		// For networks that support it, allow special reduction of the
 		// required difficulty once too much time has elapsed without
 		// mining a block.
-		if b.params.ReduceMinDifficulty {
+		if m.cfg.ReduceMinDifficulty {
 			// Return minimum difficulty when more than the desired
 			// amount of time has elapsed without mining a block.
-			reductionTime := int64(b.params.MinDiffReductionTime /
+			reductionTime := int64(m.cfg.MinDiffReductionTime /
 				time.Second)
 			allowMinTime := curNode.Timestamp.Unix() + reductionTime
 
@@ -140,7 +141,7 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 			if newBlockTime.Unix() > allowMinTime {
 				timePassed := newBlockTime.Unix() - curNode.Timestamp.Unix()
 				timePassed -= reductionTime
-				shifts := uint((timePassed / int64(b.params.TargetTimePerBlock/
+				shifts := uint((timePassed / int64(m.cfg.TargetTimePerBlock/
 					time.Second)) + 1)
 
 				// Scale the difficulty with time passed.
@@ -163,29 +164,29 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 			// The block was mined within the desired timeframe, so
 			// return the difficulty for the last block which did
 			// not have the special minimum difficulty rule applied.
-			return b.findPrevTestNetDifficulty(block, powInstance), nil
+			return m.findPrevTestNetDifficulty(block, powInstance), nil
 		}
 
 		return oldDiff, nil
 	}
 	// Declare some useful variables.
-	RAFBig := big.NewInt(b.params.RetargetAdjustmentFactor)
+	RAFBig := big.NewInt(m.cfg.RetargetAdjustmentFactor)
 	nextDiffBigMin := pow.CompactToBig(curNode.Difficulty)
 	nextDiffBigMin.Div(nextDiffBigMin, RAFBig)
 	nextDiffBigMax := pow.CompactToBig(curNode.Difficulty)
 	nextDiffBigMax.Mul(nextDiffBigMax, RAFBig)
 
-	alpha := b.params.WorkDiffAlpha
+	alpha := m.cfg.WorkDiffAlpha
 
 	// Number of nodes to traverse while calculating difficulty.
-	nodesToTraverse := needAjustCount * b.params.WorkDiffWindows
-	percentStatsRecentCount := b.params.WorkDiffWindowSize * b.params.WorkDiffWindows
+	nodesToTraverse := needAjustCount * m.cfg.WorkDiffWindows
+	percentStatsRecentCount := m.cfg.WorkDiffWindowSize * m.cfg.WorkDiffWindows
 	//calc pow block count in last nodesToTraverse blocks
-	currentPowBlockCount := b.calcCurrentPowCount(originCurrentBlock, percentStatsRecentCount, powInstance.GetPowType())
+	currentPowBlockCount := m.calcCurrentPowCount(originCurrentBlock, percentStatsRecentCount, powInstance.GetPowType())
 
 	// Initialize bigInt slice for the percentage changes for each window period
 	// above or below the target.
-	windowChanges := make([]*big.Int, b.params.WorkDiffWindows)
+	windowChanges := make([]*big.Int, m.cfg.WorkDiffWindows)
 
 	// Regress through all of the previous blocks and store the percent changes
 	// per window period; use bigInts to emulate 64.32 bit fixed point.
@@ -205,22 +206,22 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 			// Just assume we're at the target (no change) if we've
 			// gone all the way back to the genesis block.
 			if oldBlockOrder == 0 {
-				timeDifference = int64(b.params.TargetTimespan /
+				timeDifference = int64(m.cfg.TargetTimespan /
 					time.Second)
 			}
 			timeDifBig := big.NewInt(timeDifference)
 			timeDifBig.Lsh(timeDifBig, 32) // Add padding
-			targetTemp := big.NewInt(int64(b.params.TargetTimespan /
+			targetTemp := big.NewInt(int64(m.cfg.TargetTimespan /
 				time.Second))
 			windowAdjusted := targetTemp.Div(timeDifBig, targetTemp)
 
 			// Weight it exponentially. Be aware that this could at some point
 			// overflow if alpha or the number of blocks used is really large.
 			windowAdjusted = windowAdjusted.Lsh(windowAdjusted,
-				uint((b.params.WorkDiffWindows-windowPeriod)*alpha))
+				uint((m.cfg.WorkDiffWindows-windowPeriod)*alpha))
 
 			// Sum up all the different weights incrementally.
-			weights += 1 << uint64((b.params.WorkDiffWindows-windowPeriod)*
+			weights += 1 << uint64((m.cfg.WorkDiffWindows-windowPeriod)*
 				alpha)
 
 			// Store it in the slice.
@@ -237,17 +238,17 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 		// Get the previous node while staying at the genesis block as
 		// needed.
 		if oldBlock != nil && oldBlock.HasParents() {
-			oldBlock = b.bd.GetBlockById(oldBlock.GetMainParent())
+			oldBlock = m.b.GetBlockById(oldBlock.GetMainParent())
 			if oldBlock == nil {
 				continue
 			}
-			oldBlock = b.getPowTypeNode(oldBlock, powInstance.GetPowType())
+			oldBlock = m.getPowTypeNode(oldBlock, powInstance.GetPowType())
 			if oldBlock == nil {
 				oldNodeTimestamp = 0
 				oldBlockOrder = 0
 				continue
 			}
-			on := b.GetBlockHeader(oldBlock)
+			on := m.b.GetBlockHeader(oldBlock)
 			if on == nil {
 				continue
 			}
@@ -257,7 +258,7 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 	}
 	// Sum up the weighted window periods.
 	weightedSum := big.NewInt(0)
-	for i := int64(0); i < b.params.WorkDiffWindows; i++ {
+	for i := int64(0); i < m.cfg.WorkDiffWindows; i++ {
 		weightedSum.Add(weightedSum, windowChanges[i])
 	}
 
@@ -308,53 +309,8 @@ func (b *BlockChain) calcNextRequiredDifficulty(block meerdag.IBlock, newBlockTi
 	return nextDiffBits, nil
 }
 
-// blockWindow returns a blockWindow of the given size that contains the
-// blocks in the past of startingNode, the sorting is unspecified.
-// If the number of blocks in the past of startingNode is less then windowSize,
-// the window will be padded by genesis blocks to achieve a size of windowSize.
-func (b *BlockChain) getBlockWindows(oldBlock meerdag.IBlock, powType pow.PowType, windowSize int) difficultymanager.BlockWindow {
-	windows := make(difficultymanager.BlockWindow, 0, windowSize)
-	count := 0
-	for i := uint64(0); ; i++ {
-		// Get the previous node while staying at the genesis block as
-		// needed.
-		if oldBlock == nil || !oldBlock.HasParents() {
-			break
-		}
-		ids := oldBlock.GetParents().SortList(false)
-		for i := 0; i < len(ids); i++ {
-			id := ids[i]
-			if count >= windowSize {
-				return windows
-			}
-			oldBlock = b.bd.GetBlockById(id)
-			if oldBlock == nil {
-				continue
-			}
-			oldBlock = b.getPowTypeNode(oldBlock, powType)
-			if oldBlock == nil {
-				continue
-			}
-
-			on := b.GetBlockHeader(oldBlock)
-			if on == nil {
-				continue
-			}
-			windows = append(windows, difficultymanager.DifficultyBlock{
-				TimeInMilliseconds: on.Timestamp.UnixMilli(),
-				Bits:               on.Difficulty,
-				Hash:               on.BlockHash(),
-				BlueWork:           b.BlockDAG().IsBlue(oldBlock.GetID()),
-			})
-			count++
-		}
-
-	}
-	return windows
-}
-
 // stats current pow count in nodesToTraverse
-func (b *BlockChain) calcCurrentPowCount(block meerdag.IBlock, nodesToTraverse int64, powType pow.PowType) int64 {
+func (m *meerDiff) calcCurrentPowCount(block model.Block, nodesToTraverse int64, powType pow.PowType) int64 {
 	// Genesis block.
 	if block == nil {
 		return 0
@@ -370,9 +326,9 @@ func (b *BlockChain) calcCurrentPowCount(block meerdag.IBlock, nodesToTraverse i
 			currentPowBlockCount--
 		}
 		if oldBlock.HasParents() {
-			ob := b.bd.GetBlockById(oldBlock.GetMainParent())
+			ob := m.b.GetBlockById(oldBlock.GetMainParent())
 			if ob != nil {
-				oldNode := b.GetBlockHeader(ob)
+				oldNode := m.b.GetBlockHeader(ob)
 				if oldNode == nil {
 					continue
 				}
@@ -388,21 +344,21 @@ func (b *BlockChain) calcCurrentPowCount(block meerdag.IBlock, nodesToTraverse i
 }
 
 // whether need ajust Pow Difficulty
-// recent b.params.WorkDiffWindowSize blocks
+// recent m.cfg.WorkDiffWindowSize blocks
 // if current count arrived target block count . need ajustment difficulty
-func (b *BlockChain) needAjustPowDifficulty(block meerdag.IBlock, powType pow.PowType, needAjustCount int64) bool {
-	countFromLastAdjustment := b.getDistanceFromLastAdjustment(block, powType, needAjustCount)
-	// countFromLastAdjustment stats b.params.WorkDiffWindows Multiple count
-	countFromLastAdjustment /= b.params.WorkDiffWindows
+func (m *meerDiff) needAjustPowDifficulty(block model.Block, powType pow.PowType, needAjustCount int64) bool {
+	countFromLastAdjustment := m.getDistanceFromLastAdjustment(block, powType, needAjustCount)
+	// countFromLastAdjustment stats m.b.params.WorkDiffWindows Multiple count
+	countFromLastAdjustment /= m.cfg.WorkDiffWindows
 	return countFromLastAdjustment > 0 && countFromLastAdjustment%needAjustCount == 0
 }
 
 // Distance block count from last adjustment
-func (b *BlockChain) getDistanceFromLastAdjustment(block meerdag.IBlock, powType pow.PowType, needAjustCount int64) int64 {
+func (m *meerDiff) getDistanceFromLastAdjustment(block model.Block, powType pow.PowType, needAjustCount int64) int64 {
 	if block == nil {
 		return 0
 	}
-	curNode := b.GetBlockHeader(block)
+	curNode := m.b.GetBlockHeader(block)
 	if curNode == nil {
 		return 0
 	}
@@ -423,37 +379,21 @@ func (b *BlockChain) getDistanceFromLastAdjustment(block meerdag.IBlock, powType
 		}
 		// if TargetTimespan have only one pow block need ajustment difficulty
 		// or count >= needAjustCount
-		if (count > 1 && currentTime-curNode.Timestamp.Unix() > (count-1)*int64(b.params.TargetTimespan/time.Second)) ||
+		if (count > 1 && currentTime-curNode.Timestamp.Unix() > (count-1)*int64(m.cfg.TargetTimespan/time.Second)) ||
 			count >= needAjustCount {
-			return needAjustCount * b.params.WorkDiffWindows
+			return needAjustCount * m.cfg.WorkDiffWindows
 		}
 		if !block.HasParents() {
 			return count
 		}
 
-		block = b.bd.GetBlockById(block.GetMainParent())
+		block = m.b.GetBlockById(block.GetMainParent())
 		if block != nil {
-			curNode = b.GetBlockHeader(block)
+			curNode = m.b.GetBlockHeader(block)
 		} else {
 			return count
 		}
 	}
-}
-
-// CalcNextRequiredDiffFromNode calculates the required difficulty for the block
-// given with the passed hash along with the given timestamp.
-//
-// This function is NOT safe for concurrent access.
-func (b *BlockChain) CalcNextRequiredDiffFromNode(hash *hash.Hash, timestamp time.Time, powType pow.PowType) (uint32, error) {
-	ib := b.bd.GetBlock(hash)
-	if ib == nil {
-		return 0, fmt.Errorf("block %s is not known", hash)
-	}
-
-	instance := pow.GetInstance(powType, 0, []byte{})
-	instance.SetParams(b.params.PowConfig)
-	instance.SetMainHeight(pow.MainHeight(ib.GetHeight() + 1))
-	return b.calcNextRequiredDifficulty(ib, timestamp, instance)
 }
 
 // CalcNextRequiredDifficulty calculates the required difficulty for the block
@@ -461,21 +401,21 @@ func (b *BlockChain) CalcNextRequiredDiffFromNode(hash *hash.Hash, timestamp tim
 // rules.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) CalcNextRequiredDifficulty(timestamp time.Time, powType pow.PowType) (uint32, error) {
-	b.ChainRLock()
-	block := b.bd.GetMainChainTip()
+func (m *meerDiff) CalcNextRequiredDifficulty(timestamp time.Time, powType pow.PowType) (uint32, error) {
+	m.b.ChainRLock()
+	block := m.b.GetMainChainTip()
 	instance := pow.GetInstance(powType, 0, []byte{})
-	instance.SetParams(b.params.PowConfig)
+	instance.SetParams(m.cfg.PowConfig)
 	instance.SetMainHeight(pow.MainHeight(block.GetHeight() + 1))
-	difficulty, err := b.calcNextRequiredDifficulty(block, timestamp, instance)
-	b.ChainRUnlock()
+	difficulty, err := m.RequiredDifficulty(block, timestamp, instance)
+	m.b.ChainRUnlock()
 	return difficulty, err
 }
 
 // find block node by pow type
-func (b *BlockChain) getPowTypeNode(block meerdag.IBlock, powType pow.PowType) meerdag.IBlock {
+func (m *meerDiff) getPowTypeNode(block model.Block, powType pow.PowType) model.Block {
 	for {
-		curNode := b.GetBlockHeader(block)
+		curNode := m.b.GetBlockHeader(block)
 		if curNode == nil {
 			return nil
 		}
@@ -486,7 +426,7 @@ func (b *BlockChain) getPowTypeNode(block meerdag.IBlock, powType pow.PowType) m
 		if !block.HasParents() {
 			return nil
 		}
-		block = b.bd.GetBlockById(block.GetMainParent())
+		block = m.b.GetBlockById(block.GetMainParent())
 		if block == nil {
 			return nil
 		}
@@ -494,12 +434,12 @@ func (b *BlockChain) getPowTypeNode(block meerdag.IBlock, powType pow.PowType) m
 }
 
 // find block node by pow type
-func (b *BlockChain) GetCurrentPowDiff(ib meerdag.IBlock, powType pow.PowType) *big.Int {
+func (m *meerDiff) GetCurrentPowDiff(ib model.Block, powType pow.PowType) *big.Int {
 	instance := pow.GetInstance(powType, 0, []byte{})
-	instance.SetParams(b.params.PowConfig)
+	instance.SetParams(m.cfg.PowConfig)
 	safeBigDiff := instance.GetSafeDiff(0)
 	for {
-		curNode := b.GetBlockHeader(ib)
+		curNode := m.b.GetBlockHeader(ib)
 		if curNode == nil {
 			return safeBigDiff
 		}
@@ -511,7 +451,7 @@ func (b *BlockChain) GetCurrentPowDiff(ib meerdag.IBlock, powType pow.PowType) *
 			return safeBigDiff
 		}
 
-		ib = b.bd.GetBlockById(ib.GetMainParent())
+		ib = m.b.GetBlockById(ib.GetMainParent())
 		if ib == nil {
 			return safeBigDiff
 		}

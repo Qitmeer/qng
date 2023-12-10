@@ -86,6 +86,7 @@ var MixNetParams = Params{
 		},
 		// after this height the big graph will be the main pow graph
 		AdjustmentStartMainHeight: 1440 * 15 / mixTargetTimePerBlock,
+		DifficultyMode:            types.DIFFICULTY_MODE_KASPAD,
 	},
 
 	WorkDiffAlpha:            1,
@@ -127,7 +128,7 @@ var MixNetParams = Params{
 	SLIP0044CoinType: 813,
 	LegacyCoinType:   223,
 
-	CoinbaseMaturity:     720,
+	CoinbaseMaturity:     16,
 	OrganizationPkScript: hexMustDecode("76a91429209320e66d96839785dd07e643a7f1592edc5a88ac"),
 	TokenAdminPkScript:   hexMustDecode("00000000c96d6d76a914b8834294977b26a44094fe2216f8a7d59af1130888ac"),
 }

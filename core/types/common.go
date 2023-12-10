@@ -18,4 +18,9 @@ const (
 	// MaxAmount is the maximum transaction amount allowed in atoms.
 	// TODO, relocate the coin related item to chain's params
 	MaxAmount = 21e6 * AtomsPerCoin
+
+	// MEER difficulty adjustment
+	DIFFICULTY_MODE_MEER = 0
+	// KASPAD difficulty adjustment
+	DIFFICULTY_MODE_KASPAD
 )

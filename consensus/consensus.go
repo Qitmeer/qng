@@ -1,6 +1,8 @@
 package consensus
 
 import (
+	"sync"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
@@ -13,7 +15,6 @@ import (
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/index"
-	"sync"
 )
 
 type consensus struct {

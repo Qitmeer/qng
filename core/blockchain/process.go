@@ -8,16 +8,18 @@ package blockchain
 import (
 	"container/list"
 	"fmt"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/core/types/pow/difficultymanager"
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
-	"time"
 )
 
 // ProcessBlock is the main workhorse for handling insertion of new blocks into
@@ -153,7 +155,7 @@ func (b *BlockChain) preProcessBlock(block *types.SerializedBlock, flags Behavio
 			// expected based on elapsed time since the last checkpoint and
 			// maximum adjustment allowed by the retarget rules.
 			duration := blockHeader.Timestamp.Sub(checkpointTime)
-			requiredTarget := pow.CompactToBig(b.calcEasiestDifficulty(
+			requiredTarget := pow.CompactToBig(difficultymanager.NewDiffManager(b.consensus.BlockChain(), b.params).CalcEasiestDifficulty(
 				checkpointNode.Difficulty, duration, block.Block().Header.Pow))
 			currentTarget := pow.CompactToBig(blockHeader.Difficulty)
 			if !block.Block().Header.Pow.CompareDiff(currentTarget, requiredTarget) {

@@ -26,4 +26,6 @@ type BlockChain interface {
 	GetBlockOrderByHash(hash *hash.Hash) (uint, error)
 	GetBlockHeader(block Block) *types.BlockHeader
 	ForeachBlueBlocks(start Block, depth uint, powType pow.PowType, fn func(block Block, header *types.BlockHeader) error) error
+	ChainRLock()
+	ChainRUnlock()
 }

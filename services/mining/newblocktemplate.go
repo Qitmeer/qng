@@ -2,6 +2,8 @@ package mining
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/address"
@@ -11,13 +13,13 @@ import (
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/core/types/pow/difficultymanager"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/mempool"
 	"golang.org/x/net/context"
-	"time"
 )
 
 // NewBlockTemplate returns a new block template that is ready to be solved
@@ -504,7 +506,7 @@ mempool:
 	ts := MedianAdjustedTime(bc, timeSource)
 
 	//
-	reqCompactDifficulty, err := bc.CalcNextRequiredDifficulty(ts, powType)
+	reqCompactDifficulty, err := difficultymanager.NewDiffManager(bc.Consensus().BlockChain(), bc.ChainParams()).CalcNextRequiredDifficulty(ts, powType)
 	if err != nil {
 		return nil, miningRuleError(ErrGettingDifficulty, err.Error())
 	}
@@ -597,7 +599,7 @@ func UpdateBlockTime(msgBlock *types.Block, chain *blockchain.BlockChain, timeSo
 	// If running on a network that requires recalculating the difficulty,
 	// do so now.
 	if activeNetParams.ReduceMinDifficulty {
-		difficulty, err := chain.CalcNextRequiredDifficulty(
+		difficulty, err := difficultymanager.NewDiffManager(chain.Consensus().BlockChain(), chain.ChainParams()).CalcNextRequiredDifficulty(
 			newTimestamp, msgBlock.Header.Pow.GetPowType())
 		if err != nil {
 			return miningRuleError(ErrGettingDifficulty, err.Error())
