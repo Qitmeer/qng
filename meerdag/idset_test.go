@@ -17,6 +17,7 @@ import (
 )
 
 func Test_AddId(t *testing.T) {
+	t.Parallel()
 	hs := NewIdSet()
 	hs.Add(1)
 
@@ -26,6 +27,7 @@ func Test_AddId(t *testing.T) {
 }
 
 func Test_AddSetId(t *testing.T) {
+	t.Parallel()
 	hs := NewIdSet()
 	other := NewIdSet()
 	other.Add(1)
@@ -37,6 +39,7 @@ func Test_AddSetId(t *testing.T) {
 }
 
 func Test_AddPairId(t *testing.T) {
+	t.Parallel()
 	var intData int = 123
 	hs := NewIdSet()
 	hs.AddPair(1, int(intData))
@@ -47,6 +50,7 @@ func Test_AddPairId(t *testing.T) {
 }
 
 func Test_RemoveId(t *testing.T) {
+	t.Parallel()
 	hs := NewIdSet()
 	hs.Add(1)
 	hs.Remove(1)
@@ -57,6 +61,7 @@ func Test_RemoveId(t *testing.T) {
 }
 
 func Test_RemoveSetId(t *testing.T) {
+	t.Parallel()
 	hs := NewIdSet()
 	other := NewIdSet()
 	other.Add(1)
@@ -70,6 +75,7 @@ func Test_RemoveSetId(t *testing.T) {
 }
 
 func Test_SortListId(t *testing.T) {
+	t.Parallel()
 	hs := NewIdSet()
 	hl := IdSlice{}
 	var hashNum uint = 5
@@ -94,6 +100,7 @@ func Test_SortListId(t *testing.T) {
 }
 
 func Test_SortListHash(t *testing.T) {
+	t.Parallel()
 	hs := NewIdSet()
 	hl := BlockHashSlice{}
 	var hashNum uint = 5
@@ -121,6 +128,7 @@ func Test_SortListHash(t *testing.T) {
 }
 
 func Test_ForId(t *testing.T) {
+	t.Parallel()
 	hs := NewIdSet()
 	var hashNum uint = 5
 	for i := uint(0); i < hashNum; i++ {
@@ -163,6 +171,7 @@ func (tb *TestBlock) GetPriority() int {
 }
 
 func Test_SortListPriority(t *testing.T) {
+	t.Parallel()
 	hs := NewIdSet()
 	hl := BlockPrioritySlice{}
 	var hashNum uint = 5
@@ -191,6 +200,7 @@ func Test_SortListPriority(t *testing.T) {
 }
 
 func Test_SortListHeight(t *testing.T) {
+	t.Parallel()
 	hs := NewIdSet()
 	hl := BlockHeightSlice{}
 	var hashNum uint = 5
@@ -218,6 +228,7 @@ func Test_SortListHeight(t *testing.T) {
 }
 
 func TestIsDataEmpty(t *testing.T) {
+	t.Parallel()
 	hs := NewIdSet()
 	hs.Add(1)
 	hs.AddPair(2, int(2))

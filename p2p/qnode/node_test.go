@@ -22,6 +22,7 @@ var pyRecord, _ = hex.DecodeString("f884b8407098ad865b00a582051940cb9cf368365724
 // TestPythonInterop checks that we can decode and verify a record produced by the Python
 // implementation.
 func TestPythonInterop(t *testing.T) {
+	t.Parallel()
 	var r qnr.Record
 	if err := rlp.DecodeBytes(pyRecord, &r); err != nil {
 		t.Fatalf("can't decode: %v", err)
@@ -53,6 +54,7 @@ func TestPythonInterop(t *testing.T) {
 }
 
 func TestHexID(t *testing.T) {
+	t.Parallel()
 	ref := ID{0, 0, 0, 0, 0, 0, 0, 128, 106, 217, 182, 31, 165, 174, 1, 67, 7, 235, 220, 150, 66, 83, 173, 205, 159, 44, 10, 57, 42, 161, 26, 188}
 	id1 := HexID("0x00000000000000806ad9b61fa5ae014307ebdc964253adcd9f2c0a392aa11abc")
 	id2 := HexID("00000000000000806ad9b61fa5ae014307ebdc964253adcd9f2c0a392aa11abc")
@@ -66,6 +68,7 @@ func TestHexID(t *testing.T) {
 }
 
 func TestID_textEncoding(t *testing.T) {
+	t.Parallel()
 	ref := ID{
 		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10,
 		0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x20,
@@ -92,6 +95,7 @@ func TestID_textEncoding(t *testing.T) {
 }
 
 func TestID_distcmp(t *testing.T) {
+	t.Parallel()
 	distcmpBig := func(target, a, b ID) int {
 		tbig := new(big.Int).SetBytes(target[:])
 		abig := new(big.Int).SetBytes(a[:])
@@ -106,6 +110,7 @@ func TestID_distcmp(t *testing.T) {
 // The random tests is likely to miss the case where a and b are equal,
 // this test checks it explicitly.
 func TestID_distcmpEqual(t *testing.T) {
+	t.Parallel()
 	base := ID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	x := ID{15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}
 	if DistCmp(base, x, x) != 0 {
@@ -114,6 +119,7 @@ func TestID_distcmpEqual(t *testing.T) {
 }
 
 func TestID_logdist(t *testing.T) {
+	t.Parallel()
 	logdistBig := func(a, b ID) int {
 		abig, bbig := new(big.Int).SetBytes(a[:]), new(big.Int).SetBytes(b[:])
 		return new(big.Int).Xor(abig, bbig).BitLen()
@@ -126,6 +132,7 @@ func TestID_logdist(t *testing.T) {
 // The random tests is likely to miss the case where a and b are equal,
 // this test checks it explicitly.
 func TestID_logdistEqual(t *testing.T) {
+	t.Parallel()
 	x := ID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	if LogDist(x, x) != 0 {
 		t.Errorf("LogDist(x, x) != 0")
