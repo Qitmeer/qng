@@ -305,7 +305,6 @@ func (m *meerDiff) RequiredDifficulty(block model.Block, newBlockTime time.Time,
 		"diff", fmt.Sprintf("(%064x)", oldDiffBig))
 	log.Debug("New target", "bits", fmt.Sprintf("%08x", nextDiffBits),
 		"diff", fmt.Sprintf("(%064x)", nextDiffBig))
-
 	return nextDiffBits, nil
 }
 
