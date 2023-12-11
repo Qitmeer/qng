@@ -13,7 +13,6 @@ import (
 	s "github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/Qitmeer/qng/core/types/pow/difficultymanager"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
@@ -506,7 +505,7 @@ mempool:
 	ts := MedianAdjustedTime(bc, timeSource)
 
 	//
-	reqCompactDifficulty, err := difficultymanager.NewDiffManager(bc.Consensus().BlockChain(), bc.ChainParams()).CalcNextRequiredDifficulty(ts, powType)
+	reqCompactDifficulty, err := bc.CalcNextRequiredDifficulty(ts, powType)
 	if err != nil {
 		return nil, miningRuleError(ErrGettingDifficulty, err.Error())
 	}
@@ -599,7 +598,7 @@ func UpdateBlockTime(msgBlock *types.Block, chain *blockchain.BlockChain, timeSo
 	// If running on a network that requires recalculating the difficulty,
 	// do so now.
 	if activeNetParams.ReduceMinDifficulty {
-		difficulty, err := difficultymanager.NewDiffManager(chain.Consensus().BlockChain(), chain.ChainParams()).CalcNextRequiredDifficulty(
+		difficulty, err := chain.CalcNextRequiredDifficulty(
 			newTimestamp, msgBlock.Header.Pow.GetPowType())
 		if err != nil {
 			return miningRuleError(ErrGettingDifficulty, err.Error())

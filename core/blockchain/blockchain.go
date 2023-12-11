@@ -22,6 +22,7 @@ import (
 	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/core/types/pow/difficultymanager"
 	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
@@ -136,7 +137,8 @@ type BlockChain struct {
 	wg      sync.WaitGroup
 	quit    chan struct{}
 
-	meerChain *meer.MeerChain
+	meerChain         *meer.MeerChain
+	difficultyManager model.DifficultyManager
 }
 
 func (b *BlockChain) Init() error {
@@ -1070,6 +1072,7 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 	}
 	b.meerChain = mchain
 	b.Services().RegisterService(b.meerChain)
+	b.difficultyManager = difficultymanager.NewDiffManager(b.Consensus().BlockChain(), par)
 	return &b, nil
 }
 

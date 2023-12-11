@@ -25,7 +25,6 @@ import (
 	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/Qitmeer/qng/core/types/pow/difficultymanager"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
@@ -761,7 +760,7 @@ func (b *BlockChain) checkBlockHeaderContext(block *types.SerializedBlock, prevN
 		// the calculated difficulty based on the previous block and
 		// difficulty retarget rules.
 
-		expDiff, err := difficultymanager.NewDiffManager(b.consensus.BlockChain(), b.params).RequiredDifficulty(prevNode,
+		expDiff, err := b.calcNextRequiredDifficulty(prevNode,
 			header.Timestamp, instance)
 		if err != nil {
 			return err

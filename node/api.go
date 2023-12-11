@@ -18,7 +18,6 @@ import (
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/Qitmeer/qng/core/types/pow/difficultymanager"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/params"
@@ -60,7 +59,7 @@ func NewPublicBlockChainAPI(node *QitmeerFull) *PublicBlockChainAPI {
 func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 	best := api.node.GetBlockChain().BestSnapshot()
 	node := api.node.GetBlockChain().BlockDAG().GetBlock(&best.Hash)
-	powNodes := difficultymanager.NewDiffManager(api.node.GetBlockChain().Consensus().BlockChain(), api.node.GetBlockChain().ChainParams()).GetCurrentPowDiff(node, pow.MEERXKECCAKV1)
+	powNodes := api.node.GetBlockChain().GetCurrentPowDiff(node, pow.MEERXKECCAKV1)
 	ret := &json.InfoNodeResult{
 		ID:              api.node.GetPeerServer().PeerID().String(),
 		Version:         int32(1000000*version.Major + 10000*version.Minor + 100*version.Patch),
