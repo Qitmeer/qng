@@ -44,5 +44,5 @@ func (b *BlockChain) CalcNextRequiredDifficulty(timestamp time.Time, powType pow
 
 // find block node by pow type
 func (b *BlockChain) GetCurrentPowDiff(ib model.Block, powType pow.PowType) *big.Int {
-	return b.GetCurrentPowDiff(ib, powType)
+	return b.difficultyManager.GetCurrentPowDiff(ib, powType)
 }
