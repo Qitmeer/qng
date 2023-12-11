@@ -108,17 +108,6 @@ func (m *kaspadDiff) CalcEasiestDifficulty(bits uint32, duration time.Duration, 
 	return pow.BigToCompact(newTarget)
 }
 
-func (m *kaspadDiff) CalcNextRequiredDifficulty(timestamp time.Time, powType pow.PowType) (uint32, error) {
-	m.b.ChainRLock()
-	block := m.b.GetMainChainTip()
-	instance := pow.GetInstance(powType, 0, []byte{})
-	instance.SetParams(m.cfg.PowConfig)
-	instance.SetMainHeight(pow.MainHeight(block.GetHeight() + 1))
-	difficulty, err := m.RequiredDifficultyByWindows(m.getblockWindows(block, instance.GetPowType(), int(m.cfg.WorkDiffWindowSize)))
-	m.b.ChainRUnlock()
-	return difficulty, err
-}
-
 func (m *kaspadDiff) RequiredDifficulty(block model.Block, newBlockTime time.Time, powInstance pow.IPow) (uint32, error) {
 	return m.RequiredDifficultyByWindows(m.getblockWindows(block, powInstance.GetPowType(), int(m.cfg.WorkDiffWindowSize)))
 }

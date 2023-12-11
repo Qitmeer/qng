@@ -396,22 +396,6 @@ func (m *meerDiff) getDistanceFromLastAdjustment(block model.Block, powType pow.
 	}
 }
 
-// CalcNextRequiredDifficulty calculates the required difficulty for the block
-// after the end of the current best chain based on the difficulty retarget
-// rules.
-//
-// This function is safe for concurrent access.
-func (m *meerDiff) CalcNextRequiredDifficulty(timestamp time.Time, powType pow.PowType) (uint32, error) {
-	m.b.ChainRLock()
-	block := m.b.GetMainChainTip()
-	instance := pow.GetInstance(powType, 0, []byte{})
-	instance.SetParams(m.cfg.PowConfig)
-	instance.SetMainHeight(pow.MainHeight(block.GetHeight() + 1))
-	difficulty, err := m.RequiredDifficulty(block, timestamp, instance)
-	m.b.ChainRUnlock()
-	return difficulty, err
-}
-
 // find block node by pow type
 func (m *meerDiff) getPowTypeNode(block model.Block, powType pow.PowType) model.Block {
 	for {

@@ -33,7 +33,7 @@ func (m *BlockChain) calcNextRequiredDifficulty(block model.Block, newBlockTime 
 // This function is safe for concurrent access.
 func (b *BlockChain) CalcNextRequiredDifficulty(timestamp time.Time, powType pow.PowType) (uint32, error) {
 	b.ChainRLock()
-	block := b.GetMainChainTip()
+	block := b.bd.GetMainChainTip()
 	instance := pow.GetInstance(powType, 0, []byte{})
 	instance.SetParams(b.params.PowConfig)
 	instance.SetMainHeight(pow.MainHeight(block.GetHeight() + 1))
