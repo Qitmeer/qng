@@ -172,6 +172,8 @@ func (b *BlockChain) Init() error {
 	for _, v := range tips {
 		log.Info(fmt.Sprintf("hash=%s,order=%s,height=%d", v.GetHash(), meerdag.GetOrderLogStr(v.GetOrder()), v.GetHeight()))
 	}
+
+	b.difficultyManager = difficultymanager.NewDiffManager(b.Consensus().BlockChain(), b.params)
 	return nil
 }
 
@@ -1072,7 +1074,6 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 	}
 	b.meerChain = mchain
 	b.Services().RegisterService(b.meerChain)
-	b.difficultyManager = difficultymanager.NewDiffManager(b.Consensus().BlockChain(), par)
 	return &b, nil
 }
 
