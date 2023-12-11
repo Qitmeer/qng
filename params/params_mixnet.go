@@ -86,7 +86,7 @@ var MixNetParams = Params{
 		},
 		// after this height the big graph will be the main pow graph
 		AdjustmentStartMainHeight: 1440 * 15 / mixTargetTimePerBlock,
-		DifficultyMode:            types.DIFFICULTY_MODE_KASPAD,
+		DifficultyMode:            pow.DIFFICULTY_MODE_KASPAD,
 	},
 
 	WorkDiffAlpha:            1,

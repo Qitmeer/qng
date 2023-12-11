@@ -20,6 +20,13 @@ var (
 	OneLsh256 = new(big.Int).Lsh(bigOne, 256)
 )
 
+const (
+	// MEER difficulty adjustment
+	DIFFICULTY_MODE_MEER = 0
+	// KASPAD difficulty adjustment
+	DIFFICULTY_MODE_KASPAD
+)
+
 // HashToBig converts a hash.Hash into a big.Int that can be used to
 // perform math comparisons.
 func HashToBig(hash *hash.Hash) *big.Int {

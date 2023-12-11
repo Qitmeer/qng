@@ -1,11 +1,11 @@
 package difficultymanager
 
 import (
+	"math"
 	"math/big"
 	"time"
 
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/math"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
@@ -159,7 +159,7 @@ func (dm *kaspadDiff) requiredDifficultyFromTargetsWindow(targetsWindow blockWin
 	newTarget := targetsWindow.AverageTarget()
 	newTarget.
 		// We need to clamp the timestamp difference to 1 so that we'll never get a 0 target.
-		Mul(newTarget, div.SetInt64(math.MaxInt64Val(windowMaxTimeStamp-windowMinTimestamp, 1))).
+		Mul(newTarget, div.SetInt64(int64(math.Max(float64(windowMaxTimeStamp-windowMinTimestamp), 1)))).
 		Div(newTarget, div.SetInt64(dm.targetTimePerBlock.Milliseconds())).
 		Div(newTarget, div.SetUint64(uint64(len(targetsWindow))))
 	if newTarget.Cmp(dm.powMax) > 0 {
