@@ -9,5 +9,4 @@ type Block interface {
 	GetOrder() uint
 	HasParents() bool
 	GetMainParent() uint
-	GetHeight() uint
 }
