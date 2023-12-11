@@ -8,6 +8,8 @@ package blockchain
 import (
 	"container/list"
 	"fmt"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
@@ -17,7 +19,6 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag"
-	"time"
 )
 
 // ProcessBlock is the main workhorse for handling insertion of new blocks into

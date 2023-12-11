@@ -5,6 +5,10 @@ package blockchain
 import (
 	"container/list"
 	"fmt"
+	"sort"
+	"sync"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/system"
@@ -18,6 +22,7 @@ import (
 	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/core/types/pow/difficultymanager"
 	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
@@ -28,9 +33,6 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/progresslog"
 	"github.com/schollz/progressbar/v3"
-	"sort"
-	"sync"
-	"time"
 )
 
 const (
@@ -135,7 +137,8 @@ type BlockChain struct {
 	wg      sync.WaitGroup
 	quit    chan struct{}
 
-	meerChain *meer.MeerChain
+	meerChain         *meer.MeerChain
+	difficultyManager model.DifficultyManager
 }
 
 func (b *BlockChain) Init() error {
@@ -169,6 +172,8 @@ func (b *BlockChain) Init() error {
 	for _, v := range tips {
 		log.Info(fmt.Sprintf("hash=%s,order=%s,height=%d", v.GetHash(), meerdag.GetOrderLogStr(v.GetOrder()), v.GetHeight()))
 	}
+
+	b.difficultyManager = difficultymanager.NewDiffManager(b.Consensus().BlockChain(), b.params)
 	return nil
 }
 

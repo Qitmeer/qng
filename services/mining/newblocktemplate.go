@@ -2,6 +2,8 @@ package mining
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/address"
@@ -17,7 +19,6 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/mempool"
 	"golang.org/x/net/context"
-	"time"
 )
 
 // NewBlockTemplate returns a new block template that is ready to be solved
