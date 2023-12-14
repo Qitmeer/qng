@@ -189,7 +189,7 @@ func (qm *QitmeerFull) GetPeerServer() *p2p.Service {
 func (qm *QitmeerFull) GetRpcServer() *rpc.RpcServer {
 	var service *rpc.RpcServer
 	if err := qm.Services().FetchService(&service); err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 		return nil
 	}
 	return service

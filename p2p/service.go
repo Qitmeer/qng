@@ -677,7 +677,7 @@ func NewService(cfg *config.Config, consensus model.Consensus, param *params.Par
 	if len(cfg.Listener) > 0 {
 		ipAddr = net.ParseIP(cfg.Listener)
 	}
-	if ipAddr == nil {
+	if ipAddr == nil && !cfg.DisableListen {
 		ipAddr = IpAddr()
 	}
 
@@ -697,15 +697,18 @@ func NewService(cfg *config.Config, consensus model.Consensus, param *params.Par
 		return nil, err
 	}
 	opts := s.buildOptions(ipAddr, s.privKey)
-	h, err := libp2p.New(opts...)
+	if cfg.DisableListen {
+		opts = append(opts, libp2p.DisableMetrics())
+		s.host, err = libp2p.NewWithoutDefaults(opts...)
+	} else {
+		s.host, err = libp2p.New(opts...)
+	}
 	if err != nil {
 		log.Error("Failed to create p2p host")
 		return nil, err
 	}
 
-	s.host = h
-
-	s.cfg.BootstrapNodeAddr = filterBootStrapAddrs(h.ID().String(), s.cfg.BootstrapNodeAddr)
+	s.cfg.BootstrapNodeAddr = filterBootStrapAddrs(s.host.ID().String(), s.cfg.BootstrapNodeAddr)
 
 	psOpts := []pubsub.Option{
 		pubsub.WithMessageSigning(false),
@@ -753,6 +756,8 @@ func logIPAddr(id peer.ID, addrs ...multiaddr.Multiaddr) {
 	}
 	if correctAddr != nil {
 		log.Info(fmt.Sprintf("Node started p2p server:multiAddr=%s", correctAddr.String()+"/p2p/"+id.String()))
+	} else {
+		log.Warn("QNG P2P server will be useless, neither dialing nor listening")
 	}
 }
 

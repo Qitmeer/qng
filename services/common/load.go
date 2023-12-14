@@ -358,5 +358,6 @@ func SetupConfig(cfg *config.Config) error {
 		s3, _ := gp.GetPasswdPrompt("please input your pass unlock your wallet:", true, os.Stdin, os.Stdout)
 		cfg.WalletPass = string(s3)
 	}
+	config.Cfg = cfg
 	return nil
 }

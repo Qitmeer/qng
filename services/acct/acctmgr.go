@@ -131,6 +131,9 @@ func (a *AccountManager) initDB(first bool) error {
 }
 
 func (a *AccountManager) cleanDB() {
+	if len(a.cfg.DataDir) <= 0 {
+		return
+	}
 	if a.db == nil {
 		db, err := loadDB("ffldb", a.cfg.DataDir, false)
 		if err != nil {
