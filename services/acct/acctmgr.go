@@ -42,7 +42,7 @@ func (a *AccountManager) Start() error {
 	if a.cfg.AcctMode {
 		err := a.initDB(true)
 		if err != nil {
-			return fmt.Errorf("Serious error, you can try to delete the data file(%s):%s", getDBPath(a.cfg.DataDir), err.Error())
+			return fmt.Errorf("Serious error, you can try to delete the data file(%s):%s", getDBPath(getDataDir(a.cfg)), err.Error())
 		}
 	} else {
 		a.cleanDB()
@@ -66,7 +66,7 @@ func (a *AccountManager) Stop() error {
 func (a *AccountManager) initDB(first bool) error {
 	log.Info("AccountManager enable account mode")
 	var err error
-	a.db, err = loadDB("ffldb", a.cfg.DataDir, true)
+	a.db, err = loadDB("ffldb", getDataDir(a.cfg), true)
 	if err != nil {
 		return err
 	}
@@ -131,11 +131,8 @@ func (a *AccountManager) initDB(first bool) error {
 }
 
 func (a *AccountManager) cleanDB() {
-	if len(a.cfg.DataDir) <= 0 {
-		return
-	}
 	if a.db == nil {
-		db, err := loadDB("ffldb", a.cfg.DataDir, false)
+		db, err := loadDB("ffldb", getDataDir(a.cfg), false)
 		if err != nil {
 			return
 		}
@@ -167,7 +164,7 @@ func (a *AccountManager) cleanDB() {
 		}
 	}
 
-	err := removeDB(getDBPath(a.cfg.DataDir))
+	err := removeDB(getDBPath(getDataDir(a.cfg)))
 	if err != nil {
 		log.Error(err.Error())
 	}

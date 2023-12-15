@@ -58,10 +58,8 @@ func (a *WalletManager) APIs() []api.API {
 
 func New(cfg *config.Config, evm *meer.MeerChain, _am *acct.AccountManager, _tm *tx.TxManager, _events *event.Feed) (*WalletManager, error) {
 	conf := evm.ETHChain().Config().Node
-	keydir, err := conf.KeyDirConfig()
-	if err != nil {
-		return nil, err
-	}
+	keydir := evm.ETHChain().Node().KeyStoreDir()
+
 	n, p := keystore.StandardScryptN, keystore.StandardScryptP
 	if conf.UseLightweightKDF {
 		n, p = keystore.LightScryptN, keystore.LightScryptP
