@@ -213,6 +213,15 @@ func (qm *QitmeerFull) GetAccountManager() *acct.AccountManager {
 	return service
 }
 
+func (qm *QitmeerFull) GetWalletManager() *wallet.WalletManager {
+	var service *wallet.WalletManager
+	if err := qm.Services().FetchService(&service); err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return service
+}
+
 func (qm *QitmeerFull) GetMiner() *miner.Miner {
 	var service *miner.Miner
 	if err := qm.Services().FetchService(&service); err != nil {
