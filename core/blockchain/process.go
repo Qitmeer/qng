@@ -243,7 +243,11 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	//
 	// Also, store the associated block index entry.
 	if !b.DB().HasBlock(block.Hash()) {
-		err := dbMaybeStoreBlock(b.DB(), block)
+		err := block.AssertImmutability()
+		if err != nil {
+			return nil, err
+		}
+		err = dbMaybeStoreBlock(b.DB(), block)
 		if err != nil {
 			panic(err.Error())
 		}
