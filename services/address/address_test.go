@@ -2,11 +2,18 @@ package address
 
 import (
 	"encoding/hex"
+	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/testutils/simulator/testprivatekey"
 	"testing"
 )
 
 func TestNewAddresses(t *testing.T) {
-	privateKeyHex := "fff2cefe258ca60ae5f5abec99b5d63e2a561c40d784ee50b04eddf8efc84b0d"
+	params.ActiveNetParams = &params.PrivNetParam
+	pb, err := testprivatekey.NewBuilder(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	privateKeyHex := hex.EncodeToString(pb.Get(0))
 	privateKey, addr, eaddr, err := NewAddresses(privateKeyHex)
 	if err != nil {
 		t.Fatal(err)

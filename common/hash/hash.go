@@ -167,12 +167,6 @@ func MustHexToHash(i string) Hash {
 	return nh
 }
 
-// convert hex string to a hash pointer. Must means it panics for invalid input.
-func MustHexToHashPointer(i string) *Hash {
-	nh := MustHexToHash(i)
-	return &nh
-}
-
 // convert hex string to a byte-reversed hash, Must means it panics for invalid input.
 func MustHexToDecodedHash(i string) Hash {
 	h, err := NewHashFromStr(i)
