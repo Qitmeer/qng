@@ -129,10 +129,9 @@ func consensusCmd() *cli.Command {
 }
 
 func loadConfig(ctx *cli.Context) error {
-	cfg, err := common.LoadConfig(ctx, false)
+	_, err := common.LoadConfig(ctx, false)
 	if err != nil {
 		return err
 	}
-	config.Cfg = cfg
 	return nil
 }

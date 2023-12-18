@@ -78,7 +78,6 @@ func qitmeerd(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	config.Cfg = cfg
 	defer func() {
 		if log.LogWrite() != nil {
 			log.LogWrite().Close()

@@ -79,7 +79,9 @@ func MakeConfig(cfg *config.Config) (*eth.Config, error) {
 	nodeConf.HTTPModules = append(nodeConf.HTTPModules, "eth")
 	nodeConf.WSModules = append(nodeConf.WSModules, "eth")
 	nodeConf.IPCPath = ""
-	nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
+	if len(datadir) > 0 {
+		nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
+	}
 	//nodeConf.HTTPHost = node.DefaultHTTPHost
 	//nodeConf.WSHost = node.DefaultWSHost
 	nodeConf.HTTPPort, nodeConf.WSPort, nodeConf.AuthPort = getDefaultRPCPort()

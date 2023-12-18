@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/legacydb"
@@ -69,6 +70,14 @@ func removeDB(dbPath string) error {
 
 func getDBPath(dataDir string) string {
 	return filepath.Join(dataDir, dbNamePrefix)
+}
+
+func getDataDir(cfg *config.Config) string {
+	dataDir := cfg.DataDir
+	if len(dataDir) <= 0 {
+		dataDir = cfg.HomeDir
+	}
+	return dataDir
 }
 
 // info

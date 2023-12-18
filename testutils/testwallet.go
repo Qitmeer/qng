@@ -187,7 +187,7 @@ func newTestWalletWithSeed(t *testing.T, params *params.Params, seed *[hash.Hash
 	key0 := child0.Key
 	privkeys := make(map[uint32][]byte)
 	privkeys[0] = key0
-	addr0, err := privKeyToAddr(key0, params)
+	addr0, err := PrivateKeyToAddr(key0, params)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +229,7 @@ func (w *testWallet) newAddress() (types.Address, error) {
 		return nil, err
 	}
 	w.privkeys[num] = childx.Key
-	addrx, err := privKeyToAddr(childx.Key, w.netParams)
+	addrx, err := PrivateKeyToAddr(childx.Key, w.netParams)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func (m *testWallet) NewAddress() (types.Address, error) {
 }
 
 // convert the serialized private key into the p2pkh address
-func privKeyToAddr(privKey []byte, params *params.Params) (types.Address, error) {
+func PrivateKeyToAddr(privKey []byte, params *params.Params) (types.Address, error) {
 	_, pubKey := secp256k1.PrivKeyFromBytes(privKey)
 	serializedKey := pubKey.SerializeCompressed()
 	addr, err := address.NewSecpPubKeyAddress(serializedKey, params)

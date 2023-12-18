@@ -51,6 +51,13 @@ func privKey(cfg *common.Config) (crypto.PrivKey, error) {
 // Determines a private key for p2p networking from the p2p service's
 // configuration struct. If no key is found, it generates a new one.
 func PrivateKey(dataDir string, privateKeyPath string, readWritePermissions os.FileMode) (crypto.PrivKey, error) {
+	if len(dataDir) <= 0 && len(privateKeyPath) <= 0 {
+		priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		return priv, nil
+	}
 	defaultKeyPath := path.Join(dataDir, keyPath)
 
 	_, err := os.Stat(defaultKeyPath)
@@ -121,6 +128,12 @@ func retrievePrivKeyFromFile(path string) (crypto.PrivKey, error) {
 // Retrieves node p2p metadata from a set of configuration values
 // from the p2p service.
 func metaDataFromConfig(cfg *common.Config) (*pb.MetaData, error) {
+	if len(cfg.DataDir) <= 0 && len(cfg.MetaDataDir) <= 0 {
+		return &pb.MetaData{
+			SeqNumber: 0,
+			Subnets:   bitfield.NewBitvector64(),
+		}, nil
+	}
 	defaultKeyPath := path.Join(cfg.DataDir, metaDataPath)
 	metaDataPath := cfg.MetaDataDir
 
