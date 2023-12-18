@@ -459,8 +459,15 @@ func NewBlockDeepCopyCoinbase(msgBlock *Block) *SerializedBlock {
 // calling BlockHash on the underlying Block, however it caches the
 // result so subsequent calls are more efficient.
 func (sb *SerializedBlock) Hash() *hash.Hash {
-	//TODO, might need to assertBlockImmutability
 	return &sb.hash
+}
+
+func (sb *SerializedBlock) AssertImmutability() error {
+	h := sb.block.BlockHash()
+	if (&h).IsEqual(&sb.hash) {
+		return nil
+	}
+	return fmt.Errorf("block hash inconsistent:%s != %s", h.String(), sb.hash.String())
 }
 
 func (sb *SerializedBlock) Block() *Block {
