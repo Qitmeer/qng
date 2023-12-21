@@ -118,7 +118,7 @@ func doBenchmarkIO(b *testing.B, dbtype string) {
 
 	cfg := common.DefaultConfig("")
 	l.Glogger().Verbosity(l.LvlCrit)
-	eth.InitLog(elog.LvlCrit.String(), cfg.DebugPrintOrigins)
+	eth.InitLog(elog.LevelCrit.String(), cfg.DebugPrintOrigins)
 	BenchDatabaseSuite(b, func() ethdb.KeyValueStore {
 		cfg.DataDir = dataDir
 		cfg.DbType = dbtype
