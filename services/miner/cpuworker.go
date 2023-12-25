@@ -311,8 +311,9 @@ out:
 			if w.discrete && w.discreteNum <= 0 {
 				continue
 			}
-			if w.solveBlock() {
-				block := types.NewBlock(w.miner.template.Block)
+			sb := w.solveBlock()
+			if sb != nil {
+				block := types.NewBlock(sb)
 				info, err := w.miner.submitBlock(block)
 				if err != nil {
 					log.Error(fmt.Sprintf("Failed to submit new block:%s ,%v", block.Hash().String(), err))
@@ -352,9 +353,9 @@ func (w *CPUWorker) cleanDiscrete() {
 	}
 }
 
-func (w *CPUWorker) solveBlock() bool {
+func (w *CPUWorker) solveBlock() *types.Block {
 	if w.miner.template == nil {
-		return false
+		return nil
 	}
 	// Start a ticker which is used to signal checks for stale work and
 	// updates to the speed monitor.
@@ -362,7 +363,11 @@ func (w *CPUWorker) solveBlock() bool {
 	defer ticker.Stop()
 
 	// Create a couple of convenience variables.
-	block := w.miner.template.Block
+	block, err := w.miner.template.Block.Clone()
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
 	header := &block.Header
 
 	// Initial state.
@@ -390,7 +395,7 @@ func (w *CPUWorker) solveBlock() bool {
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
 		case <-w.quit:
-			return false
+			return nil
 
 		case <-ticker.C:
 			w.updateHashes <- hashesCompleted
@@ -401,13 +406,13 @@ func (w *CPUWorker) solveBlock() bool {
 			// generated and it has been at least 3 seconds,
 			// or if it's been one minute.
 			if w.hasNewWork || roughtime.Now().After(lastGenerated.Add(gbtRegenerateSeconds*time.Second)) {
-				return false
+				return nil
 			}
 
 			err := mining.UpdateBlockTime(block, w.miner.BlockChain(), w.miner.timeSource, params.ActiveNetParams.Params)
 			if err != nil {
 				log.Warn(fmt.Sprintf("CPU miner unable to update block template time: %v", err))
-				return false
+				return nil
 			}
 
 		default:
@@ -421,11 +426,11 @@ func (w *CPUWorker) solveBlock() bool {
 		header.Pow = instance
 		if header.Pow.FindSolver(header.BlockData(), header.BlockHash(), header.Difficulty) {
 			w.updateHashes <- hashesCompleted
-			return true
+			return block
 		}
 		// Each hash is actually a double hash (tow hashes), so
 	}
-	return false
+	return nil
 }
 
 func NewCPUWorker(miner *Miner) *CPUWorker {
