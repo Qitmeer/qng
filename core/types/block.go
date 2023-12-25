@@ -387,6 +387,23 @@ func (b *Block) AddParent(h *hash.Hash) error {
 
 }
 
+// Deep copy
+func (b *Block) Clone() (*Block, error) {
+	var w bytes.Buffer
+	w.Grow(b.SerializeSize())
+	err := b.Serialize(&w)
+	if err != nil {
+		return nil, err
+	}
+	r := bytes.NewReader(w.Bytes())
+	var block Block
+	err = block.Deserialize(r)
+	if err != nil {
+		return nil, err
+	}
+	return &block, nil
+}
+
 // SerializedBlock provides easier and more efficient manipulation of raw blocks.
 // It also memorizes hashes for the block and its transactions on their first
 // access so subsequent accesses don't have to  repeat the relatively expensive

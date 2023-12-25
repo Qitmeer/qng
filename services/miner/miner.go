@@ -654,16 +654,19 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 	if !m.IsEnable() || m.template == nil {
 		return nil, fmt.Errorf("You must enable miner by --miner.")
 	}
-	tHeader := &m.template.Block.Header
-	if !IsEqualForMiner(tHeader, header) {
+	if !IsEqualForMiner(&m.template.Block.Header, header) {
 		return nil, fmt.Errorf("You're overdue")
 	}
+	block, err := m.template.Block.Clone()
+	if err != nil {
+		return nil, err
+	}
 	if extraNonce <= 0 {
-		if !tHeader.TxRoot.IsEqual(&header.TxRoot) {
+		if !block.Header.TxRoot.IsEqual(&header.TxRoot) {
 			return nil, fmt.Errorf("You're overdue about tx root.")
 		}
 	} else {
-		ctx := types.NewTx(m.template.Block.Transactions[0]).Tx
+		ctx := types.NewTx(block.Transactions[0]).Tx
 		txRoot, err := mining.DoCalculateTransactionsRoot(ctx, m.template.TxMerklePath, m.template.TxWitnessRoot, extraNonce)
 		if err != nil {
 			return nil, err
@@ -671,15 +674,14 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 		if !txRoot.IsEqual(&header.TxRoot) {
 			return nil, fmt.Errorf("You're overdue about tx root.")
 		}
-		tHeader.TxRoot = header.TxRoot
-		m.template.Block.Transactions[0] = ctx
+		block.Header.TxRoot = header.TxRoot
+		block.Transactions[0] = ctx
 	}
 
-	tHeader.Difficulty = header.Difficulty
-	tHeader.Timestamp = header.Timestamp
-	tHeader.Pow = header.Pow
-	block := types.NewBlock(m.template.Block)
-	return m.submitBlock(block)
+	block.Header.Difficulty = header.Difficulty
+	block.Header.Timestamp = header.Timestamp
+	block.Header.Pow = header.Pow
+	return m.submitBlock(types.NewBlock(block))
 }
 
 func (m *Miner) CanMining() error {
