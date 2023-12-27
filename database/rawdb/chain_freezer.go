@@ -3,13 +3,13 @@ package rawdb
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/ethereum/go-ethereum/params"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/params"
 )
 
 const (
@@ -181,18 +181,24 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, id, limit uint64) ([]meerda
 
 	_, err := f.ModifyAncients(func(op ethdb.AncientWriteOp) error {
 		for ; id <= limit; id++ {
+			var header []byte
+			var block []byte
+			var dagbytes []byte
 			// Retrieve all the components of the canonical block.
 			mb := ReadDAGBlock(nfdb, id)
 			if mb == nil {
-				return fmt.Errorf("canonical hash missing, can't freeze block %d", id)
-			}
-			header := ReadHeaderRaw(nfdb, mb.GetHash())
-			if len(header) == 0 {
-				return fmt.Errorf("block header missing, can't freeze block %d %s", id, mb.GetHash().String())
-			}
-			block := ReadBodyRaw(nfdb, mb.GetHash())
-			if len(block) == 0 {
-				return fmt.Errorf("block body missing, can't freeze block %d %s", id, mb.GetHash().String())
+				log.Debug("Attempt to skip block freezing (possible cropping)", "id", id)
+			} else {
+				header = ReadHeaderRaw(nfdb, mb.GetHash())
+				if len(header) == 0 {
+					return fmt.Errorf("block header missing, can't freeze block %d %s", id, mb.GetHash().String())
+				}
+				block = ReadBodyRaw(nfdb, mb.GetHash())
+				if len(block) == 0 {
+					return fmt.Errorf("block body missing, can't freeze block %d %s", id, mb.GetHash().String())
+				}
+				dagbytes = mb.Bytes()
+				blocks = append(blocks, mb)
 			}
 
 			// Write to the batch.
@@ -202,10 +208,9 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, id, limit uint64) ([]meerda
 			if err := op.AppendRaw(ChainFreezerBlockTable, id, block); err != nil {
 				return fmt.Errorf("can't write hash to Freezer: %v", err)
 			}
-			if err := op.AppendRaw(ChainFreezerDAGBlockTable, id, mb.Bytes()); err != nil {
+			if err := op.AppendRaw(ChainFreezerDAGBlockTable, id, dagbytes); err != nil {
 				return fmt.Errorf("can't write header to Freezer: %v", err)
 			}
-			blocks = append(blocks, mb)
 		}
 		return nil
 	})
