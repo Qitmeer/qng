@@ -589,6 +589,13 @@ func (sb *SerializedBlock) Transactions() []*Tx {
 	return sb.transactions
 }
 
+func (sb *SerializedBlock) Reset() {
+	for _, tx := range sb.Transactions() {
+		tx.IsDuplicate = false
+		tx.Object = nil
+	}
+}
+
 // Contract block header
 type CBlockHeader struct {
 

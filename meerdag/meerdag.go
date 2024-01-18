@@ -237,7 +237,7 @@ func (bd *MeerDAG) init(dagType string, blockRate float64, db model.DataBase, ge
 	bd.commitBlock = NewIdSet()
 	bd.lastSnapshot = NewDAGSnapshot()
 	bd.blockRate = blockRate
-	bd.tipsDisLimit = StableConfirmations
+	bd.tipsDisLimit = MinBlockPruneSize
 	if bd.blockRate < 0 {
 		bd.blockRate = anticone.DefaultBlockRate
 	}

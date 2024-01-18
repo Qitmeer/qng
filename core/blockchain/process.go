@@ -40,6 +40,7 @@ func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFl
 	if b.IsShutdown() {
 		return nil, false, fmt.Errorf("block chain is shutdown")
 	}
+	block.Reset()
 	msg := processMsg{block: block, flags: flags, result: make(chan *processResult)}
 	b.msgChan <- &msg
 	result := <-msg.result
