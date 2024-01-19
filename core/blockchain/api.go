@@ -420,15 +420,14 @@ func (api *PublicBlockAPI) makeBlock(h hash.Hash, verbose *bool, inclTx *bool, f
 	}
 	confirmations := int64(api.chain.BlockDAG().GetConfirmations(block.GetID()))
 	bd := api.chain.BlockDAG()
-	ib := bd.GetBlock(&h)
-	cs := bd.GetChildren(ib)
+	cs := bd.GetChildren(block)
 	children := []*hash.Hash{}
 	if cs != nil && !cs.IsEmpty() {
 		for _, v := range cs.GetMap() {
 			children = append(children, v.(meerdag.IBlock).GetHash())
 		}
 	}
-	api.chain.SetDAGDuplicateTxs(blk, ib)
+	api.chain.SetDAGDuplicateTxs(blk, block)
 	coinbaseFees := api.chain.CalculateFees(blk)
 	coinbaseAmout := types.AmountMap{}
 
