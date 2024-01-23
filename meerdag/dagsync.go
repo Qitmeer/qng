@@ -71,7 +71,21 @@ func (ds *DAGSync) CalcSyncBlocks(gs *GraphState, locator []*hash.Hash, mode Syn
 	if point == nil {
 		point = ds.bd.getGenesis()
 	}
-	return ds.getBlockChainFromMain(point, maxHashes), point.GetHash()
+	syncPoint := point
+	for _, t := range gs.tips {
+		tip := ds.bd.getBlock(&t)
+		if tip == nil {
+			continue
+		}
+		if !tip.IsOrdered() {
+			continue
+		}
+		if tip.GetOrder() > syncPoint.GetOrder() {
+			syncPoint = tip
+		}
+	}
+	log.Trace("CalcSyncBlocks", "point", point.GetHash().String(), "syncPoint", syncPoint.GetHash().String())
+	return ds.getBlockChainFromMain(syncPoint, maxHashes), point.GetHash()
 }
 
 // GetMainLocator

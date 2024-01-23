@@ -86,8 +86,10 @@ func (bd *MeerDAG) getValidTips(limit bool) []IBlock {
 			continue
 		}
 		block := bd.getBlockById(parents[i])
-		if math.Abs(float64(block.GetLayer())-float64(mainParent.GetLayer())) > MaxTipLayerGap {
-			continue
+		if limit {
+			if math.Abs(float64(block.GetLayer())-float64(mainParent.GetLayer())) > MaxTipLayerGap {
+				continue
+			}
 		}
 		_, exist := tipsM[block.GetHash().String()]
 		if exist {
