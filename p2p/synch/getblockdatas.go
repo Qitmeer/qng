@@ -148,7 +148,7 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 	}
 	blockDatasLen := blockDatas.Len()
 	if blockDatasLen <= 0 {
-		return &ProcessResult{act: ProcessResultActionContinue, orphan: false}
+		return &ProcessResult{act: ProcessResultActionTryAgain, orphan: false}
 	}
 	readys := len(blocksReady)
 	packageNumber := 0
