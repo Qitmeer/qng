@@ -41,6 +41,7 @@ const (
 	PubkeyHashAltTy                      // Alternative signature pubkey hash.
 	CLTVPubKeyHashTy                     // Check Lock Time Verify Pay pubkey hash.
 	TokenPubKeyHashTy                    // Token Pay pubkey hash.
+	WitnessTaprootTy                     // Taproot output
 )
 
 // Script Interface provide a abstract layer to support new Script parsing from opcode
@@ -79,11 +80,11 @@ func RegisterScript(sin Script) error {
 	return nil
 }
 
-// ParsePkScript returns a parsed Script from the Script registry, which's addresses and
+// ParseSTDScript returns a parsed Script from the Script registry, which's addresses and
 // required signatures are associated with. Note: It's methold only works for the
 // registered Script
-func ParsePkScript(pkScript []byte) (Script, error) {
-	pops, err := parseScript(pkScript)
+func ParseSTDScript(script []byte) (Script, error) {
+	pops, err := parseScript(script)
 	if err != nil {
 		return nil, err
 	}
@@ -437,6 +438,17 @@ func isTokenPubkeyHash(pops []ParsedOpcode) bool {
 		pops[11].opcode.value == OP_CHECKSIG
 }
 
+// isWitnessTaprootScript returns true if the passed script is for a
+// pay-to-witness-taproot output, false otherwise.
+func isWitnessTaprootScript(pops []ParsedOpcode) bool {
+	// A pay-to-witness-script-hash script is of the form:
+	//   OP_1 OP_DATA_32 <32-byte-hash>
+	return len(pops) == 2 &&
+		pops[0].opcode.value == OP_1 &&
+		pops[1].opcode.value == OP_DATA_32 &&
+		len(pops[1].data) == 32
+}
+
 // scriptType returns the type of the script being inspected from the known
 // standard types.
 func typeOfScript(pops []ParsedOpcode) ScriptClass {
@@ -466,6 +478,8 @@ func typeOfScript(pops []ParsedOpcode) ScriptClass {
 		return CLTVPubKeyHashTy
 	} else if isTokenPubkeyHash(pops) {
 		return TokenPubKeyHashTy
+	} else if isWitnessTaprootScript(pops) {
+		return WitnessTaprootTy
 	}
 
 	return NonStandardTy
@@ -1032,6 +1046,12 @@ func PayToTokenPubKeyHashScript(pubKeyHash []byte, coinId types.CoinID, upLimit 
 		AddData(pubKeyHash).AddOp(OP_EQUALVERIFY).AddOp(OP_CHECKSIG).Script()
 }
 
+// payToWitnessTaprootScript creates a new script to pay to a version 1
+// (taproot) witness program. The passed hash is expected to be valid.
+func payToWitnessTaprootScript(rawKey []byte) ([]byte, error) {
+	return NewScriptBuilder().AddOp(OP_1).AddData(rawKey).Script()
+}
+
 // GenerateSStxAddrPush generates an OP_RETURN push for SSGen payment addresses in
 // an SStx.
 func GenerateSStxAddrPush(addr types.Address, amount uint64,
@@ -1410,6 +1430,13 @@ func ExtractPkScriptAddrs(pkScript []byte,
 		requiredSigs = 1
 		addr, err := address.NewPubKeyHashAddress(pops[9].data,
 			chainParams, ecc.ECDSA_Secp256k1)
+		if err == nil {
+			addrs = append(addrs, addr)
+		}
+
+	case WitnessTaprootTy:
+		requiredSigs = 1
+		addr, err := address.NewAddressTaproot(pops[1].data, chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
 		}

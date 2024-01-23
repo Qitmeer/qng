@@ -102,6 +102,7 @@ var MainNetParams = Params{
 
 	// Address encoding magics
 	NetworkAddressPrefix: "M",
+	Bech32HRPSegwit:      "m",
 	PubKeyAddrID:         [2]byte{0x1f, 0xc5}, // starts with Mk
 	PubKeyHashAddrID:     [2]byte{0x0b, 0xb1}, // starts with Mm
 	PKHEdwardsAddrID:     [2]byte{0x0b, 0x9f}, // starts with Me

@@ -139,6 +139,7 @@ var PrivNetParams = Params{
 
 	// Address encoding magics
 	NetworkAddressPrefix: "R",
+	Bech32HRPSegwit:      "r",
 	PubKeyAddrID:         [2]byte{0x25, 0xe5}, // starts with Rk
 	PubKeyHashAddrID:     [2]byte{0x0d, 0xf1}, // starts with Rm
 	PKHEdwardsAddrID:     [2]byte{0x0d, 0xe0}, // starts with Re

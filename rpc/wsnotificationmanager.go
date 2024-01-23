@@ -381,9 +381,7 @@ func (m *wsNotificationManager) subscribedClients(tx *types.Tx,
 			if filter == nil {
 				continue
 			}
-			pkScript, err := txscript.ComputePkScript(
-				input.SignScript,
-			)
+			pkScript, err := txscript.ComputePkScript(input.SignScript)
 			if err != nil {
 				continue
 			}

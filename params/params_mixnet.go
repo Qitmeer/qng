@@ -112,6 +112,7 @@ var MixNetParams = Params{
 
 	// Address encoding magics
 	NetworkAddressPrefix: "X",
+	Bech32HRPSegwit:      "x",
 	PubKeyAddrID:         [2]byte{0x2f, 0x16}, // starts with Xx
 	PubKeyHashAddrID:     [2]byte{0x11, 0x52}, // starts with Xm
 	PKHEdwardsAddrID:     [2]byte{0x11, 0x41}, // starts with Xe
