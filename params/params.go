@@ -191,6 +191,9 @@ type Params struct {
 	// for any given address encoded as a string.
 	NetworkAddressPrefix string
 
+	// Human-readable part for Bech32 encoded segwit addresses
+	Bech32HRPSegwit string
+
 	// Address encoding magics
 	PubKeyAddrID     [2]byte // First 2 bytes of a P2PK address
 	PubKeyHashAddrID [2]byte // First 2 bytes of P2PKH address

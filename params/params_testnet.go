@@ -111,6 +111,7 @@ var TestNetParams = Params{
 
 	// Address encoding magics
 	NetworkAddressPrefix: "T",
+	Bech32HRPSegwit:      "t",
 	PubKeyAddrID:         [2]byte{0x28, 0xf5}, // starts with Tk
 	PubKeyHashAddrID:     [2]byte{0x0f, 0x14}, // starts with Tn (to distinguish 0.9.x testnet)
 	PKHEdwardsAddrID:     [2]byte{0x0f, 0x01}, // starts with Te
