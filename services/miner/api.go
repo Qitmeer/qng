@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
@@ -15,7 +17,6 @@ import (
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/services/mining"
-	"time"
 )
 
 const (
@@ -171,11 +172,21 @@ func (api *PublicMinerAPI) GetRemoteGBT(powType byte, extraNonce *bool) (interfa
 	if extraNonce != nil && *extraNonce {
 		coinbaseFlags = mining.CoinbaseFlagsDynamic
 	}
+	start := time.Now().UnixMilli()
+	api.miner.stats.TotalGbtRequests++
+
 	err := api.miner.RemoteMining(pow.PowType(powType), coinbaseFlags, reply)
 	if err != nil {
 		return nil, err
 	}
 	resp := <-reply
+	txcount := len(resp.result.(*json.GetBlockTemplateResult).Transactions)
+	if err := api.checkGBTTime(txcount); err != nil {
+		api.miner.stats.MempoolEmptyWarns++
+		return nil, err
+	}
+	api.miner.stats.LastestMempoolEmptyTimestamp = 0
+	api.miner.StatsGbtRequest(time.Now().UnixMilli()-start, txcount, resp.result.(*json.GetBlockTemplateResult).LongPollID)
 	return resp.result, resp.err
 }
 
@@ -214,7 +225,11 @@ func (api *PublicMinerAPI) checkSubmitLimit() error {
 }
 
 func (api *PublicMinerAPI) checkGBTTime(txcount int) error {
-	if txcount < 1 && time.Since(api.miner.stats.LastestGbtRequest) < params.ActiveNetParams.TargetTimePerBlock {
+	minDuration := params.ActiveNetParams.TargetTimePerBlock
+	if minDuration < params.ActiveNetParams.MinEmptyGbtDuration {
+		minDuration = params.ActiveNetParams.MinEmptyGbtDuration
+	}
+	if txcount < 1 && time.Since(api.miner.stats.LastestGbtRequest) < minDuration {
 		log.Debug("[gbttxzreo]Client init download, qitmeer is sync tx...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading tx...")

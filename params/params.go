@@ -8,13 +8,14 @@ package params
 import (
 	"encoding/hex"
 	"errors"
+	"strings"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
-	"strings"
-	"time"
 )
 
 // CheckForDuplicateHashes checks for duplicate hashes when validating blocks.
@@ -242,6 +243,9 @@ type Params struct {
 	LedgerParams ledger.LedgerParams
 
 	CoinbaseConfig CoinbaseConfigs
+
+	// min gbt duration when empty transactions
+	MinEmptyGbtDuration time.Duration
 }
 
 type CoinbaseConfig struct {
