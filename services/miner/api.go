@@ -180,13 +180,17 @@ func (api *PublicMinerAPI) GetRemoteGBT(powType byte, extraNonce *bool) (interfa
 		return nil, err
 	}
 	resp := <-reply
-	txcount := len(resp.result.(*json.GetBlockTemplateResult).Transactions)
+	block, err := api.miner.template.Block.Clone()
+	if err != nil {
+		return nil, err
+	}
+	txcount := len(block.Transactions)
 	if err := api.checkGBTTime(txcount); err != nil {
 		api.miner.stats.MempoolEmptyWarns++
 		return nil, err
 	}
 	api.miner.stats.LastestMempoolEmptyTimestamp = 0
-	api.miner.StatsGbtRequest(time.Now().UnixMilli()-start, txcount, resp.result.(*json.GetBlockTemplateResult).LongPollID)
+	api.miner.StatsGbtRequest(time.Now().UnixMilli()-start, txcount, block.Header.ParentRoot.String())
 	return resp.result, resp.err
 }
 
