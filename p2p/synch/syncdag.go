@@ -7,6 +7,8 @@ package synch
 import (
 	"context"
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/peers"
@@ -44,6 +46,21 @@ func (s *Sync) syncDAGHandler(ctx context.Context, msg interface{}, stream libp2
 
 	gs := pe.GraphState()
 	blocks, point := s.PeerSync().dagSync.CalcSyncBlocks(gs, changePBHashsToHashs(m.MainLocator), meerdag.SubDAGMode, MaxBlockLocatorsPerMsg)
+	pe.UpdateSyncPoint(point)
+	sd := &pb.SubDAG{SyncPoint: &pb.Hash{Hash: point.Bytes()}, GraphState: s.getGraphState(), Blocks: changeHashsToPBHashs(blocks)}
+
+	return s.EncodeResponseMsg(stream, sd)
+}
+
+func (s *Sync) conSyncDAGHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
+	m, ok := msg.(*pb.ContinueSyncDAG)
+	if !ok {
+		err := fmt.Errorf("message is not type *pb.Hash")
+		return ErrMessage(err)
+	}
+
+	gs := pe.GraphState()
+	blocks, point := s.PeerSync().dagSync.CalcSyncBlocks(gs, []*hash.Hash{changePBHashToHash(m.SyncPoint), changePBHashToHash(m.Start)}, meerdag.ContinueMode, MaxBlockLocatorsPerMsg)
 	pe.UpdateSyncPoint(point)
 	sd := &pb.SubDAG{SyncPoint: &pb.Hash{Hash: point.Bytes()}, GraphState: s.getGraphState(), Blocks: changeHashsToPBHashs(blocks)}
 
@@ -96,6 +113,41 @@ func (ps *PeerSync) processSyncDAGBlocks(pe *peers.Peer) *ProcessResult {
 		pe.UpdateSyncPoint(ps.Chain().BlockDAG().GetGenesisHash())
 		return &ProcessResult{act: ProcessResultActionTryAgain}
 	}
-	log.Trace(fmt.Sprintf("processSyncDAGBlocks do GetBlockDatas blocks=%v ", len(subd.Blocks)), "processID", ps.processID)
-	return ps.processGetBlockDatas(pe, changePBHashsToHashs(subd.Blocks))
+	var pret *ProcessResult
+	conCount := 0
+	for len(subd.Blocks) > 0 {
+		blocks := changePBHashsToHashs(subd.Blocks)
+		log.Trace(fmt.Sprintf("processSyncDAGBlocks do GetBlockDatas blocks=%v ", len(subd.Blocks)), "processID", ps.processID)
+		pret = ps.processGetBlockDatas(pe, blocks)
+		if pret == nil ||
+			pret.add > 0 ||
+			pe.ChainState().ProtocolVersion < uint32(protocol.ConSyncDAGProtocolVersion) {
+			return pret
+		}
+		endBlock := blocks[len(blocks)-1]
+		if endBlock.IsEqual(pe.GraphState().GetMainChainTip()) {
+			return pret
+		}
+		if !ps.isSyncPeer(pe) || !pe.IsConnected() {
+			return pret
+		}
+		point = pe.SyncPoint()
+		log.Trace("Try continue sync DAG blocks", "point", point.String(), "start", endBlock.String(), "continue", conCount, "processID", ps.processID)
+		csd := &pb.ContinueSyncDAG{SyncPoint: &pb.Hash{Hash: point.Bytes()}, Start: &pb.Hash{Hash: endBlock.Bytes()}}
+		ret, err := ps.sy.Send(pe, RPCContinueSyncDAG, csd)
+		if err != nil {
+			log.Trace(fmt.Sprintf("processSyncDAGBlocks err=%v ", err.Error()), "processID", ps.processID)
+			return &ProcessResult{act: ProcessResultActionTryAgain}
+		}
+		subd = ret.(*pb.SubDAG)
+		if ps.IsInterrupt() {
+			return pret
+		}
+		log.Trace(fmt.Sprintf("processSyncDAGBlocks result graphstate=(%v,%v,%v), blocks=%v ",
+			subd.GraphState.MainOrder, subd.GraphState.MainHeight, subd.GraphState.Layer,
+			len(subd.Blocks)), "continue", conCount, "processID", ps.processID)
+		pe.UpdateGraphState(subd.GraphState)
+		conCount++
+	}
+	return pret
 }
