@@ -5,6 +5,11 @@ import (
 	"context"
 	ejson "encoding/json"
 	"fmt"
+	"math/rand"
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/config"
@@ -23,10 +28,6 @@ import (
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/services/mining"
-	"math/rand"
-	"net/http"
-	"sync"
-	"time"
 )
 
 const (
@@ -657,6 +658,8 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 	if !IsEqualForMiner(&m.template.Block.Header, header) {
 		return nil, fmt.Errorf("You're overdue")
 	}
+
+	start := time.Now().UnixMilli()
 	block, err := m.template.Block.Clone()
 	if err != nil {
 		return nil, err
@@ -681,7 +684,9 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 	block.Header.Difficulty = header.Difficulty
 	block.Header.Timestamp = header.Timestamp
 	block.Header.Pow = header.Pow
-	return m.submitBlock(types.NewBlock(block))
+	res, err := m.submitBlock(types.NewBlock(block))
+	m.StatsSubmit(time.Now().UnixMilli()-start, header.BlockHash().String(), len(block.Transactions)-1)
+	return res, err
 }
 
 func (m *Miner) CanMining() error {

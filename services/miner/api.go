@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
@@ -15,7 +17,6 @@ import (
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/services/mining"
-	"time"
 )
 
 const (
@@ -171,11 +172,21 @@ func (api *PublicMinerAPI) GetRemoteGBT(powType byte, extraNonce *bool) (interfa
 	if extraNonce != nil && *extraNonce {
 		coinbaseFlags = mining.CoinbaseFlagsDynamic
 	}
+	start := time.Now().UnixMilli()
+	api.miner.stats.TotalGbtRequests++
+
 	err := api.miner.RemoteMining(pow.PowType(powType), coinbaseFlags, reply)
 	if err != nil {
 		return nil, err
 	}
 	resp := <-reply
+	txcount := len(api.miner.template.Block.Transactions)
+	if err := api.checkGBTTime(txcount); err != nil {
+		api.miner.stats.MempoolEmptyWarns++
+		return nil, err
+	}
+	api.miner.stats.LastestMempoolEmptyTimestamp = 0
+	api.miner.StatsGbtRequest(time.Now().UnixMilli()-start, txcount, api.miner.template.Block.Header.ParentRoot.String())
 	return resp.result, resp.err
 }
 
