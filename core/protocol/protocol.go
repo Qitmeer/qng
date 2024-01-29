@@ -15,8 +15,14 @@ const (
 	// network.
 	InitialProcotolVersion uint32 = 42
 
+	// Support check data consistency
+	ConsistencyProtocolVersion uint32 = 43
+
+	// Support continue block sync for DAG search
+	ConSyncDAGProtocolVersion uint32 = 44
+
 	// ProtocolVersion is the latest protocol version this package supports.
-	ProtocolVersion uint32 = 43
+	ProtocolVersion uint32 = ConSyncDAGProtocolVersion
 )
 
 // Network represents which qitmeer network a message belongs to.

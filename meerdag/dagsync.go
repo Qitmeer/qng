@@ -13,8 +13,9 @@ const MaxMainLocatorNum = 32
 type SyncMode byte
 
 const (
-	DirectMode SyncMode = 0
-	SubDAGMode SyncMode = 1
+	DirectMode   SyncMode = 0
+	SubDAGMode   SyncMode = 1
+	ContinueMode SyncMode = 2
 )
 
 type DAGSync struct {
@@ -37,6 +38,23 @@ func (ds *DAGSync) CalcSyncBlocks(gs *GraphState, locator []*hash.Hash, mode Syn
 			return result, nil
 		}
 		return ds.bd.sortBlock(locator), nil
+	} else if mode == ContinueMode {
+		result := []*hash.Hash{}
+		if len(locator) <= 0 {
+			return result, nil
+		}
+		point := ds.bd.getBlock(locator[0])
+		if point == nil {
+			return result, nil
+		}
+		if !ds.bd.isOnMainChain(point.GetID()) {
+			return result, nil
+		}
+		startBlock := ds.bd.getBlock(locator[1])
+		if startBlock == nil {
+			return result, nil
+		}
+		return ds.getBlockChainFromMain(startBlock, maxHashes), point.GetHash()
 	}
 
 	var point IBlock
@@ -71,21 +89,7 @@ func (ds *DAGSync) CalcSyncBlocks(gs *GraphState, locator []*hash.Hash, mode Syn
 	if point == nil {
 		point = ds.bd.getGenesis()
 	}
-	syncPoint := point
-	for _, t := range gs.tips {
-		tip := ds.bd.getBlock(&t)
-		if tip == nil {
-			continue
-		}
-		if !tip.IsOrdered() {
-			continue
-		}
-		if tip.GetOrder() > syncPoint.GetOrder() {
-			syncPoint = tip
-		}
-	}
-	log.Trace("CalcSyncBlocks", "point", point.GetHash().String(), "syncPoint", syncPoint.GetHash().String())
-	return ds.getBlockChainFromMain(syncPoint, maxHashes), point.GetHash()
+	return ds.getBlockChainFromMain(point, maxHashes), point.GetHash()
 }
 
 // GetMainLocator

@@ -38,6 +38,8 @@ const (
 	RPCGetBlockDatas = "/qitmeer/req/getblockdatas/1"
 	// RPCGetBlocks defines the topic for the get blocks rpc method.
 	RPCSyncDAG = "/qitmeer/req/syncdag/1"
+	// RPCContinueSyncDAG defines the topic for the get blocks rpc method.
+	RPCContinueSyncDAG = "/qitmeer/req/continuesyncdag/1"
 	// RPCTransaction defines the topic for the transaction rpc method.
 	RPCTransaction = "/qitmeer/req/transaction/1"
 	// RPCInventory defines the topic for the inventory rpc method.
@@ -164,6 +166,12 @@ func (s *Sync) registerRPCHandlers() {
 	)
 
 	s.registerRPC(
+		RPCContinueSyncDAG,
+		&pb.ContinueSyncDAG{},
+		s.conSyncDAGHandler,
+	)
+
+	s.registerRPC(
 		RPCTransaction,
 		&pb.GetTxs{},
 		s.txHandler,
@@ -273,6 +281,8 @@ func (s *Sync) Send(pe *peers.Peer, protocol string, message interface{}) (inter
 	case RPCPingTopic:
 		e = s.SendPingRequest(stream, pe)
 	case RPCSyncDAG:
+		ret, e = s.sendSyncDAGRequest(stream, pe)
+	case RPCContinueSyncDAG:
 		ret, e = s.sendSyncDAGRequest(stream, pe)
 	case RPCSyncQNR:
 		ret, e = s.sendQNRRequest(stream, pe)
