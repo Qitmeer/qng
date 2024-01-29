@@ -132,5 +132,4 @@ var MixNetParams = Params{
 	CoinbaseMaturity:     16,
 	OrganizationPkScript: hexMustDecode("76a91429209320e66d96839785dd07e643a7f1592edc5a88ac"),
 	TokenAdminPkScript:   hexMustDecode("00000000c96d6d76a914b8834294977b26a44094fe2216f8a7d59af1130888ac"),
-	MinEmptyGbtDuration:  3 * time.Second,
 }
