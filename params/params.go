@@ -243,9 +243,6 @@ type Params struct {
 	LedgerParams ledger.LedgerParams
 
 	CoinbaseConfig CoinbaseConfigs
-
-	// min gbt duration when empty transactions
-	MinEmptyGbtDuration time.Duration
 }
 
 type CoinbaseConfig struct {
