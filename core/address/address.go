@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/params"
 	"golang.org/x/crypto/ripemd160"
+	"strings"
 )
 
 // encodeAddress returns a human-readable payment address given a ripemd160 hash
@@ -85,6 +86,39 @@ type ContractAddress struct {
 // DecodeAddress decodes the string encoding of an address and returns
 // the Address if addr is a valid encoding for a known address type
 func DecodeAddress(addr string) (types.Address, error) {
+	oneIndex := strings.LastIndexByte(addr, '1')
+	if oneIndex >= 1 {
+		prefix := addr[:oneIndex+1]
+		if params.IsBech32SegwitPrefix(prefix) {
+			witnessVer, witnessProg, err := decodeSegWitAddress(addr)
+			if err != nil {
+				return nil, err
+			}
+
+			// We currently only support P2WPKH and P2WSH, which is
+			// witness version 0 and P2TR which is witness version
+			// 1.
+			if witnessVer != 0 && witnessVer != 1 {
+				return nil, fmt.Errorf("unsupported witness version: %#x", byte(witnessVer))
+			}
+
+			// The HRP is everything before the found '1'.
+			hrp := prefix[:len(prefix)-1]
+
+			switch len(witnessProg) {
+			case 20:
+				return newAddressWitnessPubKeyHash(hrp, witnessProg)
+			case 32:
+				if witnessVer == 1 {
+					return newAddressTaproot(hrp, witnessProg)
+				}
+
+				return newAddressWitnessScriptHash(hrp, witnessProg)
+			default:
+				return nil, fmt.Errorf("unsupported witness program length: %d", len(witnessProg))
+			}
+		}
+	}
 	// Switch on decoded length to determine the type.
 	decoded, netID, err := base58.QitmeerCheckDecode(addr)
 	if err != nil {

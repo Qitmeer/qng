@@ -306,10 +306,11 @@ var (
 )
 
 var (
-	registeredNets    = make(map[protocol.Network]struct{})
-	pubKeyHashAddrIDs = make(map[[2]byte]struct{})
-	scriptHashAddrIDs = make(map[[2]byte]struct{})
-	hdPrivToPubKeyIDs = make(map[[4]byte][]byte)
+	registeredNets       = make(map[protocol.Network]struct{})
+	pubKeyHashAddrIDs    = make(map[[2]byte]struct{})
+	scriptHashAddrIDs    = make(map[[2]byte]struct{})
+	hdPrivToPubKeyIDs    = make(map[[4]byte][]byte)
+	bech32SegwitPrefixes = make(map[string]struct{})
 )
 
 // Register registers the network parameters for a Bitcoin network.  This may
@@ -330,6 +331,9 @@ func Register(params *Params) error {
 	scriptHashAddrIDs[params.ScriptHashAddrID] = struct{}{}
 	hdPrivToPubKeyIDs[params.HDPrivateKeyID] = params.HDPublicKeyID[:]
 
+	// A valid Bech32 encoded segwit address always has as prefix the
+	// human-readable part for the given net followed by '1'.
+	bech32SegwitPrefixes[params.Bech32HRPSegwit+"1"] = struct{}{}
 	return nil
 }
 
@@ -356,4 +360,13 @@ func hexMustDecode(hexStr string) []byte {
 		panic(err)
 	}
 	return b
+}
+
+// IsBech32SegwitPrefix returns whether the prefix is a known prefix for segwit
+// addresses on any default or registered network.  This is used when decoding
+// an address string into a specific address type.
+func IsBech32SegwitPrefix(prefix string) bool {
+	prefix = strings.ToLower(prefix)
+	_, ok := bech32SegwitPrefixes[prefix]
+	return ok
 }
