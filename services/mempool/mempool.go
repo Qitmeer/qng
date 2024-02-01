@@ -14,7 +14,6 @@ import (
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
-	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/message"
 	"github.com/Qitmeer/qng/core/types"
 	"math"
@@ -40,7 +39,7 @@ type TxPool struct {
 	pennyTotal    float64 // exponentially decaying total for penny spends.
 	lastPennyUnix int64   // unix time of last ``penny spend''
 
-	notifyT *time.Timer
+	dirty atomic.Bool
 }
 
 // New returns a new memory pool for validating and storing standalone
@@ -233,25 +232,9 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 		mp.cfg.FeeEstimator.ObserveTransaction(txD)
 	}
 
-	mp.notify()
+	mp.dirty.Store(true)
 
 	return txD
-}
-
-func (mp *TxPool) notify() {
-	DELAY := time.Second * 2
-	if mp.notifyT == nil {
-		mp.notifyT = time.NewTimer(DELAY)
-		go func() {
-			select {
-			case <-mp.notifyT.C:
-			}
-			mp.cfg.Events.Send(event.New(event.MempoolTxAdd))
-			mp.notifyT.Stop()
-			mp.notifyT = nil
-		}()
-		return
-	}
 }
 
 // Call addTransaction
@@ -1294,4 +1277,12 @@ func (mp *TxPool) AddUnconfirmedTx(tx *types.Tx, utxoView *utxo.UtxoViewpoint) {
 		pkScripts = append(pkScripts, txOut.PkScript)
 	}
 	mp.cfg.IndexManager.AddrIndex().AddUnconfirmedTx(tx, pkScripts)
+}
+
+func (mp *TxPool) Dirty() bool {
+	return mp.dirty.Load()
+}
+
+func (mp *TxPool) CleanDirty() {
+	mp.dirty.Store(false)
 }
