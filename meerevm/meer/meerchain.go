@@ -342,7 +342,7 @@ func (b *MeerChain) prepareEnvironment(state model.BlockState) (*types.Header, e
 		}
 		log.Info("Try to restore block state for EVM", "evm.hash", list[i].GetEVMHash().String(), "evm.number", list[i].GetEVMNumber(), "state.order", list[i].GetOrder())
 		block := b.chain.Ether().BlockChain().GetBlock(list[i].GetEVMHash(), list[i].GetEVMNumber())
-		if block != nil {
+		if block == nil {
 			log.Info("Try to rebuild evm block", "state.order", list[i].GetOrder())
 			sb, err := b.consensus.BlockChain().BlockByOrder(list[i].GetOrder())
 			if err != nil {
