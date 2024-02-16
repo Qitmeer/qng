@@ -184,6 +184,27 @@ func (ds *DAGSync) getBlockChainFromMain(point IBlock, maxHashes uint) []*hash.H
 			break
 		}
 	}
+	rlen := len(result)
+	if uint(rlen) < maxHashes &&
+		rlen > 0 &&
+		result[rlen-1].IsEqual(mainTip.GetHash()) {
+		pdb, ok := ds.bd.GetInstance().(*Phantom)
+		if ok {
+			if !pdb.GetDiffAnticone().IsEmpty() {
+				da := pdb.GetDiffAnticone().SortList(false)
+				for _, id := range da {
+					block := ds.bd.getBlockById(id)
+					if block == nil {
+						continue
+					}
+					result = append(result, block.GetHash())
+					if uint(len(result)) >= maxHashes {
+						break
+					}
+				}
+			}
+		}
+	}
 	return result
 }
 
