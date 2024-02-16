@@ -62,6 +62,8 @@ const (
 	RPCGetData = "/qitmeer/req/getdata/1"
 	// RPCStateRoot defines the topic for the stateroot rpc method.
 	RPCStateRoot = "/qitmeer/req/stateroot/1"
+	// RPCBroadcastBlock defines the topic for the broadcast block rpc method.
+	RPCBroadcastBlock = "/qitmeer/req/broadcastblock/1"
 )
 
 // Time to first byte timeout. The maximum time to wait for first byte of
@@ -236,6 +238,12 @@ func (s *Sync) registerRPCHandlers() {
 		&pb.StateRootReq{},
 		s.stateRootHandler,
 	)
+
+	s.registerRPC(
+		RPCBroadcastBlock,
+		&pb.BroadcastBlock{},
+		s.broadcastBlockHandler,
+	)
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
@@ -290,6 +298,8 @@ func (s *Sync) Send(pe *peers.Peer, protocol string, message interface{}) (inter
 		ret, e = s.sendTxRequest(stream, pe)
 	case RPCStateRoot:
 		ret, e = s.sendStateRootRequest(stream, pe)
+	case RPCBroadcastBlock:
+		e = s.sendBroadcastBlockRequest(stream, pe)
 	default:
 		return nil, fmt.Errorf("Can't support:%s", protocol)
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"time"
 )
 
@@ -69,7 +70,8 @@ type BlockAcceptedNotifyData struct {
 	Block  *types.SerializedBlock
 	Height uint64
 
-	Flags BehaviorFlags
+	Flags  BehaviorFlags
+	Source *peer.ID
 }
 
 // ReorganizationNotifyData is the structure for data indicating information

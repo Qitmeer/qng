@@ -21,6 +21,9 @@ const (
 	// Add block from RPC interface
 	BFRPCAdd
 
+	// Add block from broadcast interface
+	BFBroadcast
+
 	// BFNone is a convenience value to specifically indicate no flags.
 	BFNone BehaviorFlags = 0
 )

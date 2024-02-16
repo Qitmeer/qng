@@ -16,3 +16,7 @@ message BlockDatas {
 message BlockData {
   bytes blockBytes = 100 [(gogoproto.moretags) = "ssz-max:\"1048576\""];
 }
+
+message BroadcastBlock {
+  BlockData block =1;
+}

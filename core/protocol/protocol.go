@@ -21,8 +21,11 @@ const (
 	// Support continue block sync for DAG search
 	ConSyncDAGProtocolVersion uint32 = 44
 
+	// Support continue block sync for DAG search
+	BroadcastblockProtocolVersion uint32 = 45
+
 	// ProtocolVersion is the latest protocol version this package supports.
-	ProtocolVersion uint32 = ConSyncDAGProtocolVersion
+	ProtocolVersion uint32 = BroadcastblockProtocolVersion
 )
 
 // Network represents which qitmeer network a message belongs to.
