@@ -258,7 +258,7 @@ func (b *BlockChain) processOrphans(flags BehaviorFlags) error {
 			continue
 		}
 		b.RemoveOrphanBlock(cur)
-		b.maybeAcceptBlock(cur.block, flags)
+		b.maybeAcceptBlock(cur.block, flags, nil)
 	}
 	return nil
 }

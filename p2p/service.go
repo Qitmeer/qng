@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/json"
 	pv "github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/discover"
@@ -477,6 +478,30 @@ func (s *Service) RelayInventory(nds []*notify.NotifyData) {
 
 func (s *Service) BroadcastMessage(data interface{}) {
 
+}
+
+func (s *Service) BroadcastBlock(block *types.SerializedBlock, source *peer.ID) error {
+	for _, pe := range s.Peers().CanSyncPeers() {
+		if source != nil {
+			if pe.GetID() == *source {
+				continue
+			}
+		}
+		if pe.ChainState().ProtocolVersion < uint32(pv.BroadcastblockProtocolVersion) {
+			continue
+		}
+		go func(pe *peers.Peer) {
+			blockBytes, err := block.Bytes()
+			if err != nil {
+				log.Error(err.Error())
+				return
+			}
+			if _, err := s.sy.Send(pe, synch.RPCBroadcastBlock, &pb.BroadcastBlock{Block: &pb.BlockData{BlockBytes: blockBytes}}); err != nil {
+				log.Error(err.Error())
+			}
+		}(pe)
+	}
+	return nil
 }
 
 func (s *Service) GetBanlist() map[peer.ID][]*json.BadResponse {

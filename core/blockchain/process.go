@@ -8,6 +8,7 @@ package blockchain
 import (
 	"container/list"
 	"fmt"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"time"
 
 	"github.com/Qitmeer/qng/common/hash"
@@ -36,12 +37,12 @@ import (
 //
 // This function is safe for concurrent access.
 // return IsOrphan,error
-func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags) (meerdag.IBlock, bool, error) {
+func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFlags, source *peer.ID) (meerdag.IBlock, bool, error) {
 	if b.IsShutdown() {
 		return nil, false, fmt.Errorf("block chain is shutdown")
 	}
 	block.Reset()
-	msg := processMsg{block: block, flags: flags, result: make(chan *processResult)}
+	msg := processMsg{block: block, flags: flags, result: make(chan *processResult), source: source}
 	b.msgChan <- &msg
 	result := <-msg.result
 	return result.block, result.isOrphan, result.err
@@ -54,7 +55,7 @@ out:
 		select {
 		case msg := <-b.msgChan:
 			start := time.Now()
-			ib, isOrphan, err := b.processBlock(msg.block, msg.flags)
+			ib, isOrphan, err := b.processBlock(msg.block, msg.flags, msg.source)
 			blockProcessTimer.Update(time.Since(start))
 			msg.result <- &processResult{isOrphan: isOrphan, err: err, block: ib}
 		case <-b.quit:
@@ -75,14 +76,14 @@ cleanup:
 	log.Trace("BlockChain handler done")
 }
 
-func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFlags) (meerdag.IBlock, bool, error) {
+func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFlags, source *peer.ID) (meerdag.IBlock, bool, error) {
 	isorphan, err := b.preProcessBlock(block, flags)
 	if err != nil || isorphan {
 		return nil, isorphan, err
 	}
 	// The block has passed all context independent checks and appears sane
 	// enough to potentially accept it into the block chain.
-	ib, err := b.maybeAcceptBlock(block, flags)
+	ib, err := b.maybeAcceptBlock(block, flags, source)
 	if err != nil {
 		return nil, false, err
 	}
@@ -193,7 +194,7 @@ func (b *BlockChain) preProcessBlock(block *types.SerializedBlock, flags Behavio
 // their documentation for how the flags modify their behavior.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags BehaviorFlags) (meerdag.IBlock, error) {
+func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags BehaviorFlags, source *peer.ID) (meerdag.IBlock, error) {
 	if onEnd := l.LogAndMeasureExecutionTime(log, "BlockChain.maybeAcceptBlock"); onEnd != nil {
 		defer onEnd()
 	}
@@ -293,6 +294,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		Block:                block,
 		Flags:                flags,
 		Height:               uint64(ib.GetHeight()),
+		Source:               source,
 	})
 	if b.Acct != nil {
 		err = b.Acct.Commit()
@@ -304,7 +306,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 }
 
 func (b *BlockChain) FastAcceptBlock(block *types.SerializedBlock, flags BehaviorFlags) (meerdag.IBlock, error) {
-	return b.maybeAcceptBlock(block, flags)
+	return b.maybeAcceptBlock(block, flags, nil)
 }
 
 // connectBestChain handles connecting the passed block to the chain while
@@ -788,6 +790,7 @@ type processMsg struct {
 	block  *types.SerializedBlock
 	flags  BehaviorFlags
 	result chan *processResult
+	source *peer.ID
 }
 
 type processResult struct {

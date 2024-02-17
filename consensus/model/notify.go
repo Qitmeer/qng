@@ -13,7 +13,7 @@ import (
 // and rpc server.
 type Notify interface {
 	AnnounceNewTransactions(newTxs []*types.TxDesc, filters []peer.ID)
-	RelayInventory(data interface{}, filters []peer.ID)
+	RelayInventory(block *types.SerializedBlock, flags uint32, source *peer.ID)
 	BroadcastMessage(data interface{})
 	TransactionConfirmed(tx *types.Tx)
 	AddRebroadcastInventory(newTxs []*types.TxDesc)
