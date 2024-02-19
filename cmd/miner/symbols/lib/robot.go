@@ -230,7 +230,7 @@ func (this *QitmeerRobot) SubmitWork() {
 				var height int
 				var blockHash string
 				var gbtID string
-				if this.SubmitCount == 10 {
+				if this.SubmitCount == this.Cfg.OptionConfig.WindowSize {
 					allNeedTime := time.Duration(this.Cfg.OptionConfig.WindowSize * this.Cfg.OptionConfig.BlockPerTime * int(time.Second))
 					offset := allNeedTime - time.Since(this.SubmitStart)
 					common.MinerLoger.Info("Finished mining 10 blocks", "spent", time.Since(this.SubmitStart), "slept", offset)

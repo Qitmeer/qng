@@ -74,8 +74,8 @@ type OptionalConfig struct {
 	Freqs         string `long:"freqs" description:"freq settings" default-mask:"1000,200|"`
 	BaseDiff      uint   `long:"base_diff" description:"base_diff settings,default 4G" default-mask:"224"`
 	UartPath      string `long:"uart_path" description:"uarts path split with ," default-mask:"/dev/ttyS1"`
-	WindowSize    int    `long:"windowsize" description:"" default-mask:"10"`
-	BlockPerTime  int    `long:"blockpertime" description:"" default-mask:"1"`
+	WindowSize    int    `long:"windowsize" description:"windows size" default-mask:"10"`
+	BlockPerTime  int    `long:"blockpertime" description:"block per time" default-mask:"1"`
 }
 
 type PoolConfig struct {
