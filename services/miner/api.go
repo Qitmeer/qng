@@ -218,9 +218,9 @@ func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string, extraNonce *
 }
 
 func (api *PublicMinerAPI) checkSubmitLimit() error {
-	if time.Since(api.miner.stats.LastestSubmit) < SubmitInterval {
-		return fmt.Errorf("Submission interval Limited:%s < %s\n", time.Since(api.miner.stats.LastestSubmit), SubmitInterval)
-	}
+	// if time.Since(api.miner.stats.LastestSubmit) < SubmitInterval {
+	// 	return fmt.Errorf("Submission interval Limited:%s < %s\n", time.Since(api.miner.stats.LastestSubmit), SubmitInterval)
+	// }
 	return nil
 }
 

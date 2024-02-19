@@ -1,4 +1,5 @@
-/**
+/*
+*
 Qitmeer
 james
 */
@@ -7,10 +8,11 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/Qitmeer/qng/cmd/miner/common"
 	"math"
 	"sync"
 	"time"
+
+	"github.com/Qitmeer/qng/cmd/miner/common"
 )
 
 type BaseDevice interface {
