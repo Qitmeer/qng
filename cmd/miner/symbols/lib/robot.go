@@ -232,8 +232,9 @@ func (this *QitmeerRobot) SubmitWork() {
 				var gbtID string
 				if this.SubmitCount == this.Cfg.OptionConfig.WindowSize {
 					allNeedTime := time.Duration(this.Cfg.OptionConfig.WindowSize * this.Cfg.OptionConfig.BlockPerTime * int(time.Second))
-					offset := allNeedTime - time.Since(this.SubmitStart)
-					common.MinerLoger.Info("Finished mining 10 blocks", "spent", time.Since(this.SubmitStart), "slept", offset)
+					spent := time.Since(this.SubmitStart)
+					offset := allNeedTime - spent
+					common.MinerLoger.Info(fmt.Sprintf("Finished mining %d blocks", this.Cfg.OptionConfig.WindowSize), "spent", spent, "slept", offset)
 					if offset > 0 {
 						t1 := time.NewTimer(offset)
 						<-t1.C
