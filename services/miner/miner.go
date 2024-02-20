@@ -358,11 +358,6 @@ out:
 						}
 						if m.updateBlockTemplate(true) == nil {
 							m.worker.Update()
-						} else {
-							if msg.block != nil {
-								close(msg.block)
-								msg.block = nil
-							}
 						}
 						continue
 					}
