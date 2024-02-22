@@ -372,11 +372,12 @@ func (s *Sync) broadcastBlockHandler(ctx context.Context, msg interface{}, strea
 		}
 	}
 	peid := pe.GetID()
-	_, _, err = s.p2p.BlockChain().ProcessBlock(block, blockchain.BFBroadcast, &peid)
-	if err != nil {
-		log.Error("Failed to process block", "hash", block.Hash(), "error", err)
-		return s.EncodeResponseMsg(stream, ret)
-	}
+	go func() {
+		_, _, err = s.p2p.BlockChain().ProcessBlock(block, blockchain.BFBroadcast, &peid)
+		if err != nil {
+			log.Error("Failed to process block", "hash", block.Hash(), "error", err)
+		}
+	}()
 	ret = 1
 	return s.EncodeResponseMsg(stream, ret)
 }
