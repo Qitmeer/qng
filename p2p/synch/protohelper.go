@@ -116,6 +116,13 @@ func getMessageString(message interface{}) string {
 			str += tx.String()
 		}
 		return str
+	case *pb.BroadcastBlock:
+		block, err := types.NewBlockFromBytes(msg.Block.BlockBytes)
+		if err != nil {
+			return err.Error()
+		}
+		str += fmt.Sprintf(" blockHash:%s", block.Hash().String())
+		return str
 	}
 	str += fmt.Sprintf("%v", message)
 	return str
