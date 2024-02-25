@@ -259,15 +259,47 @@ func (api *PublicBlockAPI) IsBlue(h hash.Hash) (interface{}, error) {
 
 // Return a list hash of the tip blocks of the DAG at this moment.
 func (api *PublicBlockAPI) Tips() (interface{}, error) {
-	tipsList, err := api.chain.TipGeneration()
-	if err != nil {
-		return nil, err
+	tips := api.chain.BlockDAG().GetTipsList()
+	tipinfos := json.TipsInfo{Count: len(tips), Valid: []qjson.TipInfo{}}
+	validtips := api.chain.BlockDAG().GetValidTips(meerdag.MaxPriority)
+	mtheight := api.chain.BlockDAG().GetMainChainTip().GetHeight()
+
+	temp := map[hash.Hash]struct{}{}
+	for _, tiphash := range validtips {
+		temp[*tiphash] = struct{}{}
 	}
-	tips := []string{}
-	for _, v := range tipsList {
-		tips = append(tips, v.String())
+	getTipInfo := func(block meerdag.IBlock) qjson.TipInfo {
+		pruneHeight := int64(block.GetHeight()) + api.chain.BlockDAG().GetTipsDisLimit()
+		pruneCD := pruneHeight - int64(mtheight)
+		if pruneCD < 0 {
+			pruneCD = 0
+		}
+		return qjson.TipInfo{ID: uint64(block.GetID()),
+			Hash:        block.GetHash().String(),
+			Height:      uint64(block.GetHeight()),
+			PruneHeight: uint64(pruneHeight),
+			PruneCD:     uint64(pruneCD)}
 	}
-	return tips, nil
+	for _, tip := range tips {
+		if tip.GetHash().IsEqual(validtips[0]) {
+			tipinfos.Valid = append(tipinfos.Valid, getTipInfo(tip))
+		}
+	}
+	for _, tip := range tips {
+		if tip.GetHash().IsEqual(validtips[0]) {
+			continue
+		}
+		if _, ok := temp[*tip.GetHash()]; ok {
+			tipinfos.Valid = append(tipinfos.Valid, getTipInfo(tip))
+		} else {
+			if len(tipinfos.Invalid) <= 0 {
+				tipinfos.Invalid = []qjson.TipInfo{getTipInfo(tip)}
+			} else {
+				tipinfos.Invalid = append(tipinfos.Invalid, getTipInfo(tip))
+			}
+		}
+	}
+	return tipinfos, nil
 }
 
 // GetCoinbase
