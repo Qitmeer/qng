@@ -227,6 +227,12 @@ func (bd *MeerDAG) SetTipsDisLimit(limit int64) {
 	bd.tipsDisLimit = limit
 }
 
+func (bd *MeerDAG) GetTipsDisLimit() int64 {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	return bd.tipsDisLimit
+}
+
 func (bd *MeerDAG) GetTipsSet() *IdSet {
 	return bd.tips
 }
