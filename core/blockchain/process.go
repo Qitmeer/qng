@@ -103,8 +103,6 @@ func (b *BlockChain) preProcessBlock(block *types.SerializedBlock, flags Behavio
 	b.ChainRLock()
 	defer b.ChainRUnlock()
 
-	fastAdd := flags&BFFastAdd == BFFastAdd
-
 	blockHash := block.Hash()
 	log.Trace("Processing block ", "hash", blockHash)
 
@@ -148,7 +146,7 @@ func (b *BlockChain) preProcessBlock(block *types.SerializedBlock, flags Behavio
 			return false, ruleError(ErrCheckpointTimeTooOld, str)
 		}
 
-		if !fastAdd {
+		if !flags.Has(BFFastAdd) {
 			// Even though the checks prior to now have already ensured the
 			// proof of work exceeds the claimed amount, the claimed amount
 			// is a field in the block header which could be forged.  This
@@ -207,8 +205,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 
 	newNode := NewBlockNode(block)
 
-	fastAdd := flags&BFFastAdd == BFFastAdd
-	if !fastAdd {
+	if !flags.Has(BFFastAdd) {
 		mainParent := b.bd.GetBlock(newNode.GetMainParent())
 		if mainParent == nil {
 			b.ChainUnlock()
@@ -282,7 +279,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		}
 	}
 
-	if flags&BFP2PAdd == BFP2PAdd {
+	if flags.Has(BFP2PAdd) {
 		b.progressLogger.LogBlockOrder(ib.GetOrder(), block)
 	}
 
