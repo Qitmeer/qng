@@ -127,4 +127,15 @@ type MeerDAGInfoResult struct {
 	BlockCacheHeightSize uint64 `json:"bcacheheightsize"`
 	BlockCacheRate       string `json:"bcacherate"`
 	BlockDataCacheSize   string `json:"bdcachesize"`
+	AnticoneSize         int    `json:"anticonesize"`
+}
+
+type ChainInfoResult struct {
+	Count           uint64  `json:"count"`
+	Start           string  `json:"start"`
+	End             string  `json:"end"`
+	BlocksPerSecond float64 `json:"blockspersecond"`
+	TxsPerSecond    float64 `json:"txspersecond"`
+	SecondPerHeight string  `json:"secondperheight"`
+	Concurrency     float64 `json:"concurrency"`
 }

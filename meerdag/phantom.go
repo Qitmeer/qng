@@ -823,6 +823,10 @@ func (ph *Phantom) CheckBlockOrderDB(maxDepth uint64) error {
 	return nil
 }
 
+func (ph *Phantom) AnticoneSize() int {
+	return ph.anticoneSize
+}
+
 // The main chain of DAG is support incremental expansion
 type MainChain struct {
 	bd      *MeerDAG

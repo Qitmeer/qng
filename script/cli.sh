@@ -743,6 +743,15 @@ function dag_info(){
   get_result "$data"
 }
 
+function chain_info(){
+  local count=$1
+  if [ "$count" == "" ]; then
+    count=0
+  fi
+  local data='{"jsonrpc":"2.0","method":"getChainInfo","params":['$count'],"id":1}'
+  get_result "$data"
+}
+
 function database_info(){
   local data='{"jsonrpc":"2.0","method":"getDatabaseInfo","params":[],"id":1}'
   get_result "$data"
@@ -845,6 +854,7 @@ function usage(){
   echo "  getaddresses <private key>"
   echo "  modules"
   echo "  daginfo"
+  echo "  chaininfo"
   echo "  dbinfo"
   echo "  config"
   echo "block  :"
@@ -1572,6 +1582,10 @@ elif [ "$1" == "remotegbt" ]; then
 elif [ "$1" == "daginfo" ]; then
   shift
   dag_info $@
+
+elif [ "$1" == "chaininfo" ]; then
+  shift
+  chain_info $@
 
 elif [ "$1" == "dbinfo" ]; then
   shift

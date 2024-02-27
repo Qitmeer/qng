@@ -8,6 +8,7 @@ package node
 import (
 	js "encoding/json"
 	"fmt"
+	"github.com/Qitmeer/qng/core/blockchain"
 	"math/big"
 	"strconv"
 	"time"
@@ -221,6 +222,7 @@ func (api *PublicBlockChainAPI) GetMeerDAGInfo() (interface{}, error) {
 	mdr.BlockCacheHeightSize = md.GetMinBlockCacheSize()
 	mdr.BlockCacheRate = fmt.Sprintf("%.2f%%", float64(md.GetBlockCacheSize())/float64(mdr.Total)*100)
 	mdr.BlockDataCacheSize = fmt.Sprintf("%d / %d", md.GetBlockDataCacheSize(), md.GetMinBlockDataCacheSize())
+	mdr.AnticoneSize = md.GetInstance().(*meerdag.Phantom).AnticoneSize()
 	return mdr, nil
 }
 
@@ -233,6 +235,76 @@ func (api *PublicBlockChainAPI) GetDatabaseInfo() (interface{}, error) {
 		json.KV{Key: "snapshot", Val: api.node.db.SnapshotInfo()},
 	}
 	return ret, nil
+}
+
+func (api *PublicBlockChainAPI) GetChainInfo(lastCount int) (interface{}, error) {
+	if !api.node.GetPeerServer().IsCurrent() {
+		return nil, fmt.Errorf("Busy, try again later")
+	}
+	count := meerdag.MinBlockPruneSize
+	if lastCount > 1 {
+		count = lastCount
+	}
+	md := api.node.GetBlockChain().BlockDAG()
+	mainTip := md.GetMainChainTip()
+	var start meerdag.IBlock
+	var blockNode *blockchain.BlockNode
+	info := json.ChainInfoResult{Count: 0, End: fmt.Sprintf("%s (order:%d)", mainTip.GetHash().String(), mainTip.GetOrder())}
+	totalTxs := 0
+	err := md.Foreach(mainTip, uint(count), meerdag.All, func(block meerdag.IBlock) (bool, error) {
+		if block.GetID() <= 0 {
+			return true, nil
+		}
+		blockNode = api.node.GetBlockChain().GetBlockNode(block)
+		if blockNode == nil {
+			return true, nil
+		}
+		info.Count++
+		totalTxs += blockNode.GetPriority()
+		start = block
+		return true, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if info.Count <= 0 {
+		return nil, fmt.Errorf("No blocks")
+	}
+	totalTxs -= blockNode.GetPriority()
+	if totalTxs < 0 {
+		totalTxs = 0
+	}
+	info.Start = fmt.Sprintf("%s (order:%d)", start.GetHash().String(), start.GetOrder())
+	startNode := api.node.GetBlockChain().GetBlockHeader(start)
+	if startNode == nil {
+		return nil, fmt.Errorf("No block:%s", start.GetHash().String())
+	}
+	endNode := api.node.GetBlockChain().GetBlockNode(mainTip)
+	if endNode == nil {
+		return nil, fmt.Errorf("No block:%s", mainTip.GetHash().String())
+	}
+	totalTxs += endNode.GetPriority()
+	totalTime := endNode.GetTimestamp() - startNode.Timestamp.Unix()
+	if totalTime < 0 {
+		totalTime = 0
+	}
+	if totalTime <= 0 {
+		return nil, fmt.Errorf("Time is too short")
+	}
+	info.BlocksPerSecond = float64(info.Count) / float64(totalTime)
+	info.TxsPerSecond = float64(totalTxs) / float64(totalTime)
+
+	totalHeight := int64(mainTip.GetHeight()) - int64(start.GetHeight())
+	if totalHeight < 0 {
+		totalHeight = 0
+	}
+	if totalHeight > 0 {
+		secondPerHeight := time.Duration(totalTime) * time.Second / time.Duration(totalHeight)
+		info.SecondPerHeight = secondPerHeight.String()
+		info.Concurrency = float64(info.Count) / float64(totalHeight)
+	}
+
+	return info, nil
 }
 
 type PrivateBlockChainAPI struct {
