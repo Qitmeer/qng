@@ -279,7 +279,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		}
 	}
 
-	if flags.Has(BFP2PAdd) {
+	if flags.Has(BFP2PAdd) || flags.Has(BFBroadcast) {
 		b.progressLogger.LogBlockOrder(ib.GetOrder(), block)
 	}
 
