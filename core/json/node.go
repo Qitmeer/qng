@@ -138,4 +138,5 @@ type ChainInfoResult struct {
 	TxsPerSecond    float64 `json:"txspersecond"`
 	SecondPerHeight string  `json:"secondperheight"`
 	Concurrency     float64 `json:"concurrency"`
+	EmptyBlockRate  string  `json:"emptyblockrate"`
 }
