@@ -61,6 +61,7 @@ type Config struct {
 	BlockPrioritySize uint32   `long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
 	miningAddrs       []types.Address
 	GBTNotify         []string `long:"gbtnotify" description:"HTTP URL list to be notified of new block template"`
+	ObsoleteHeight    int      `long:"obsoleteheight" description:"What is the maximum allowable height of block obsolescence for submission"`
 
 	//WebSocket support
 	RPCMaxWebsockets     int `long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`

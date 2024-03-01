@@ -40,6 +40,7 @@ const (
 	defaultMinBlockPruneSize      = 2000
 	defaultMinBlockDataCache      = 2000
 	defaultMinRelayTxFee          = int64(1e4)
+	defaultObsoleteHeight         = 5
 )
 const (
 	defaultSigCacheMaxSize = 100000
@@ -619,6 +620,12 @@ var (
 			Usage:       "Scheme to use for storing ethereum state ('hash' or 'path')",
 			Destination: &cfg.StateScheme,
 		},
+		&cli.IntFlag{
+			Name:        "obsoleteheight",
+			Usage:       "What is the maximum allowable height of block obsolescence for submission",
+			Value:       defaultObsoleteHeight,
+			Destination: &cfg.ObsoleteHeight,
+		},
 	}
 )
 
@@ -653,6 +660,7 @@ func DefaultConfig(homeDir string) *config.Config {
 		AcceptNonStd:         true,
 		RPCUser:              defaultRPCUser,
 		RPCPass:              defaultRPCPass,
+		ObsoleteHeight:       defaultObsoleteHeight,
 	}
 	if len(homeDir) > 0 {
 		hd, err := filepath.Abs(homeDir)
