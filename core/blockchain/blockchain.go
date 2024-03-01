@@ -432,6 +432,23 @@ func (b *BlockChain) isCurrent() bool {
 	return lastNode.GetTimestamp() >= minus24Hours
 }
 
+func (b *BlockChain) IsNearlySynced() bool {
+	lastBlock := b.bd.GetMainChainTip()
+	if lastBlock.GetID() == 0 {
+		return true
+	}
+	checkpoint := b.LatestCheckpoint()
+	if checkpoint != nil && uint64(lastBlock.GetLayer()) < checkpoint.Layer {
+		return false
+	}
+	lastNode := b.GetBlockNode(lastBlock)
+	if lastNode == nil {
+		return false
+	}
+	startTargetTime := b.timeSource.AdjustedTime().Add(-b.params.TargetTimespan).Unix()
+	return lastNode.GetTimestamp() >= startTargetTime
+}
+
 // TipGeneration returns the entire generation of blocks stemming from the
 // parent of the current tip.
 //

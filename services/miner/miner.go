@@ -685,9 +685,11 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 }
 
 func (m *Miner) CanMining() error {
-	currentOrder := m.BlockChain().BestSnapshot().GraphState.GetTotal() - 1
-	if currentOrder != 0 && !m.p2pSer.IsCurrent() {
-		log.Trace("Client in initial download, qitmeer is downloading blocks...")
+	if m.cfg.SubmitNoSynced {
+		return nil
+	}
+	if !m.BlockChain().IsNearlySynced() {
+		log.Warn("Client in initial download, qitmeer is downloading blocks...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading blocks...")
 	}

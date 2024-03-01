@@ -626,6 +626,12 @@ var (
 			Value:       defaultObsoleteHeight,
 			Destination: &cfg.ObsoleteHeight,
 		},
+		&cli.BoolFlag{
+			Name:        "allowsubmitwhennotsynced",
+			Usage:       "Allow the node to accept blocks from RPC while not synced (this flag is mainly used for testing)",
+			Value:       false,
+			Destination: &cfg.SubmitNoSynced,
+		},
 	}
 )
 
@@ -661,6 +667,7 @@ func DefaultConfig(homeDir string) *config.Config {
 		RPCUser:              defaultRPCUser,
 		RPCPass:              defaultRPCPass,
 		ObsoleteHeight:       defaultObsoleteHeight,
+		SubmitNoSynced:       false,
 	}
 	if len(homeDir) > 0 {
 		hd, err := filepath.Abs(homeDir)
