@@ -373,9 +373,12 @@ func (s *Sync) broadcastBlockHandler(ctx context.Context, msg interface{}, strea
 	}
 	peid := pe.GetID()
 	go func() {
+		if s.p2p.BlockChain().BlockDAG().HasBlock(block.Hash()) {
+			return
+		}
 		_, _, err = s.p2p.BlockChain().ProcessBlock(block, blockchain.BFBroadcast, &peid)
 		if err != nil {
-			log.Error("Failed to process block", "hash", block.Hash(), "error", err)
+			log.Trace("Failed to process block", "hash", block.Hash(), "error", err)
 		}
 	}()
 	ret = 1
