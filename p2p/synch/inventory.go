@@ -29,7 +29,9 @@ func (s *Sync) tryToSendInventoryRequest(pe *peers.Peer, invs []*pb.InvVect) err
 
 			if len(invMsg.Invs) >= MaxInvPerMsg ||
 				(i == (len(invs)-1) && len(invMsg.Invs) > 0) {
-				go s.Send(pe, RPCInventory, invMsg)
+				go func(msg *pb.Inventory) {
+					s.Send(pe, RPCInventory, msg)
+				}(invMsg)
 				invMsg = nil
 			}
 		}

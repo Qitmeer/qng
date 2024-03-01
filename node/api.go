@@ -251,6 +251,7 @@ func (api *PublicBlockChainAPI) GetChainInfo(lastCount int) (interface{}, error)
 	var blockNode *blockchain.BlockNode
 	info := json.ChainInfoResult{Count: 0, End: fmt.Sprintf("%s (order:%d)", mainTip.GetHash().String(), mainTip.GetOrder())}
 	totalTxs := 0
+	emptyBlocks := 0
 	err := md.Foreach(mainTip, uint(count), meerdag.All, func(block meerdag.IBlock) (bool, error) {
 		if block.GetID() <= 0 {
 			return true, nil
@@ -261,6 +262,9 @@ func (api *PublicBlockChainAPI) GetChainInfo(lastCount int) (interface{}, error)
 		}
 		info.Count++
 		totalTxs += blockNode.GetPriority()
+		if blockNode.GetPriority() <= 1 {
+			emptyBlocks++
+		}
 		start = block
 		return true, nil
 	})
@@ -274,6 +278,9 @@ func (api *PublicBlockChainAPI) GetChainInfo(lastCount int) (interface{}, error)
 	if totalTxs < 0 {
 		totalTxs = 0
 	}
+	if blockNode.GetPriority() <= 1 {
+		emptyBlocks--
+	}
 	info.Start = fmt.Sprintf("%s (order:%d)", start.GetHash().String(), start.GetOrder())
 	startNode := api.node.GetBlockChain().GetBlockHeader(start)
 	if startNode == nil {
@@ -284,6 +291,9 @@ func (api *PublicBlockChainAPI) GetChainInfo(lastCount int) (interface{}, error)
 		return nil, fmt.Errorf("No block:%s", mainTip.GetHash().String())
 	}
 	totalTxs += endNode.GetPriority()
+	if endNode.GetPriority() <= 1 {
+		emptyBlocks++
+	}
 	totalTime := endNode.GetTimestamp() - startNode.Timestamp.Unix()
 	if totalTime < 0 {
 		totalTime = 0
@@ -303,7 +313,8 @@ func (api *PublicBlockChainAPI) GetChainInfo(lastCount int) (interface{}, error)
 		info.SecondPerHeight = secondPerHeight.String()
 		info.Concurrency = float64(info.Count) / float64(totalHeight)
 	}
-
+	info.EmptyBlockRate = fmt.Sprintf("%d%%", uint64(emptyBlocks*100)/info.Count)
+	info.ProcessQueueSize = int32(api.node.GetBlockChain().ProcessQueueSize())
 	return info, nil
 }
 

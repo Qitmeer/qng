@@ -139,6 +139,8 @@ type BlockChain struct {
 
 	meerChain         *meer.MeerChain
 	difficultyManager model.DifficultyManager
+
+	processQueueMap sync.Map
 }
 
 func (b *BlockChain) Init() error {
@@ -428,6 +430,23 @@ func (b *BlockChain) isCurrent() bool {
 		return false
 	}
 	return lastNode.GetTimestamp() >= minus24Hours
+}
+
+func (b *BlockChain) IsNearlySynced() bool {
+	lastBlock := b.bd.GetMainChainTip()
+	if lastBlock.GetID() == 0 {
+		return true
+	}
+	checkpoint := b.LatestCheckpoint()
+	if checkpoint != nil && uint64(lastBlock.GetLayer()) < checkpoint.Layer {
+		return false
+	}
+	lastNode := b.GetBlockNode(lastBlock)
+	if lastNode == nil {
+		return false
+	}
+	startTargetTime := b.timeSource.AdjustedTime().Add(-b.params.TargetTimespan).Unix()
+	return lastNode.GetTimestamp() >= startTargetTime
 }
 
 // TipGeneration returns the entire generation of blocks stemming from the
@@ -1014,6 +1033,15 @@ func (b *BlockChain) GetBlockState(order uint64) model.BlockState {
 
 func (b *BlockChain) Consensus() model.Consensus {
 	return b.consensus
+}
+
+func (b *BlockChain) ProcessQueueSize() int {
+	size := 0
+	b.processQueueMap.Range(func(key, value any) bool {
+		size++
+		return true
+	})
+	return size
 }
 
 // New returns a BlockChain instance using the provided configuration details.

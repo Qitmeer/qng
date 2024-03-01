@@ -42,9 +42,15 @@ func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFl
 		return nil, false, fmt.Errorf("block chain is shutdown")
 	}
 	block.Reset()
+	bh := *block.Hash()
+	if _, ok := b.processQueueMap.Load(bh); ok {
+		return nil, false, fmt.Errorf("Already exists in the queue:%s", block.Hash().String())
+	}
+	b.processQueueMap.Store(bh, nil)
 	msg := processMsg{block: block, flags: flags, result: make(chan *processResult), source: source}
 	b.msgChan <- &msg
 	result := <-msg.result
+	b.processQueueMap.Delete(bh)
 	return result.block, result.isOrphan, result.err
 }
 

@@ -131,11 +131,13 @@ type MeerDAGInfoResult struct {
 }
 
 type ChainInfoResult struct {
-	Count           uint64  `json:"count"`
-	Start           string  `json:"start"`
-	End             string  `json:"end"`
-	BlocksPerSecond float64 `json:"blockspersecond"`
-	TxsPerSecond    float64 `json:"txspersecond"`
-	SecondPerHeight string  `json:"secondperheight"`
-	Concurrency     float64 `json:"concurrency"`
+	Count            uint64  `json:"count"`
+	Start            string  `json:"start"`
+	End              string  `json:"end"`
+	BlocksPerSecond  float64 `json:"blockspersecond"`
+	TxsPerSecond     float64 `json:"txspersecond"`
+	SecondPerHeight  string  `json:"secondperheight"`
+	Concurrency      float64 `json:"concurrency"`
+	EmptyBlockRate   string  `json:"emptyblockrate"`
+	ProcessQueueSize int32   `json:"processqueuesize"`
 }

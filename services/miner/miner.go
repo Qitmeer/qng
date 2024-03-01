@@ -594,7 +594,7 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	defer m.submitLocker.Unlock()
 	m.totalSubmit++
 
-	err := m.consensus.BlockChain().(*blockchain.BlockChain).BlockDAG().CheckSubMainChainTip(block.Block().Parents)
+	err := m.CheckSubMainChainTip(block.Block().Parents)
 	if err != nil {
 		go m.BlockChainChange()
 		return nil, fmt.Errorf("The tips of block is expired:%s (error:%s)\n", block.Hash().String(), err.Error())
@@ -685,9 +685,11 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 }
 
 func (m *Miner) CanMining() error {
-	currentOrder := m.BlockChain().BestSnapshot().GraphState.GetTotal() - 1
-	if currentOrder != 0 && !m.p2pSer.IsCurrent() {
-		log.Trace("Client in initial download, qitmeer is downloading blocks...")
+	if m.cfg.SubmitNoSynced {
+		return nil
+	}
+	if !m.BlockChain().IsNearlySynced() {
+		log.Warn("Client in initial download, qitmeer is downloading blocks...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading blocks...")
 	}
@@ -900,6 +902,36 @@ func (m *Miner) sendNotification(url string, jsonData []byte) {
 
 func (m *Miner) BlockChain() *blockchain.BlockChain {
 	return m.consensus.BlockChain().(*blockchain.BlockChain)
+}
+
+// Checking the sub main chain for the parents of tip
+func (m *Miner) CheckSubMainChainTip(parents []*hash.Hash) error {
+	if len(parents) == 0 {
+		return fmt.Errorf("Parents is empty")
+	}
+	var mt meerdag.IBlock
+	for k, pa := range parents {
+		ib := m.BlockChain().BlockDAG().GetBlock(pa)
+		if ib == nil {
+			return fmt.Errorf("Parent(%s) is overdue\n", pa.String())
+		}
+		if k == 0 {
+			mt = ib
+		}
+	}
+	if mt == nil {
+		return fmt.Errorf("No main tip:%v", parents)
+	}
+	mainTip := m.BlockChain().BlockDAG().GetMainChainTip()
+	if mt.GetHeight() >= mainTip.GetHeight() {
+		return nil
+	}
+	distance := mainTip.GetHeight() - mt.GetHeight()
+	if distance > uint(m.cfg.ObsoleteHeight) {
+		return fmt.Errorf("main chain tip is overdue,submit main parent:%v (%d), but main tip is :%v (%d). ObsoleteHeight:%d\n",
+			mt.GetHash().String(), mt.GetHeight(), mainTip.GetHash().String(), mainTip.GetHeight(), m.cfg.ObsoleteHeight)
+	}
+	return nil
 }
 
 func NewMiner(consensus model.Consensus, policy *mining.Policy, txpool *mempool.TxPool, p2pSer model.P2PService) *Miner {
