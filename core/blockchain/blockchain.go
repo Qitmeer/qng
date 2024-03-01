@@ -139,6 +139,8 @@ type BlockChain struct {
 
 	meerChain         *meer.MeerChain
 	difficultyManager model.DifficultyManager
+
+	processQueueMap sync.Map
 }
 
 func (b *BlockChain) Init() error {
@@ -1014,6 +1016,15 @@ func (b *BlockChain) GetBlockState(order uint64) model.BlockState {
 
 func (b *BlockChain) Consensus() model.Consensus {
 	return b.consensus
+}
+
+func (b *BlockChain) ProcessQueueSize() int {
+	size := 0
+	b.processQueueMap.Range(func(key, value any) bool {
+		size++
+		return true
+	})
+	return size
 }
 
 // New returns a BlockChain instance using the provided configuration details.

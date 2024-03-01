@@ -314,6 +314,7 @@ func (api *PublicBlockChainAPI) GetChainInfo(lastCount int) (interface{}, error)
 		info.Concurrency = float64(info.Count) / float64(totalHeight)
 	}
 	info.EmptyBlockRate = fmt.Sprintf("%d%%", uint64(emptyBlocks*100)/info.Count)
+	info.ProcessQueueSize = int32(api.node.GetBlockChain().ProcessQueueSize())
 	return info, nil
 }
 
