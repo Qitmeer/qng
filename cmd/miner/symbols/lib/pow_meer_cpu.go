@@ -101,7 +101,9 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 			if this.HasNewWork || this.ForceStop {
 				break
 			}
-
+			if common.LatestGBTID > this.Work.Block.GBTID {
+				break
+			}
 			hData := make([]byte, 128)
 			copy(hData[0:types.MaxBlockHeaderPayload-pow.PROOFDATA_LENGTH], this.header.BlockData())
 			nonce++
@@ -117,6 +119,9 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 					subm += "-" + fmt.Sprintf("%d", this.Work.Block.GBTID)
 				} else {
 					subm += "-" + this.header.JobID + "-" + this.header.Exnonce2
+				}
+				if common.LatestGBTID > this.Work.Block.GBTID {
+					break
 				}
 				this.SubmitData <- subm
 				if !this.Pool { // solo only submit once in one task
