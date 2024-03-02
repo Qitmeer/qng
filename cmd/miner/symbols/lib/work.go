@@ -8,14 +8,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/Qitmeer/qng/cmd/miner/common"
 	"github.com/Qitmeer/qng/cmd/miner/core"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/rpc/client"
-	"strings"
-	"sync"
-	"time"
 )
 
 var ErrSameWork = fmt.Errorf("Same work, Had Submitted!")
@@ -72,7 +74,9 @@ func (this *QitmeerWork) Get() bool {
 		this.Block.ParentRoot = header.ParentRoot
 		this.Block.WorkData = header.BlockData()
 		this.Block.Target = fmt.Sprintf("%064x", pow.CompactToBig(header.Difficulty))
-		common.MinerLoger.Info(fmt.Sprintf("getRemoteBlockTemplate , target :%s", this.Block.Target))
+		this.Block.GBTID = this.Rpc.GbtID
+		common.LatestGBTID = this.Rpc.GbtID
+		common.MinerLoger.Info(fmt.Sprintf("getRemoteBlockTemplate , target :%s , GBTID:%d", this.Block.Target, this.Rpc.GbtID))
 		return true
 	}
 }
@@ -81,7 +85,12 @@ func (this *QitmeerWork) Get() bool {
 func (this *QitmeerWork) Submit(header *types.BlockHeader, gbtID string) (string, int, error) {
 	this.Lock()
 	defer this.Unlock()
+	gbtIDInt64, _ := strconv.ParseInt(gbtID, 10, 64)
+	if this.Rpc.GbtID > gbtIDInt64 {
+		return "", 0, ErrSameWork
+	}
 	this.Rpc.SubmitID++
+
 	id := fmt.Sprintf("miner_submit_gbtID:%s_id:%d", gbtID, this.Rpc.SubmitID)
 	res, err := this.WsClient.SubmitBlockHeader(header)
 	if err != nil {
@@ -123,7 +132,7 @@ func (this *QitmeerWork) PoolGet() bool {
 	return false
 }
 
-//pool submit work
+// pool submit work
 func (this *QitmeerWork) PoolSubmit(subm string) error {
 	if this.LastSub == subm {
 		return ErrSameWork

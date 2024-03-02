@@ -1,6 +1,7 @@
 //go:build !asic
 
-/**
+/*
+*
 Qitmeer
 james
 */
@@ -10,16 +11,17 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/cmd/miner/common"
-	"github.com/Qitmeer/qng/cmd/miner/core"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/core/types/pow"
 	"math/big"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Qitmeer/qng/cmd/miner/common"
+	"github.com/Qitmeer/qng/cmd/miner/core"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/core/types/pow"
 )
 
 type MeerCrypto struct {
@@ -58,6 +60,9 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 		select {
 		case w = <-this.NewWork:
 			this.Work = w.(*QitmeerWork)
+			if common.LatestGBTID > this.Work.Block.GBTID {
+				continue
+			}
 		case <-this.Quit.Done():
 			common.MinerLoger.Debug("mining service exit")
 			return
