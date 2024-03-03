@@ -259,6 +259,7 @@ func (this *QitmeerRobot) SubmitWork() {
 					err = header.Deserialize(bytes.NewReader(b))
 					if err != nil {
 						common.MinerLoger.Error(err.Error())
+						this.SubmitLock.Unlock()
 						continue
 					}
 					blockHash = header.BlockHash().String()
@@ -270,11 +271,9 @@ func (this *QitmeerRobot) SubmitWork() {
 				}
 				if err != nil {
 					if err != ErrSameWork || err == ErrSameWork {
-						if err == ErrStratumStaleWork {
-							this.StaleShares++
-						} else {
-							this.InvalidShares++
-						}
+						this.StaleShares++
+						this.SubmitLock.Unlock()
+						continue
 					}
 					time.AfterFunc(1*time.Second, func() {
 						//this.SubmitLock.Lock()
