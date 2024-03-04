@@ -91,8 +91,8 @@ type TipInfo struct {
 	ID          uint64 `json:"id"`
 	Hash        string `json:"hash"`
 	Height      uint64 `json:"height"`
-	PruneHeight uint64 `json:"pruneheight"`
-	PruneCD     uint64 `json:"prunecd"`
+	PruneHeight uint64 `json:"pruneheight,omitempty"`
+	PruneCD     uint64 `json:"prunecd,omitempty"`
 }
 
 type TipsInfo struct {
