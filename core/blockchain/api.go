@@ -268,21 +268,28 @@ func (api *PublicBlockAPI) Tips() (interface{}, error) {
 	for _, tiphash := range validtips {
 		temp[*tiphash] = struct{}{}
 	}
-	getTipInfo := func(block meerdag.IBlock) qjson.TipInfo {
+	getTipInfo := func(block meerdag.IBlock, valid bool) qjson.TipInfo {
 		pruneHeight := int64(block.GetHeight()) + api.chain.BlockDAG().GetTipsDisLimit()
 		pruneCD := pruneHeight - int64(mtheight)
 		if pruneCD < 0 {
 			pruneCD = 0
 		}
-		return qjson.TipInfo{ID: uint64(block.GetID()),
-			Hash:        block.GetHash().String(),
-			Height:      uint64(block.GetHeight()),
-			PruneHeight: uint64(pruneHeight),
-			PruneCD:     uint64(pruneCD)}
+		if valid {
+			return qjson.TipInfo{ID: uint64(block.GetID()),
+				Hash:   block.GetHash().String(),
+				Height: uint64(block.GetHeight())}
+		} else {
+			return qjson.TipInfo{ID: uint64(block.GetID()),
+				Hash:        block.GetHash().String(),
+				Height:      uint64(block.GetHeight()),
+				PruneHeight: uint64(pruneHeight),
+				PruneCD:     uint64(pruneCD)}
+		}
 	}
 	for _, tip := range tips {
 		if tip.GetHash().IsEqual(validtips[0]) {
-			tipinfos.Valid = append(tipinfos.Valid, getTipInfo(tip))
+			tipinfos.Valid = append(tipinfos.Valid, getTipInfo(tip, true))
+			break
 		}
 	}
 	for _, tip := range tips {
@@ -290,12 +297,12 @@ func (api *PublicBlockAPI) Tips() (interface{}, error) {
 			continue
 		}
 		if _, ok := temp[*tip.GetHash()]; ok {
-			tipinfos.Valid = append(tipinfos.Valid, getTipInfo(tip))
+			tipinfos.Valid = append(tipinfos.Valid, getTipInfo(tip, true))
 		} else {
 			if len(tipinfos.Invalid) <= 0 {
-				tipinfos.Invalid = []qjson.TipInfo{getTipInfo(tip)}
+				tipinfos.Invalid = []qjson.TipInfo{getTipInfo(tip, false)}
 			} else {
-				tipinfos.Invalid = append(tipinfos.Invalid, getTipInfo(tip))
+				tipinfos.Invalid = append(tipinfos.Invalid, getTipInfo(tip, false))
 			}
 		}
 	}
