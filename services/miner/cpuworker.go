@@ -307,6 +307,9 @@ out:
 			continue
 		}
 		start := time.Now()
+		if w.miner.cfg.NoPowCheck {
+			time.Sleep(params.ActiveNetParams.Params.TargetTimePerBlock)
+		}
 		sb := w.solveBlock()
 		if sb != nil {
 			w.hasNewWork.Store(false)
@@ -411,6 +414,9 @@ func (w *CPUWorker) solveBlock() *types.Block {
 		instance.SetParams(params.ActiveNetParams.Params.PowConfig)
 		hashesCompleted += 2
 		header.Pow = instance
+		if w.miner.cfg.NoPowCheck {
+			return block
+		}
 		if header.Pow.FindSolver(header.BlockData(), header.BlockHash(), header.Difficulty) {
 			w.updateHashes <- hashesCompleted
 			return block

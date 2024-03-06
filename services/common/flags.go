@@ -632,6 +632,12 @@ var (
 			Value:       false,
 			Destination: &cfg.SubmitNoSynced,
 		},
+		&cli.BoolFlag{
+			Name:        "nopowcheck",
+			Usage:       "Enable no pow check for debug node",
+			Value:       false,
+			Destination: &cfg.NoPowCheck,
+		},
 	}
 )
 
@@ -668,6 +674,7 @@ func DefaultConfig(homeDir string) *config.Config {
 		RPCPass:              defaultRPCPass,
 		ObsoleteHeight:       defaultObsoleteHeight,
 		SubmitNoSynced:       false,
+		NoPowCheck:           false,
 	}
 	if len(homeDir) > 0 {
 		hd, err := filepath.Abs(homeDir)

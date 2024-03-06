@@ -751,26 +751,27 @@ func (b *BlockChain) checkBlockHeaderContext(block *types.SerializedBlock, prevN
 
 	header := &block.Block().Header
 	if !flags.Has(BFFastAdd) {
-		instance := pow.GetInstance(header.Pow.GetPowType(), 0, []byte{})
-		instance.SetMainHeight(pow.MainHeight(prevNode.GetHeight() + 1))
-		instance.SetParams(b.params.PowConfig)
-		// Ensure the difficulty specified in the block header matches
-		// the calculated difficulty based on the previous block and
-		// difficulty retarget rules.
+		if flags.Has(BFNoPoWCheck) {
+			instance := pow.GetInstance(header.Pow.GetPowType(), 0, []byte{})
+			instance.SetMainHeight(pow.MainHeight(prevNode.GetHeight() + 1))
+			instance.SetParams(b.params.PowConfig)
+			// Ensure the difficulty specified in the block header matches
+			// the calculated difficulty based on the previous block and
+			// difficulty retarget rules.
 
-		expDiff, err := b.calcNextRequiredDifficulty(prevNode,
-			header.Timestamp, instance)
-		if err != nil {
-			return err
+			expDiff, err := b.calcNextRequiredDifficulty(prevNode,
+				header.Timestamp, instance)
+			if err != nil {
+				return err
+			}
+			blockDifficulty := header.Difficulty
+			if blockDifficulty != expDiff {
+				str := fmt.Sprintf("block difficulty of %d is not the"+
+					" expected value of %d", blockDifficulty,
+					expDiff)
+				return ruleError(ErrUnexpectedDifficulty, str)
+			}
 		}
-		blockDifficulty := header.Difficulty
-		if blockDifficulty != expDiff {
-			str := fmt.Sprintf("block difficulty of %d is not the"+
-				" expected value of %d", blockDifficulty,
-				expDiff)
-			return ruleError(ErrUnexpectedDifficulty, str)
-		}
-
 		// Ensure the timestamp for the block header is after the
 		// median time of the last several blocks (medianTimeBlocks).
 		medianTime := b.CalcPastMedianTime(prevNode)
