@@ -7,7 +7,6 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/mining"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -49,8 +48,7 @@ type CPUWorker struct {
 	workWg            sync.WaitGroup
 	updateNumWorks    chan struct{}
 	numWorks          uint32
-	updateWork        chan struct{}
-	hasNewWork        bool
+	hasNewWork        atomic.Bool
 
 	miner *Miner
 
@@ -274,15 +272,7 @@ func (w *CPUWorker) Update() {
 	if atomic.LoadInt32(&w.shutdown) != 0 {
 		return
 	}
-	w.Lock()
-	defer w.Unlock()
-
-	if w.discrete && w.discreteNum <= 0 {
-		return
-	}
-	w.hasNewWork = true
-	w.updateWork <- struct{}{}
-	w.hasNewWork = false
+	w.hasNewWork.Store(true)
 }
 
 func (w *CPUWorker) generateDiscrete(num int, block chan *hash.Hash) bool {
@@ -302,45 +292,49 @@ func (w *CPUWorker) generateDiscrete(num int, block chan *hash.Hash) bool {
 }
 
 func (w *CPUWorker) generateBlocks() {
-	log.Trace(fmt.Sprintf("Starting generate blocks worker:%s", w.GetType()))
+	log.Info(fmt.Sprintf("Starting generate blocks worker:%s", w.GetType()))
 out:
 	for {
 		// Quit when the miner is stopped.
 		select {
-		case <-w.updateWork:
-			if w.discrete && w.discreteNum <= 0 {
-				continue
-			}
-			sb := w.solveBlock()
-			if sb != nil {
-				block := types.NewBlock(sb)
-				info, err := w.miner.submitBlock(block)
-				if err != nil {
-					log.Error(fmt.Sprintf("Failed to submit new block:%s ,%v", block.Hash().String(), err))
-					w.cleanDiscrete()
-					continue
-				}
-				log.Info(fmt.Sprintf("%v", info))
-
-				if w.discrete && w.discreteNum > 0 {
-					if w.discreteBlock != nil {
-						w.discreteBlock <- block.Hash()
-					}
-					w.discreteNum--
-					if w.discreteNum <= 0 {
-						w.cleanDiscrete()
-					}
-				}
-			} else {
-				w.cleanDiscrete()
-			}
 		case <-w.quit:
 			break out
+		default:
+			// Non-blocking select to fall through
+		}
+		if w.discrete && w.discreteNum <= 0 || !w.hasNewWork.Load() {
+			time.Sleep(time.Second)
+			continue
+		}
+		start := time.Now()
+		sb := w.solveBlock()
+		if sb != nil {
+			w.hasNewWork.Store(false)
+			block := types.NewBlock(sb)
+			info, err := w.miner.submitBlock(block)
+			if err != nil {
+				log.Error(fmt.Sprintf("Failed to submit new block:%s ,%v", block.Hash().String(), err))
+				w.cleanDiscrete()
+				continue
+			}
+			log.Info(fmt.Sprintf("%v", info), "cost", time.Since(start).String())
+
+			if w.discrete && w.discreteNum > 0 {
+				if w.discreteBlock != nil {
+					w.discreteBlock <- block.Hash()
+				}
+				w.discreteNum--
+				if w.discreteNum <= 0 {
+					w.cleanDiscrete()
+				}
+			}
+		} else {
+			w.cleanDiscrete()
 		}
 	}
 
 	w.workWg.Done()
-	log.Trace(fmt.Sprintf("Generate blocks worker done:%s", w.GetType()))
+	log.Info(fmt.Sprintf("Generate blocks worker done:%s", w.GetType()))
 }
 
 func (w *CPUWorker) cleanDiscrete() {
@@ -359,7 +353,7 @@ func (w *CPUWorker) solveBlock() *types.Block {
 	}
 	// Start a ticker which is used to signal checks for stale work and
 	// updates to the speed monitor.
-	ticker := time.NewTicker(333 * time.Millisecond)
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
 	// Create a couple of convenience variables.
@@ -405,16 +399,9 @@ func (w *CPUWorker) solveBlock() *types.Block {
 			// has been updated since the block template was
 			// generated and it has been at least 3 seconds,
 			// or if it's been one minute.
-			if w.hasNewWork || roughtime.Now().After(lastGenerated.Add(gbtRegenerateSeconds*time.Second)) {
+			if roughtime.Now().After(lastGenerated.Add(gbtRegenerateSeconds * time.Second)) {
 				return nil
 			}
-
-			err := mining.UpdateBlockTime(block, w.miner.BlockChain(), w.miner.timeSource, params.ActiveNetParams.Params)
-			if err != nil {
-				log.Warn(fmt.Sprintf("CPU miner unable to update block template time: %v", err))
-				return nil
-			}
-
 		default:
 			// Non-blocking select to fall through
 		}
@@ -443,7 +430,6 @@ func NewCPUWorker(miner *Miner) *CPUWorker {
 		queryHashesPerSec: make(chan float64),
 		updateNumWorks:    make(chan struct{}),
 		numWorks:          defaultNumWorkers,
-		updateWork:        make(chan struct{}),
 	}
 
 	return &w
