@@ -67,6 +67,7 @@ type kaspadDiff struct {
 	genesisBits                    uint32
 	b                              model.BlockChain
 	cfg                            *params.Params
+	con                            model.Consensus
 }
 
 // CalcEasiestDifficulty calculates the easiest possible difficulty that a block
@@ -114,7 +115,7 @@ func (m *kaspadDiff) RequiredDifficulty(block model.Block, newBlockTime time.Tim
 
 // RequiredDifficultyByWindows returns the difficulty required for some block
 func (dm *kaspadDiff) RequiredDifficultyByWindows(targetsWindow blockWindow) (uint32, error) {
-	if len(targetsWindow) < 1 {
+	if len(targetsWindow) < 1 || dm.con.Config().NoPowCheck {
 		return dm.genesisBits, nil
 	}
 	return dm.requiredDifficultyFromTargetsWindow(targetsWindow)

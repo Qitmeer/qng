@@ -29,6 +29,7 @@ const maxShift = uint(256)
 type meerDiff struct {
 	b   model.BlockChain
 	cfg *params.Params
+	con model.Consensus
 }
 
 // CalcEasiestDifficulty calculates the easiest possible difficulty that a block
@@ -102,7 +103,7 @@ func (m *meerDiff) RequiredDifficulty(block model.Block, newBlockTime time.Time,
 	baseTarget := powInstance.GetSafeDiff(0)
 	originCurrentBlock := block
 	// Genesis block.
-	if block == nil {
+	if block == nil || m.con.Config().NoPowCheck {
 		return pow.BigToCompact(baseTarget), nil
 	}
 
