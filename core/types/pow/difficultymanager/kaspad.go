@@ -67,6 +67,7 @@ type kaspadDiff struct {
 	genesisBits                    uint32
 	b                              model.BlockChain
 	cfg                            *params.Params
+	con                            model.Consensus
 }
 
 // CalcEasiestDifficulty calculates the easiest possible difficulty that a block

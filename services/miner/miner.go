@@ -689,7 +689,7 @@ func (m *Miner) CanMining() error {
 		return nil
 	}
 	if !m.BlockChain().IsNearlySynced() {
-		log.Warn("Client in initial download, qitmeer is downloading blocks...")
+		log.Trace("Client in initial download, qitmeer is downloading blocks...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading blocks...")
 	}

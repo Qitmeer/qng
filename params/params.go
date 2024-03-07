@@ -294,6 +294,10 @@ func (p *Params) HasTax() bool {
 	return false
 }
 
+func (p *Params) IsDevelopDiff() bool {
+	return p.PowConfig.DifficultyMode == pow.DIFFICULTY_MODE_DEVELOP
+}
+
 var (
 	// ErrDuplicateNet describes an error where the parameters for a network
 	// could not be set due to the network already being a standard

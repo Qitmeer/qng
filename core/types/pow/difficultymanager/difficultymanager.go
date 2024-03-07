@@ -6,11 +6,12 @@ import (
 	"github.com/Qitmeer/qng/params"
 )
 
-func NewDiffManager(b model.BlockChain, cfg *params.Params) model.DifficultyManager {
+func NewDiffManager(con model.Consensus, cfg *params.Params) model.DifficultyManager {
 	switch cfg.PowConfig.DifficultyMode {
 	case pow.DIFFICULTY_MODE_KASPAD:
 		return &kaspadDiff{
-			b:                              b,
+			con:                            con,
+			b:                              con.BlockChain(),
 			powMax:                         cfg.PowConfig.MeerXKeccakV1PowLimit,
 			difficultyAdjustmentWindowSize: int(cfg.WorkDiffWindowSize),
 			disableDifficultyAdjustment:    false,
@@ -18,9 +19,15 @@ func NewDiffManager(b model.BlockChain, cfg *params.Params) model.DifficultyMana
 			genesisBits:                    cfg.PowConfig.MeerXKeccakV1PowLimitBits,
 			cfg:                            cfg,
 		}
+	case pow.DIFFICULTY_MODE_DEVELOP:
+		return &developDiff{
+			b:   con.BlockChain(),
+			cfg: cfg,
+		}
 	}
 	return &meerDiff{
-		b:   b,
+		con: con,
+		b:   con.BlockChain(),
 		cfg: cfg,
 	}
 }

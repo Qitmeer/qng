@@ -29,6 +29,7 @@ const maxShift = uint(256)
 type meerDiff struct {
 	b   model.BlockChain
 	cfg *params.Params
+	con model.Consensus
 }
 
 // CalcEasiestDifficulty calculates the easiest possible difficulty that a block

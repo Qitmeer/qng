@@ -25,6 +25,8 @@ const (
 	DIFFICULTY_MODE_MEER = 0
 	// KASPAD difficulty adjustment
 	DIFFICULTY_MODE_KASPAD = 1
+	// DEVELOP difficulty adjustment
+	DIFFICULTY_MODE_DEVELOP = 2
 )
 
 // HashToBig converts a hash.Hash into a big.Int that can be used to

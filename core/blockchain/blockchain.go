@@ -175,7 +175,7 @@ func (b *BlockChain) Init() error {
 		log.Info(fmt.Sprintf("hash=%s,order=%s,height=%d", v.GetHash(), meerdag.GetOrderLogStr(v.GetOrder()), v.GetHeight()))
 	}
 
-	b.difficultyManager = difficultymanager.NewDiffManager(b.Consensus().BlockChain(), b.params)
+	b.difficultyManager = difficultymanager.NewDiffManager(b.Consensus(), b.params)
 	return nil
 }
 
