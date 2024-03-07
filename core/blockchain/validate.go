@@ -289,7 +289,7 @@ func checkProofOfWork(header *types.BlockHeader, powConfig *pow.PowConfig, flags
 
 	// The block hash must be less than the claimed target unless the flag
 	// to avoid proof of work checks is set.
-	if !flags.Has(BFNoPoWCheck) {
+	if !flags.Has(BFNoPoWCheck) && !params.ActiveNetParams.Params.IsDevelopDiff() {
 		header.Pow.SetParams(powConfig)
 		header.Pow.SetMainHeight(pow.MainHeight(mHeight))
 		// The block hash must be less than the claimed target.
@@ -751,7 +751,7 @@ func (b *BlockChain) checkBlockHeaderContext(block *types.SerializedBlock, prevN
 
 	header := &block.Block().Header
 	if !flags.Has(BFFastAdd) {
-		if !flags.Has(BFNoPoWCheck) {
+		if !b.params.IsDevelopDiff() {
 			instance := pow.GetInstance(header.Pow.GetPowType(), 0, []byte{})
 			instance.SetMainHeight(pow.MainHeight(prevNode.GetHeight() + 1))
 			instance.SetParams(b.params.PowConfig)

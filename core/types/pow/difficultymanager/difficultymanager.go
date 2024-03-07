@@ -19,6 +19,11 @@ func NewDiffManager(con model.Consensus, cfg *params.Params) model.DifficultyMan
 			genesisBits:                    cfg.PowConfig.MeerXKeccakV1PowLimitBits,
 			cfg:                            cfg,
 		}
+	case pow.DIFFICULTY_MODE_DEVELOP:
+		return &developDiff{
+			b:   con.BlockChain(),
+			cfg: cfg,
+		}
 	}
 	return &meerDiff{
 		con: con,

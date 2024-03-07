@@ -47,9 +47,6 @@ func (b *BlockChain) ProcessBlock(block *types.SerializedBlock, flags BehaviorFl
 		return nil, false, fmt.Errorf("Already exists in the queue:%s", block.Hash().String())
 	}
 	b.processQueueMap.Store(bh, nil)
-	if b.consensus.Config().NoPowCheck {
-		flags |= BFNoPoWCheck
-	}
 	msg := processMsg{block: block, flags: flags, result: make(chan *processResult), source: source}
 	b.msgChan <- &msg
 	result := <-msg.result

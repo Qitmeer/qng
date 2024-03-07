@@ -307,7 +307,7 @@ out:
 			continue
 		}
 		start := time.Now()
-		if w.miner.cfg.NoPowCheck {
+		if params.ActiveNetParams.Params.IsDevelopDiff() {
 			time.Sleep(params.ActiveNetParams.Params.TargetTimePerBlock)
 		}
 		sb := w.solveBlock()
@@ -414,7 +414,7 @@ func (w *CPUWorker) solveBlock() *types.Block {
 		instance.SetParams(params.ActiveNetParams.Params.PowConfig)
 		hashesCompleted += 2
 		header.Pow = instance
-		if w.miner.cfg.NoPowCheck {
+		if params.ActiveNetParams.Params.IsDevelopDiff() {
 			return block
 		}
 		if header.Pow.FindSolver(header.BlockData(), header.BlockHash(), header.Difficulty) {

@@ -103,7 +103,7 @@ func (m *meerDiff) RequiredDifficulty(block model.Block, newBlockTime time.Time,
 	baseTarget := powInstance.GetSafeDiff(0)
 	originCurrentBlock := block
 	// Genesis block.
-	if block == nil || m.con.Config().NoPowCheck {
+	if block == nil {
 		return pow.BigToCompact(baseTarget), nil
 	}
 

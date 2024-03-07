@@ -115,7 +115,7 @@ func (m *kaspadDiff) RequiredDifficulty(block model.Block, newBlockTime time.Tim
 
 // RequiredDifficultyByWindows returns the difficulty required for some block
 func (dm *kaspadDiff) RequiredDifficultyByWindows(targetsWindow blockWindow) (uint32, error) {
-	if len(targetsWindow) < 1 || dm.con.Config().NoPowCheck {
+	if len(targetsWindow) < 1 {
 		return dm.genesisBits, nil
 	}
 	return dm.requiredDifficultyFromTargetsWindow(targetsWindow)
