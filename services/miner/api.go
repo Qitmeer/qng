@@ -225,6 +225,7 @@ func (api *PublicMinerAPI) checkSubmitLimit() error {
 }
 
 func (api *PublicMinerAPI) checkGBTTime(txcount int) error {
+	return nil
 	if txcount < 1 && time.Since(api.miner.stats.LastestGbtRequest) < params.ActiveNetParams.TargetTimePerBlock {
 		log.Debug("[gbttxzreo]Client init download, qitmeer is sync tx...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
