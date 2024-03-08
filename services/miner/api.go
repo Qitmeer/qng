@@ -218,14 +218,19 @@ func (api *PublicMinerAPI) SubmitBlockHeader(hexBlockHeader string, extraNonce *
 }
 
 func (api *PublicMinerAPI) checkSubmitLimit() error {
-	// if time.Since(api.miner.stats.LastestSubmit) < SubmitInterval {
-	// 	return fmt.Errorf("Submission interval Limited:%s < %s\n", time.Since(api.miner.stats.LastestSubmit), SubmitInterval)
-	// }
+	if params.ActiveNetParams.Name == params.MixNetParam.Name {
+		return nil
+	}
+	if time.Since(api.miner.stats.LastestSubmit) < SubmitInterval {
+		return fmt.Errorf("Submission interval Limited:%s < %s\n", time.Since(api.miner.stats.LastestSubmit), SubmitInterval)
+	}
 	return nil
 }
 
 func (api *PublicMinerAPI) checkGBTTime(txcount int) error {
-	return nil
+	if params.ActiveNetParams.Name == params.MixNetParam.Name {
+		return nil
+	}
 	if txcount < 1 && time.Since(api.miner.stats.LastestGbtRequest) < params.ActiveNetParams.TargetTimePerBlock {
 		log.Debug("[gbttxzreo]Client init download, qitmeer is sync tx...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
