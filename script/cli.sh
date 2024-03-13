@@ -753,9 +753,9 @@ function chain_info(){
   if [ "$start" == "" ]; then
       start=0
   fi
- if [ "$end" == "" ]; then
+  if [ "$end" == "" ]; then
      end=0
-   fi
+  fi
   local data='{"jsonrpc":"2.0","method":"getChainInfo","params":['$count','$start','$end'],"id":1}'
   get_result "$data"
 }
