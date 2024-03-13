@@ -237,7 +237,7 @@ func (api *PublicBlockChainAPI) GetDatabaseInfo() (interface{}, error) {
 	return ret, nil
 }
 
-func (api *PublicBlockChainAPI) GetChainInfo(lastCount int) (interface{}, error) {
+func (api *PublicBlockChainAPI) GetChainInfo(lastCount int, start *int64, end *int64) (interface{}, error) {
 	if !api.node.GetPeerServer().IsCurrent() {
 		return nil, fmt.Errorf("Busy, try again later")
 	}
@@ -246,54 +246,118 @@ func (api *PublicBlockChainAPI) GetChainInfo(lastCount int) (interface{}, error)
 		count = lastCount
 	}
 	md := api.node.GetBlockChain().BlockDAG()
+	var startBlock meerdag.IBlock
+	var endBlock meerdag.IBlock
+	var info *json.ChainInfoResult
 	mainTip := md.GetMainChainTip()
-	var start meerdag.IBlock
-	var blockNode *blockchain.BlockNode
-	info := json.ChainInfoResult{Count: 0, End: fmt.Sprintf("%s (order:%d)", mainTip.GetHash().String(), mainTip.GetOrder())}
 	totalTxs := 0
 	emptyBlocks := 0
-	err := md.Foreach(mainTip, uint(count), meerdag.All, func(block meerdag.IBlock) (bool, error) {
-		if block.GetID() <= 0 {
-			return true, nil
+	startOrder := uint(0)
+	if start != nil {
+		startOrder = uint(*start)
+	}
+	endOrder := uint(0)
+	if end != nil {
+		endOrder = uint(*end)
+	}
+	if startOrder > 0 {
+		if endOrder > 0 {
+			endBlock = md.GetBlockByOrder(endOrder)
+			if endBlock == nil {
+				return nil, fmt.Errorf("No end block by order:%d", endOrder)
+			}
+		} else {
+			endOrder = mainTip.GetOrder()
 		}
-		blockNode = api.node.GetBlockChain().GetBlockNode(block)
-		if blockNode == nil {
-			return true, nil
+		if startOrder >= endOrder {
+			return nil, fmt.Errorf("Invalid start block by order:%d", startOrder)
 		}
-		info.Count++
-		totalTxs += blockNode.GetPriority()
-		if blockNode.GetPriority() <= 1 {
+		startBlock = md.GetBlockByOrder(startOrder)
+		if startBlock == nil {
+			return nil, fmt.Errorf("No start block by order:%d", startOrder)
+		}
+
+		info = &json.ChainInfoResult{Count: 0}
+		var block meerdag.IBlock
+		for i := startOrder + 1; i <= endOrder; i++ {
+			block = md.GetBlockByOrder(i)
+			if block == nil {
+				return nil, fmt.Errorf("No block by order:%d", i)
+			}
+			blockNode := api.node.GetBlockChain().GetBlockNode(block)
+			if blockNode == nil {
+				return true, nil
+			}
+			info.Count++
+			totalTxs += blockNode.GetPriority()
+			if blockNode.GetPriority() <= 1 {
+				emptyBlocks++
+			}
+			if endBlock != nil {
+				continue
+			}
+			if info.Count >= uint64(count) {
+				endBlock = block
+				break
+			}
+		}
+	} else {
+		endBlock = mainTip
+		info = &json.ChainInfoResult{Count: 0}
+		var blockNode *blockchain.BlockNode
+		err := md.Foreach(endBlock, uint(count), meerdag.All, func(block meerdag.IBlock) (bool, error) {
+			if block.GetID() <= 0 {
+				return true, nil
+			}
+			blockNode = api.node.GetBlockChain().GetBlockNode(block)
+			if blockNode == nil {
+				return true, nil
+			}
+			info.Count++
+			totalTxs += blockNode.GetPriority()
+			if blockNode.GetPriority() <= 1 {
+				emptyBlocks++
+			}
+			startBlock = block
+			return true, nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		if blockNode != nil {
+			totalTxs -= blockNode.GetPriority()
+			if totalTxs < 0 {
+				totalTxs = 0
+			}
+			if blockNode.GetPriority() <= 1 {
+				emptyBlocks--
+			}
+		}
+		endNode := api.node.GetBlockChain().GetBlockNode(endBlock)
+		if endNode == nil {
+			return nil, fmt.Errorf("No block:%s", endBlock.GetHash().String())
+		}
+		totalTxs += endNode.GetPriority()
+		if endNode.GetPriority() <= 1 {
 			emptyBlocks++
 		}
-		start = block
-		return true, nil
-	})
-	if err != nil {
-		return nil, err
 	}
+
 	if info.Count <= 0 {
 		return nil, fmt.Errorf("No blocks")
 	}
-	totalTxs -= blockNode.GetPriority()
-	if totalTxs < 0 {
-		totalTxs = 0
-	}
-	if blockNode.GetPriority() <= 1 {
-		emptyBlocks--
-	}
-	info.Start = fmt.Sprintf("%s (order:%d)", start.GetHash().String(), start.GetOrder())
-	startNode := api.node.GetBlockChain().GetBlockHeader(start)
+
+	info.Start = fmt.Sprintf("%s (order:%d)", startBlock.GetHash().String(), startBlock.GetOrder())
+	info.End = fmt.Sprintf("%s (order:%d)", endBlock.GetHash().String(), endBlock.GetOrder())
+	startNode := api.node.GetBlockChain().GetBlockHeader(startBlock)
 	if startNode == nil {
-		return nil, fmt.Errorf("No block:%s", start.GetHash().String())
+		return nil, fmt.Errorf("No block:%s", startBlock.GetHash().String())
 	}
-	endNode := api.node.GetBlockChain().GetBlockNode(mainTip)
+	endNode := api.node.GetBlockChain().GetBlockNode(endBlock)
 	if endNode == nil {
-		return nil, fmt.Errorf("No block:%s", mainTip.GetHash().String())
+		return nil, fmt.Errorf("No block:%s", endBlock.GetHash().String())
 	}
-	totalTxs += endNode.GetPriority()
-	if endNode.GetPriority() <= 1 {
-		emptyBlocks++
-	}
+
 	totalTime := endNode.GetTimestamp() - startNode.Timestamp.Unix()
 	if totalTime < 0 {
 		totalTime = 0
@@ -304,7 +368,7 @@ func (api *PublicBlockChainAPI) GetChainInfo(lastCount int) (interface{}, error)
 	info.BlocksPerSecond = float64(info.Count) / float64(totalTime)
 	info.TxsPerSecond = float64(totalTxs) / float64(totalTime)
 
-	totalHeight := int64(mainTip.GetHeight()) - int64(start.GetHeight())
+	totalHeight := int64(endBlock.GetHeight()) - int64(startBlock.GetHeight())
 	if totalHeight < 0 {
 		totalHeight = 0
 	}
@@ -315,7 +379,7 @@ func (api *PublicBlockChainAPI) GetChainInfo(lastCount int) (interface{}, error)
 	}
 	info.EmptyBlockRate = fmt.Sprintf("%d%%", uint64(emptyBlocks*100)/info.Count)
 	info.ProcessQueueSize = int32(api.node.GetBlockChain().ProcessQueueSize())
-	return info, nil
+	return *info, nil
 }
 
 type PrivateBlockChainAPI struct {

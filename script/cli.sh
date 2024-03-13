@@ -745,10 +745,18 @@ function dag_info(){
 
 function chain_info(){
   local count=$1
+  local start=$2
+  local end=$3
   if [ "$count" == "" ]; then
     count=0
   fi
-  local data='{"jsonrpc":"2.0","method":"getChainInfo","params":['$count'],"id":1}'
+  if [ "$start" == "" ]; then
+      start=0
+  fi
+ if [ "$end" == "" ]; then
+     end=0
+   fi
+  local data='{"jsonrpc":"2.0","method":"getChainInfo","params":['$count','$start','$end'],"id":1}'
   get_result "$data"
 }
 
@@ -854,7 +862,7 @@ function usage(){
   echo "  getaddresses <private key>"
   echo "  modules"
   echo "  daginfo"
-  echo "  chaininfo"
+  echo "  chaininfo <count> <start> <end>"
   echo "  dbinfo"
   echo "  config"
   echo "block  :"
