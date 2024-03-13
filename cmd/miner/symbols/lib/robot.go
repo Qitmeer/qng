@@ -46,8 +46,7 @@ type QitmeerRobot struct {
 	PendingLock          sync.Mutex
 	SubmitLock           sync.Mutex
 	WsClient             *client.Client
-	SubmitCount          int
-	SubmitStart          time.Time
+	LastSubmit           time.Time
 }
 
 func (this *QitmeerRobot) GetPow(i int, ctx context.Context, uart_path string, allCount uint64) core.BaseDevice {
@@ -183,6 +182,11 @@ func (this *QitmeerRobot) ListenWork() {
 }
 
 func (this *QitmeerRobot) NotifyWork(r bool) {
+	if time.Since(this.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
+		<-time.After(time.Since(this.LastSubmit))
+		this.NotifyWork(this.Work.Get())
+		return
+	}
 	if r {
 		validDeviceCount := 0
 		for _, dev := range this.Devices {
@@ -207,7 +211,6 @@ func (this *QitmeerRobot) NotifyWork(r bool) {
 func (this *QitmeerRobot) SubmitWork() {
 	common.MinerLoger.Info("listen submit block server")
 	this.Wg.Add(1)
-	this.SubmitStart = time.Now()
 	go func() {
 		defer this.Wg.Done()
 		str := ""
@@ -223,27 +226,22 @@ func (this *QitmeerRobot) SubmitWork() {
 					this.StaleShares++
 					continue
 				}
-				this.SubmitCount++
+
 				this.SubmitLock.Lock()
+				if time.Since(this.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
+					this.SubmitLock.Unlock()
+					<-time.After(time.Since(this.LastSubmit))
+					this.NotifyWork(this.Work.Get())
+					continue
+				}
+				this.LastSubmit = time.Now()
 				var err error
 				var txID string
 				var height int
 				var blockHash string
 				var gbtID string
-				if this.SubmitCount == this.Cfg.OptionConfig.WindowSize {
-					allNeedTime := time.Duration(this.Cfg.OptionConfig.WindowSize * this.Cfg.OptionConfig.BlockPerTime * int(time.Second))
-					spent := time.Since(this.SubmitStart)
-					offset := allNeedTime - spent
-					common.MinerLoger.Info(fmt.Sprintf("Finished mining %d blocks", this.Cfg.OptionConfig.WindowSize), "spent", spent, "slept", offset)
-					if offset > 0 {
-						t1 := time.NewTimer(offset)
-						<-t1.C
-						t1.Stop()
-					}
-					this.SubmitCount = 0
-					this.SubmitStart = time.Now()
 
-				}
+				// }
 				if this.Pool {
 					arr = strings.Split(str, "-")
 					// block = arr[0]
@@ -317,8 +315,8 @@ func (this *QitmeerRobot) SubmitWork() {
 						}, 1, func() {
 						})
 
-						common.MinerLoger.Info(fmt.Sprintf("Submit block, block hash=%s , height=%d",
-							blockHash, height))
+						common.MinerLoger.Info(fmt.Sprintf("Submit block, block hash=%s , height=%d , next submit will after %s",
+							blockHash, height, this.LastSubmit.Add(time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond).Format(time.RFC3339)))
 						this.PendingLock.Unlock()
 					} else {
 						this.ValidShares++

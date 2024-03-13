@@ -76,7 +76,7 @@ func (this *QitmeerWork) Get() bool {
 		this.Block.Target = fmt.Sprintf("%064x", pow.CompactToBig(header.Difficulty))
 		this.Block.GBTID = this.Rpc.GbtID
 		common.LatestGBTID = this.Rpc.GbtID
-		common.MinerLoger.Info(fmt.Sprintf("getRemoteBlockTemplate , target :%s , GBTID:%d", this.Block.Target, this.Rpc.GbtID))
+		common.MinerLoger.Trace(fmt.Sprintf("getRemoteBlockTemplate , target :%s , GBTID:%d", this.Block.Target, this.Rpc.GbtID))
 		return true
 	}
 }
