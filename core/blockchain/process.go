@@ -679,6 +679,10 @@ func (bc *BlockChain) disconnectTransactions(block *types.SerializedBlock, stxos
 }
 
 func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedBlock, attachNodes *list.List) error {
+	err := b.bd.Commit()
+	if err != nil {
+		return err
+	}
 	// Must be end node of sequence in dag
 	// Generate a new best state snapshot that will be used to update the
 	// database and later memory if all database updates are successful.
@@ -700,7 +704,7 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 
 	// Atomically insert info into the database.
 	// Update best block state.
-	err := dbPutBestState(b.DB(), state, pow.CalcWork(mainTipNode.Difficulty(), mainTipNode.Pow().GetPowType()))
+	err = dbPutBestState(b.DB(), state, pow.CalcWork(mainTipNode.Difficulty(), mainTipNode.Pow().GetPowType()))
 	if err != nil {
 		return err
 	}
@@ -717,7 +721,7 @@ func (b *BlockChain) updateBestState(ib meerdag.IBlock, block *types.SerializedB
 	b.stateSnapshot = state
 	b.stateLock.Unlock()
 
-	return b.bd.Commit()
+	return nil
 }
 
 func (b *BlockChain) updateBlockState(ib meerdag.IBlock, block *types.SerializedBlock) error {
