@@ -592,12 +592,13 @@ var (
 		&cli.IntFlag{
 			Name:        "cache.snapshot",
 			Usage:       "Percentage of cache memory allowance to use for snapshot caching (default = 10% full mode, 20% archive mode)",
-			Value:       0,
+			Value:       5,
 			Destination: &cfg.CacheSnapshot,
 		},
 		&cli.BoolFlag{
 			Name:        "devnextgdb",
 			Usage:       "Enable next generation databases that only exist in development mode",
+			Value:       true,
 			Destination: &cfg.DevNextGDB,
 		},
 		&cli.BoolFlag{
@@ -668,6 +669,7 @@ func DefaultConfig(homeDir string) *config.Config {
 		RPCPass:              defaultRPCPass,
 		ObsoleteHeight:       defaultObsoleteHeight,
 		SubmitNoSynced:       false,
+		DevNextGDB:           true,
 	}
 	if len(homeDir) > 0 {
 		hd, err := filepath.Abs(homeDir)
