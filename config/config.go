@@ -163,4 +163,11 @@ func (c *Config) SnapshotCache() int {
 	return c.Cache * c.CacheSnapshot / 100
 }
 
+func (c *Config) DBEngine() string {
+	if c.DbType == "ffldb" {
+		return "leveldb"
+	}
+	return c.DbType
+}
+
 var Cfg *Config

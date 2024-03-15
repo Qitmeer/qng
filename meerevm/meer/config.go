@@ -73,6 +73,7 @@ func MakeConfig(cfg *config.Config) (*eth.Config, error) {
 
 	nodeConf := node.DefaultConfig
 
+	nodeConf.DBEngine = cfg.DBEngine()
 	nodeConf.DataDir = datadir
 	nodeConf.Name = ClientIdentifier
 	nodeConf.Version = params.VersionWithMeta
