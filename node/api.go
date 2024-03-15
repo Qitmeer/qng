@@ -301,6 +301,9 @@ func (api *PublicBlockChainAPI) GetChainInfo(lastCount int, start *int64, end *i
 				break
 			}
 		}
+		if endBlock == nil {
+			endBlock = block
+		}
 	} else {
 		endBlock = mainTip
 		info = &json.ChainInfoResult{Count: 0}
