@@ -129,7 +129,7 @@ type Config struct {
 
 	Cache         int `long:"cache" description:"Megabytes of memory allocated to internal caching (default = 1024 mainnet full node)"`
 	CacheDatabase int `long:"cache.database" description:"Percentage of cache memory allowance to use for database io"`
-	CacheSnapshot int `long:"cache.snapshot" description:"Percentage of cache memory allowance to use for snapshot caching (default = 10% full mode, 20% archive mode)"`
+	CacheSnapshot int `long:"cache.snapshot" description:"Percentage of cache memory allowance to use for snapshot caching (default = 5% full mode)"`
 
 	EVMTrieTimeout int    `long:"evmtrietimeout" description:"Set the interval time(seconds) for flush evm trie to disk"`
 	StateScheme    string `long:"state.scheme" description:"Scheme to use for storing ethereum state ('hash' or 'path')"`
