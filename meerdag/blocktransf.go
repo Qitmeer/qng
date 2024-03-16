@@ -440,6 +440,7 @@ func (bd *MeerDAG) Foreach(start IBlock, depth uint, filter FilterType, fn func(
 	count := uint(0)
 	cost := time.Now()
 	cur := start
+main:
 	for count < depth && cur != nil {
 		if cur.GetID() != start.GetID() {
 			ret, err := fn(cur)
@@ -473,6 +474,9 @@ func (bd *MeerDAG) Foreach(start IBlock, depth uint, filter FilterType, fn func(
 				}
 				if ret {
 					count++
+					if count >= depth {
+						break main
+					}
 				}
 			}
 		}

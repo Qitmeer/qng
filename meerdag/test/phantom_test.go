@@ -511,7 +511,7 @@ func Test_ForeachFig2(t *testing.T) {
 			t.FailNow()
 		}
 	}
-	fmt.Printf("The Fig.1 Order from mainTip: ")
+	fmt.Printf("The Fig.2 Order from mainTip: ")
 	printBlockChainTag(order)
 }
 
@@ -542,4 +542,29 @@ func Test_ForeachFig4(t *testing.T) {
 	}
 	fmt.Printf("The Fig.1 Order from mainTip: ")
 	printBlockChainTag(order)
+}
+
+func Test_ForeachDepth(t *testing.T) {
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
+	if ibd == nil {
+		t.FailNow()
+	}
+
+	mt := bd.GetMainChainTip()
+	for i := uint(0); i <= mt.GetOrder(); i++ {
+		count := uint(0)
+		err := bd.Foreach(mt, i, meerdag.All, func(block meerdag.IBlock) (bool, error) {
+			//t.Logf("depth:%d,block id:%d hash:%s order:%d", i, block.GetID(), block.GetHash().String(), block.GetOrder())
+			count++
+			return true, nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if count != i {
+			t.Fatalf("expect:%d != %d", i, count)
+		}
+		//t.Log("-------------")
+	}
+
 }
