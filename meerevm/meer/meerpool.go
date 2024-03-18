@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/miner"
+	"github.com/holiman/uint256"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -219,8 +220,8 @@ func (m *MeerPool) handler() {
 						Hash:      tx.Hash(),
 						Tx:        tx.WithoutBlobTxSidecar(),
 						Time:      tx.Time(),
-						GasFeeCap: tx.GasFeeCap(),
-						GasTipCap: tx.GasTipCap(),
+						GasFeeCap: uint256.MustFromBig(tx.GasFeeCap()),
+						GasTipCap: uint256.MustFromBig(tx.GasTipCap()),
 					})
 				}
 				txset := miner.NewTransactionsByPriceAndNonce(m.current.signer, txs, m.current.header.BaseFee)
@@ -373,7 +374,7 @@ func (m *MeerPool) commitTransactions(env *environment, txs miner.TransactionsBy
 			log.Trace("Not enough gas for further transactions", "have", env.gasPool, "want", params.TxGas)
 			break
 		}
-		ltx := txs.Peek()
+		ltx, _ := txs.Peek()
 		if ltx == nil {
 			break
 		}
@@ -564,7 +565,19 @@ func (m *MeerPool) updateTemplate(interrupt *atomic.Int32, timestamp int64) {
 }
 
 func (m *MeerPool) fillTransactions(interrupt *atomic.Int32, env *environment) error {
-	pending := m.eth.TxPool().Pending(true)
+	// Retrieve the pending transactions pre-filtered by the 1559/4844 dynamic fees
+	filter := txpool.PendingFilter{
+		MinTip: uint256.MustFromBig(m.config.GasPrice),
+	}
+	if env.header.BaseFee != nil {
+		filter.BaseFee = uint256.MustFromBig(env.header.BaseFee)
+	}
+	if env.header.ExcessBlobGas != nil {
+		filter.BlobFee = uint256.MustFromBig(eip4844.CalcBlobFee(*env.header.ExcessBlobGas))
+	}
+	filter.OnlyPlainTxs, filter.OnlyBlobTxs = true, false
+
+	pending := m.eth.TxPool().Pending(filter)
 
 	// Split the pending transactions into locals and remotes.
 	localTxs, remoteTxs := make(map[common.Address][]*txpool.LazyTransaction), pending
@@ -810,6 +823,13 @@ func (m *MeerPool) SetGasCeil(ceil uint64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.config.GasCeil = ceil
+}
+
+func (m *MeerPool) SetGasTip(tip *big.Int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.config.GasPrice = tip
+	return nil
 }
 
 func (m *MeerPool) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription {
