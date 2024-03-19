@@ -439,7 +439,7 @@ func (b *MeerChain) validateTx(tx *types.Transaction, checkState bool) error {
 		if currentState.GetNonce(from) > tx.Nonce() {
 			return core.ErrNonceTooLow
 		}
-		if currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+		if currentState.GetBalance(from).ToBig().Cmp(tx.Cost()) < 0 {
 			return core.ErrInsufficientFunds
 		}
 	}
@@ -508,7 +508,7 @@ func (b *MeerChain) GetBalance(addre string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	ba := state.GetBalance(eAddr)
+	ba := state.GetBalance(eAddr).ToBig()
 	if ba == nil {
 		return 0, fmt.Errorf("No balance for address %s", eAddr)
 	}
@@ -517,8 +517,8 @@ func (b *MeerChain) GetBalance(addre string) (int64, error) {
 }
 
 func (b *MeerChain) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
-	tx, _, blockNumber, _, _ := b.chain.Backend().GetTransaction(nil, qcommon.ToEVMHash(txhash))
-	if tx == nil {
+	ret, tx, _, blockNumber, _, _ := b.chain.Backend().GetTransaction(nil, qcommon.ToEVMHash(txhash))
+	if !ret || tx == nil {
 		return 0
 	}
 	return blockNumber
