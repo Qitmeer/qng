@@ -396,7 +396,9 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 	mainHeightGauge.Update(int64(curMT.GetHeight()))
 	mainLayerGauge.Update(int64(curMT.GetLayer()))
 	tipsTotalGauge.Update(int64(bd.tips.Size()))
-
+	if olds.Len() > 0 {
+		reorganizeGauge.Update(int64(olds.Len()))
+	}
 	return news, olds, ib, lastMT != curMT.GetID()
 }
 
