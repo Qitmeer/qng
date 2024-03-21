@@ -182,11 +182,6 @@ func (this *QitmeerRobot) ListenWork() {
 }
 
 func (this *QitmeerRobot) NotifyWork(r bool) {
-	// if time.Since(this.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
-	// 	<-time.After(time.Since(this.LastSubmit))
-	// 	this.NotifyWork(this.Work.Get())
-	// 	return
-	// }
 	if r {
 		validDeviceCount := 0
 		for _, dev := range this.Devices {
@@ -307,9 +302,9 @@ func (this *QitmeerRobot) SubmitWork() {
 							if err != nil {
 								common.MinerLoger.Error(err.Error())
 							}
-							common.MinerLoger.Info("ws block success")
+							common.MinerLoger.Info("ws broadcast tx success")
 						}, 1, func() {
-							common.MinerLoger.Info("ws block failed")
+							common.MinerLoger.Info("ws broadcast tx failed")
 						})
 
 						common.MinerLoger.Info(fmt.Sprintf("Submit block, block hash=%s , height=%d , next submit will after %s",
