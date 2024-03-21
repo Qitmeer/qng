@@ -182,11 +182,11 @@ func (this *QitmeerRobot) ListenWork() {
 }
 
 func (this *QitmeerRobot) NotifyWork(r bool) {
-	if time.Since(this.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
-		<-time.After(time.Since(this.LastSubmit))
-		this.NotifyWork(this.Work.Get())
-		return
-	}
+	// if time.Since(this.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
+	// 	<-time.After(time.Since(this.LastSubmit))
+	// 	this.NotifyWork(this.Work.Get())
+	// 	return
+	// }
 	if r {
 		validDeviceCount := 0
 		for _, dev := range this.Devices {
@@ -229,9 +229,9 @@ func (this *QitmeerRobot) SubmitWork() {
 
 				this.SubmitLock.Lock()
 				if time.Since(this.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
+					r := this.Work.Get()
 					this.SubmitLock.Unlock()
-					<-time.After(time.Since(this.LastSubmit))
-					this.NotifyWork(this.Work.Get())
+					this.NotifyWork(r)
 					continue
 				}
 				this.LastSubmit = time.Now()
@@ -268,20 +268,16 @@ func (this *QitmeerRobot) SubmitWork() {
 					})
 				}
 				if err != nil {
-					if err != ErrSameWork || err == ErrSameWork {
+					if err == ErrSameWork {
 						this.StaleShares++
-						this.SubmitLock.Unlock()
-						continue
 					}
-					time.AfterFunc(1*time.Second, func() {
-						//this.SubmitLock.Lock()
-						r := this.Work.Get()
-						this.SubmitLock.Unlock()
-						if this.Work.Block != nil {
-							common.MinerLoger.Info("Change Task", "height", this.Work.Block.Height)
-						}
-						this.NotifyWork(r)
-					})
+					r := this.Work.Get()
+					this.SubmitLock.Unlock()
+					if this.Work.Block != nil {
+						common.MinerLoger.Info("Change Task", "height", this.Work.Block.Height)
+					}
+					this.NotifyWork(r)
+					continue
 				} else {
 					if !this.Pool { // solo
 						this.PendingLock.Lock()
@@ -313,6 +309,7 @@ func (this *QitmeerRobot) SubmitWork() {
 							}
 							common.MinerLoger.Info("ws block success")
 						}, 1, func() {
+							common.MinerLoger.Info("ws block failed")
 						})
 
 						common.MinerLoger.Info(fmt.Sprintf("Submit block, block hash=%s , height=%d , next submit will after %s",
@@ -451,8 +448,8 @@ func (this *QitmeerRobot) WsConnect() {
 				this.SubmitLock.Unlock()
 				if this.Work.Block != nil {
 					common.MinerLoger.Info("New Block Coming", "height", height)
+					this.NotifyWork(r)
 				}
-				this.NotifyWork(r)
 			}()
 		},
 		OnNodeExit: func(p *cmds.NodeExitNtfn) {

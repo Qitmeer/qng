@@ -31,7 +31,7 @@ var (
 	defaultRPCServer   = "127.0.0.1"
 	defaultPow         = "cuckaroo"
 	defaultSymbol      = "PMEER"
-	defaultTimeout     = 60
+	defaultTimeout     = 5
 	defaultMaxTxCount  = 100000000
 	defaultMaxSigCount = 400000000
 	defaultStatsServer = ""

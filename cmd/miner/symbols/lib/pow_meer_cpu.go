@@ -60,7 +60,8 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 		select {
 		case w = <-this.NewWork:
 			this.Work = w.(*QitmeerWork)
-			if common.LatestGBTID > this.Work.Block.GBTID {
+			if common.LatestGBTID != this.Work.Block.GBTID { //the height may be reduced if reorg
+				common.MinerLoger.Debug("task expired", "current", this.Work.Block.GBTID, "need", common.LatestGBTID)
 				continue
 			}
 		case <-this.Quit.Done():
@@ -101,7 +102,8 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 			if this.HasNewWork || this.ForceStop {
 				break
 			}
-			if common.LatestGBTID > this.Work.Block.GBTID {
+			if common.LatestGBTID != this.Work.Block.GBTID { //the height may be reduced if reorg
+				common.MinerLoger.Debug("task expired", "current", this.Work.Block.GBTID, "need", common.LatestGBTID)
 				break
 			}
 			hData := make([]byte, 128)
@@ -120,10 +122,13 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 				} else {
 					subm += "-" + this.header.JobID + "-" + this.header.Exnonce2
 				}
-				if common.LatestGBTID > this.Work.Block.GBTID {
+				if common.LatestGBTID != this.Work.Block.GBTID { //the height may be reduced if reorg
 					break
 				}
-				this.SubmitData <- subm
+				common.Timeout(func() { //prevent stuck
+					this.SubmitData <- subm
+				}, int64(this.Cfg.OptionConfig.Timeout), func() {})
+
 				if !this.Pool { // solo only submit once in one task
 					break
 				}
