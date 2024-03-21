@@ -12,7 +12,6 @@ import (
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"time"
 )
 
 // NotificationType represents the type of a notification message.
@@ -101,7 +100,6 @@ type NotificationCallback func(*Notification)
 // caller requested notifications by providing a callback function in the call
 // to New.
 func (b *BlockChain) sendNotification(typ NotificationType, data interface{}) {
-	start := time.Now()
 	// Generate and send the notification.
 	n := &Notification{Type: typ, Data: data}
 	b.notificationsLock.RLock()
@@ -109,7 +107,6 @@ func (b *BlockChain) sendNotification(typ NotificationType, data interface{}) {
 		callback(n)
 	}
 	b.notificationsLock.RUnlock()
-	blockConnectedNotifications.Update(time.Now().Sub(start))
 	// Ignore it if the caller didn't request notifications.
 	if b.events == nil {
 		return

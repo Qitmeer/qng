@@ -280,9 +280,11 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 	}
 	b.ChainUnlock()
 	if connectedBlocks.Len() > 0 {
+		start := time.Now()
 		for e := connectedBlocks.Front(); e != nil; e = e.Next() {
 			b.sendNotification(BlockConnected, e.Value)
 		}
+		blockConnectedNotifications.Update(time.Now().Sub(start))
 	}
 
 	if flags.Has(BFP2PAdd) || flags.Has(BFBroadcast) {
