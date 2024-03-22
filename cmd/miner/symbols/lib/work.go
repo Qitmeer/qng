@@ -33,6 +33,7 @@ type QitmeerWork struct {
 	Ing         bool
 	WorkLock    sync.Mutex
 	WsClient    *client.Client
+	LastSubmit  time.Time
 }
 
 func (this *QitmeerWork) GetPowType() pow.PowType {
@@ -53,6 +54,11 @@ func (this *QitmeerWork) Get() bool {
 		this.Ing = false
 	}()
 	this.Ing = true
+	if time.Since(this.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
+		<-time.After(time.Since(this.LastSubmit))
+		return this.Get()
+	}
+
 	for {
 		if this.WsClient == nil || this.WsClient.Disconnected() {
 			return false

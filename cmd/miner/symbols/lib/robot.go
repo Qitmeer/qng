@@ -46,7 +46,6 @@ type QitmeerRobot struct {
 	PendingLock          sync.Mutex
 	SubmitLock           sync.Mutex
 	WsClient             *client.Client
-	LastSubmit           time.Time
 }
 
 func (this *QitmeerRobot) GetPow(i int, ctx context.Context, uart_path string, allCount uint64) core.BaseDevice {
@@ -223,13 +222,13 @@ func (this *QitmeerRobot) SubmitWork() {
 				}
 
 				this.SubmitLock.Lock()
-				if time.Since(this.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
+				if time.Since(this.Work.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
 					r := this.Work.Get()
 					this.SubmitLock.Unlock()
 					this.NotifyWork(r)
 					continue
 				}
-				this.LastSubmit = time.Now()
+				this.Work.LastSubmit = time.Now()
 				var err error
 				var txID string
 				var height int
@@ -308,7 +307,7 @@ func (this *QitmeerRobot) SubmitWork() {
 						})
 
 						common.MinerLoger.Info(fmt.Sprintf("Submit block, block hash=%s , height=%d , next submit will after %s",
-							blockHash, height, this.LastSubmit.Add(time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond).Format(time.RFC3339)))
+							blockHash, height, this.Work.LastSubmit.Add(time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond).Format(time.RFC3339)))
 						this.PendingLock.Unlock()
 					} else {
 						this.ValidShares++
