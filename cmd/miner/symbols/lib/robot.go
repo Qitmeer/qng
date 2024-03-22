@@ -222,7 +222,7 @@ func (this *QitmeerRobot) SubmitWork() {
 					this.SubmitLock.Unlock()
 					continue
 				}
-				this.Work.LastSubmit = time.Now()
+
 				var err error
 				var txID string
 				var height int
@@ -263,6 +263,8 @@ func (this *QitmeerRobot) SubmitWork() {
 					common.MinerLoger.Error("Submit Error", "error", err.Error())
 					continue
 				} else {
+
+					this.Work.LastSubmit = time.Now()
 					if !this.Pool { // solo
 						this.PendingBlocks[txID] = PendingBlock{
 							CoinbaseHash: txID,
@@ -294,7 +296,6 @@ func (this *QitmeerRobot) SubmitWork() {
 						}, 1, func() {
 							common.MinerLoger.Info("ws broadcast tx failed")
 						})
-
 						common.MinerLoger.Info(fmt.Sprintf("Submit block, block hash=%s , height=%d , next submit will after %s",
 							blockHash, height, this.Work.LastSubmit.Add(time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond).Format(time.RFC3339)))
 
