@@ -380,6 +380,7 @@ func InspectDatabase(db ethdb.Database, keyPrefix, keyStart []byte) error {
 		invalidtxFullHash   stat
 		SnapshotBlockOrder  stat
 		SnapshotBlockStatus stat
+		addridx             stat
 
 		// Meta- and unaccounted data
 		metadata    stat
@@ -424,12 +425,14 @@ func InspectDatabase(db ethdb.Database, keyPrefix, keyStart []byte) error {
 			SnapshotBlockOrder.Add(size)
 		case bytes.HasPrefix(key, SnapshotBlockStatusPrefix) && len(key) == (len(SnapshotBlockStatusPrefix)+8):
 			SnapshotBlockStatus.Add(size)
-
+		case bytes.HasPrefix(key, AddridxPrefix):
+			addridx.Add(size)
 		default:
 			var accounted bool
 			for _, meta := range [][]byte{VersionKey, CompressionVersionKey, BlockIndexVersionKey, CreatedKey,
 				snapshotDisabledKey, SnapshotRootKey, snapshotJournalKey, snapshotGeneratorKey, snapshotRecoveryKey, snapshotSyncStatusKey,
 				badBlockKey, uncleanShutdownKey, bestChainStateKey, dagInfoKey, mainchainTipKey, dagTipsKey, diffAnticoneKey, EstimateFeeDatabaseKey,
+				addridxTipKey,
 			} {
 				if bytes.Equal(key, meta) {
 					metadata.Add(size)
@@ -463,6 +466,7 @@ func InspectDatabase(db ethdb.Database, keyPrefix, keyStart []byte) error {
 		{"Key-Value store", "InvalidTxFullHash", invalidtxFullHash.Size(), invalidtxFullHash.Count()},
 		{"Key-Value store", "SnapshotBlockOrder", SnapshotBlockOrder.Size(), SnapshotBlockOrder.Count()},
 		{"Key-Value store", "SnapshotBlockStatus", SnapshotBlockStatus.Size(), SnapshotBlockStatus.Count()},
+		{"Key-Value store", "Addridx", addridx.Size(), addridx.Count()},
 	}
 	// Inspect all registered append-only file store then.
 	ancients, err := inspectFreezers(db)
