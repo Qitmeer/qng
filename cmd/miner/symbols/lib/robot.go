@@ -153,7 +153,6 @@ func (this *QitmeerRobot) Run(ctx context.Context) {
 func (this *QitmeerRobot) ListenWork() {
 	common.MinerLoger.Info("listen new work server")
 	r := false
-	first := true
 	for {
 		select {
 		case <-this.Quit.Done():
@@ -163,15 +162,12 @@ func (this *QitmeerRobot) ListenWork() {
 			r = false
 			if this.Pool {
 				r = this.Work.PoolGet() // get new work
-			} else if first { // solo
+			} else { // solo
 				if this.WsClient == nil || this.WsClient.Disconnected() {
 					continue
 				}
 				this.Work.WsClient = this.WsClient
 				r = this.Work.Get() // get new work
-				if r && this.Work.Block != nil {
-					first = false
-				}
 			}
 			this.NotifyWork(r)
 			time.Sleep(time.Millisecond * time.Duration(this.Cfg.OptionConfig.TaskInterval))
@@ -222,9 +218,8 @@ func (this *QitmeerRobot) SubmitWork() {
 
 				this.SubmitLock.Lock()
 				if time.Since(this.Work.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
-					r := this.Work.Get()
+					common.MinerLoger.Debug("Submit Too Fast", "wait", time.Since(this.Work.LastSubmit))
 					this.SubmitLock.Unlock()
-					this.NotifyWork(r)
 					continue
 				}
 				this.Work.LastSubmit = time.Now()
@@ -264,12 +259,8 @@ func (this *QitmeerRobot) SubmitWork() {
 					if err == ErrSameWork {
 						this.StaleShares++
 					}
-					r := this.Work.Get()
 					this.SubmitLock.Unlock()
-					if this.Work.Block != nil {
-						common.MinerLoger.Info("Change Task", "height", this.Work.Block.Height)
-					}
-					this.NotifyWork(r)
+					common.MinerLoger.Error("Submit Error", "error", err.Error())
 					continue
 				} else {
 					if !this.Pool { // solo
@@ -336,36 +327,34 @@ func (this *QitmeerRobot) Status() {
 				continue
 			}
 			if this.Cfg.PoolConfig.Pool == "" {
-				go func() {
-					if this.Work.Block != nil {
-						this.SubmitLock.Lock()
-						for i, v := range this.PendingBlocks {
-							if this.Work.Block.Height > v.Height+this.Cfg.SoloConfig.NotConfirmHeight {
-								common.MinerLoger.Info("[Invalid Blocks]", "block hash", v.BlockHash, "coinbase hash", v.CoinbaseHash, "height", v.Height)
-								this.InvalidShares++
-								this.PendingShares--
-								delete(this.PendingBlocks, i)
-								common.Timeout(func() {
-									if this.WsClient == nil || this.WsClient.Disconnected() {
-										return
-									}
-									txes := []cmds.TxConfirm{
-										{
-											Txid: v.CoinbaseHash,
-										},
-									}
-									err := this.WsClient.RemoveTxsConfirmed(txes)
-									if err != nil {
-										common.MinerLoger.Error(err.Error())
-									}
-									common.MinerLoger.Debug("ws remove success")
-								}, 1, func() {
-								})
-							}
+				if this.Work.Block != nil {
+					this.SubmitLock.Lock()
+					for i, v := range this.PendingBlocks {
+						if this.Work.Block.Height > v.Height+this.Cfg.SoloConfig.NotConfirmHeight {
+							common.MinerLoger.Info("[Invalid Blocks]", "block hash", v.BlockHash, "coinbase hash", v.CoinbaseHash, "height", v.Height)
+							this.InvalidShares++
+							this.PendingShares--
+							delete(this.PendingBlocks, i)
+							common.Timeout(func() {
+								if this.WsClient == nil || this.WsClient.Disconnected() {
+									return
+								}
+								txes := []cmds.TxConfirm{
+									{
+										Txid: v.CoinbaseHash,
+									},
+								}
+								err := this.WsClient.RemoveTxsConfirmed(txes)
+								if err != nil {
+									common.MinerLoger.Error(err.Error())
+								}
+								common.MinerLoger.Debug("ws remove success")
+							}, 1, func() {
+							})
 						}
-						this.SubmitLock.Unlock()
 					}
-				}()
+					this.SubmitLock.Unlock()
+				}
 
 			}
 			valid = this.ValidShares
@@ -440,14 +429,13 @@ func (this *QitmeerRobot) WsConnect() {
 		},
 		OnBlockConnected: func(hash *hash.Hash, height, order int64, t time.Time, txs []*types.Transaction) {
 			go func() {
-				this.SubmitLock.Lock()
 				r := this.Work.Get()
-				this.SubmitLock.Unlock()
 				if this.Work.Block != nil {
 					common.MinerLoger.Info("New Block Coming", "height", height)
 					this.NotifyWork(r)
 				}
 			}()
+
 		},
 		OnNodeExit: func(p *cmds.NodeExitNtfn) {
 			common.MinerLoger.Debug("OnNodeExit")
