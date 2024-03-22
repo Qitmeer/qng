@@ -43,7 +43,6 @@ type QitmeerRobot struct {
 	StratuFee            *QitmeerStratum
 	AllTransactionsCount int64
 	PendingBlocks        map[string]PendingBlock
-	PendingLock          sync.Mutex
 	SubmitLock           sync.Mutex
 	WsClient             *client.Client
 }
@@ -274,7 +273,6 @@ func (this *QitmeerRobot) SubmitWork() {
 					continue
 				} else {
 					if !this.Pool { // solo
-						this.PendingLock.Lock()
 						this.PendingBlocks[txID] = PendingBlock{
 							CoinbaseHash: txID,
 							BlockHash:    blockHash,
@@ -308,7 +306,7 @@ func (this *QitmeerRobot) SubmitWork() {
 
 						common.MinerLoger.Info(fmt.Sprintf("Submit block, block hash=%s , height=%d , next submit will after %s",
 							blockHash, height, this.Work.LastSubmit.Add(time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond).Format(time.RFC3339)))
-						this.PendingLock.Unlock()
+
 					} else {
 						this.ValidShares++
 					}
@@ -338,32 +336,37 @@ func (this *QitmeerRobot) Status() {
 				continue
 			}
 			if this.Cfg.PoolConfig.Pool == "" {
-				this.PendingLock.Lock()
-				for i, v := range this.PendingBlocks {
-					if this.Work.Block.Height > v.Height+this.Cfg.SoloConfig.NotConfirmHeight {
-						common.MinerLoger.Info("[Invalid Blocks]", "block hash", v.BlockHash, "coinbase hash", v.CoinbaseHash, "height", v.Height)
-						this.InvalidShares++
-						this.PendingShares--
-						delete(this.PendingBlocks, i)
-						common.Timeout(func() {
-							if this.WsClient == nil || this.WsClient.Disconnected() {
-								return
+				go func() {
+					if this.Work.Block != nil {
+						this.SubmitLock.Lock()
+						for i, v := range this.PendingBlocks {
+							if this.Work.Block.Height > v.Height+this.Cfg.SoloConfig.NotConfirmHeight {
+								common.MinerLoger.Info("[Invalid Blocks]", "block hash", v.BlockHash, "coinbase hash", v.CoinbaseHash, "height", v.Height)
+								this.InvalidShares++
+								this.PendingShares--
+								delete(this.PendingBlocks, i)
+								common.Timeout(func() {
+									if this.WsClient == nil || this.WsClient.Disconnected() {
+										return
+									}
+									txes := []cmds.TxConfirm{
+										{
+											Txid: v.CoinbaseHash,
+										},
+									}
+									err := this.WsClient.RemoveTxsConfirmed(txes)
+									if err != nil {
+										common.MinerLoger.Error(err.Error())
+									}
+									common.MinerLoger.Debug("ws remove success")
+								}, 1, func() {
+								})
 							}
-							txes := []cmds.TxConfirm{
-								{
-									Txid: v.CoinbaseHash,
-								},
-							}
-							err := this.WsClient.RemoveTxsConfirmed(txes)
-							if err != nil {
-								common.MinerLoger.Error(err.Error())
-							}
-							common.MinerLoger.Debug("ws remove success")
-						}, 1, func() {
-						})
+						}
+						this.SubmitLock.Unlock()
 					}
-				}
-				this.PendingLock.Unlock()
+				}()
+
 			}
 			valid = this.ValidShares
 			rejected = this.InvalidShares
@@ -417,7 +420,7 @@ func (this *QitmeerRobot) WsConnect() {
 		OnTxConfirm: func(txConfirm *cmds.TxConfirmResult) {
 			common.MinerLoger.Info("OnTxConfirm", "tx", txConfirm.Tx, "confirms", txConfirm.Confirms, "order", txConfirm.Order)
 			go func() {
-				this.PendingLock.Lock()
+				this.SubmitLock.Lock()
 				if _, ok := this.PendingBlocks[txConfirm.Tx]; ok && txConfirm.Confirms >= this.Cfg.SoloConfig.ConfirmHeight {
 					//
 					if _, ok := this.PendingBlocks[txConfirm.Tx]; ok {
@@ -432,7 +435,7 @@ func (this *QitmeerRobot) WsConnect() {
 						delete(this.PendingBlocks, txConfirm.Tx)
 					}
 				}
-				this.PendingLock.Unlock()
+				this.SubmitLock.Unlock()
 			}()
 		},
 		OnBlockConnected: func(hash *hash.Hash, height, order int64, t time.Time, txs []*types.Transaction) {
