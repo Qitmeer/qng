@@ -43,10 +43,8 @@ type QitmeerRobot struct {
 	StratuFee            *QitmeerStratum
 	AllTransactionsCount int64
 	PendingBlocks        map[string]PendingBlock
-	PendingLock          sync.Mutex
 	SubmitLock           sync.Mutex
 	WsClient             *client.Client
-	LastSubmit           time.Time
 }
 
 func (this *QitmeerRobot) GetPow(i int, ctx context.Context, uart_path string, allCount uint64) core.BaseDevice {
@@ -155,7 +153,6 @@ func (this *QitmeerRobot) Run(ctx context.Context) {
 func (this *QitmeerRobot) ListenWork() {
 	common.MinerLoger.Info("listen new work server")
 	r := false
-	first := true
 	for {
 		select {
 		case <-this.Quit.Done():
@@ -165,15 +162,12 @@ func (this *QitmeerRobot) ListenWork() {
 			r = false
 			if this.Pool {
 				r = this.Work.PoolGet() // get new work
-			} else if first { // solo
+			} else { // solo
 				if this.WsClient == nil || this.WsClient.Disconnected() {
 					continue
 				}
 				this.Work.WsClient = this.WsClient
 				r = this.Work.Get() // get new work
-				if r && this.Work.Block != nil {
-					first = false
-				}
 			}
 			this.NotifyWork(r)
 			time.Sleep(time.Millisecond * time.Duration(this.Cfg.OptionConfig.TaskInterval))
@@ -223,13 +217,12 @@ func (this *QitmeerRobot) SubmitWork() {
 				}
 
 				this.SubmitLock.Lock()
-				if time.Since(this.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
-					r := this.Work.Get()
+				if time.Since(this.Work.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
+					common.MinerLoger.Debug("Submit Too Fast", "wait", time.Since(this.Work.LastSubmit))
 					this.SubmitLock.Unlock()
-					this.NotifyWork(r)
 					continue
 				}
-				this.LastSubmit = time.Now()
+
 				var err error
 				var txID string
 				var height int
@@ -266,16 +259,13 @@ func (this *QitmeerRobot) SubmitWork() {
 					if err == ErrSameWork {
 						this.StaleShares++
 					}
-					r := this.Work.Get()
 					this.SubmitLock.Unlock()
-					if this.Work.Block != nil {
-						common.MinerLoger.Info("Change Task", "height", this.Work.Block.Height)
-					}
-					this.NotifyWork(r)
+					common.MinerLoger.Error("Submit Error", "error", err.Error())
 					continue
 				} else {
+
+					this.Work.LastSubmit = time.Now()
 					if !this.Pool { // solo
-						this.PendingLock.Lock()
 						this.PendingBlocks[txID] = PendingBlock{
 							CoinbaseHash: txID,
 							BlockHash:    blockHash,
@@ -306,10 +296,9 @@ func (this *QitmeerRobot) SubmitWork() {
 						}, 1, func() {
 							common.MinerLoger.Info("ws broadcast tx failed")
 						})
-
 						common.MinerLoger.Info(fmt.Sprintf("Submit block, block hash=%s , height=%d , next submit will after %s",
-							blockHash, height, this.LastSubmit.Add(time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond).Format(time.RFC3339)))
-						this.PendingLock.Unlock()
+							blockHash, height, this.Work.LastSubmit.Add(time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond).Format(time.RFC3339)))
+
 					} else {
 						this.ValidShares++
 					}
@@ -339,32 +328,35 @@ func (this *QitmeerRobot) Status() {
 				continue
 			}
 			if this.Cfg.PoolConfig.Pool == "" {
-				this.PendingLock.Lock()
-				for i, v := range this.PendingBlocks {
-					if this.Work.Block.Height > v.Height+this.Cfg.SoloConfig.NotConfirmHeight {
-						common.MinerLoger.Info("[Invalid Blocks]", "block hash", v.BlockHash, "coinbase hash", v.CoinbaseHash, "height", v.Height)
-						this.InvalidShares++
-						this.PendingShares--
-						delete(this.PendingBlocks, i)
-						common.Timeout(func() {
-							if this.WsClient == nil || this.WsClient.Disconnected() {
-								return
-							}
-							txes := []cmds.TxConfirm{
-								{
-									Txid: v.CoinbaseHash,
-								},
-							}
-							err := this.WsClient.RemoveTxsConfirmed(txes)
-							if err != nil {
-								common.MinerLoger.Error(err.Error())
-							}
-							common.MinerLoger.Debug("ws remove success")
-						}, 1, func() {
-						})
+				if this.Work.Block != nil {
+					this.SubmitLock.Lock()
+					for i, v := range this.PendingBlocks {
+						if this.Work.Block.Height > v.Height+this.Cfg.SoloConfig.NotConfirmHeight {
+							common.MinerLoger.Info("[Invalid Blocks]", "block hash", v.BlockHash, "coinbase hash", v.CoinbaseHash, "height", v.Height)
+							this.InvalidShares++
+							this.PendingShares--
+							delete(this.PendingBlocks, i)
+							common.Timeout(func() {
+								if this.WsClient == nil || this.WsClient.Disconnected() {
+									return
+								}
+								txes := []cmds.TxConfirm{
+									{
+										Txid: v.CoinbaseHash,
+									},
+								}
+								err := this.WsClient.RemoveTxsConfirmed(txes)
+								if err != nil {
+									common.MinerLoger.Error(err.Error())
+								}
+								common.MinerLoger.Debug("ws remove success")
+							}, 1, func() {
+							})
+						}
 					}
+					this.SubmitLock.Unlock()
 				}
-				this.PendingLock.Unlock()
+
 			}
 			valid = this.ValidShares
 			rejected = this.InvalidShares
@@ -418,7 +410,7 @@ func (this *QitmeerRobot) WsConnect() {
 		OnTxConfirm: func(txConfirm *cmds.TxConfirmResult) {
 			common.MinerLoger.Info("OnTxConfirm", "tx", txConfirm.Tx, "confirms", txConfirm.Confirms, "order", txConfirm.Order)
 			go func() {
-				this.PendingLock.Lock()
+				this.SubmitLock.Lock()
 				if _, ok := this.PendingBlocks[txConfirm.Tx]; ok && txConfirm.Confirms >= this.Cfg.SoloConfig.ConfirmHeight {
 					//
 					if _, ok := this.PendingBlocks[txConfirm.Tx]; ok {
@@ -433,19 +425,18 @@ func (this *QitmeerRobot) WsConnect() {
 						delete(this.PendingBlocks, txConfirm.Tx)
 					}
 				}
-				this.PendingLock.Unlock()
+				this.SubmitLock.Unlock()
 			}()
 		},
 		OnBlockConnected: func(hash *hash.Hash, height, order int64, t time.Time, txs []*types.Transaction) {
 			go func() {
-				this.SubmitLock.Lock()
 				r := this.Work.Get()
-				this.SubmitLock.Unlock()
 				if this.Work.Block != nil {
 					common.MinerLoger.Info("New Block Coming", "height", height)
 					this.NotifyWork(r)
 				}
 			}()
+
 		},
 		OnNodeExit: func(p *cmds.NodeExitNtfn) {
 			common.MinerLoger.Debug("OnNodeExit")
