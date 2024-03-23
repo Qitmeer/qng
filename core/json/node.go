@@ -56,6 +56,8 @@ type GetPeerInfoResult struct {
 	ReConnect      uint64               `json:"reconnect,omitempty"`
 	Bads           []string             `json:"bads,omitempty"`
 	MempoolReqTime string               `json:"mempoolreqtime,omitempty"`
+	Tasks          int                  `json:"tasks,omitempty"`
+	Broadcast      int                  `json:"broadcast,omitempty"`
 }
 
 // GetGraphStateResult data

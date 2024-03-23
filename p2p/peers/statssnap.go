@@ -37,6 +37,8 @@ type StatsSnap struct {
 	ReConnect      uint64
 	StateRoot      string
 	MempoolReqTime time.Time
+	Tasks          int
+	Broadcast      int
 }
 
 func (p *StatsSnap) IsRelay() bool {
