@@ -360,6 +360,8 @@ func (p *Peer) StatsSnapshot() (*StatsSnap, error) {
 		ReConnect:      p.reconnect,
 		StateRoot:      p.stateRootAndOrder(),
 		MempoolReqTime: p.mempoolreq,
+		Tasks:          len(p.rateTasks),
+		Broadcast:      len(p.broadcast),
 	}
 	n := p.node()
 	if n != nil {
