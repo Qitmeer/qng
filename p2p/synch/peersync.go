@@ -30,9 +30,10 @@ const (
 type PeerSync struct {
 	sy *Sync
 
-	splock   sync.RWMutex
-	syncPeer *peers.Peer
-	lastSync time.Time
+	splock      sync.RWMutex
+	syncPeer    *peers.Peer
+	lastSync    time.Time
+	lastBlockID uint
 	// dag sync
 	dagSync *meerdag.DAGSync
 
@@ -168,9 +169,15 @@ func (ps *PeerSync) handleStallSample() {
 	if atomic.LoadInt32(&ps.shutdown) != 0 {
 		return
 	}
-	if time.Since(ps.lastSync) >= ps.sy.PeerInterval {
-		ps.TryAgainUpdateSyncPeer(true)
+	lbid := ps.Chain().BlockDAG().GetLastBlockID()
+	if ps.lastBlockID <= 0 {
+		ps.lastBlockID = lbid
+		return
 	}
+	if ps.lastBlockID != lbid {
+		return
+	}
+	ps.TryAgainUpdateSyncPeer(true)
 }
 
 func (ps *PeerSync) Pause() bool {
