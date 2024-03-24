@@ -568,3 +568,18 @@ func Test_ForeachDepth(t *testing.T) {
 	}
 
 }
+
+func Test_LastBlock(t *testing.T) {
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
+	if ibd == nil {
+		t.FailNow()
+	}
+	lastBlock := bd.GetLastBlock()
+	lastBlockID := bd.GetLastBlockID()
+	if lastBlock.GetID() != lastBlockID {
+		t.FailNow()
+	}
+	if !tbMap["K"].GetHash().IsEqual(lastBlock.GetHash()) {
+		t.FailNow()
+	}
+}
