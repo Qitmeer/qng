@@ -162,10 +162,25 @@ func (bd *MeerDAG) getBlockByOrder(order uint) IBlock {
 	return bd.getBlockById(id)
 }
 
-// Return the last order block
+// Return the last added block
 func (bd *MeerDAG) GetLastBlock() IBlock {
-	// TODO
-	return bd.GetMainChainTip()
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+
+	return bd.getBlockById(bd.getLastBlockID())
+}
+
+func (bd *MeerDAG) GetLastBlockID() uint {
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	return bd.getLastBlockID()
+}
+
+func (bd *MeerDAG) getLastBlockID() uint {
+	if bd.blockTotal <= 0 {
+		return 0
+	}
+	return bd.blockTotal - 1
 }
 
 // This function need a stable sequence,so call it before sorting the DAG.
