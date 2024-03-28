@@ -44,7 +44,7 @@ func QngMixnetGenesis() *core.Genesis {
 		Nonce:      0,
 		Number:     0,
 		ExtraData:  hexutil.MustDecode("0x00"),
-		GasLimit:   100000000,
+		GasLimit:   4000000,
 		Difficulty: big.NewInt(0),
 		Alloc:      DecodePrealloc(getAllocData(qparams.MixNetParams.Name)),
 		Timestamp:  uint64(qparams.MixNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
