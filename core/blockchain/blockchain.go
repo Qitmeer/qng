@@ -445,7 +445,8 @@ func (b *BlockChain) IsNearlySynced() bool {
 	if lastNode == nil {
 		return false
 	}
-	startTargetTime := b.timeSource.AdjustedTime().Add(-b.params.TargetTimespan).Unix()
+	timeSpan := b.params.TargetTimePerBlock * (meerdag.StableConfirmations - 1)
+	startTargetTime := b.timeSource.AdjustedTime().Add(-timeSpan).Unix()
 	return lastNode.GetTimestamp() >= startTargetTime
 }
 

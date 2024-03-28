@@ -307,9 +307,13 @@ out:
 			continue
 		}
 		start := time.Now()
-		if params.ActiveNetParams.Params.IsDevelopDiff() {
+		if w.miner.CanMining() != nil {
+			time.Sleep(time.Second)
+			continue
+		} else if params.ActiveNetParams.Params.IsDevelopDiff() {
 			time.Sleep(params.ActiveNetParams.Params.TargetTimePerBlock)
 		}
+
 		sb := w.solveBlock()
 		if sb != nil {
 			w.hasNewWork.Store(false)

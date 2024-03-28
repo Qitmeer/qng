@@ -100,8 +100,12 @@ func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFl
 	if err != nil {
 		return ib, false, err
 	}
+	if source != nil {
+		log.Debug("Accepted block", "hash", block.Hash().String(), "age", time.Since(block.Block().Header.Timestamp), "source", source.ShortString())
+	} else {
+		log.Debug("Accepted block", "hash", block.Hash().String(), "age", time.Since(block.Block().Header.Timestamp))
+	}
 
-	log.Debug("Accepted block", "hash", block.Hash().String())
 	return ib, false, nil
 }
 

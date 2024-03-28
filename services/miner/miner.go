@@ -688,7 +688,10 @@ func (m *Miner) CanMining() error {
 	if m.cfg.SubmitNoSynced {
 		return nil
 	}
-	if !m.BlockChain().IsNearlySynced() {
+	if m.BlockChain().BestSnapshot().GraphState.GetMainOrder() <= 0 {
+		return nil
+	}
+	if !m.BlockChain().IsCurrent() {
 		log.Trace("Client in initial download, qitmeer is downloading blocks...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading blocks...")

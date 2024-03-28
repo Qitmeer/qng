@@ -6,6 +6,7 @@ package synch
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/event"
@@ -284,7 +285,7 @@ func (ps *PeerSync) startSync() {
 		return
 	}
 	best := ps.Chain().BestSnapshot()
-	bestPeer := ps.getBestPeer()
+	bestPeer := ps.getGoodPeer()
 	// Start syncing from the best peer if one was selected.
 	if bestPeer != nil {
 		ps.processID++
@@ -356,10 +357,6 @@ func (ps *PeerSync) startSync() {
 		log.Info("The sync of graph state has ended", "spend", time.Since(startTime).Truncate(time.Second).String(), "processID", ps.processID)
 		if add > 0 {
 			if longSyncMod && !ps.IsInterrupt() {
-				if ps.IsCompleteForSyncPeer() {
-					log.Info("Your synchronization has been completed.")
-				}
-
 				if ps.IsCurrent() {
 					log.Info("You're up to date now.")
 				}
@@ -421,6 +418,27 @@ func (ps *PeerSync) getBestPeer() *peers.Peer {
 	return equalPeers[index]
 }
 
+func (ps *PeerSync) getGoodPeer() *peers.Peer {
+	best := ps.Chain().BestSnapshot()
+	for _, sp := range ps.sy.peers.CanSyncPeers() {
+		gs := sp.GraphState()
+		if gs == nil {
+			continue
+		}
+		if gs.GetTips().IsEmpty() {
+			continue
+		}
+		if best.GraphState.GetTips().Contain(gs.GetTips()) {
+			continue
+		}
+		if ps.sy.p2p.BlockChain().BlockDAG().HasBlocks(gs.GetTips().List()) {
+			continue
+		}
+		return sp
+	}
+	return nil
+}
+
 // IsCurrent returns true if we believe we are synced with our peers, false if we
 // still have blocks to check
 func (ps *PeerSync) IsCurrent() bool {
@@ -428,7 +446,7 @@ func (ps *PeerSync) IsCurrent() bool {
 		return false
 	}
 
-	return ps.IsCompleteForSyncPeer()
+	return ps.IsCompleteForPeers()
 }
 
 func (ps *PeerSync) IsCompleteForSyncPeer() bool {
@@ -452,6 +470,29 @@ func (ps *PeerSync) IsCompleteForSyncPeer() bool {
 	}
 
 	return true
+}
+
+// Due to the nature of dag, it is necessary to detect the state of all nodes and whether they are consistent
+func (ps *PeerSync) IsCompleteForPeers() bool {
+	best := ps.Chain().BestSnapshot()
+	hs := []*hash.Hash{}
+	for _, pe := range ps.sy.Peers().CanSyncPeers() {
+		gs := pe.GraphState()
+		if gs == nil {
+			continue
+		}
+		if gs.GetTips().IsEmpty() {
+			continue
+		}
+		if best.GraphState.GetTips().Contain(gs.GetTips()) {
+			continue
+		}
+		hs = append(hs, gs.GetTips().List()...)
+	}
+	if len(hs) <= 0 {
+		return true
+	}
+	return ps.sy.p2p.BlockChain().BlockDAG().HasBlocks(hs)
 }
 
 func (ps *PeerSync) IntellectSyncBlocks(refresh bool, pe *peers.Peer) *ProcessResult {
@@ -525,7 +566,7 @@ func (ps *PeerSync) checkContinueSync() bool {
 			go ps.TryAgainUpdateSyncPeer(true)
 			return false
 		}
-		bestPeer := ps.getBestPeer()
+		bestPeer := ps.getGoodPeer()
 		if bestPeer == nil {
 			go ps.TryAgainUpdateSyncPeer(true)
 			return false
