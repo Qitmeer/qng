@@ -385,7 +385,7 @@ var testPowNetGenesisCoinbaseTx = types.Transaction{
 }
 
 var mixNetGenesisTx1 = buildMixNetGenesisTxOne()
-var mixnetGenesisTime = time.Unix(1710731214, 0) // 2024-03-18
+var mixnetGenesisTime = time.Unix(1711599744, 0) // 2024-03-28
 func buildMixNetGenesisTxOne() types.Transaction {
 	tx := types.Transaction{
 		Version: 1,
