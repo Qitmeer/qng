@@ -185,9 +185,7 @@ func (ds *DAGSync) getBlockChainFromMain(point IBlock, maxHashes uint) []*hash.H
 		}
 	}
 	rlen := len(result)
-	if uint(rlen) < maxHashes &&
-		rlen > 0 &&
-		result[rlen-1].IsEqual(mainTip.GetHash()) {
+	if uint(rlen) < maxHashes {
 		pdb, ok := ds.bd.GetInstance().(*Phantom)
 		if ok {
 			if !pdb.GetDiffAnticone().IsEmpty() {
