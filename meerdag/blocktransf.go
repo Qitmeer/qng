@@ -25,6 +25,20 @@ func (bd *MeerDAG) HasBlock(h *hash.Hash) bool {
 	return bd.GetBlockId(h) != MaxId
 }
 
+func (bd *MeerDAG) HasBlocks(hs []*hash.Hash) bool {
+	if len(hs) <= 0 {
+		return false
+	}
+	bd.stateLock.Lock()
+	defer bd.stateLock.Unlock()
+	for _, h := range hs {
+		if !bd.hasBlock(h) {
+			return false
+		}
+	}
+	return true
+}
+
 func (bd *MeerDAG) hasBlock(h *hash.Hash) bool {
 	return bd.getBlockId(h) != MaxId
 }
