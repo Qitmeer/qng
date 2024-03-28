@@ -65,7 +65,6 @@ func (this *QitmeerWork) Get() bool {
 			return false
 		}
 		this.ForceUpdate = false
-		this.Rpc.GbtID++
 		header, err := this.WsClient.GetRemoteGBT(this.GetPowType())
 		if err != nil {
 			time.Sleep(time.Duration(this.Cfg.OptionConfig.TaskInterval) * time.Millisecond)
@@ -77,13 +76,15 @@ func (this *QitmeerWork) Get() bool {
 			//not has new work
 			return false
 		}
+		this.Rpc.GbtID++
 		this.Block = &BlockHeader{}
 		this.Block.ParentRoot = header.ParentRoot
 		this.Block.WorkData = header.BlockData()
 		this.Block.Target = fmt.Sprintf("%064x", pow.CompactToBig(header.Difficulty))
 		this.Block.GBTID = this.Rpc.GbtID
 		common.LatestGBTID = this.Rpc.GbtID
-		common.MinerLoger.Trace(fmt.Sprintf("getRemoteBlockTemplate , target :%s , GBTID:%d", this.Block.Target, this.Rpc.GbtID))
+		common.MinerLoger.Debug(fmt.Sprintf("getRemoteBlockTemplate , target :%s , GBTID:%d", this.Block.Target, this.Rpc.GbtID))
+		this.GetWorkTime = time.Now().Unix()
 		return true
 	}
 }
@@ -93,7 +94,8 @@ func (this *QitmeerWork) Submit(header *types.BlockHeader, gbtID string) (string
 	this.Lock()
 	defer this.Unlock()
 	gbtIDInt64, _ := strconv.ParseInt(gbtID, 10, 64)
-	if this.Rpc.GbtID > gbtIDInt64 {
+	if this.Rpc.GbtID != gbtIDInt64 {
+		common.MinerLoger.Debug(fmt.Sprintf("gbt old , target :%d , current:%d", this.Rpc.GbtID, gbtIDInt64))
 		return "", 0, ErrSameWork
 	}
 	this.Rpc.SubmitID++

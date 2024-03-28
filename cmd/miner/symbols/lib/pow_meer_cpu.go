@@ -55,13 +55,15 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 	this.Started = time.Now().Unix()
 	this.AllDiffOneShares = 0
 	this.IsRunning = true
+	var currentGBTID int64
 	for {
 		this.AllDiffOneShares = 0
 		select {
 		case w = <-this.NewWork:
 			this.Work = w.(*QitmeerWork)
-			if common.LatestGBTID != this.Work.Block.GBTID { //the height may be reduced if reorg
-				common.MinerLoger.Debug("task expired", "current", this.Work.Block.GBTID, "need", common.LatestGBTID)
+			currentGBTID = w.(*QitmeerWork).Block.GBTID
+			if common.LatestGBTID != currentGBTID { //the height may be reduced if reorg
+				common.MinerLoger.Debug("task expired", "current", currentGBTID, "need", common.LatestGBTID)
 				continue
 			}
 		case <-this.Quit.Done():
@@ -100,10 +102,11 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 			}
 			// if has new work ,current calc stop
 			if this.HasNewWork || this.ForceStop {
+				common.MinerLoger.Debug("HasNewWork")
 				break
 			}
-			if common.LatestGBTID != this.Work.Block.GBTID { //the height may be reduced if reorg
-				common.MinerLoger.Debug("task expired", "current", this.Work.Block.GBTID, "need", common.LatestGBTID)
+			if common.LatestGBTID != currentGBTID { //the height may be reduced if reorg
+				common.MinerLoger.Debug("task expired", "current", currentGBTID, "need", common.LatestGBTID)
 				break
 			}
 			hData := make([]byte, 128)
@@ -118,11 +121,11 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 				common.MinerLoger.Debug(fmt.Sprintf("device #%d found hash : %s nonce:%d target:%064x", this.MinerId, h, nonce, this.header.TargetDiff))
 				subm := hex.EncodeToString(hData[:117])
 				if !this.Pool {
-					subm += "-" + fmt.Sprintf("%d", this.Work.Block.GBTID)
+					subm += "-" + fmt.Sprintf("%d", currentGBTID)
 				} else {
 					subm += "-" + this.header.JobID + "-" + this.header.Exnonce2
 				}
-				if common.LatestGBTID != this.Work.Block.GBTID { //the height may be reduced if reorg
+				if common.LatestGBTID != currentGBTID { //the height may be reduced if reorg
 					break
 				}
 				common.Timeout(func() { //prevent stuck
