@@ -231,7 +231,8 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 			block = b.Block
 		}
 		//
-		_, IsOrphan, err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags, nil)
+		pid := pe.GetID()
+		_, IsOrphan, err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags, &pid)
 		if err != nil {
 			log.Error(fmt.Sprintf("Failed to process block:hash=%s err=%s", block.Hash(), err), "processID", ps.processID)
 			continue
