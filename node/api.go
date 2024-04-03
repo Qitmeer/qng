@@ -238,7 +238,7 @@ func (api *PublicBlockChainAPI) GetDatabaseInfo() (interface{}, error) {
 }
 
 func (api *PublicBlockChainAPI) GetChainInfo(lastCount int, start *int64, end *int64) (interface{}, error) {
-	if !api.node.GetBlockChain().IsNearlySynced() {
+	if !api.node.GetPeerServer().IsNearlySynced() {
 		return nil, fmt.Errorf("Busy, try again later")
 	}
 	count := meerdag.MinBlockPruneSize

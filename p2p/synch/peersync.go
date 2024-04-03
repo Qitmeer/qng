@@ -246,7 +246,7 @@ func (ps *PeerSync) PeerUpdate(pe *peers.Peer, immediately bool) {
 		return
 	}
 
-	pe.RunRate(PeerUpdate, DefaultRateTaskTime, func() {
+	pe.RunRate(PeerUpdate, UpdateGraphStateTime, func() {
 		ps.OnPeerUpdate(pe)
 	})
 
@@ -425,6 +425,27 @@ func (ps *PeerSync) IsCurrent() bool {
 	}
 
 	return ps.IsCompleteForSyncPeer()
+}
+
+func (ps *PeerSync) IsNearlySynced() bool {
+	if !ps.Chain().IsCurrent() {
+		return false
+	}
+	if len(ps.sy.peers.CanSyncPeers()) <= 0 {
+		return true
+	}
+	best := ps.Chain().BestSnapshot()
+	for _, sp := range ps.sy.peers.CanSyncPeers() {
+		gs := sp.GraphState()
+		if gs == nil {
+			continue
+		}
+		if best.GraphState.GetMainOrder()+meerdag.StableConfirmations >= gs.GetMainOrder() {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func (ps *PeerSync) IsCompleteForSyncPeer() bool {
