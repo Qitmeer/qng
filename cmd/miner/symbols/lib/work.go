@@ -73,20 +73,26 @@ func (this *QitmeerWork) Get() bool {
 		}
 		if this.Block != nil && this.Block.ParentRoot == header.ParentRoot &&
 			(time.Now().Unix()-this.GetWorkTime) < int64(this.Cfg.OptionConfig.Timeout)*10 {
+			common.MinerLoger.Warn("GetRemoteGBT Repeat", "old block parent root", this.Block.ParentRoot, "current", header.ParentRoot)
 			//not has new work
 			return false
 		}
-		this.Rpc.GbtID++
-		this.Block = &BlockHeader{}
-		this.Block.ParentRoot = header.ParentRoot
-		this.Block.WorkData = header.BlockData()
-		this.Block.Target = fmt.Sprintf("%064x", pow.CompactToBig(header.Difficulty))
-		this.Block.GBTID = this.Rpc.GbtID
-		common.LatestGBTID = this.Rpc.GbtID
-		common.MinerLoger.Debug(fmt.Sprintf("getRemoteBlockTemplate , target :%s , GBTID:%d", this.Block.Target, this.Rpc.GbtID))
-		this.GetWorkTime = time.Now().Unix()
-		return true
+		return this.BuildBlock(header)
 	}
+}
+
+// BuildBlock
+func (this *QitmeerWork) BuildBlock(header *types.BlockHeader) bool {
+	this.Rpc.GbtID++
+	this.Block = &BlockHeader{}
+	this.Block.ParentRoot = header.ParentRoot
+	this.Block.WorkData = header.BlockData()
+	this.Block.Target = fmt.Sprintf("%064x", pow.CompactToBig(header.Difficulty))
+	this.Block.GBTID = this.Rpc.GbtID
+	common.LatestGBTID = this.Rpc.GbtID
+	common.MinerLoger.Debug(fmt.Sprintf("getRemoteBlockTemplate , target :%s , GBTID:%d", this.Block.Target, this.Rpc.GbtID))
+	this.GetWorkTime = time.Now().Unix()
+	return true
 }
 
 // submit
