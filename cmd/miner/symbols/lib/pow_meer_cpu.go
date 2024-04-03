@@ -131,10 +131,6 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 				common.Timeout(func() { //prevent stuck
 					this.SubmitData <- subm
 				}, int64(this.Cfg.OptionConfig.Timeout), func() {})
-
-				if !this.Pool { // solo only submit once in one task
-					break
-				}
 			}
 		}
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/Qitmeer/qng/cmd/miner/common"
 	"github.com/Qitmeer/qng/cmd/miner/core"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/rpc/client"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
@@ -170,7 +171,6 @@ func (this *QitmeerRobot) ListenWork() {
 				r = this.Work.Get() // get new work
 			}
 			this.NotifyWork(r)
-			time.Sleep(time.Millisecond * time.Duration(this.Cfg.OptionConfig.TaskInterval))
 		}
 	}
 }
@@ -433,6 +433,25 @@ func (this *QitmeerRobot) WsConnect() {
 				r := this.Work.Get()
 				if this.Work.Block != nil {
 					common.MinerLoger.Info("New Block Coming", "height", height)
+					this.NotifyWork(r)
+				}
+			}()
+
+		},
+		OnBlockTemplate: func(bt *json.RemoteGBTResult) {
+			go func() {
+				var header types.BlockHeader
+				serialized, err := hex.DecodeString(bt.HeaderHex)
+				if err != nil {
+					return
+				}
+				err = header.Deserialize(bytes.NewReader(serialized))
+				if err != nil {
+					return
+				}
+				r := this.Work.BuildBlock(&header)
+				if this.Work.Block != nil {
+					common.MinerLoger.Info("New Template Coming")
 					this.NotifyWork(r)
 				}
 			}()
