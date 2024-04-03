@@ -171,6 +171,7 @@ func (this *QitmeerRobot) ListenWork() {
 				r = this.Work.Get() // get new work
 			}
 			this.NotifyWork(r)
+			time.Sleep(time.Millisecond * time.Duration(this.Cfg.OptionConfig.TaskInterval))
 		}
 	}
 }
