@@ -601,6 +601,10 @@ func (s *Service) IsCurrent() bool {
 	return s.PeerSync().IsCurrent()
 }
 
+func (s *Service) IsNearlySynced() bool {
+	return s.PeerSync().IsNearlySynced()
+}
+
 func (s *Service) IsRunning() bool {
 	return !s.IsShutdown() && s.IsStarted()
 }
