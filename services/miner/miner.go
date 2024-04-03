@@ -691,7 +691,7 @@ func (m *Miner) CanMining() error {
 	if m.BlockChain().BestSnapshot().GraphState.GetMainOrder() <= 0 {
 		return nil
 	}
-	if !m.BlockChain().IsCurrent() {
+	if !m.p2pSer.IsCurrent() {
 		log.Trace("Client in initial download, qitmeer is downloading blocks...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading blocks...")
