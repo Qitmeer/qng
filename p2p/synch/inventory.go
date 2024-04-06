@@ -67,13 +67,14 @@ func (s *Sync) handleInventory(msg *pb.Inventory, pe *peers.Peer) error {
 	}
 	txs := []*hash.Hash{}
 	hasBlocks := false
+	isCurrent := s.peerSync.IsCurrent()
 	for _, inv := range msg.Invs {
 		h := changePBHashToHash(inv.Hash)
 		if InvType(inv.Type) == InvTypeBlock {
 			hasBlocks = true
 		} else if InvType(inv.Type) == InvTypeTx {
 			if s.p2p.Config().DisableRelayTx ||
-				!s.peerSync.IsCurrent() {
+				!isCurrent {
 				continue
 			}
 			if s.haveInventory(inv) {
