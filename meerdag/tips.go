@@ -132,10 +132,10 @@ func (bd *MeerDAG) updateTips(b IBlock) {
 	bd.tips.AddPair(b.GetID(), b)
 }
 
-func (bd *MeerDAG) optimizeTips() {
+func (bd *MeerDAG) optimizeTips(load bool) {
 	disTipsCount := 0
 	for {
-		disTips := bd.getDiscardedTips()
+		disTips := bd.getDiscardedTips(load)
 		if len(disTips) <= 0 {
 			break
 		}
@@ -200,22 +200,17 @@ func (bd *MeerDAG) removeTip(b IBlock) error {
 	return DBDelDiffAnticone(bd.db, b.GetID())
 }
 
-func (bd *MeerDAG) getDiscardedTips() []IBlock {
+func (bd *MeerDAG) getDiscardedTips(load bool) []IBlock {
 	mainTip := bd.getMainChainTip()
 	var result []IBlock
-	for k, v := range bd.tips.GetMap() {
-		if k == mainTip.GetID() {
-			continue
-		}
+	for _, v := range bd.tips.GetMap() {
 		block := v.(IBlock)
-		if block.IsOrdered() {
-			continue
+		if !load {
+			if block.GetID()+uint(bd.tipsDisLimit) >= mainTip.GetID() {
+				continue
+			}
 		}
-		if block.GetID()+uint(bd.tipsDisLimit) >= mainTip.GetID() {
-			continue
-		}
-		gap := int64(mainTip.GetHeight()) - int64(block.GetHeight())
-		if gap > bd.tipsDisLimit {
+		if bd.CanPrune(block, mainTip) {
 			if result == nil {
 				result = []IBlock{}
 			}
@@ -239,4 +234,18 @@ func (bd *MeerDAG) GetTipsDisLimit() int64 {
 
 func (bd *MeerDAG) GetTipsSet() *IdSet {
 	return bd.tips
+}
+
+func (bd *MeerDAG) CanPrune(block IBlock, mainTip IBlock) bool {
+	if block.GetID() == mainTip.GetID() {
+		return false
+	}
+	if block.IsOrdered() {
+		return false
+	}
+	gap := int64(mainTip.GetHeight()) - int64(block.GetHeight())
+	if gap <= bd.tipsDisLimit {
+		return false
+	}
+	return true
 }

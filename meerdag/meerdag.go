@@ -1250,7 +1250,7 @@ func (bd *MeerDAG) commit() error {
 	if err != nil {
 		return err
 	}
-	bd.optimizeTips()
+	bd.optimizeTips(false)
 	return nil
 }
 

@@ -195,6 +195,9 @@ func (ds *DAGSync) getBlockChainFromMain(point IBlock, maxHashes uint) []*hash.H
 					if block == nil {
 						continue
 					}
+					if ds.bd.CanPrune(block, mainTip) {
+						continue
+					}
 					result = append(result, block.GetHash())
 					if uint(len(result)) >= maxHashes {
 						break
