@@ -622,7 +622,7 @@ func (ph *Phantom) Load() error {
 		return fmt.Errorf("Main chain tip and tips is mismatch")
 	}
 
-	ph.bd.optimizeTips()
+	ph.bd.optimizeTips(true)
 
 	for _, da := range diffs {
 		dab := ph.getBlock(da)
