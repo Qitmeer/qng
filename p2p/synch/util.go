@@ -64,7 +64,7 @@ func ErrDAGConsensus(err error) *common.Error {
 }
 
 const (
-	UpdateGraphStateTime = time.Second * 2
+	UpdateGraphStateTime = time.Second / 2
 	DefaultRateTaskTime  = time.Second * 2
 )
 

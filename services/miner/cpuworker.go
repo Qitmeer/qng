@@ -307,7 +307,8 @@ out:
 			continue
 		}
 		start := time.Now()
-		if w.miner.CanMining() != nil {
+		if err := w.miner.CanMining(); err != nil {
+			log.Warn(err.Error())
 			time.Sleep(time.Second)
 			continue
 		} else if params.ActiveNetParams.Params.IsDevelopDiff() {

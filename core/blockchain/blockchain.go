@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Qitmeer/qng/common/hash"
@@ -141,6 +142,8 @@ type BlockChain struct {
 	difficultyManager model.DifficultyManager
 
 	processQueueMap sync.Map
+
+	selfAdd atomic.Int64
 }
 
 func (b *BlockChain) Init() error {
@@ -1070,6 +1073,8 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		msgChan:            make(chan *processMsg),
 		quit:               make(chan struct{}),
 	}
+	b.selfAdd.Store(0)
+
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
 	b.bd = meerdag.New(config.DAGType, 1.0/float64(par.TargetTimePerBlock/time.Second), b.DB(), b.getBlockData)
