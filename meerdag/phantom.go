@@ -603,10 +603,6 @@ func (ph *Phantom) Load() error {
 	if err != nil {
 		return err
 	}
-	diffs, err := DBGetDiffAnticone(ph.bd.db)
-	if err != nil {
-		return err
-	}
 
 	ph.mainChain.genesis = 0
 	ph.mainChain.tip = tips[0]
@@ -624,6 +620,10 @@ func (ph *Phantom) Load() error {
 
 	ph.bd.optimizeTips(true)
 
+	diffs, err := DBGetDiffAnticone(ph.bd.db)
+	if err != nil {
+		return err
+	}
 	for _, da := range diffs {
 		dab := ph.getBlock(da)
 		if dab == nil {
