@@ -5,6 +5,7 @@ import (
 	"context"
 	ejson "encoding/json"
 	"fmt"
+	"github.com/Qitmeer/qng/core/protocol"
 	"math/rand"
 	"net/http"
 	"sync"
@@ -594,7 +595,7 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	defer m.submitLocker.Unlock()
 	m.totalSubmit++
 
-	err := m.CheckSubMainChainTip(block.Block().Parents)
+	err := m.BlockChain().BlockDAG().CheckSubMainChainTip(block.Block().Parents)
 	if err != nil {
 		go m.BlockChainChange()
 		return nil, fmt.Errorf("The tips of block is expired:%s (error:%s)\n", block.Hash().String(), err.Error())
@@ -695,6 +696,12 @@ func (m *Miner) CanMining() error {
 		log.Trace("Client in initial download, qitmeer is downloading blocks...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading blocks...")
+	}
+	if params.ActiveNetParams.Net == protocol.PrivNet {
+		return nil
+	}
+	if m.BlockChain().GetSelfAdd() >= meerdag.StableConfirmations {
+		return fmt.Errorf("Side chain depth too large")
 	}
 	return nil
 }

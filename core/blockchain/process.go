@@ -93,6 +93,11 @@ func (b *BlockChain) processBlock(block *types.SerializedBlock, flags BehaviorFl
 	if err != nil {
 		return nil, false, err
 	}
+	if flags.Has(BFRPCAdd) {
+		b.selfAdd.Add(1)
+	} else {
+		b.selfAdd.Store(0)
+	}
 	// Accept any orphan blocks that depend on this block (they are no
 	// longer orphans) and repeat for those accepted blocks until there are
 	// no more.
@@ -797,6 +802,10 @@ func (b *BlockChain) UpdateWeight(ib meerdag.IBlock) {
 		}
 		b.bd.AddToCommit(ib)
 	}
+}
+
+func (b *BlockChain) GetSelfAdd() int64 {
+	return b.selfAdd.Load()
 }
 
 type processMsg struct {
