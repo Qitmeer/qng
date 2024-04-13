@@ -31,12 +31,16 @@ type TxPool struct {
 	// The following variables must only be used atomically.
 	lastUpdated int64 // last time pool was updated.
 
-	mtx           sync.RWMutex
-	cfg           Config
-	pool          map[hash.Hash]*TxDesc
+	procmtx sync.RWMutex
+	cfg     Config
+
+	mtx       sync.RWMutex
+	pool      map[hash.Hash]*TxDesc
+	outpoints map[types.TxOutPoint]*types.Tx
+
+	orphansmtx    sync.RWMutex
 	orphans       map[hash.Hash]*types.Tx
 	orphansByPrev map[hash.Hash]map[hash.Hash]*types.Tx
-	outpoints     map[types.TxOutPoint]*types.Tx
 
 	pennyTotal    float64 // exponentially decaying total for penny spends.
 	lastPennyUnix int64   // unix time of last ``penny spend''
@@ -112,14 +116,20 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 		// Remove any transactions which rely on this one.
 		for i := uint32(0); i < uint32(len(tx.TxOut)); i++ {
 			outpoint := types.NewOutPoint(txHash, i)
-			if txRedeemer, exists := mp.outpoints[*outpoint]; exists {
+			mp.mtx.RLock()
+			txRedeemer, exists := mp.outpoints[*outpoint]
+			mp.mtx.RUnlock()
+			if exists {
 				mp.removeTransaction(txRedeemer, true)
 			}
 		}
 	}
 
 	// Remove the transaction if needed.
-	if txDesc, exists := mp.pool[*txHash]; exists {
+	mp.mtx.RLock()
+	txDesc, exists := mp.pool[*txHash]
+	mp.mtx.RUnlock()
+	if exists {
 		// Remove unconfirmed address index entries associated with the
 		// transaction if enabled.
 		// TODO address index
@@ -127,11 +137,13 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 			aIndex.RemoveUnconfirmedTx(txHash)
 		}
 		// Mark the referenced outpoints as unspent by the pool.
-
+		mp.mtx.Lock()
 		for _, txIn := range txDesc.Tx.Transaction().TxIn {
 			delete(mp.outpoints, txIn.PreviousOut)
 		}
 		delete(mp.pool, *txHash)
+		mp.mtx.Unlock()
+
 		// stats daily tx count
 		if mp.LastUpdated().Day() != time.Now().Day() {
 			newDailyTxCount.Update(1)
@@ -149,9 +161,6 @@ func (mp *TxPool) removeTransaction(theTx *types.Tx, removeRedeemers bool) {
 // This function is safe for concurrent access.
 func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 	// Protect concurrent access.
-	mp.mtx.Lock()
-	defer mp.mtx.Unlock()
-
 	if opreturn.IsMeerEVMTx(tx.Tx) {
 		if mp.cfg.BC.IsShutdown() {
 			return
@@ -161,6 +170,8 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 			log.Error(err.Error())
 		}
 	} else {
+		mp.procmtx.Lock()
+		defer mp.procmtx.Unlock()
 		mp.removeTransaction(tx, removeRedeemers)
 	}
 }
@@ -174,15 +185,18 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 // This function is safe for concurrent access.
 func (mp *TxPool) RemoveDoubleSpends(tx *types.Tx) {
 	// Protect concurrent access.
-	mp.mtx.Lock()
+	mp.procmtx.Lock()
 	for _, txIn := range tx.Transaction().TxIn {
-		if txRedeemer, ok := mp.outpoints[txIn.PreviousOut]; ok {
+		mp.mtx.RLock()
+		txRedeemer, ok := mp.outpoints[txIn.PreviousOut]
+		mp.mtx.RUnlock()
+		if ok {
 			if !txRedeemer.Hash().IsEqual(tx.Hash()) {
 				mp.removeTransaction(txRedeemer, true)
 			}
 		}
 	}
-	mp.mtx.Unlock()
+	mp.procmtx.Unlock()
 }
 
 // addTransaction adds the passed transaction to the memory pool.  It should
@@ -210,7 +224,9 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 	}
 
 	if !types.IsCrossChainVMTx(tx.Tx) {
+		mp.mtx.Lock()
 		mp.pool[*tx.Hash()] = txD
+		mp.mtx.Unlock()
 	}
 
 	if !types.IsCrossChainVMTx(tx.Tx) &&
@@ -220,12 +236,14 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 		!types.IsTokenInvalidateTx(tx.Tx) &&
 		!types.IsTokenValidateTx(tx.Tx) {
 
+		mp.mtx.Lock()
 		for txIdx, txIn := range msgTx.TxIn {
 			if txIdx == 0 && (types.IsTokenMintTx(tx.Tx) || types.IsTokenUnmintTx(tx.Tx)) {
 				continue
 			}
 			mp.outpoints[txIn.PreviousOut] = tx
 		}
+		mp.mtx.Unlock()
 	}
 	if mp.LastUpdated().Day() == time.Now().Day() {
 		newDailyTxCount.Inc(1)
@@ -744,8 +762,8 @@ func (mp *TxPool) fetchInputUtxos(tx *types.Tx) (*utxo.UtxoViewpoint, error) {
 func (mp *TxPool) ProcessTransaction(tx *types.Tx, allowOrphan, rateLimit, allowHighFees bool) ([]*types.TxDesc, error) {
 	// Protect concurrent access.
 	start := time.Now()
-	mp.mtx.Lock()
-	defer mp.mtx.Unlock()
+	mp.procmtx.Lock()
+	defer mp.procmtx.Unlock()
 	var err error
 	defer func() {
 		if err != nil {
@@ -841,9 +859,9 @@ func (mp *TxPool) maybeAddOrphan(tx *types.Tx) error {
 // This function is safe for concurrent access.
 func (mp *TxPool) MaybeAcceptTransaction(tx *types.Tx, isNew, rateLimit bool) ([]*hash.Hash, error) {
 	// Protect concurrent access.
-	mp.mtx.Lock()
+	mp.procmtx.Lock()
 	hashes, _, err := mp.maybeAcceptTransaction(tx, isNew, rateLimit, true)
-	mp.mtx.Unlock()
+	mp.procmtx.Unlock()
 
 	return hashes, err
 }
@@ -853,6 +871,8 @@ func (mp *TxPool) MaybeAcceptTransaction(tx *types.Tx, isNew, rateLimit bool) ([
 //
 // This function MUST be called with the mempool lock held (for writes).
 func (mp *TxPool) removeOrphan(txHash *hash.Hash) {
+	mp.orphansmtx.Lock()
+	defer mp.orphansmtx.Unlock()
 	// Nothing to do if passed tx is not an orphan.
 	tx, exists := mp.orphans[*txHash]
 	if !exists {
@@ -883,9 +903,7 @@ func (mp *TxPool) removeOrphan(txHash *hash.Hash) {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) RemoveOrphan(txHash *hash.Hash) {
-	mp.mtx.Lock()
 	mp.removeOrphan(txHash)
-	mp.mtx.Unlock()
 }
 
 // processOrphans is the internal function which implements the public
@@ -908,7 +926,9 @@ func (mp *TxPool) processOrphans(h *hash.Hash) []*TxDesc {
 		// be multiple if the referenced transaction contains multiple
 		// outputs.  Skip to the next item on the list of hashes to
 		// process if there are none.
+		mp.orphansmtx.RLock()
 		orphans, exists := mp.orphansByPrev[*processHash]
+		mp.orphansmtx.RUnlock()
 		if !exists || orphans == nil {
 			continue
 		}
@@ -978,6 +998,8 @@ func (mp *TxPool) addOrphan(tx *types.Tx) {
 	if mp.cfg.Policy.MaxOrphanTxs <= 0 {
 		return
 	}
+	mp.orphansmtx.Lock()
+	defer mp.orphansmtx.Unlock()
 
 	mp.orphans[*tx.Hash()] = tx
 	for _, txIn := range tx.Tx.TxIn {
@@ -1004,9 +1026,9 @@ func (mp *TxPool) addOrphan(tx *types.Tx) {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) ProcessOrphans(hash *hash.Hash) []*types.TxDesc {
-	mp.mtx.Lock()
+	mp.procmtx.Lock()
 	acceptedTxns := mp.processOrphans(hash)
-	mp.mtx.Unlock()
+	mp.procmtx.Unlock()
 	acceptedTxnsT := []*types.TxDesc{}
 	for _, td := range acceptedTxns {
 		acceptedTxnsT = append(acceptedTxnsT, &td.TxDesc)
@@ -1125,20 +1147,12 @@ func (mp *TxPool) haveTransaction(hash *hash.Hash) bool {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) HaveTransaction(hash *hash.Hash) bool {
-	// Protect concurrent access.
-	mp.mtx.RLock()
-	haveTx := mp.haveTransaction(hash)
-	mp.mtx.RUnlock()
-
-	return haveTx
+	return mp.haveTransaction(hash)
 }
 
 func (mp *TxPool) HaveTransactionUTXO(hash *hash.Hash) bool {
 	// Protect concurrent access.
-	mp.mtx.RLock()
 	haveTx := mp.isTransactionInPool(hash, false) || mp.isOrphanInPool(hash)
-	mp.mtx.RUnlock()
-
 	return haveTx
 }
 
@@ -1148,7 +1162,11 @@ func (mp *TxPool) HaveTransactionUTXO(hash *hash.Hash) bool {
 // This function MUST be called with the mempool lock held (for reads).
 // all: include evm tx
 func (mp *TxPool) isTransactionInPool(hash *hash.Hash, all bool) bool {
-	if _, exists := mp.pool[*hash]; exists {
+	mp.mtx.RLock()
+	_, exists := mp.pool[*hash]
+	mp.mtx.RUnlock()
+
+	if exists {
 		return true
 	}
 	if !all {
@@ -1163,11 +1181,7 @@ func (mp *TxPool) isTransactionInPool(hash *hash.Hash, all bool) bool {
 // This function is safe for concurrent access.
 func (mp *TxPool) IsTransactionInPool(hash *hash.Hash, all bool) bool {
 	// Protect concurrent access.
-	mp.mtx.RLock()
-	inPool := mp.isTransactionInPool(hash, all)
-	mp.mtx.RUnlock()
-
-	return inPool
+	return mp.isTransactionInPool(hash, all)
 }
 
 // isOrphanInPool returns whether or not the passed transaction already exists
@@ -1175,10 +1189,12 @@ func (mp *TxPool) IsTransactionInPool(hash *hash.Hash, all bool) bool {
 //
 // This function MUST be called with the mempool lock held (for reads).
 func (mp *TxPool) isOrphanInPool(hash *hash.Hash) bool {
-	if _, exists := mp.orphans[*hash]; exists {
+	mp.orphansmtx.RLock()
+	_, exists := mp.orphans[*hash]
+	mp.orphansmtx.RUnlock()
+	if exists {
 		return true
 	}
-
 	return false
 }
 
@@ -1188,11 +1204,7 @@ func (mp *TxPool) isOrphanInPool(hash *hash.Hash) bool {
 // This function is safe for concurrent access.
 func (mp *TxPool) IsOrphanInPool(hash *hash.Hash) bool {
 	// Protect concurrent access.
-	mp.mtx.RLock()
-	inPool := mp.isOrphanInPool(hash)
-	mp.mtx.RUnlock()
-
-	return inPool
+	return mp.isOrphanInPool(hash)
 }
 
 // LastUpdated returns the last time a transaction was added to or removed from
@@ -1240,8 +1252,8 @@ func (mp *TxPool) MiningDescs() []*types.TxDesc {
 func (mp *TxPool) DoPruneExpiredTx() {
 	nextBlockHeight := mp.cfg.BestHeight() + 1
 
-	mp.mtx.Lock()
-	defer mp.mtx.Unlock()
+	mp.procmtx.Lock()
+	defer mp.procmtx.Unlock()
 	for _, tx := range mp.pool {
 		if blockchain.IsExpired(tx.Tx, nextBlockHeight) {
 			log.Debug(fmt.Sprintf("Pruning expired transaction %v from the mempool",
