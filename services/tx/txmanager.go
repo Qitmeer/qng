@@ -3,6 +3,7 @@ package tx
 import (
 	"bytes"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/Qitmeer/qng/common/hash"
@@ -41,6 +42,9 @@ type TxManager struct {
 	enableFeeEst bool
 
 	consensus model.Consensus
+
+	wg   sync.WaitGroup
+	quit chan struct{}
 }
 
 func (tm *TxManager) Start() error {
@@ -48,6 +52,9 @@ func (tm *TxManager) Start() error {
 	if err := tm.Service.Start(); err != nil {
 		return err
 	}
+	tm.wg.Add(1)
+	go tm.handler()
+
 	tm.LoadMempool()
 	return tm.initFeeEstimator()
 }
@@ -99,6 +106,9 @@ func (tm *TxManager) Stop() error {
 	if err := tm.Service.Stop(); err != nil {
 		return err
 	}
+	close(tm.quit)
+	tm.wg.Wait()
+
 	if tm.txMemPool.IsPersist() {
 		num, err := tm.txMemPool.Save()
 		if err != nil {
@@ -189,6 +199,42 @@ func (tm *TxManager) GetChain() *blockchain.BlockChain {
 	return tm.consensus.BlockChain().(*blockchain.BlockChain)
 }
 
+func (tm *TxManager) handler() {
+	stallTicker := time.NewTicker(time.Minute)
+	defer stallTicker.Stop()
+
+out:
+	for {
+		select {
+		case <-stallTicker.C:
+			tm.handleStallSample()
+
+		case <-tm.quit:
+			break out
+		}
+	}
+
+cleanup:
+	for {
+		select {
+		default:
+			break cleanup
+		}
+	}
+
+	tm.wg.Done()
+	log.Trace("TxManager handler done")
+}
+
+func (tm *TxManager) handleStallSample() {
+	if tm.IsShutdown() {
+		return
+	}
+	if tm.txMemPool.PruneDirty() {
+		tm.txMemPool.DoPruneExpiredTx()
+	}
+}
+
 func NewTxManager(consensus model.Consensus, ntmgr model.Notify) (*TxManager, error) {
 	cfg := consensus.Config()
 	sigCache := consensus.SigCache()
@@ -236,7 +282,8 @@ func NewTxManager(consensus model.Consensus, ntmgr model.Notify) (*TxManager, er
 		txMemPool:    txMemPool,
 		ntmgr:        ntmgr,
 		invalidTx:    invalidTx,
-		enableFeeEst: cfg.Estimatefee}
+		enableFeeEst: cfg.Estimatefee,
+		quit:         make(chan struct{})}
 	consensus.BlockChain().(*blockchain.BlockChain).Subscribe(tm.handleNotifyMsg)
 	return tm, nil
 }

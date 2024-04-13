@@ -41,19 +41,22 @@ type TxPool struct {
 	pennyTotal    float64 // exponentially decaying total for penny spends.
 	lastPennyUnix int64   // unix time of last ``penny spend''
 
-	dirty atomic.Bool
+	dirty      atomic.Bool
+	pruneDirty atomic.Bool
 }
 
 // New returns a new memory pool for validating and storing standalone
 // transactions until they are mined into a block.
 func New(cfg *Config) *TxPool {
-	return &TxPool{
+	tp := &TxPool{
 		cfg:           *cfg,
 		pool:          make(map[hash.Hash]*TxDesc),
 		orphans:       make(map[hash.Hash]*types.Tx),
 		orphansByPrev: make(map[hash.Hash]map[hash.Hash]*types.Tx),
 		outpoints:     make(map[types.TxOutPoint]*types.Tx),
 	}
+	tp.pruneDirty.Store(false)
+	return tp
 }
 
 // TxDesc is a descriptor containing a transaction in the mempool along with
@@ -1234,9 +1237,11 @@ func (mp *TxPool) MiningDescs() []*types.TxDesc {
 // be able to be included into a block.
 //
 // This function MUST be called with the mempool lock held (for writes).
-func (mp *TxPool) pruneExpiredTx() {
+func (mp *TxPool) DoPruneExpiredTx() {
 	nextBlockHeight := mp.cfg.BestHeight() + 1
 
+	mp.mtx.Lock()
+	defer mp.mtx.Unlock()
 	for _, tx := range mp.pool {
 		if blockchain.IsExpired(tx.Tx, nextBlockHeight) {
 			log.Debug(fmt.Sprintf("Pruning expired transaction %v from the mempool",
@@ -1244,6 +1249,7 @@ func (mp *TxPool) pruneExpiredTx() {
 			mp.removeTransaction(tx.Tx, true)
 		}
 	}
+	mp.pruneDirty.Store(false)
 }
 
 // PruneExpiredTx prunes expired transactions from the mempool that may no longer
@@ -1251,10 +1257,7 @@ func (mp *TxPool) pruneExpiredTx() {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) PruneExpiredTx() {
-	// Protect concurrent access.
-	mp.mtx.Lock()
-	mp.pruneExpiredTx()
-	mp.mtx.Unlock()
+	mp.pruneDirty.Store(true)
 }
 
 // Count returns the number of transactions in the main pool.  It does not
@@ -1312,4 +1315,8 @@ func (mp *TxPool) Dirty() bool {
 
 func (mp *TxPool) CleanDirty() {
 	mp.dirty.Store(false)
+}
+
+func (mp *TxPool) PruneDirty() bool {
+	return mp.pruneDirty.Load()
 }
