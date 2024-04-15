@@ -223,6 +223,7 @@ func (this *QitmeerRobot) SubmitWork() {
 					this.SubmitLock.Unlock()
 					continue
 				}
+				this.Work.LastSubmit = time.Now()
 
 				var err error
 				var txID string
@@ -264,8 +265,6 @@ func (this *QitmeerRobot) SubmitWork() {
 					common.MinerLoger.Error("Submit Error", "error", err.Error())
 					continue
 				} else {
-
-					this.Work.LastSubmit = time.Now()
 					if !this.Pool { // solo
 						this.PendingBlocks[txID] = PendingBlock{
 							CoinbaseHash: txID,

@@ -681,7 +681,9 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 	block.Header.Timestamp = header.Timestamp
 	block.Header.Pow = header.Pow
 	res, err := m.submitBlock(types.NewBlock(block))
-	m.StatsSubmit(time.Now().UnixMilli()-start, header.BlockHash().String(), len(block.Transactions)-1)
+	if err != nil {
+		m.StatsSubmit(time.Now().UnixMilli()-start, header.BlockHash().String(), len(block.Transactions)-1)
+	}
 	return res, err
 }
 
