@@ -5,11 +5,12 @@ import (
 	"context"
 	ejson "encoding/json"
 	"fmt"
-	"github.com/Qitmeer/qng/core/protocol"
 	"math/rand"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/Qitmeer/qng/core/protocol"
 
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
@@ -681,7 +682,7 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 	block.Header.Timestamp = header.Timestamp
 	block.Header.Pow = header.Pow
 	res, err := m.submitBlock(types.NewBlock(block))
-	if err != nil {
+	if err == nil {
 		m.StatsSubmit(time.Now().UnixMilli()-start, header.BlockHash().String(), len(block.Transactions)-1)
 	}
 	return res, err
