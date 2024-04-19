@@ -11,7 +11,7 @@ import (
 func ReadTxLookupEntry(db ethdb.Reader, hash *hash.Hash) *uint64 {
 	data, err := db.Get(txLookupKey(hash))
 	if len(data) == 0 {
-		log.Debug("tx lookup entry", "err", err.Error())
+		log.Trace("tx lookup entry", "err", err.Error())
 		return nil
 	}
 	id := binary.BigEndian.Uint64(data)

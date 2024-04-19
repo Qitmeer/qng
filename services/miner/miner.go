@@ -596,7 +596,7 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	defer m.submitLocker.Unlock()
 	m.totalSubmit++
 
-	err := m.BlockChain().BlockDAG().CheckSubMainChainTip(block.Block().Parents)
+	err := m.CheckSubMainChainTip(block.Block().Parents)
 	if err != nil {
 		go m.BlockChainChange()
 		return nil, fmt.Errorf("The tips of block is expired:%s (error:%s)\n", block.Hash().String(), err.Error())
@@ -936,15 +936,13 @@ func (m *Miner) CheckSubMainChainTip(parents []*hash.Hash) error {
 		return fmt.Errorf("No main tip:%v", parents)
 	}
 	mainTip := m.BlockChain().BlockDAG().GetMainChainTip()
-	if mt.GetHeight() >= mainTip.GetHeight() {
+	if mt.GetHeight()+1 >= mainTip.GetHeight() {
 		return nil
 	}
 	distance := mainTip.GetHeight() - mt.GetHeight()
-	if distance > uint(m.cfg.ObsoleteHeight) {
-		return fmt.Errorf("main chain tip is overdue,submit main parent:%v (%d), but main tip is :%v (%d). ObsoleteHeight:%d\n",
-			mt.GetHash().String(), mt.GetHeight(), mainTip.GetHash().String(), mainTip.GetHeight(), m.cfg.ObsoleteHeight)
-	}
-	return nil
+
+	return fmt.Errorf("main chain tip is overdue,submit main parent:%v (%d), but main tip is :%v (%d). Obsolete depth:%d\n",
+		mt.GetHash().String(), mt.GetHeight(), mainTip.GetHash().String(), mainTip.GetHeight(), distance)
 }
 
 func NewMiner(consensus model.Consensus, policy *mining.Policy, txpool *mempool.TxPool, p2pSer model.P2PService) *Miner {

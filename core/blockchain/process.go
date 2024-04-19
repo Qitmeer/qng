@@ -185,7 +185,7 @@ func (b *BlockChain) preProcessBlock(block *types.SerializedBlock, flags Behavio
 	for _, pb := range block.Block().Parents {
 		if !b.bd.HasBlock(pb) {
 			log.Trace(fmt.Sprintf("Adding orphan block %s with parent %s", blockHash.String(), pb.String()))
-			b.addOrphanBlock(block)
+			b.addOrphanBlock(block, flags)
 
 			// The fork length of orphans is unknown since they, by definition, do
 			// not connect to the best chain.

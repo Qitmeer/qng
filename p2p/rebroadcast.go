@@ -14,6 +14,10 @@ import (
 	"time"
 )
 
+const (
+	MaxRegainMempoolSize = 1000
+)
+
 type broadcastInventoryAdd relayMsg
 
 type broadcastInventoryDel *hash.Hash
@@ -176,7 +180,9 @@ func (r *Rebroadcast) onRegainMempool() {
 		return
 	}
 	mptxCount := r.s.TxMemPool().Count()
-
+	if mptxCount > MaxRegainMempoolSize {
+		return
+	}
 	canPeers := []*peers.Peer{}
 	for _, pe := range r.s.Peers().CanSyncPeers() {
 		if time.Since(pe.GetMempoolReqTime()) <= params.ActiveNetParams.TargetTimePerBlock {
