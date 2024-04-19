@@ -32,7 +32,9 @@ func (s *Sync) HandlerMemPool(ctx context.Context, msg interface{}, stream libp2
 		err := fmt.Errorf("message is not type *MsgFilterLoad")
 		return ErrMessage(err)
 	}
-
+	if s.p2p.Consensus().Config().Miner {
+		return s.EncodeResponseMsg(stream, nil)
+	}
 	curCount := uint64(s.p2p.TxMemPool().Count())
 	if mpr.TxsNum != curCount && curCount != 0 {
 		err := s.peerSync.OnMemPool(pe, &MsgMemPool{})

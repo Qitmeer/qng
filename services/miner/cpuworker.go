@@ -319,13 +319,16 @@ out:
 		if sb != nil {
 			w.hasNewWork.Store(false)
 			block := types.NewBlock(sb)
+			startSB := time.Now().UnixMilli()
 			info, err := w.miner.submitBlock(block)
 			if err != nil {
 				log.Error(fmt.Sprintf("Failed to submit new block:%s ,%v", block.Hash().String(), err))
 				w.cleanDiscrete()
 				continue
+			} else {
+				w.miner.StatsSubmit(time.Now().UnixMilli()-startSB, block.Block().BlockHash().String(), len(block.Block().Transactions)-1)
 			}
-			log.Info(fmt.Sprintf("%v", info), "cost", time.Since(start).String())
+			log.Info(fmt.Sprintf("%v", info), "cost", time.Since(start).String(), "txs", len(block.Transactions()))
 
 			if w.discrete && w.discreteNum > 0 {
 				if w.discreteBlock != nil {

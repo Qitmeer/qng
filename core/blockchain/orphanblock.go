@@ -12,6 +12,7 @@ type orphanBlock struct {
 	block      *types.SerializedBlock
 	expiration time.Time
 	height     uint64
+	flags      BehaviorFlags
 }
 
 type orphanBlockSlice []*orphanBlock
