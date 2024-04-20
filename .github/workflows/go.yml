@@ -20,7 +20,9 @@ jobs:
           go-version: 1.21.0
 
       - name: npm
-        run: sudo apt -y install nodejs
+        run: |
+          sudo apt update
+          sudo apt -y install nodejs
 
       - name: solc
         run: sudo npm install solc@0.8.3 -g
