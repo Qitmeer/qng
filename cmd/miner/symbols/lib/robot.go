@@ -284,18 +284,21 @@ func (this *QitmeerRobot) SubmitWork() {
 								Confirmations: int32(this.Cfg.SoloConfig.ConfirmHeight),
 							})
 						}
-						common.Timeout(func() {
-							if this.WsClient == nil || this.WsClient.Disconnected() {
-								return
-							}
-							err = this.WsClient.NotifyTxsConfirmed(txes)
-							if err != nil {
-								common.MinerLoger.Error(err.Error())
-							}
-							common.MinerLoger.Info("ws broadcast tx success")
-						}, 1, func() {
-							common.MinerLoger.Info("ws broadcast tx failed")
-						})
+						if this.Cfg.OptionConfig.EnableTxConfirm {
+							common.Timeout(func() {
+								if this.WsClient == nil || this.WsClient.Disconnected() {
+									return
+								}
+								err = this.WsClient.NotifyTxsConfirmed(txes)
+								if err != nil {
+									common.MinerLoger.Error(err.Error())
+								}
+								common.MinerLoger.Info("ws broadcast tx success")
+							}, 1, func() {
+								common.MinerLoger.Info("ws broadcast tx failed")
+							})
+						}
+
 						common.MinerLoger.Info(fmt.Sprintf("Submit block, block hash=%s , height=%d , next submit will after %s",
 							blockHash, height, this.Work.LastSubmit.Add(time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond).Format(time.RFC3339)))
 
@@ -359,6 +362,9 @@ func (this *QitmeerRobot) Status() {
 
 			}
 			valid = this.ValidShares
+			if !this.Cfg.OptionConfig.EnableTxConfirm {
+				valid = this.PendingShares
+			}
 			rejected = this.InvalidShares
 			staleShares = this.StaleShares
 			if this.Pool {
@@ -370,6 +376,7 @@ func (this *QitmeerRobot) Status() {
 			this.Cfg.OptionConfig.Reject = int(rejected)
 			this.Cfg.OptionConfig.Stale = int(staleShares)
 			total := valid + rejected + staleShares + this.PendingShares
+
 			common.MinerLoger.Info(fmt.Sprintf("Global stats: Accepted: %v,Pending: %v,Stale: %v, Rejected: %v, Total: %v",
 				valid,
 				this.PendingShares,
@@ -408,6 +415,9 @@ func (this *QitmeerRobot) WsConnect() {
 	var err error
 	ntfnHandlers := client.NotificationHandlers{
 		OnTxConfirm: func(txConfirm *cmds.TxConfirmResult) {
+			if !this.Cfg.OptionConfig.EnableTxConfirm {
+				return
+			}
 			common.MinerLoger.Info("OnTxConfirm", "tx", txConfirm.Tx, "confirms", txConfirm.Confirms, "order", txConfirm.Order)
 			go func() {
 				this.SubmitLock.Lock()

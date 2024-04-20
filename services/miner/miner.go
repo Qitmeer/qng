@@ -696,6 +696,7 @@ func (m *Miner) CanMining() error {
 		return nil
 	}
 	if !m.p2pSer.IsCurrent() {
+		gbtDownload.Update(1)
 		log.Trace("Client in initial download, qitmeer is downloading blocks...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading blocks...")
@@ -704,6 +705,7 @@ func (m *Miner) CanMining() error {
 		return nil
 	}
 	if m.BlockChain().GetSelfAdd() >= meerdag.StableConfirmations {
+		gbtSideChain.Update(1)
 		return fmt.Errorf("Side chain depth too large")
 	}
 	return nil
