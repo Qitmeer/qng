@@ -635,7 +635,7 @@ var (
 		},
 		&cli.IntFlag{
 			Name:        "gbttimeout",
-			Usage:       "Build block template time out.(Can limit the number of transactions included in the block)",
+			Usage:       "Build block template timeout by Millisecond.(Can limit the number of transactions included in the block)",
 			Destination: &cfg.GBTTimeOut,
 		},
 	}
