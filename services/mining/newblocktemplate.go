@@ -91,7 +91,11 @@ import (
 func NewBlockTemplate(policy *Policy, params *params.Params,
 	sigCache *txscript.SigCache, txpool *mempool.TxPool, timeSource model.MedianTimeSource,
 	consensus model.Consensus, payToAddress types.Address, parents []*hash.Hash, powType pow.PowType, coinbaseFlags CoinbaseFlags) (*types.BlockTemplate, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), params.TargetTimePerBlock/2)
+	timeout := params.TargetTimePerBlock / 2
+	if consensus.Config().GBTTimeOut > 0 {
+		timeout = time.Duration(consensus.Config().GBTTimeOut) * time.Millisecond
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	if onEnd := log.LogAndMeasureExecutionTime(log.Root(), "NewBlockTemplate"); onEnd != nil {

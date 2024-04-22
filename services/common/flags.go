@@ -633,6 +633,11 @@ var (
 			Value:       false,
 			Destination: &cfg.SubmitNoSynced,
 		},
+		&cli.IntFlag{
+			Name:        "gbttimeout",
+			Usage:       "Build block template timeout by Millisecond.(Can limit the number of transactions included in the block)",
+			Destination: &cfg.GBTTimeOut,
+		},
 	}
 )
 
