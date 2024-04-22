@@ -63,6 +63,7 @@ type Config struct {
 	GBTNotify         []string `long:"gbtnotify" description:"HTTP URL list to be notified of new block template"`
 	ObsoleteHeight    int      `long:"obsoleteheight" description:"What is the maximum allowable height of block obsolescence for submission"`
 	SubmitNoSynced    bool     `long:"allowsubmitwhennotsynced" description:"Allow the node to accept blocks from RPC while not synced (this flag is mainly used for testing)"`
+	GBTTimeOut        int      `long:"gbttimeout" description:"Build block template timeout by Millisecond.(Can limit the number of transactions included in the block)"`
 
 	//WebSocket support
 	RPCMaxWebsockets     int `long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
