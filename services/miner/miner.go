@@ -938,9 +938,16 @@ func (m *Miner) CheckSubMainChainTip(parents []*hash.Hash) error {
 		return fmt.Errorf("No main tip:%v", parents)
 	}
 	mainTip := m.BlockChain().BlockDAG().GetMainChainTip()
-	if mt.GetHeight()+1 >= mainTip.GetHeight() {
-		return nil
+	if m.BlockChain().GetSelfAdd() > 0 {
+		if mt.GetHeight()+1 > mainTip.GetHeight() {
+			return nil
+		}
+	} else {
+		if mt.GetHeight()+1 >= mainTip.GetHeight() {
+			return nil
+		}
 	}
+
 	distance := mainTip.GetHeight() - mt.GetHeight()
 
 	return fmt.Errorf("main chain tip is overdue,submit main parent:%v (%d), but main tip is :%v (%d). Obsolete depth:%d\n",
