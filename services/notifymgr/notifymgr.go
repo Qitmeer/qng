@@ -2,6 +2,7 @@ package notifymgr
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/types"
@@ -95,7 +96,15 @@ func (ntmgr *NotifyMgr) AddRebroadcastInventory(newTxs []*types.TxDesc) {
 // Transaction has one confirmation on the main chain. Now we can mark it as no
 // longer needing rebroadcasting.
 func (ntmgr *NotifyMgr) TransactionConfirmed(tx *types.Tx) {
-	ntmgr.Server.Rebroadcast().RemoveInventory(tx.Hash())
+	ntmgr.Server.Rebroadcast().RemoveInventory([]*hash.Hash{tx.Hash()})
+}
+
+func (ntmgr *NotifyMgr) TransactionsConfirmed(txs []*types.Tx) {
+	hs := []*hash.Hash{}
+	for _, tx := range txs {
+		hs = append(hs, tx.Hash())
+	}
+	go ntmgr.Server.Rebroadcast().RemoveInventory(hs)
 }
 
 func (ntmgr *NotifyMgr) Start() error {

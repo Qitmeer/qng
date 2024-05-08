@@ -16,5 +16,6 @@ type Notify interface {
 	RelayInventory(block *types.SerializedBlock, flags uint32, source *peer.ID)
 	BroadcastMessage(data interface{})
 	TransactionConfirmed(tx *types.Tx)
+	TransactionsConfirmed(txs []*types.Tx)
 	AddRebroadcastInventory(newTxs []*types.TxDesc)
 }

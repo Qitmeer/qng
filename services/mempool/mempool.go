@@ -184,6 +184,14 @@ func (mp *TxPool) RemoveTransaction(tx *types.Tx, removeRedeemers bool) {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) RemoveDoubleSpends(tx *types.Tx) {
+	if types.IsCrossChainVMTx(tx.Tx) ||
+		types.IsCrossChainImportTx(tx.Tx) ||
+		types.IsTokenNewTx(tx.Tx) ||
+		types.IsTokenRenewTx(tx.Tx) ||
+		types.IsTokenInvalidateTx(tx.Tx) ||
+		types.IsTokenValidateTx(tx.Tx) {
+		return
+	}
 	// Protect concurrent access.
 	mp.procmtx.Lock()
 	for _, txIn := range tx.Transaction().TxIn {
@@ -487,21 +495,19 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 
 		log.Debug(fmt.Sprintf("Accepted import transaction ,txHash(qng):%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
 		return nil, txD, nil
-	} else if types.IsCrossChainVMTx(tx.Tx) {
-		if opreturn.IsMeerEVMTx(tx.Tx) {
-			if mp.cfg.BC.HasTx(txHash) {
-				return nil, nil, fmt.Errorf("Already have transaction %v", txHash)
-			}
-			fee, err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().AddTx(tx, false)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			txD := mp.addTransaction(nil, tx, nextBlockHeight, fee)
-
-			log.Debug(fmt.Sprintf("Accepted meerevm transaction ,txHash(qng):%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
-			return nil, txD, nil
+	} else if opreturn.IsMeerEVMTx(tx.Tx) {
+		if mp.cfg.BC.HasTx(txHash) {
+			return nil, nil, fmt.Errorf("Already have transaction %v", txHash)
 		}
+		fee, err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().AddTx(tx, false)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		txD := mp.addTransaction(nil, tx, nextBlockHeight, fee)
+
+		log.Debug(fmt.Sprintf("Accepted meerevm transaction ,txHash(qng):%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
+		return nil, txD, nil
 	}
 	// Fetch all of the unspent transaction outputs referenced by the inputs
 	// to this transaction.  This function also attempts to fetch the
@@ -902,8 +908,13 @@ func (mp *TxPool) removeOrphan(txHash *hash.Hash) {
 // previous orphan index.
 //
 // This function is safe for concurrent access.
-func (mp *TxPool) RemoveOrphan(txHash *hash.Hash) {
-	mp.removeOrphan(txHash)
+func (mp *TxPool) RemoveOrphan(tx *types.Tx) {
+	if types.IsTokenTx(tx.Tx) ||
+		types.IsCrossChainImportTx(tx.Tx) ||
+		opreturn.IsMeerEVMTx(tx.Tx) {
+		return
+	}
+	mp.removeOrphan(tx.Hash())
 }
 
 // processOrphans is the internal function which implements the public
@@ -1025,10 +1036,16 @@ func (mp *TxPool) addOrphan(tx *types.Tx) {
 // no transactions were moved from the orphan pool to the mempool.
 //
 // This function is safe for concurrent access.
-func (mp *TxPool) ProcessOrphans(hash *hash.Hash) []*types.TxDesc {
+func (mp *TxPool) ProcessOrphans(tx *types.Tx) []*types.TxDesc {
+	if opreturn.IsMeerEVMTx(tx.Tx) {
+		return nil
+	}
 	mp.procmtx.Lock()
-	acceptedTxns := mp.processOrphans(hash)
+	acceptedTxns := mp.processOrphans(tx.Hash())
 	mp.procmtx.Unlock()
+	if len(acceptedTxns) <= 0 {
+		return nil
+	}
 	acceptedTxnsT := []*types.TxDesc{}
 	for _, td := range acceptedTxns {
 		acceptedTxnsT = append(acceptedTxnsT, &td.TxDesc)
