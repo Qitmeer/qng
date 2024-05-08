@@ -158,19 +158,24 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 		}
 
 		block := blockSlice[0].(*types.SerializedBlock)
-		txds := []*types.TxDesc{}
-		for _, tx := range block.Transactions()[1:] {
-			if tm.IsShutdown() {
-				return
+		if len(block.Transactions()) > 1 {
+			txds := []*types.TxDesc{}
+			for _, tx := range block.Transactions()[1:] {
+				if tm.IsShutdown() {
+					return
+				}
+				tm.MemPool().RemoveTransaction(tx, false)
+				tm.MemPool().RemoveDoubleSpends(tx)
+				tm.MemPool().RemoveOrphan(tx)
+				acceptedTxs := tm.MemPool().ProcessOrphans(tx)
+				if len(acceptedTxs) > 0 {
+					txds = append(txds, acceptedTxs...)
+				}
 			}
-			tm.MemPool().RemoveTransaction(tx, false)
-			tm.MemPool().RemoveDoubleSpends(tx)
-			tm.MemPool().RemoveOrphan(tx.Hash())
-			tm.ntmgr.TransactionConfirmed(tx)
-			acceptedTxs := tm.MemPool().ProcessOrphans(tx.Hash())
-			txds = append(txds, acceptedTxs...)
+			tm.ntmgr.TransactionsConfirmed(block.Transactions()[1:])
+			tm.ntmgr.AnnounceNewTransactions(txds, nil)
 		}
-		tm.ntmgr.AnnounceNewTransactions(txds, nil)
+
 		// Register block with the fee estimator, if it exists.
 		if tm.FeeEstimator() != nil && blockSlice[1].(bool) {
 			err := tm.FeeEstimator().RegisterBlock(block, blockSlice[2].(meerdag.IBlock).GetHeight())

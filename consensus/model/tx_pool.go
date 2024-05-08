@@ -14,9 +14,9 @@ type TxPool interface {
 
 	RemoveDoubleSpends(tx *types.Tx)
 
-	RemoveOrphan(txHash *hash.Hash)
+	RemoveOrphan(tx *types.Tx)
 
-	ProcessOrphans(hash *hash.Hash) []*types.TxDesc
+	ProcessOrphans(tx *types.Tx) []*types.TxDesc
 
 	MaybeAcceptTransaction(tx *types.Tx, isNew, rateLimit bool) ([]*hash.Hash, error)
 
