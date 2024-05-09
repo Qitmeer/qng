@@ -136,7 +136,7 @@ func (api *PublicMinerAPI) SubmitBlock(hexBlock string) (interface{}, error) {
 	log.Debug("submitstart", "blockhash", block.Block().BlockHash(), "txcount", len(block.Block().Transactions))
 	res, err := m.submitBlock(block)
 	if err == nil {
-		api.miner.StatsSubmit(time.Now().UnixMilli()-start, block.Block().BlockHash().String(), len(block.Block().Transactions)-1)
+		api.miner.StatsSubmit(time.Now(), time.Now().UnixMilli()-start, block.Block().BlockHash().String(), len(block.Block().Transactions)-1)
 	}
 
 	log.Debug("submitend", "blockhash", block.Block().BlockHash(), "txcount",

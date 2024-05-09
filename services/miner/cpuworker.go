@@ -2,14 +2,15 @@ package miner
 
 import (
 	"fmt"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/params"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 const (
@@ -326,7 +327,7 @@ out:
 				w.cleanDiscrete()
 				continue
 			} else {
-				w.miner.StatsSubmit(time.Now().UnixMilli()-startSB, block.Block().BlockHash().String(), len(block.Block().Transactions)-1)
+				w.miner.StatsSubmit(time.Now(), time.Now().UnixMilli()-startSB, block.Block().BlockHash().String(), len(block.Block().Transactions)-1)
 			}
 			log.Info(fmt.Sprintf("%v", info), "cost", time.Since(start).String(), "txs", len(block.Transactions()))
 
