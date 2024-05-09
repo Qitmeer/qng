@@ -198,7 +198,8 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 	}
 }
 
-func (m *Miner) StatsSubmit(start time.Time, currentReqMillSec int64, bh string, txcount int) {
+func (m *Miner) StatsSubmit(start time.Time, bh string, txcount int) {
+	currentReqMillSec := time.Since(start).Milliseconds()
 	m.stats.TotalSubmits++
 	totalSubmits.Update(m.stats.TotalSubmits)
 	if len(m.stats.Last100Submits) >= 100 {
@@ -656,7 +657,7 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 		return nil, fmt.Errorf("You're overdue")
 	}
 
-	start := time.Now().UnixMilli()
+	start := time.Now()
 	block, err := m.template.Block.Clone()
 	if err != nil {
 		return nil, err
@@ -683,7 +684,7 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 	block.Header.Pow = header.Pow
 	res, err := m.submitBlock(types.NewBlock(block))
 	if err == nil {
-		m.StatsSubmit(time.Now(), time.Now().UnixMilli()-start, header.BlockHash().String(), len(block.Transactions)-1)
+		m.StatsSubmit(start, header.BlockHash().String(), len(block.Transactions)-1)
 	}
 	return res, err
 }
