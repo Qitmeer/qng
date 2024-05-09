@@ -132,15 +132,15 @@ func (api *PublicMinerAPI) SubmitBlock(hexBlock string) (interface{}, error) {
 		return nil, fmt.Errorf("block is illegal")
 	}
 
-	start := time.Now().UnixMilli()
+	start := time.Now()
 	log.Debug("submitstart", "blockhash", block.Block().BlockHash(), "txcount", len(block.Block().Transactions))
 	res, err := m.submitBlock(block)
 	if err == nil {
-		api.miner.StatsSubmit(time.Now().UnixMilli()-start, block.Block().BlockHash().String(), len(block.Block().Transactions)-1)
+		api.miner.StatsSubmit(start, block.Block().BlockHash().String(), len(block.Block().Transactions)-1)
 	}
 
 	log.Debug("submitend", "blockhash", block.Block().BlockHash(), "txcount",
-		len(block.Block().Transactions), "res", res, "err", err, "spent", (time.Now().UnixMilli()-start)/1000)
+		len(block.Block().Transactions), "res", res, "err", err, "spent", time.Since(start))
 	return res, err
 }
 
