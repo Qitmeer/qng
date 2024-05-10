@@ -11,20 +11,20 @@ import (
 	"github.com/Qitmeer/qng/common/profiling"
 	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/core/types"
 	"github.com/urfave/cli/v2"
 )
 
 const (
-	defaultConfigFilename         = "qng.conf"
-	defaultDataDirname            = "data"
-	defaultLogLevel               = "info"
-	defaultDebugPrintOrigins      = false
-	defaultLogDirname             = "logs"
-	defaultLogFilename            = "qng.log"
-	defaultGenerate               = false
-	defaultBlockMinSize           = 0
-	defaultBlockMaxSize           = types.MaxBlockPayload / 2
+	defaultConfigFilename    = "qng.conf"
+	defaultDataDirname       = "data"
+	defaultLogLevel          = "info"
+	defaultDebugPrintOrigins = false
+	defaultLogDirname        = "logs"
+	defaultLogFilename       = "qng.log"
+	defaultGenerate          = false
+	defaultBlockMinSize      = 0
+	// 122880 = 120 KB (120*1024)
+	defaultBlockMaxSize           = 122880
 	defaultMaxRPCClients          = 10
 	defaultMaxRPCWebsockets       = 25
 	defaultMaxRPCConcurrentReqs   = 20
@@ -41,6 +41,7 @@ const (
 	defaultMinBlockDataCache      = 2000
 	defaultMinRelayTxFee          = int64(1e4)
 	defaultObsoleteHeight         = 5
+	defaultGBTTimeout             = 1000 // default gbt timeout 1s = 1000ms
 )
 const (
 	defaultSigCacheMaxSize = 100000
@@ -675,6 +676,7 @@ func DefaultConfig(homeDir string) *config.Config {
 		ObsoleteHeight:       defaultObsoleteHeight,
 		SubmitNoSynced:       false,
 		DevNextGDB:           true,
+		GBTTimeOut:           defaultGBTTimeout,
 	}
 	if len(homeDir) > 0 {
 		hd, err := filepath.Abs(homeDir)
