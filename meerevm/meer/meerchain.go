@@ -161,7 +161,7 @@ func (b *MeerChain) buildBlock(parent *types.Header, qtxs []model.Tx, timestamp 
 		return nil, nil, nil, err
 	}
 
-	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts, nil)
+	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, &types.Body{Transactions: txs, Uncles: uncles}, receipts)
 	if err != nil {
 		return nil, nil, nil, err
 	}

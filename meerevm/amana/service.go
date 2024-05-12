@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
-	mconsensus "github.com/Qitmeer/qng/meerevm/amana/consensus"
 	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -38,21 +35,6 @@ func (q *AmanaService) Start() error {
 		return err
 	}
 	q.chain = chain
-	//
-
-	if chain.Context().Bool(utils.MiningEnabledFlag.Name) || chain.Context().Bool(utils.DeveloperFlag.Name) {
-		eb, err := chain.Ether().Etherbase()
-		if err != nil {
-			return fmt.Errorf("etherbase missing: %v", err)
-		}
-		wallet, err := chain.Ether().AccountManager().Find(accounts.Account{Address: eb})
-		if wallet == nil || err != nil {
-			log.Error("Etherbase account unavailable locally", "err", err)
-			return fmt.Errorf("signer missing: %v", err)
-		}
-		chain.Ether().Engine().(*mconsensus.Amana).Authorize(eb, wallet.SignData)
-		log.Info(fmt.Sprintf("Amana Authorize:%s", eb))
-	}
 	//
 	err = q.chain.Start()
 	if err != nil {

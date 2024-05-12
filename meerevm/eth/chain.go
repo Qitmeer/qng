@@ -6,7 +6,6 @@ package eth
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/external"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -14,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/usbwallet"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -22,6 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -157,7 +158,24 @@ func makeFullNode(ctx *cli.Context, cfg *Config) (*node.Node, *eth.EthAPIBackend
 		v := ctx.Uint64(utils.OverrideCancun.Name)
 		cfg.Eth.OverrideCancun = &v
 	}
+	if ctx.IsSet(utils.OverrideVerkle.Name) {
+		v := ctx.Uint64(utils.OverrideVerkle.Name)
+		cfg.Eth.OverrideVerkle = &v
+	}
 	backend, ethe := utils.RegisterEthService(stack, &cfg.Eth)
+	// Create gauge with geth system and build information
+	if ethe != nil { // The 'eth' backend may be nil in light mode
+		var protos []string
+		for _, p := range ethe.Protocols() {
+			protos = append(protos, fmt.Sprintf("%v/%d", p.Name, p.Version))
+		}
+		metrics.NewRegisteredGaugeInfo("geth/info", nil).Update(metrics.GaugeInfoValue{
+			"arch":      runtime.GOARCH,
+			"os":        runtime.GOOS,
+			"version":   cfg.Node.Version,
+			"protocols": strings.Join(protos, ","),
+		})
+	}
 	// Configure log filter RPC API.
 	filterSystem := utils.RegisterFilterAPI(stack, backend, &cfg.Eth)
 
@@ -166,6 +184,14 @@ func makeFullNode(ctx *cli.Context, cfg *Config) (*node.Node, *eth.EthAPIBackend
 	}
 	if cfg.Ethstats.URL != "" {
 		utils.RegisterEthStatsService(stack, backend, cfg.Ethstats.URL)
+	}
+	// Configure full-sync tester service if requested
+	if ctx.IsSet(utils.SyncTargetFlag.Name) {
+		hex := hexutil.MustDecode(ctx.String(utils.SyncTargetFlag.Name))
+		if len(hex) != common.HashLength {
+			utils.Fatalf("invalid sync target length: have %d, want %d", len(hex), common.HashLength)
+		}
+		utils.RegisterFullSyncTester(stack, ethe, common.BytesToHash(hex))
 	}
 	return stack, backend.(*eth.EthAPIBackend), ethe
 }
@@ -208,10 +234,11 @@ func setAccountManagerBackends(stack *node.Node) error {
 		scryptP = keystore.LightScryptP
 	}
 
+	// Assemble the supported backends
 	if len(conf.ExternalSigner) > 0 {
 		log.Info("Using external signer", "url", conf.ExternalSigner)
-		if extapi, err := external.NewExternalBackend(conf.ExternalSigner); err == nil {
-			am.AddBackend(extapi)
+		if extBackend, err := external.NewExternalBackend(conf.ExternalSigner); err == nil {
+			am.AddBackend(extBackend)
 			return nil
 		} else {
 			return fmt.Errorf("error connecting to external signer: %v", err)
@@ -252,7 +279,7 @@ func applyMetricConfig(ctx *cli.Context, cfg *Config) {
 		cfg.Metrics.Enabled = ctx.Bool(utils.MetricsEnabledFlag.Name)
 	}
 	if ctx.IsSet(utils.MetricsEnabledExpensiveFlag.Name) {
-		cfg.Metrics.EnabledExpensive = ctx.Bool(utils.MetricsEnabledExpensiveFlag.Name)
+		log.Warn("Expensive metrics are collected by default, please remove this flag", "flag", utils.MetricsEnabledExpensiveFlag.Name)
 	}
 	if ctx.IsSet(utils.MetricsHTTPFlag.Name) {
 		cfg.Metrics.HTTP = ctx.String(utils.MetricsHTTPFlag.Name)
@@ -358,19 +385,6 @@ func startNode(ctx *cli.Context, stack *node.Node, backend *eth.EthAPIBackend) e
 			}
 		}()
 	}
-
-	if ctx.Bool(utils.MiningEnabledFlag.Name) || ctx.Bool(utils.DeveloperFlag.Name) {
-		if ctx.String(utils.SyncModeFlag.Name) == "light" {
-			utils.Fatalf("Light clients do not support mining")
-		}
-
-		gasprice := ethereum.GlobalBig(ctx, utils.MinerGasPriceFlag.Name)
-		backend.TxPool().SetGasTip(gasprice)
-		if err := backend.StartMining(); err != nil {
-			utils.Fatalf("Failed to start mining: %v", err)
-		}
-	}
-
 	return nil
 }
 
@@ -438,14 +452,15 @@ func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrErr
 	}
 	fmt.Println("Testing your password against all of them...")
 	var match *accounts.Account
-	for _, a := range err.Matches {
-		if err := ks.Unlock(a, auth); err == nil {
-			match = &a
+	for i, a := range err.Matches {
+		if e := ks.Unlock(a, auth); e == nil {
+			match = &err.Matches[i]
 			break
 		}
 	}
 	if match == nil {
 		utils.Fatalf("None of the listed files could be unlocked.")
+		return accounts.Account{}
 	}
 	fmt.Printf("Your password unlocked %s\n", match.URL)
 	fmt.Println("In order to avoid this warning, you need to remove the following duplicate key files:")

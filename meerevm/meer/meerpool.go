@@ -264,8 +264,7 @@ func (m *MeerPool) updateSnapshot(env *environment) {
 
 	m.snapshotBlock = types.NewBlock(
 		env.header,
-		env.txs,
-		nil,
+		&types.Body{Transactions: env.txs},
 		env.receipts,
 		trie.NewStackTrie(nil),
 	)
@@ -607,7 +606,7 @@ func (m *MeerPool) fillTransactions(interrupt *atomic.Int32, env *environment) e
 func (m *MeerPool) commit(env *environment, update bool, start time.Time) error {
 	receipts := qcommon.CopyReceipts(env.receipts)
 	s := env.state.Copy()
-	block, err := m.engine.FinalizeAndAssemble(m.chain, env.header, s, env.txs, []*types.Header{}, receipts, nil)
+	block, err := m.engine.FinalizeAndAssemble(m.chain, env.header, s, &types.Body{Transactions: env.txs}, receipts)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -794,13 +793,13 @@ func (m *MeerPool) SetRecommitInterval(interval time.Duration) {
 	log.Debug("Temporarily not supported: SetRecommitInterval")
 }
 
-func (m *MeerPool) Pending() (*types.Block, *state.StateDB) {
+func (m *MeerPool) Pending() (*types.Block, types.Receipts, *state.StateDB) {
 	m.snapshotMu.RLock()
 	defer m.snapshotMu.RUnlock()
 	if m.snapshotState == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
-	return m.snapshotBlock, m.snapshotState.Copy()
+	return m.snapshotBlock, m.snapshotReceipts, m.snapshotState.Copy()
 }
 
 func (m *MeerPool) PendingBlock() *types.Block {

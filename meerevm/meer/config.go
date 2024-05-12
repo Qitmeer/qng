@@ -36,7 +36,6 @@ var (
 		utils.DiscoveryPortFlag,
 		utils.MiningEnabledFlag,
 		utils.MinerEtherbaseFlag,
-		utils.MinerNewPayloadTimeout,
 		utils.NATFlag,
 		utils.NoDiscoverFlag,
 		utils.DiscoveryV5Flag,
