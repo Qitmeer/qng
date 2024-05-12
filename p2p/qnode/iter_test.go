@@ -15,7 +15,6 @@ import (
 )
 
 func TestReadNodes(t *testing.T) {
-	t.Parallel()
 	nodes := ReadNodes(new(genIter), 10)
 	checkNodes(t, nodes, 10)
 }
@@ -23,7 +22,6 @@ func TestReadNodes(t *testing.T) {
 // This test checks that ReadNodes terminates when reading N nodes from an iterator
 // which returns less than N nodes in an endless cycle.
 func TestReadNodesCycle(t *testing.T) {
-	t.Parallel()
 	iter := &callCountIter{
 		Iterator: CycleNodes([]*Node{
 			testNode(0, 0),
@@ -39,7 +37,6 @@ func TestReadNodesCycle(t *testing.T) {
 }
 
 func TestFilterNodes(t *testing.T) {
-	t.Parallel()
 	nodes := make([]*Node, 100)
 	for i := range nodes {
 		nodes[i] = testNode(uint64(i), uint64(i))
@@ -66,7 +63,7 @@ func checkNodes(t *testing.T, nodes []*Node, wantLen int) {
 		t.Errorf("slice has %d nodes, want %d", len(nodes), wantLen)
 		return
 	}
-	seen := make(map[ID]bool)
+	seen := make(map[ID]bool, len(nodes))
 	for i, e := range nodes {
 		if e == nil {
 			t.Errorf("nil node at index %d", i)
@@ -83,7 +80,6 @@ func checkNodes(t *testing.T, nodes []*Node, wantLen int) {
 // This test checks fairness of FairMix in the happy case where all sources return nodes
 // within the context's deadline.
 func TestFairMix(t *testing.T) {
-	t.Parallel()
 	for i := 0; i < 500; i++ {
 		testMixerFairness(t)
 	}
@@ -112,7 +108,6 @@ func testMixerFairness(t *testing.T) {
 // This test checks that FairMix falls back to an alternative source when
 // the 'fair' choice doesn't return a node within the timeout.
 func TestFairMixNextFromAll(t *testing.T) {
-	t.Parallel()
 	mix := NewFairMix(1 * time.Millisecond)
 	mix.AddSource(&genIter{index: 1})
 	mix.AddSource(CycleNodes(nil))
@@ -129,7 +124,6 @@ func TestFairMixNextFromAll(t *testing.T) {
 
 // This test ensures FairMix works for Next with no sources.
 func TestFairMixEmpty(t *testing.T) {
-	t.Parallel()
 	var (
 		mix   = NewFairMix(1 * time.Second)
 		testN = testNode(1, 1)
@@ -150,7 +144,6 @@ func TestFairMixEmpty(t *testing.T) {
 
 // This test checks closing a source while Next runs.
 func TestFairMixRemoveSource(t *testing.T) {
-	t.Parallel()
 	mix := NewFairMix(1 * time.Second)
 	source := make(blockingIter)
 	mix.AddSource(source)
@@ -194,7 +187,6 @@ func (it blockingIter) Close() {
 }
 
 func TestFairMixClose(t *testing.T) {
-	t.Parallel()
 	for i := 0; i < 20 && !t.Failed(); i++ {
 		testMixerClose(t)
 	}
@@ -227,7 +219,7 @@ func testMixerClose(t *testing.T) {
 }
 
 func idPrefixDistribution(nodes []*Node) map[uint32]int {
-	d := make(map[uint32]int)
+	d := make(map[uint32]int, len(nodes))
 	for _, node := range nodes {
 		id := node.ID()
 		d[binary.BigEndian.Uint32(id[:4])]++
