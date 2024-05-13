@@ -86,7 +86,7 @@ func (api *PrivateMinerAPI) GetMiningStats() (interface{}, error) {
 	return string(b), err
 }
 
-// SetBlockMaxsize func (api *PublicMinerAPI) SetBlockMaxsize() (interface{}, error){
+// SetBlockMaxsize func (api *PrivateMinerAPI) SetBlockMaxsize() (interface{}, error){
 func (api *PrivateMinerAPI) SetBlockMaxsize(maxsize uint32) (interface{}, error) {
 	err := api.miner.policy.SetBlockMaxSize(maxsize)
 	if err != nil {
