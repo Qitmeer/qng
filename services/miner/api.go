@@ -80,10 +80,19 @@ func (api *PublicMinerAPI) GetBlockTemplate(capabilities []string, powType byte)
 	return nil, rpc.RpcInvalidError("Invalid mode")
 }
 
-// GetMiningStats func (api *PublicMinerAPI) GetMiningStats() (interface{}, error){
+// GetMiningStats func (api *PrivateMinerAPI) GetMiningStats() (interface{}, error){
 func (api *PrivateMinerAPI) GetMiningStats() (interface{}, error) {
 	b, err := api.miner.stats.MarshalJSON()
 	return string(b), err
+}
+
+// SetBlockMaxsize func (api *PublicMinerAPI) SetBlockMaxsize() (interface{}, error){
+func (api *PrivateMinerAPI) SetBlockMaxsize(maxsize uint32) (interface{}, error) {
+	err := api.miner.policy.SetBlockMaxSize(maxsize)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // LL

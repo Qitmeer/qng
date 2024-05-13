@@ -389,6 +389,12 @@ function get_mining_stats(){
   get_result "$data"
 }
 
+function set_block_maxsize(){
+  local size=$1
+  local data='{"jsonrpc":"2.0","method":"miner_setBlockMaxsize","params":['$size'],"id":1}'
+  get_result "$data"
+}
+
 function get_mainchain_height(){
   local data='{"jsonrpc":"2.0","method":"getMainChainHeight","params":[],"id":1}'
   get_result "$data"
@@ -1215,7 +1221,9 @@ elif [ "$1" == "template" ]; then
 elif [ "$1" == "miningstats" ]; then
     shift
     get_mining_stats $@ | jq .
-
+elif [ "$1" == "setblocksize" ]; then
+    shift
+    set_block_maxsize $@ | jq .
 elif [ "$1" == "mainHeight" ]; then
     shift
     get_mainchain_height
