@@ -137,8 +137,9 @@ type Config struct {
 	// TODO: It will soon be discarded in the near future
 	DevNextGDB bool `long:"devnextgdb" description:"Enable next generation databases that only exist in development mode"`
 	// wallet
-	WalletPass     string
-	AutoCollectEvm bool `long:"autocollectevm" description:"auto collect utxo to evm"`
+	WalletPass             string
+	AutoCollectEvm         bool `long:"autocollectevm" description:"auto collect utxo to evm"`
+	UseDynamicBlockMaxSize bool `long:"usedynamicblockmaxsize" description:"does the block max size change?"`
 }
 
 func (c *Config) GetMinningAddrs() []types.Address {

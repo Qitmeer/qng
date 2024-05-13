@@ -639,6 +639,12 @@ var (
 			Usage:       "Build block template timeout by Millisecond.(Can limit the number of transactions included in the block)",
 			Destination: &cfg.GBTTimeOut,
 		},
+		&cli.BoolFlag{
+			Name:        "usedynamicblockmaxsize",
+			Usage:       "Does the block max size change?",
+			Value:       false,
+			Destination: &cfg.UseDynamicBlockMaxSize,
+		},
 	}
 )
 
