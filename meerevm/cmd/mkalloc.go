@@ -62,13 +62,13 @@ func makelist(g *core.Genesis) allocList {
 	return a
 }
 
-func makealloc(g *core.Genesis) string {
+func makealloc(g *core.Genesis) (string, []byte) {
 	a := makelist(g)
 	data, err := rlp.EncodeToBytes(a)
 	if err != nil {
 		panic(err)
 	}
-	return strconv.QuoteToASCII(string(data))
+	return strconv.QuoteToASCII(string(data)), data
 }
 
 func main() {
@@ -120,8 +120,8 @@ func main() {
 				panic(err)
 			}
 		}
-		alloc := makealloc(genesis)
-		log.Printf("network=%s genesisHash=%s\n", networkTag, hex.EncodeToString(crypto.Keccak256([]byte(alloc))))
+		alloc, src := makealloc(genesis)
+		log.Printf("network=%s genesisHash=%s\n", networkTag, hex.EncodeToString(crypto.Keccak256([]byte(src))))
 		fileContent += fmt.Sprintf("\nconst %s = %s", networkTag, alloc)
 	}
 
