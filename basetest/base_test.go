@@ -1,10 +1,11 @@
 package basetest
 
 import (
+	"testing"
+
 	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestEvmGenesis(t *testing.T) {
