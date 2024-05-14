@@ -7,6 +7,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
+	"math/big"
+	"os"
+	"sort"
+	"strconv"
+
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
@@ -15,11 +21,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"log"
-	"math/big"
-	"os"
-	"sort"
-	"strconv"
 )
 
 const RELEASE_CONTRACT_ADDR = "0x1000000000000000000000000000000000000000"
@@ -62,13 +63,13 @@ func makelist(g *core.Genesis) allocList {
 	return a
 }
 
-func makealloc(g *core.Genesis) string {
+func makealloc(g *core.Genesis) (string, []byte) {
 	a := makelist(g)
 	data, err := rlp.EncodeToBytes(a)
 	if err != nil {
 		panic(err)
 	}
-	return strconv.QuoteToASCII(string(data))
+	return strconv.QuoteToASCII(string(data)), data
 }
 
 func main() {
@@ -120,8 +121,8 @@ func main() {
 				panic(err)
 			}
 		}
-		alloc := makealloc(genesis)
-		log.Printf("network=%s genesisHash=%s\n", networkTag, hex.EncodeToString(crypto.Keccak256([]byte(alloc))))
+		alloc, originAllocData := makealloc(genesis)
+		log.Printf("network=%s genesisHash=%s\n", networkTag, hex.EncodeToString(crypto.Keccak256(originAllocData)))
 		fileContent += fmt.Sprintf("\nconst %s = %s", networkTag, alloc)
 	}
 
