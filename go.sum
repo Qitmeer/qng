@@ -26,10 +26,8 @@ github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a h1:LUGOJG/lF0TlnlYT
 github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:gbGKdXSJn71Mc2xcKJHqC/waPiX0byZae67zarj83m4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a h1:O2Erw/YvYAkIqkc2uvP/WwuWf0V8S0+pjU/FKHmjFU4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:KiA7g46zc6dkgf/3NbEpJirY75v656WYlmSQNR1wTVk=
-github.com/Qitmeer/go-ethereum v1.13.14-q.0 h1:+LWjSJ2Qt4IwUk9u3YfksXusKgW5wgeCqnGSWGHOPJE=
-github.com/Qitmeer/go-ethereum v1.13.14-q.0/go.mod h1:TN8ZiHrdJwSe8Cb6x+p0hs5CxhJZPbqB7hHkaUXcmIU=
-github.com/Qitmeer/go-ethereum v1.14.2-q.0 h1:OycDUSk7MViw8b0E71KGhI69NbeK1bwXsZG3+qidg+M=
-github.com/Qitmeer/go-ethereum v1.14.2-q.0/go.mod h1:4o9EENgbm2ig8HW49zZAoAlmAtLHauoFRvUeVbltmFs=
+github.com/Qitmeer/go-ethereum v1.14.2-q.1 h1:ZV0VbImY0vgq05zdm7AAENXIby9sD5TnK6C7f8K5uDY=
+github.com/Qitmeer/go-ethereum v1.14.2-q.1/go.mod h1:4o9EENgbm2ig8HW49zZAoAlmAtLHauoFRvUeVbltmFs=
 github.com/Qitmeer/go-secp256k1 v0.5.1 h1:t3u4VMSz7LRn9Ki1lecG7tyTNwbLGILt1CwdOAA5N7M=
 github.com/Qitmeer/go-secp256k1 v0.5.1/go.mod h1:AkrSQDAMwdV4+pXUQnEAPvPbUiIN4DAHMAm0ueneJB8=
 github.com/Shopify/goreferrer v0.0.0-20181106222321-ec9c9a553398/go.mod h1:a1uqRtAwp2Xwc6WNPJEufxJ7fx3npB4UV/JOLmbu5I0=
