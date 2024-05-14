@@ -7,9 +7,9 @@ import (
 )
 
 const MainAllocHash = "e36181b59aaec0602dbec5e16570e60ca3828abe07bf79fd08d3ca379cdae425"
-const MixAllocHash = "c877cb5688d5daf9e7b20eba0c46fec0bf096fb06d966aa601068c7e7b795e86"
-const TestAllocHash = "c877cb5688d5daf9e7b20eba0c46fec0bf096fb06d966aa601068c7e7b795e86"
-const PrivAllocHash = "c877cb5688d5daf9e7b20eba0c46fec0bf096fb06d966aa601068c7e7b795e86"
+const MixAllocHash = "5cc4ee79533fa24494c44d391dabb7816b39a3c4ac9f0e34b2a1877764aaac9f"
+const TestAllocHash = "5cc4ee79533fa24494c44d391dabb7816b39a3c4ac9f0e34b2a1877764aaac9f"
+const PrivAllocHash = "5cc4ee79533fa24494c44d391dabb7816b39a3c4ac9f0e34b2a1877764aaac9f"
 
 func BuildGenesisHash(network string) string {
 	switch network {
