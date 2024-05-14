@@ -1,12 +1,12 @@
 package meer
 
 import (
-	"fmt"
 	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	qcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"math/big"
 	"strings"
@@ -64,36 +64,38 @@ func QngPrivnetGenesis() *core.Genesis {
 	}
 }
 
-func DecodePrealloc(data string) core.GenesisAlloc {
+func DecodePrealloc(data string) types.GenesisAlloc {
 	if len(data) <= 0 {
 		return core.GenesisAlloc{}
 	}
 	var p []struct {
-		Addr, Balance *big.Int
-		Code          []byte
-		Nonce         uint64
-		StorageKey    []string
-		StorageValue  []string
+		Addr    *big.Int
+		Balance *big.Int
+		Misc    *struct {
+			Nonce uint64
+			Code  []byte
+			Slots []struct {
+				Key qcommon.Hash
+				Val qcommon.Hash
+			}
+		} `rlp:"optional"`
 	}
 	if err := rlp.NewStream(strings.NewReader(data), 0).Decode(&p); err != nil {
 		panic(err)
 	}
-	ga := make(core.GenesisAlloc, len(p))
+	ga := make(types.GenesisAlloc, len(p))
 	for _, account := range p {
-		if len(account.StorageKey) != len(account.StorageValue) {
-			log.Error(fmt.Sprintf("account.StorageKey != account.StorageValue"))
-			continue
+		acc := types.Account{Balance: account.Balance}
+		if account.Misc != nil {
+			acc.Nonce = account.Misc.Nonce
+			acc.Code = account.Misc.Code
+
+			acc.Storage = make(map[qcommon.Hash]qcommon.Hash)
+			for _, slot := range account.Misc.Slots {
+				acc.Storage[slot.Key] = slot.Val
+			}
 		}
-		storage := map[qcommon.Hash]qcommon.Hash{}
-		for i := 0; i < len(account.StorageKey); i++ {
-			storage[qcommon.HexToHash(account.StorageKey[i])] = qcommon.HexToHash(account.StorageValue[i])
-		}
-		ga[qcommon.BigToAddress(account.Addr)] = core.GenesisAccount{
-			Balance: account.Balance,
-			Code:    account.Code,
-			Storage: storage,
-			Nonce:   account.Nonce,
-		}
+		ga[qcommon.BigToAddress(account.Addr)] = acc
 	}
 	return ga
 }

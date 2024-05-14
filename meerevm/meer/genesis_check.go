@@ -6,10 +6,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-const MainAllocHash = "204bb2f79e29453543b74b620533c854ddd327603fdcadb5c938b4e29e2cbd0b"
-const MixAllocHash = "e380c81b956194ce4e38c218f9b99300ef725f58b7ec13963fea763c8379446f"
-const TestAllocHash = "e380c81b956194ce4e38c218f9b99300ef725f58b7ec13963fea763c8379446f"
-const PrivAllocHash = "e380c81b956194ce4e38c218f9b99300ef725f58b7ec13963fea763c8379446f"
+const MainAllocHash = "e36181b59aaec0602dbec5e16570e60ca3828abe07bf79fd08d3ca379cdae425"
+const MixAllocHash = "c877cb5688d5daf9e7b20eba0c46fec0bf096fb06d966aa601068c7e7b795e86"
+const TestAllocHash = "c877cb5688d5daf9e7b20eba0c46fec0bf096fb06d966aa601068c7e7b795e86"
+const PrivAllocHash = "c877cb5688d5daf9e7b20eba0c46fec0bf096fb06d966aa601068c7e7b795e86"
 
 func BuildGenesisHash(network string) string {
 	switch network {
