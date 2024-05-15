@@ -66,7 +66,7 @@ func QngPrivnetGenesis() *core.Genesis {
 
 func DecodePrealloc(data string) types.GenesisAlloc {
 	if len(data) <= 0 {
-		return core.GenesisAlloc{}
+		return types.GenesisAlloc{}
 	}
 	var p []struct {
 		Addr    *big.Int
