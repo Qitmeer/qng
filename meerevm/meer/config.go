@@ -46,7 +46,7 @@ var (
 
 func MakeConfig(cfg *config.Config) (*eth.Config, error) {
 	datadir := cfg.DataDir
-	genesis := Genesis()
+	genesis := CurrentGenesis()
 
 	etherbase := common.Address{}
 	econfig := ethconfig.Defaults
@@ -146,8 +146,8 @@ func ChainConfig() *params.ChainConfig {
 	return nil
 }
 
-func Genesis() *core.Genesis {
-	switch qparams.ActiveNetParams.Net {
+func Genesis(net protocol.Network) *core.Genesis {
+	switch net {
 	case protocol.MainNet:
 		return QngGenesis()
 	case protocol.TestNet:
@@ -158,4 +158,8 @@ func Genesis() *core.Genesis {
 		return QngPrivnetGenesis()
 	}
 	return nil
+}
+
+func CurrentGenesis() *core.Genesis {
+	return Genesis(qparams.ActiveNetParams.Net)
 }

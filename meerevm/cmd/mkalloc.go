@@ -67,13 +67,13 @@ func makelist(g *core.Genesis) []allocItem {
 	return items
 }
 
-func makealloc(g *core.Genesis) (string, []byte) {
+func makealloc(g *core.Genesis) string {
 	a := makelist(g)
 	data, err := rlp.EncodeToBytes(a)
 	if err != nil {
 		panic(err)
 	}
-	return strconv.QuoteToASCII(string(data)), data
+	return strconv.QuoteToASCII(string(data))
 }
 
 func main() {
@@ -108,7 +108,7 @@ func main() {
 			params.ActiveNetParams = &params.MainNetParam
 			networkTag = "mainAllocData"
 		}
-		genesis := meer.Genesis()
+		genesis := meer.CurrentGenesis()
 		genesis.Alloc = ngd.Data.Genesis.Alloc
 		if _, ok := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]; ok {
 			releaseAccount := genesis.Alloc[common.HexToAddress(RELEASE_CONTRACT_ADDR)]
@@ -125,9 +125,11 @@ func main() {
 				panic(err)
 			}
 		}
-		alloc, src := makealloc(genesis)
-		log.Printf("network=%s genesisHash=%s\n", networkTag, hex.EncodeToString(crypto.Keccak256([]byte(src))))
+		alloc := makealloc(genesis)
+		genesisHash := genesis.ToBlock().Hash()
+		log.Printf("network = %s, genesisHash= %s\n", networkTag, genesisHash.String())
 		fileContent += fmt.Sprintf("\nconst %s = %s", networkTag, alloc)
+		fileContent += fmt.Sprintf("\nconst %sGenesisHash = \"%s\"", params.ActiveNetParams.Net.String(), genesisHash.String())
 	}
 
 	fileName := "./../meer/genesis_alloc.go"
