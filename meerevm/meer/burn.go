@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
+	"sort"
 	"strings"
 )
 
@@ -20,6 +21,20 @@ type BurnDetail struct {
 	From   string `json:"from"`
 	Amount int64  `json:"amount"`
 	Time   int64  `json:"time"`
+}
+
+type MeerMappingBurnDetailSlice []release.MeerMappingBurnDetail
+
+func (sh MeerMappingBurnDetailSlice) Len() int {
+	return len(sh)
+}
+
+func (sh MeerMappingBurnDetailSlice) Less(i, j int) bool {
+	return sh[i].Order.Cmp(sh[j].Order) > 0
+}
+
+func (sh MeerMappingBurnDetailSlice) Swap(i, j int) {
+	sh[i], sh[j] = sh[j], sh[i]
 }
 
 // 2022/08/17 20:35:36 MmQitmeerMainNetHonorAddressXY9JH2y burn amount 408011208230864
@@ -71,7 +86,9 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 	}
 	log.Debug("All burn amount", allBurnAmount)
 	for k, v := range bas {
-		for i, vv := range v {
+		sv := MeerMappingBurnDetailSlice(v)
+		sort.Sort(sv)
+		for i, vv := range sv {
 			// amount
 			s := k + fmt.Sprintf("%064x", big.NewInt(1))
 			b, _ := hex.DecodeString(s)
