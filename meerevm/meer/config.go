@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -46,7 +47,7 @@ var (
 
 func MakeConfig(cfg *config.Config) (*eth.Config, error) {
 	datadir := cfg.DataDir
-	genesis := Genesis()
+	genesis := CurrentGenesis()
 
 	etherbase := common.Address{}
 	econfig := ethconfig.Defaults
@@ -146,16 +147,20 @@ func ChainConfig() *params.ChainConfig {
 	return nil
 }
 
-func Genesis() *core.Genesis {
-	switch qparams.ActiveNetParams.Net {
+func Genesis(net protocol.Network, alloc types.GenesisAlloc) *core.Genesis {
+	switch net {
 	case protocol.MainNet:
-		return QngGenesis()
+		return QngGenesis(alloc)
 	case protocol.TestNet:
-		return QngTestnetGenesis()
+		return QngTestnetGenesis(alloc)
 	case protocol.MixNet:
-		return QngMixnetGenesis()
+		return QngMixnetGenesis(alloc)
 	case protocol.PrivNet:
-		return QngPrivnetGenesis()
+		return QngPrivnetGenesis(alloc)
 	}
 	return nil
+}
+
+func CurrentGenesis() *core.Genesis {
+	return Genesis(qparams.ActiveNetParams.Net, nil)
 }

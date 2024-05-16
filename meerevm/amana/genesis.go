@@ -6,6 +6,7 @@ import (
 	qcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"math/big"
 )
@@ -62,8 +63,8 @@ func AmanaPrivnetGenesis() *core.Genesis {
 	}
 }
 
-func decodePrealloc() core.GenesisAlloc {
-	ga := core.GenesisAlloc{}
+func decodePrealloc() types.GenesisAlloc {
+	ga := types.GenesisAlloc{}
 	ga[qcommon.HexToAddress("0x71bc4403af41634cda7c32600a8024d54e7f6499")] = core.GenesisAccount{Balance: big.NewInt(params.Ether).Mul(big.NewInt(params.Ether), big.NewInt(10000000000))}
 	return ga
 }
