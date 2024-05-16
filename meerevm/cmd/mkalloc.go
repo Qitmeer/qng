@@ -21,7 +21,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fileHeader := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go \npackage meer\n\n"
+	fileHeader := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2024 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go \npackage meer\n\n"
 	fileContent := fileHeader
 	fileContent += fmt.Sprintf("\nconst genesisJson = `%s`", genesisJ)
 	fileContent += fmt.Sprintf("\nconst burnListJson = `%s`", burnListJ)
