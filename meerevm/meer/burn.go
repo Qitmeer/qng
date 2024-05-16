@@ -4,12 +4,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/testutils/release"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"math/big"
-	"strings"
 )
 
 const RELEASE_CONTRACT_ADDR = "0x1000000000000000000000000000000000000000"
@@ -113,5 +114,5 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 		kb := crypto.Keccak256(kk)
 		storage[common.BytesToHash(kb)] = common.HexToHash(fmt.Sprintf("%064x", len(v)))
 	}
-	return storage
+	return storage // output hash.HashB(storageBytes) need 10314f3a2571ceac1023968a37aa3f65e47b52b90e98d2609b639af3bd12dd65
 }

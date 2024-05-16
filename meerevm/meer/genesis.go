@@ -3,6 +3,9 @@ package meer
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"strings"
+
 	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/common"
@@ -11,8 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	"math/big"
-	"strings"
 )
 
 func QngGenesis(alloc types.GenesisAlloc) *core.Genesis {
@@ -161,8 +162,11 @@ func DoDecodeAlloc(network *qparams.Params, genesisStr string, burnStr string) t
 	if ngd == nil {
 		panic(fmt.Errorf("No alloc config data from: %s", network.Name))
 	}
-
-	burnList := BuildBurnBalance(burnStr)
+	var burnList map[common.Hash]common.Hash
+	storageJsonReader := strings.NewReader(storageJson)
+	if err := json.NewDecoder(storageJsonReader).Decode(&burnList); err != nil {
+		panic(err)
+	}
 	genesis := Genesis(network.Net, types.GenesisAlloc{})
 	genesis.Alloc = ngd.Data.Genesis.Alloc
 	releaseConAddr := common.HexToAddress(RELEASE_CONTRACT_ADDR)

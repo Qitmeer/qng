@@ -1,9 +1,10 @@
 package meer
 
 import (
+	"testing"
+
 	"github.com/Qitmeer/qng/params"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestGenesisHash(t *testing.T) {

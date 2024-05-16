@@ -6,10 +6,11 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/meer"
-	"github.com/Qitmeer/qng/params"
 	"log"
 	"os"
+
+	"github.com/Qitmeer/qng/meerevm/meer"
+	"github.com/Qitmeer/qng/params"
 )
 
 func main() {
@@ -21,10 +22,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	storage, err := readFromFile("./../meer/10314f3a2571ceac1023968a37aa3f65e47b52b90e98d2609b639af3bd12dd65.json")
+	if err != nil {
+		panic(err)
+	}
 	fileHeader := "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2024 The qitmeer developers \n// This file is auto generate by : go run mkalloc.go \npackage meer\n\n"
 	fileContent := fileHeader
 	fileContent += fmt.Sprintf("\nconst genesisJson = `%s`", genesisJ)
 	fileContent += fmt.Sprintf("\nconst burnListJson = `%s`", burnListJ)
+	fileContent += fmt.Sprintf("\nconst storageJson = `%s`", storage)
 	err = saveFile("./../meer/genesis_alloc.go", fileContent)
 	if err != nil {
 		panic(err)
