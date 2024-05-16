@@ -22,6 +22,27 @@ type BurnDetail struct {
 	Amount int64  `json:"amount"`
 	Time   int64  `json:"time"`
 }
+type BurnTimes int
+
+type BurnerAdressHash160 string
+
+type BurnerTimes map[BurnerAdressHash160]BurnTimes
+
+func (bt *BurnTimes) ToInt() int {
+	return int(*bt)
+}
+func (bah *BurnerAdressHash160) ToString() string {
+	return string(*bah)
+}
+
+func (bah *BurnerTimes) SortKeys(callback func(keys []string)) {
+	keys := make([]string, 0)
+	for k := range *bah {
+		keys = append(keys, string(k))
+	}
+	sort.Strings(keys)
+	callback(keys)
+}
 
 // 2022/08/17 20:35:36 MmQitmeerMainNetHonorAddressXY9JH2y burn amount 408011208230864
 // 2022/08/17 20:35:36 MmQitmeerMainNetGuardAddressXd7b76q burn amount 514790066054534
@@ -34,55 +55,56 @@ type BurnDetail struct {
 
 func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 	storage := map[common.Hash]common.Hash{}
-	gds := map[string][]BurnDetail{}
+	burnList := map[string][]BurnDetail{}
 	jsonR := strings.NewReader(burnStr)
-	if err := json.NewDecoder(jsonR).Decode(&gds); err != nil {
+	if err := json.NewDecoder(jsonR).Decode(&burnList); err != nil {
 		panic(err)
 	}
-	addrhashHash160Orders := map[string]int{}
+
+	burnTimes := BurnerTimes{}
 
 	allBurnAmount := uint64(0)
 	burnM := map[string]uint64{}
 	keys := make([]string, 0)
-	for k := range gds {
+	for k := range burnList {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		v := gds[k]
-		for _, vv := range v {
-			addr, err := address.DecodeAddress(vv.From)
+		burnRecords := burnList[k]
+		for _, burnDetail := range burnRecords {
+			burnerAddr, err := address.DecodeAddress(burnDetail.From)
 			if err != nil {
-				panic(vv.From + "meer address err" + err.Error())
+				panic(burnDetail.From + "meer address err" + err.Error())
 			}
 
-			h16 := addr.Hash160()
-			addrHash160 := hex.EncodeToString(h16[:])
+			h16 := burnerAddr.Hash160()
+			burnerAddrHash160 := BurnerAdressHash160(hex.EncodeToString(h16[:]))
+
 			// storage the mapping key value on storage slot
-			key, value := BuildMappingStorageSlot(addrHash160, addrhashHash160Orders[addrHash160], 0, big.NewInt(vv.Amount))
+			burnerTimes := burnTimes[burnerAddrHash160]
+			key, value := BuildMappingStorageSlot(burnerAddrHash160.ToString(), burnerTimes.ToInt(), 0, big.NewInt(burnDetail.Amount))
 			storage[key] = value
-			key, value = BuildMappingStorageSlot(addrHash160, addrhashHash160Orders[addrHash160], 1, big.NewInt(vv.Time))
+			key, value = BuildMappingStorageSlot(burnerAddrHash160.ToString(), burnerTimes.ToInt(), 1, big.NewInt(burnDetail.Time))
 			storage[key] = value
-			key, value = BuildMappingStorageSlot(addrHash160, addrhashHash160Orders[addrHash160], 2, big.NewInt(vv.Order))
+			key, value = BuildMappingStorageSlot(burnerAddrHash160.ToString(), burnerTimes.ToInt(), 2, big.NewInt(burnDetail.Order))
 			storage[key] = value
-			key, value = BuildMappingStorageSlot(addrHash160, addrhashHash160Orders[addrHash160], 3, big.NewInt(vv.Height))
+			key, value = BuildMappingStorageSlot(burnerAddrHash160.ToString(), burnerTimes.ToInt(), 3, big.NewInt(burnDetail.Height))
 			storage[key] = value
 
-			addrhashHash160Orders[addrHash160]++
-			allBurnAmount += uint64(vv.Amount)
-			burnM[k] += uint64(vv.Amount)
+			burnTimes[burnerAddrHash160]++
+			allBurnAmount += uint64(burnDetail.Amount)
+			burnM[k] += uint64(burnDetail.Amount)
 		}
 	}
-	keys = make([]string, 0)
-	for k := range addrhashHash160Orders {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, v := range keys {
-		// storage the mapping key length on storage slot
-		key, value := BuildStorageSlot(v, 0, addrhashHash160Orders[v])
-		storage[key] = value
-	}
+	burnTimes.SortKeys(func(keys []string) {
+		for _, v := range keys {
+			burnerTimes := burnTimes[BurnerAdressHash160(v)]
+			// storage the mapping key length on storage slot
+			key, value := BuildStorageSlot(v, 0, burnerTimes.ToInt())
+			storage[key] = value
+		}
+	})
 
 	for k, v := range burnM {
 		log.Trace(k, "burn amount", v)
@@ -135,7 +157,7 @@ func BuildMappingStorageSlot(mapKey string, keyPosition, valuePosition int, mapV
 	mapping(string => BurnDetail[]) burnUsers;
 	@param mapKey is burnUsers key of user's address hash160 string
 	@param keyPosition is the mapping first position for recording the length of BurnDetail[]
-	@param valueLength is the length of the map
+	@param valueLength is the length of the BurnDetail[]
 
 *
 */
