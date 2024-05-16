@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
+	"sort"
 	"strings"
 )
 
@@ -41,7 +42,13 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 	bas := map[string][]release.MeerMappingBurnDetail{}
 	allBurnAmount := uint64(0)
 	burnM := map[string]uint64{}
-	for k, v := range gds {
+	keys := make([]string, 0)
+	for k, _ := range gds {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		v := gds[k]
 		for _, vv := range v {
 			addr, err := address.DecodeAddress(vv.From)
 			if err != nil {
