@@ -40,3 +40,5 @@ var MixNetParam = netParams{
 	Params:  &MixNetParams,
 	RpcPort: "28131",
 }
+
+var AllNetParams = []*netParams{&MainNetParam, &TestNetParam, &PrivNetParam, &MixNetParam}

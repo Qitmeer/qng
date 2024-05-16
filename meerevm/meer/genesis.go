@@ -1,8 +1,11 @@
 package meer
 
 import (
+	"encoding/json"
+	"fmt"
 	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
+	"github.com/ethereum/go-ethereum/common"
 	qcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
@@ -12,7 +15,10 @@ import (
 	"strings"
 )
 
-func QngGenesis() *core.Genesis {
+func QngGenesis(alloc types.GenesisAlloc) *core.Genesis {
+	if alloc == nil {
+		alloc = DecodeAlloc(qparams.MainNetParam.Params)
+	}
 	return &core.Genesis{
 		Config:     mparams.QngMainnetChainConfig,
 		Nonce:      0,
@@ -20,12 +26,15 @@ func QngGenesis() *core.Genesis {
 		ExtraData:  hexutil.MustDecode("0x00"),
 		GasLimit:   100000000,
 		Difficulty: big.NewInt(0),
-		Alloc:      DecodePrealloc(getAllocData(qparams.MainNetParams.Name)),
+		Alloc:      alloc,
 		Timestamp:  uint64(qparams.MainNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
 }
 
-func QngTestnetGenesis() *core.Genesis {
+func QngTestnetGenesis(alloc types.GenesisAlloc) *core.Genesis {
+	if alloc == nil {
+		alloc = DecodeAlloc(qparams.TestNetParam.Params)
+	}
 	return &core.Genesis{
 		Config:     mparams.QngTestnetChainConfig,
 		Nonce:      0,
@@ -33,12 +42,15 @@ func QngTestnetGenesis() *core.Genesis {
 		ExtraData:  hexutil.MustDecode("0x00"),
 		GasLimit:   8000000,
 		Difficulty: big.NewInt(0),
-		Alloc:      DecodePrealloc(getAllocData(qparams.TestNetParams.Name)),
+		Alloc:      alloc,
 		Timestamp:  uint64(qparams.TestNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
 }
 
-func QngMixnetGenesis() *core.Genesis {
+func QngMixnetGenesis(alloc types.GenesisAlloc) *core.Genesis {
+	if alloc == nil {
+		alloc = DecodeAlloc(qparams.MixNetParam.Params)
+	}
 	return &core.Genesis{
 		Config:     mparams.QngMixnetChainConfig,
 		Nonce:      0,
@@ -46,12 +58,15 @@ func QngMixnetGenesis() *core.Genesis {
 		ExtraData:  hexutil.MustDecode("0x00"),
 		GasLimit:   100000000,
 		Difficulty: big.NewInt(0),
-		Alloc:      DecodePrealloc(getAllocData(qparams.MixNetParams.Name)),
+		Alloc:      alloc,
 		Timestamp:  uint64(qparams.MixNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
 }
 
-func QngPrivnetGenesis() *core.Genesis {
+func QngPrivnetGenesis(alloc types.GenesisAlloc) *core.Genesis {
+	if alloc == nil {
+		alloc = DecodeAlloc(qparams.PrivNetParam.Params)
+	}
 	return &core.Genesis{
 		Config:     mparams.QngPrivnetChainConfig,
 		Nonce:      0,
@@ -59,7 +74,7 @@ func QngPrivnetGenesis() *core.Genesis {
 		ExtraData:  hexutil.MustDecode("0x00"),
 		GasLimit:   100000000,
 		Difficulty: big.NewInt(0),
-		Alloc:      DecodePrealloc(getAllocData(qparams.PrivNetParams.Name)),
+		Alloc:      alloc,
 		Timestamp:  uint64(qparams.PrivNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
 }
@@ -116,13 +131,54 @@ type Contract struct {
 	Input string `json:"input"`
 }
 
-func getAllocData(network string) string {
-	if network == qparams.TestNetParam.Name {
-		return testAllocData
-	} else if network == qparams.PrivNetParam.Name {
-		return privAllocData
-	} else if network == qparams.MixNetParam.Name {
-		return mixAllocData
+func DecodeAlloc(network *qparams.Params) types.GenesisAlloc {
+	return DoDecodeAlloc(network, "", "")
+}
+
+func DoDecodeAlloc(network *qparams.Params, genesisStr string, burnStr string) types.GenesisAlloc {
+	if len(genesisStr) <= 0 {
+		genesisStr = genesisJson
 	}
-	return mainAllocData
+	if len(burnStr) <= 0 {
+		burnStr = burnListJson
+	}
+	gds := []NetGenesisData{}
+	jsonR := strings.NewReader(genesisStr)
+	if err := json.NewDecoder(jsonR).Decode(&gds); err != nil {
+		panic(err)
+	}
+	if len(gds) != 4 {
+		panic(fmt.Errorf("Error genesis data config"))
+	}
+	var ngd *NetGenesisData
+	for _, gd := range gds {
+		if gd.Network == network.Name {
+			tgd := gd
+			ngd = &tgd
+			break
+		}
+	}
+	if ngd == nil {
+		panic(fmt.Errorf("No alloc config data from: %s", network.Name))
+	}
+
+	burnList := BuildBurnBalance(burnStr)
+	genesis := Genesis(network.Net, types.GenesisAlloc{})
+	genesis.Alloc = ngd.Data.Genesis.Alloc
+	releaseConAddr := common.HexToAddress(RELEASE_CONTRACT_ADDR)
+	if releaseAccount, ok := genesis.Alloc[releaseConAddr]; ok {
+		for k, v := range burnList {
+			kk := k
+			vv := v
+			releaseAccount.Storage[kk] = vv
+		}
+		genesis.Alloc[releaseConAddr] = releaseAccount
+	}
+	if len(ngd.Data.Contracts) > 0 {
+		err := UpdateAlloc(genesis, ngd.Data.Contracts)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return genesis.Alloc
 }

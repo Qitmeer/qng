@@ -235,7 +235,7 @@ func UpdateAlloc(genesis *core.Genesis, contracts []Contract) error {
 	if err != nil {
 		return err
 	}
-	genesis.Alloc = core.GenesisAlloc(alloc)
+	genesis.Alloc = types.GenesisAlloc(alloc)
 
 	b, err := json.MarshalIndent(alloc, "", " ")
 	if err != nil {
