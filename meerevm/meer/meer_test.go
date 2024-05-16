@@ -1,9 +1,10 @@
 package meer
 
 import (
+	"testing"
+
 	"github.com/Qitmeer/qng/params"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestGenesisHash(t *testing.T) {
@@ -15,4 +16,5 @@ func TestGenesisHash(t *testing.T) {
 		params.TestNetParams.Name+" genesis hash not equal latest")
 	assert.Equal(t, PrivNetGenesisHash, Genesis(params.PrivNetParams.Net, nil).ToBlock().Hash().String(),
 		params.PrivNetParam.Name+" genesis hash not equal latest")
+
 }

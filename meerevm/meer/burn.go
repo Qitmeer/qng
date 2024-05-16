@@ -4,13 +4,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/testutils/release"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"sort"
 	"strings"
+
+	"github.com/Qitmeer/qng/core/address"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 const RELEASE_CONTRACT_ADDR = "0x1000000000000000000000000000000000000000"
@@ -39,11 +39,12 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 	if err := json.NewDecoder(jsonR).Decode(&gds); err != nil {
 		panic(err)
 	}
-	bas := map[string][]release.MeerMappingBurnDetail{}
+	addrhashHash160Orders := map[string]int{}
+
 	allBurnAmount := uint64(0)
 	burnM := map[string]uint64{}
 	keys := make([]string, 0)
-	for k, _ := range gds {
+	for k := range gds {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
@@ -54,71 +55,94 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 			if err != nil {
 				panic(vv.From + "meer address err" + err.Error())
 			}
-			d := release.MeerMappingBurnDetail{
-				Amount: big.NewInt(vv.Amount),
-				Time:   big.NewInt(vv.Time),
-				Order:  big.NewInt(vv.Order),
-				Height: big.NewInt(vv.Height),
-			}
-			//parsed, _ := abi.JSON(strings.NewReader(release.TokenMetaData.ABI))
-			//// constructor params
-			//hexData, _ := parsed.Pack("", d)
+
 			h16 := addr.Hash160()
-			h16hex := hex.EncodeToString(h16[:])
-			if _, ok := bas[h16hex]; !ok {
-				bas[h16hex] = []release.MeerMappingBurnDetail{}
-			}
-			bas[h16hex] = append(bas[h16hex], d)
+			addrHash160 := hex.EncodeToString(h16[:])
+			// storage the mapping key value on storage slot
+			key, value := BuildMappingStorageSlot(addrHash160, addrhashHash160Orders[addrHash160], 0, big.NewInt(vv.Amount))
+			storage[key] = value
+			key, value = BuildMappingStorageSlot(addrHash160, addrhashHash160Orders[addrHash160], 1, big.NewInt(vv.Time))
+			storage[key] = value
+			key, value = BuildMappingStorageSlot(addrHash160, addrhashHash160Orders[addrHash160], 2, big.NewInt(vv.Order))
+			storage[key] = value
+			key, value = BuildMappingStorageSlot(addrHash160, addrhashHash160Orders[addrHash160], 3, big.NewInt(vv.Height))
+			storage[key] = value
+
+			addrhashHash160Orders[addrHash160]++
 			allBurnAmount += uint64(vv.Amount)
 			burnM[k] += uint64(vv.Amount)
 		}
 	}
+	keys = make([]string, 0)
+	for k := range addrhashHash160Orders {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, v := range keys {
+		// storage the mapping key length on storage slot
+		key, value := BuildStorageSlot(v, 0, addrhashHash160Orders[v])
+		storage[key] = value
+	}
+
 	for k, v := range burnM {
 		log.Trace(k, "burn amount", v)
 	}
 	log.Debug("All burn amount", allBurnAmount)
-	for k, v := range bas {
-		for i, vv := range v {
-			// amount
-			s := k + fmt.Sprintf("%064x", big.NewInt(1))
-			b, _ := hex.DecodeString(s)
-			key0 := crypto.Keccak256(b)
-			s = fmt.Sprintf("%064x", big.NewInt(int64(i))) + hex.EncodeToString(key0)
-			b, _ = hex.DecodeString(s)
-			key0 = crypto.Keccak256(b)
-			key0Big := new(big.Int).Add(new(big.Int).SetBytes(key0), big.NewInt(0))
-			storage[common.HexToHash(fmt.Sprintf("%064x", key0Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Amount))
-			// time
-			s = k + fmt.Sprintf("%064x", big.NewInt(1))
-			b, _ = hex.DecodeString(s)
-			key1 := crypto.Keccak256(b)
-			s = fmt.Sprintf("%064x", big.NewInt(int64(i))) + hex.EncodeToString(key1)
-			b, _ = hex.DecodeString(s)
-			key1 = crypto.Keccak256(b)
-			key1Big := new(big.Int).Add(new(big.Int).SetBytes(key1), big.NewInt(1))
-			storage[common.HexToHash(fmt.Sprintf("%064x", key1Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Time))
-			// order
-			s = k + fmt.Sprintf("%064x", big.NewInt(1))
-			b, _ = hex.DecodeString(s)
-			key2 := crypto.Keccak256(b)
-			s = fmt.Sprintf("%064x", big.NewInt(int64(i))) + hex.EncodeToString(key2)
-			b, _ = hex.DecodeString(s)
-			key2 = crypto.Keccak256(b)
-			key2Big := new(big.Int).Add(new(big.Int).SetBytes(key2), big.NewInt(2))
-			storage[common.HexToHash(fmt.Sprintf("%064x", key2Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Order))
-			// height
-			s = k + fmt.Sprintf("%064x", big.NewInt(1))
-			b, _ = hex.DecodeString(s)
-			key3 := crypto.Keccak256(b)
-			s = fmt.Sprintf("%064x", big.NewInt(int64(i))) + hex.EncodeToString(key3)
-			b, _ = hex.DecodeString(s)
-			key3 = crypto.Keccak256(b)
-			key3Big := new(big.Int).Add(new(big.Int).SetBytes(key3), big.NewInt(3))
-			storage[common.HexToHash(fmt.Sprintf("%064x", key3Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Height))
-		}
-		kk, _ := hex.DecodeString(k + fmt.Sprintf("%064x", big.NewInt(0)))
-		kb := crypto.Keccak256(kk)
-		storage[common.BytesToHash(kb)] = common.HexToHash(fmt.Sprintf("%064x", len(v)))
-	}
 	return storage
+}
+
+/*
+*
+
+	solidity code like:
+	struct BurnDetail {
+	    uint amount;
+	    uint time;
+	    uint order;
+	    uint height;
+	}
+	mapping(string => BurnDetail[]) burnUsers;
+	@param mapKey is burnUsers key of user's address hash160 string
+	@param keyPosition is the BurnDetail[] index , slot storage position 0-1-2-3...
+	@param valuePosition is the BurnDetail fields storage position 0-1-2-3, just the field order
+	@param mapVal is the actual value of the BurnDetail field
+
+*
+*/
+func BuildMappingStorageSlot(mapKey string, keyPosition, valuePosition int, mapVal *big.Int) (key common.Hash, value common.Hash) {
+	s := mapKey + fmt.Sprintf("%064x", big.NewInt(1))
+	b, _ := hex.DecodeString(s)
+	keyHash := crypto.Keccak256(b)
+	s = fmt.Sprintf("%064x", big.NewInt(int64(keyPosition))) + hex.EncodeToString(keyHash)
+	b, _ = hex.DecodeString(s)
+	keyHash = crypto.Keccak256(b)
+	key0Big := new(big.Int).Add(new(big.Int).SetBytes(keyHash), big.NewInt(int64(valuePosition)))
+	key = common.HexToHash(fmt.Sprintf("%064x", key0Big))
+	value = common.HexToHash(fmt.Sprintf("%064x", mapVal))
+	return
+}
+
+/*
+*
+
+	solidity code like:
+	struct BurnDetail {
+	    uint amount;
+	    uint time;
+	    uint order;
+	    uint height;
+	}
+	mapping(string => BurnDetail[]) burnUsers;
+	@param mapKey is burnUsers key of user's address hash160 string
+	@param keyPosition is the mapping first position for recording the length of BurnDetail[]
+	@param valueLength is the length of the map
+
+*
+*/
+func BuildStorageSlot(mapKey string, keyPosition, valueLength int) (key common.Hash, value common.Hash) {
+	b, _ := hex.DecodeString(mapKey + fmt.Sprintf("%064x", big.NewInt(int64(keyPosition))))
+	keyHash := crypto.Keccak256(b)
+	key = common.BytesToHash(keyHash)
+	value = common.HexToHash(fmt.Sprintf("%064x", valueLength))
+	return
 }
