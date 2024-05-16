@@ -48,10 +48,10 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 				panic(vv.From + "meer address err" + err.Error())
 			}
 			d := release.MeerMappingBurnDetail{
-				big.NewInt(vv.Amount),
-				big.NewInt(vv.Time),
-				big.NewInt(vv.Order),
-				big.NewInt(vv.Height),
+				Amount: big.NewInt(vv.Amount),
+				Time:   big.NewInt(vv.Time),
+				Order:  big.NewInt(vv.Order),
+				Height: big.NewInt(vv.Height),
 			}
 			//parsed, _ := abi.JSON(strings.NewReader(release.TokenMetaData.ABI))
 			//// constructor params
