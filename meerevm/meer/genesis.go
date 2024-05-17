@@ -168,6 +168,11 @@ func DoDecodeAlloc(network *qparams.Params, genesisStr string, burnStr string) t
 	genesis.Alloc = ngd.Data.Genesis.Alloc
 	releaseConAddr := common.HexToAddress(RELEASE_CONTRACT_ADDR)
 	if releaseAccount, ok := genesis.Alloc[releaseConAddr]; ok {
+		for k, v := range burnList {
+			kk := k
+			vv := v
+			releaseAccount.Storage[kk] = vv
+		}
 		releaseAccount.Storage = burnList
 		genesis.Alloc[releaseConAddr] = releaseAccount
 	}
