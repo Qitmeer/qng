@@ -66,7 +66,7 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 
 	for burnAddr, burnRecords := range recordsGroupByBuner {
 		slotPosition := 0 // record the records size
-		storage[BuildMappingRecordsSizeStorageSlotKey(&burnAddr, 0)] = common.HexToHash(fmt.Sprintf("%064x", len(burnRecords)))
+		storage[BuildMappingRecordsSizeStorageSlotKey(&burnAddr, slotPosition)] = common.HexToHash(fmt.Sprintf("%064x", len(burnRecords)))
 		for sequenceNumber, burnDetail := range burnRecords {
 			slotPosition = 1 // record the field value
 			storage[BuildMappingFiledsPositionStorageSlotKey(&burnAddr, slotPosition, sequenceNumber, 0)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Amount)))
