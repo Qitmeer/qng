@@ -4,13 +4,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/testutils/release"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"sort"
 	"strings"
+
+	"github.com/Qitmeer/qng/core/address"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 const RELEASE_CONTRACT_ADDR = "0x1000000000000000000000000000000000000000"
@@ -21,6 +21,20 @@ type BurnDetail struct {
 	From   string `json:"from"`
 	Amount int64  `json:"amount"`
 	Time   int64  `json:"time"`
+}
+type BurnRecordSequenceNumber int
+
+type BurnerAddressHash160 [20]byte
+
+type BurnerRecords map[BurnerAddressHash160]BurnRecordSequenceNumber
+
+func (bah *BurnerRecords) SortKeys(callback func(keys []string)) {
+	keys := make([]string, 0)
+	for k := range *bah {
+		keys = append(keys, hex.EncodeToString(k[:]))
+	}
+	sort.Strings(keys)
+	callback(keys)
 }
 
 // 2022/08/17 20:35:36 MmQitmeerMainNetHonorAddressXY9JH2y burn amount 408011208230864
@@ -34,91 +48,112 @@ type BurnDetail struct {
 
 func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 	storage := map[common.Hash]common.Hash{}
-	gds := map[string][]BurnDetail{}
+	burnList := map[string][]BurnDetail{}
 	jsonR := strings.NewReader(burnStr)
-	if err := json.NewDecoder(jsonR).Decode(&gds); err != nil {
+	if err := json.NewDecoder(jsonR).Decode(&burnList); err != nil {
 		panic(err)
 	}
-	bas := map[string][]release.MeerMappingBurnDetail{}
+
+	burnerRecords := BurnerRecords{}
+
 	allBurnAmount := uint64(0)
 	burnM := map[string]uint64{}
 	keys := make([]string, 0)
-	for k, _ := range gds {
+	for k := range burnList {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		v := gds[k]
-		for _, vv := range v {
-			addr, err := address.DecodeAddress(vv.From)
+		burnRecords := burnList[k]
+		for _, burnDetail := range burnRecords {
+			burnerAddr, err := address.DecodeAddress(burnDetail.From)
 			if err != nil {
-				panic(vv.From + "meer address err" + err.Error())
+				panic(burnDetail.From + "meer address err" + err.Error())
 			}
-			d := release.MeerMappingBurnDetail{
-				Amount: big.NewInt(vv.Amount),
-				Time:   big.NewInt(vv.Time),
-				Order:  big.NewInt(vv.Order),
-				Height: big.NewInt(vv.Height),
-			}
-			//parsed, _ := abi.JSON(strings.NewReader(release.TokenMetaData.ABI))
-			//// constructor params
-			//hexData, _ := parsed.Pack("", d)
-			h16 := addr.Hash160()
-			h16hex := hex.EncodeToString(h16[:])
-			if _, ok := bas[h16hex]; !ok {
-				bas[h16hex] = []release.MeerMappingBurnDetail{}
-			}
-			bas[h16hex] = append(bas[h16hex], d)
-			allBurnAmount += uint64(vv.Amount)
-			burnM[k] += uint64(vv.Amount)
+
+			h16 := burnerAddr.Hash160()
+
+			burnerAddrHash160 := BurnerAddressHash160(*h16)
+
+			// storage the mapping key value on storage slot
+			burnRecordSequenceNumber := int(burnerRecords[burnerAddrHash160])
+			storage[BuildMappingFiledsPositionStorageSlotKey(h16[:], burnRecordSequenceNumber, 0)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Amount)))
+
+			storage[BuildMappingFiledsPositionStorageSlotKey(h16[:], burnRecordSequenceNumber, 1)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Time)))
+
+			storage[BuildMappingFiledsPositionStorageSlotKey(h16[:], burnRecordSequenceNumber, 2)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Order)))
+			storage[BuildMappingFiledsPositionStorageSlotKey(h16[:], burnRecordSequenceNumber, 3)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Height)))
+
+			burnerRecords[burnerAddrHash160]++
+			allBurnAmount += uint64(burnDetail.Amount)
+			burnM[k] += uint64(burnDetail.Amount)
 		}
 	}
+	burnerRecords.SortKeys(func(keys []string) {
+		for _, v := range keys {
+			b, _ := hex.DecodeString(v)
+			//how many burning records of 1 address
+			burnRecordsLength := int(burnerRecords[BurnerAddressHash160(b[:])])
+			// storage the mapping key records length on storage slot
+			storage[BuildMappingRecordsLengthStorageSlotKey(b, 0)] = common.HexToHash(fmt.Sprintf("%064x", burnRecordsLength))
+		}
+	})
+
 	for k, v := range burnM {
 		log.Trace(k, "burn amount", v)
 	}
 	log.Debug("All burn amount", allBurnAmount)
-	for k, v := range bas {
-		for i, vv := range v {
-			// amount
-			s := k + fmt.Sprintf("%064x", big.NewInt(1))
-			b, _ := hex.DecodeString(s)
-			key0 := crypto.Keccak256(b)
-			s = fmt.Sprintf("%064x", big.NewInt(int64(i))) + hex.EncodeToString(key0)
-			b, _ = hex.DecodeString(s)
-			key0 = crypto.Keccak256(b)
-			key0Big := new(big.Int).Add(new(big.Int).SetBytes(key0), big.NewInt(0))
-			storage[common.HexToHash(fmt.Sprintf("%064x", key0Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Amount))
-			// time
-			s = k + fmt.Sprintf("%064x", big.NewInt(1))
-			b, _ = hex.DecodeString(s)
-			key1 := crypto.Keccak256(b)
-			s = fmt.Sprintf("%064x", big.NewInt(int64(i))) + hex.EncodeToString(key1)
-			b, _ = hex.DecodeString(s)
-			key1 = crypto.Keccak256(b)
-			key1Big := new(big.Int).Add(new(big.Int).SetBytes(key1), big.NewInt(1))
-			storage[common.HexToHash(fmt.Sprintf("%064x", key1Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Time))
-			// order
-			s = k + fmt.Sprintf("%064x", big.NewInt(1))
-			b, _ = hex.DecodeString(s)
-			key2 := crypto.Keccak256(b)
-			s = fmt.Sprintf("%064x", big.NewInt(int64(i))) + hex.EncodeToString(key2)
-			b, _ = hex.DecodeString(s)
-			key2 = crypto.Keccak256(b)
-			key2Big := new(big.Int).Add(new(big.Int).SetBytes(key2), big.NewInt(2))
-			storage[common.HexToHash(fmt.Sprintf("%064x", key2Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Order))
-			// height
-			s = k + fmt.Sprintf("%064x", big.NewInt(1))
-			b, _ = hex.DecodeString(s)
-			key3 := crypto.Keccak256(b)
-			s = fmt.Sprintf("%064x", big.NewInt(int64(i))) + hex.EncodeToString(key3)
-			b, _ = hex.DecodeString(s)
-			key3 = crypto.Keccak256(b)
-			key3Big := new(big.Int).Add(new(big.Int).SetBytes(key3), big.NewInt(3))
-			storage[common.HexToHash(fmt.Sprintf("%064x", key3Big))] = common.HexToHash(fmt.Sprintf("%064x", vv.Height))
-		}
-		kk, _ := hex.DecodeString(k + fmt.Sprintf("%064x", big.NewInt(0)))
-		kb := crypto.Keccak256(kk)
-		storage[common.BytesToHash(kb)] = common.HexToHash(fmt.Sprintf("%064x", len(v)))
-	}
 	return storage
+}
+
+/*
+*
+
+	solidity code like:
+	struct BurnDetail {
+	    uint amount; // valuePosition=0
+	    uint time;   // valuePosition=1
+	    uint order;  // valuePosition=2
+	    uint height; // valuePosition=3
+	}
+	mapping(string => BurnDetail[]) burnUsers;
+	@param mapKey is burnUsers key of user's address hash160
+	@param keyPosition is the BurnDetail[] index , slot storage position 0-1-2-3-4-5...
+	@param valuePosition is the BurnDetail fields storage position 0-1-2-3, just the field order
+	@param mapVal is the actual value of the BurnDetail field
+
+*
+*/
+func BuildMappingFiledsPositionStorageSlotKey(mapKey []byte, keyPosition, valuePosition int) common.Hash {
+	s := fmt.Sprintf("%x", mapKey) + fmt.Sprintf("%064x", big.NewInt(1))
+	b, _ := hex.DecodeString(s)
+	keyHash := crypto.Keccak256(b)
+	s = fmt.Sprintf("%064x", big.NewInt(int64(keyPosition))) + hex.EncodeToString(keyHash)
+	b, _ = hex.DecodeString(s)
+	keyHash = crypto.Keccak256(b)
+	key0Big := new(big.Int).Add(new(big.Int).SetBytes(keyHash), big.NewInt(int64(valuePosition)))
+	return common.HexToHash(fmt.Sprintf("%064x", key0Big))
+}
+
+/*
+*
+
+	solidity code like:
+	struct BurnDetail {
+	    uint amount;
+	    uint time;
+	    uint order;
+	    uint height;
+	}
+	mapping(string => BurnDetail[]) burnUsers;
+	@param mapKey is burnUsers key of user's address hash160
+	@param keyPosition is the mapping first position for recording the length of BurnDetail[]
+	@param valueLength is the length of the BurnDetail[]
+
+*
+*/
+func BuildMappingRecordsLengthStorageSlotKey(mapKey []byte, keyPosition int) common.Hash {
+	b, _ := hex.DecodeString(fmt.Sprintf("%x", mapKey) + fmt.Sprintf("%064x", big.NewInt(int64(keyPosition))))
+	keyHash := crypto.Keccak256(b)
+	return common.BytesToHash(keyHash)
 }

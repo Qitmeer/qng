@@ -3,6 +3,9 @@ package meer
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"strings"
+
 	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/common"
@@ -11,8 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	"math/big"
-	"strings"
 )
 
 func QngGenesis(alloc types.GenesisAlloc) *core.Genesis {
