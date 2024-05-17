@@ -114,10 +114,10 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 
 	solidity code like:
 	struct BurnDetail {
-	    uint amount;
-	    uint time;
-	    uint order;
-	    uint height;
+	    uint amount; // valuePosition=0
+	    uint time;   // valuePosition=1
+	    uint order;  // valuePosition=2
+	    uint height; // valuePosition=3
 	}
 	mapping(string => BurnDetail[]) burnUsers;
 	@param mapKey is burnUsers key of user's address hash160
