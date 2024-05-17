@@ -99,7 +99,6 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 	}
 	mapping(string => BurnDetail[]) burnUsers;
 	@param mapKey is burnUsers key of user's address
-	@param slotPosition record the position of the fields value , the value is 1
 	@param keyPosition is the BurnDetail[] index , slot storage position 0-1-2-3-4-5...
 	@param valuePosition is the BurnDetail fields storage position 0-1-2-3, just the field order
 
