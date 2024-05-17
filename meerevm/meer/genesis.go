@@ -173,7 +173,6 @@ func DoDecodeAlloc(network *qparams.Params, genesisStr string, burnStr string) t
 			vv := v
 			releaseAccount.Storage[kk] = vv
 		}
-		releaseAccount.Storage = burnList
 		genesis.Alloc[releaseConAddr] = releaseAccount
 	}
 	if len(ngd.Data.Contracts) > 0 {
