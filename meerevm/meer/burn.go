@@ -77,14 +77,12 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 
 			// storage the mapping key value on storage slot
 			burnRecordSequenceNumber := int(burnerRecords[burnerAddrHash160])
-			key, value := BuildMappingFiledsPositionStorageSlot(h16[:], burnRecordSequenceNumber, 0, big.NewInt(burnDetail.Amount))
-			storage[key] = value
-			key, value = BuildMappingFiledsPositionStorageSlot(h16[:], burnRecordSequenceNumber, 1, big.NewInt(burnDetail.Time))
-			storage[key] = value
-			key, value = BuildMappingFiledsPositionStorageSlot(h16[:], burnRecordSequenceNumber, 2, big.NewInt(burnDetail.Order))
-			storage[key] = value
-			key, value = BuildMappingFiledsPositionStorageSlot(h16[:], burnRecordSequenceNumber, 3, big.NewInt(burnDetail.Height))
-			storage[key] = value
+			storage[BuildMappingFiledsPositionStorageSlotKey(h16[:], burnRecordSequenceNumber, 0)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Amount)))
+
+			storage[BuildMappingFiledsPositionStorageSlotKey(h16[:], burnRecordSequenceNumber, 1)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Time)))
+
+			storage[BuildMappingFiledsPositionStorageSlotKey(h16[:], burnRecordSequenceNumber, 2)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Order)))
+			storage[BuildMappingFiledsPositionStorageSlotKey(h16[:], burnRecordSequenceNumber, 3)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Height)))
 
 			burnerRecords[burnerAddrHash160]++
 			allBurnAmount += uint64(burnDetail.Amount)
@@ -97,8 +95,7 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 			//how many burning records of 1 address
 			burnRecordsLength := int(burnerRecords[BurnerAddressHash160(b[:])])
 			// storage the mapping key records length on storage slot
-			key, value := BuildMappingRecordsLengthStorageSlot(b, 0, burnRecordsLength)
-			storage[key] = value
+			storage[BuildMappingRecordsLengthStorageSlotKey(b, 0)] = common.HexToHash(fmt.Sprintf("%064x", burnRecordsLength))
 		}
 	})
 
@@ -127,7 +124,7 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 
 *
 */
-func BuildMappingFiledsPositionStorageSlot(mapKey []byte, keyPosition, valuePosition int, mapVal *big.Int) (key common.Hash, value common.Hash) {
+func BuildMappingFiledsPositionStorageSlotKey(mapKey []byte, keyPosition, valuePosition int) common.Hash {
 	s := fmt.Sprintf("%x", mapKey) + fmt.Sprintf("%064x", big.NewInt(1))
 	b, _ := hex.DecodeString(s)
 	keyHash := crypto.Keccak256(b)
@@ -135,9 +132,7 @@ func BuildMappingFiledsPositionStorageSlot(mapKey []byte, keyPosition, valuePosi
 	b, _ = hex.DecodeString(s)
 	keyHash = crypto.Keccak256(b)
 	key0Big := new(big.Int).Add(new(big.Int).SetBytes(keyHash), big.NewInt(int64(valuePosition)))
-	key = common.HexToHash(fmt.Sprintf("%064x", key0Big))
-	value = common.HexToHash(fmt.Sprintf("%064x", mapVal))
-	return
+	return common.HexToHash(fmt.Sprintf("%064x", key0Big))
 }
 
 /*
@@ -157,10 +152,8 @@ func BuildMappingFiledsPositionStorageSlot(mapKey []byte, keyPosition, valuePosi
 
 *
 */
-func BuildMappingRecordsLengthStorageSlot(mapKey []byte, keyPosition, valueLength int) (key common.Hash, value common.Hash) {
+func BuildMappingRecordsLengthStorageSlotKey(mapKey []byte, keyPosition int) common.Hash {
 	b, _ := hex.DecodeString(fmt.Sprintf("%x", mapKey) + fmt.Sprintf("%064x", big.NewInt(int64(keyPosition))))
 	keyHash := crypto.Keccak256(b)
-	key = common.BytesToHash(keyHash)
-	value = common.HexToHash(fmt.Sprintf("%064x", valueLength))
-	return
+	return common.BytesToHash(keyHash)
 }

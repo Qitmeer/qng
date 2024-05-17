@@ -3,6 +3,9 @@ package meer
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"strings"
+
 	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/common"
@@ -11,8 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	"math/big"
-	"strings"
 )
 
 func QngGenesis(alloc types.GenesisAlloc) *core.Genesis {
@@ -167,11 +168,7 @@ func DoDecodeAlloc(network *qparams.Params, genesisStr string, burnStr string) t
 	genesis.Alloc = ngd.Data.Genesis.Alloc
 	releaseConAddr := common.HexToAddress(RELEASE_CONTRACT_ADDR)
 	if releaseAccount, ok := genesis.Alloc[releaseConAddr]; ok {
-		for k, v := range burnList {
-			kk := k
-			vv := v
-			releaseAccount.Storage[kk] = vv
-		}
+		releaseAccount.Storage = burnList
 		genesis.Alloc[releaseConAddr] = releaseAccount
 	}
 	if len(ngd.Data.Contracts) > 0 {
