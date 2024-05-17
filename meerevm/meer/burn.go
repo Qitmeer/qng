@@ -55,8 +55,8 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 			if err != nil {
 				panic(burnDetail.From + "meer address err" + err.Error())
 			}
-			burnerAddr := burnerAddress.(*address.PubKeyHashAddress)
-			recordsGroupByBuner[*burnerAddr] = append(recordsGroupByBuner[*burnerAddr], burnDetail)
+			burnerPKHAddr := burnerAddress.(*address.PubKeyHashAddress)
+			recordsGroupByBuner[*burnerPKHAddr] = append(recordsGroupByBuner[*burnerPKHAddr], burnDetail)
 			allBurnAmount += uint64(burnDetail.Amount)
 			burnM[k] += uint64(burnDetail.Amount)
 		}
@@ -64,15 +64,15 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 	handleBurnRecords(GuardAddress, burnList[GuardAddress])
 	handleBurnRecords(HonorAddress, burnList[HonorAddress])
 
-	for burnAddr, burnRecords := range recordsGroupByBuner {
+	for burnerPKHAddr, burnRecords := range recordsGroupByBuner {
 		slotPosition := 0 // record the records size
-		storage[BuildMappingRecordsSizeStorageSlotKey(&burnAddr, slotPosition)] = common.HexToHash(fmt.Sprintf("%064x", len(burnRecords)))
+		storage[BuildMappingRecordsSizeStorageSlotKey(&burnerPKHAddr, slotPosition)] = common.HexToHash(fmt.Sprintf("%064x", len(burnRecords)))
 		for sequenceNumber, burnDetail := range burnRecords {
 			slotPosition = 1 // record the field value
-			storage[BuildMappingFiledsPositionStorageSlotKey(&burnAddr, slotPosition, sequenceNumber, 0)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Amount)))
-			storage[BuildMappingFiledsPositionStorageSlotKey(&burnAddr, slotPosition, sequenceNumber, 1)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Time)))
-			storage[BuildMappingFiledsPositionStorageSlotKey(&burnAddr, slotPosition, sequenceNumber, 2)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Order)))
-			storage[BuildMappingFiledsPositionStorageSlotKey(&burnAddr, slotPosition, sequenceNumber, 3)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Height)))
+			storage[BuildMappingFiledsPositionStorageSlotKey(&burnerPKHAddr, slotPosition, sequenceNumber, 0)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Amount)))
+			storage[BuildMappingFiledsPositionStorageSlotKey(&burnerPKHAddr, slotPosition, sequenceNumber, 1)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Time)))
+			storage[BuildMappingFiledsPositionStorageSlotKey(&burnerPKHAddr, slotPosition, sequenceNumber, 2)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Order)))
+			storage[BuildMappingFiledsPositionStorageSlotKey(&burnerPKHAddr, slotPosition, sequenceNumber, 3)] = common.HexToHash(fmt.Sprintf("%064x", big.NewInt(burnDetail.Height)))
 		}
 	}
 
