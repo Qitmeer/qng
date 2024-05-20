@@ -73,7 +73,7 @@ func (cdb *ChainDB) DB() ethdb.Database {
 
 func (cdb *ChainDB) DBEngine() string {
 	if cdb.cfg.DbType == "ffldb" {
-		return "leveldb"
+		return "pebble"
 	}
 	return cdb.cfg.DbType
 }
