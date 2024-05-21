@@ -185,6 +185,7 @@ func InitBlockDAG(dagType string, graph string) meerdag.ConsensusAlgorithm {
 		return nil
 	}
 	cfg := common.DefaultConfig(os.TempDir())
+	cfg.DevNextGDB = false
 	db, err := loadBlockDB(cfg)
 	if err != nil {
 		fmt.Println(err)
