@@ -24,7 +24,7 @@ import (
 var testMixNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 242), common.Big1)
 
 // target time per block unit second(s)
-const mixTargetTimePerBlock = 3
+const mixTargetTimePerBlock = 1
 
 // The DAA should take the median of 60 blocks, so in order to do that we need 60 window size.
 const mixWorkDiffWindowSize = 60

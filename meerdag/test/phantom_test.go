@@ -429,6 +429,7 @@ func Test_tips(t *testing.T) {
 
 func checkLoad(t *testing.T) {
 	cfg := common.DefaultConfig(os.TempDir())
+	cfg.DevNextGDB = false
 	db, err := database.New(cfg, system.InterruptListener())
 	if err != nil {
 		t.Fatal(err)
