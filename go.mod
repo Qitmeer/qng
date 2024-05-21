@@ -131,7 +131,6 @@ require (
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/karalabe/hid v1.0.1-0.20240306101548-573246063e52 // indirect
-	github.com/karalabe/usb v0.0.3-0.20230711191512-61db3e06439c // indirect
 	github.com/klauspost/compress v1.17.6 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/koron/go-ssdp v0.0.4 // indirect
@@ -219,6 +218,6 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/ethereum/go-ethereum v1.14.2 => github.com/Qitmeer/go-ethereum v1.14.2-q.1
+replace github.com/ethereum/go-ethereum v1.14.2 => github.com/Qitmeer/go-ethereum v1.14.2-q.2
 
 replace github.com/karalabe/usb v0.0.2 => github.com/dindinw/karalabe-usb v0.0.0-20230613095851-cd69a62c9c30
