@@ -22,6 +22,7 @@ import (
 
 var ErrSameWork = fmt.Errorf("Same work, Had Submitted!")
 var ErrLimitWork = fmt.Errorf("Submission interval Limited")
+var hasSubmits = map[string]bool{}
 
 type QitmeerWork struct {
 	core.Work
@@ -74,7 +75,7 @@ func (this *QitmeerWork) Get() bool {
 			continue
 		}
 		if this.Block != nil && this.Block.ParentRoot == header.ParentRoot &&
-			(time.Now().Unix()-this.GetWorkTime) < int64(this.Cfg.OptionConfig.Timeout)*10 {
+			(time.Now().Unix()-this.GetWorkTime) < int64(this.Cfg.OptionConfig.TaskInterval)/1000 {
 			common.MinerLoger.Warn("GetRemoteGBT Repeat", "old block parent root", this.Block.ParentRoot, "current", header.ParentRoot)
 			//not has new work
 			return false
@@ -101,6 +102,10 @@ func (this *QitmeerWork) BuildBlock(header *types.BlockHeader) bool {
 func (this *QitmeerWork) Submit(header *types.BlockHeader, gbtID string) (string, int, error) {
 	this.Lock()
 	defer this.Unlock()
+	if v, ok := hasSubmits[header.ParentRoot.String()]; ok && v {
+		return "", 0, ErrSameWork
+	}
+
 	gbtIDInt64, _ := strconv.ParseInt(gbtID, 10, 64)
 	if this.GbtID != gbtIDInt64 {
 		common.MinerLoger.Debug(fmt.Sprintf("gbt old , target :%d , current:%d", this.GbtID, gbtIDInt64))
@@ -111,7 +116,7 @@ func (this *QitmeerWork) Submit(header *types.BlockHeader, gbtID string) (string
 	id := fmt.Sprintf("miner_submit_gbtID:%s_id:%d", gbtID, this.SubmitID)
 	res, err := this.WsClient.SubmitBlockHeader(header)
 	if err != nil {
-		common.MinerLoger.Error("[submit error] " + id + " " + err.Error())
+		common.MinerLoger.Error("[submit error] parent root", header.ParentRoot.String(), id)
 		if strings.Contains(err.Error(), "The tips of block is expired") {
 			return "", 0, ErrSameWork
 		}
@@ -123,6 +128,7 @@ func (this *QitmeerWork) Submit(header *types.BlockHeader, gbtID string) (string
 		}
 		return "", 0, errors.New("[submit data failed]" + err.Error())
 	}
+	hasSubmits[header.ParentRoot.String()] = true
 	return res.CoinbaseTxID, int(res.Height), err
 }
 
