@@ -555,7 +555,7 @@ func (m *Miner) subscribe() {
 						m.handleNotifyMsg(value)
 					case int:
 						if value == event.Initialized {
-							if m.cfg.Generate {
+							if m.cfg.Generate && !m.cfg.Amana {
 								m.StartCPUMining()
 							}
 						}

@@ -4,11 +4,17 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
+	mconsensus "github.com/Qitmeer/qng/meerevm/amana/consensus"
 	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/node/service"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/cmd/utils"
+	qcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"strings"
 )
 
 type AmanaService struct {
@@ -16,6 +22,7 @@ type AmanaService struct {
 	cfg   *config.Config
 	cons  model.Consensus
 	chain *eth.ETHChain
+	bk    *backend
 }
 
 func (q *AmanaService) Start() error {
@@ -65,12 +72,15 @@ func (q *AmanaService) Start() error {
 	for addr := range q.chain.Config().Eth.Genesis.Alloc {
 		log.Debug(fmt.Sprintf("Amana Alloc address:%v balance:%v", addr.String(), state.GetBalance(addr)))
 	}
-	return nil
+	return q.initMiner()
 }
 
 func (q *AmanaService) Stop() error {
 	if err := q.Service.Stop(); err != nil {
 		return err
+	}
+	if q.bk != nil {
+		q.bk.Stop()
 	}
 	return q.chain.Stop()
 }
@@ -83,6 +93,37 @@ func (q *AmanaService) APIs() []api.API {
 			Public:    true,
 		},
 	}
+}
+
+func (q *AmanaService) initMiner() error {
+	if !q.cfg.Generate {
+		return nil
+	}
+	var unlocks []string
+	inputs := strings.Split(q.chain.Context().String(utils.UnlockedAccountFlag.Name), ",")
+	for _, input := range inputs {
+		if trimmed := strings.TrimSpace(input); trimmed != "" {
+			unlocks = append(unlocks, trimmed)
+		}
+	}
+	if len(unlocks) <= 0 {
+		return fmt.Errorf("No Amana miner addresses specified via --miningaddr.")
+	}
+	eb := qcommon.HexToAddress(unlocks[0])
+	wallet, err := q.chain.Ether().AccountManager().Find(accounts.Account{Address: eb})
+	if wallet == nil || err != nil {
+		return fmt.Errorf("Etherbase account unavailable locally, signer missing: %v, %s", err, eb.String())
+	}
+	q.chain.Ether().Engine().(*mconsensus.Amana).Authorize(eb, wallet.SignData)
+	log.Info(fmt.Sprintf("Amana Authorize:%s", eb))
+
+	bk, err := NewBackend(params.ActiveNetParams.TargetTimePerBlock, q.chain.Ether())
+	if err != nil {
+		utils.Fatalf("failed to register amana catalyst service: %v", err)
+	}
+	bk.SetFeeRecipient(eb)
+	q.bk = bk
+	return bk.Start()
 }
 
 func New(cfg *config.Config, cons model.Consensus) (*AmanaService, error) {
