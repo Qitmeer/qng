@@ -23,8 +23,8 @@ const (
 	defaultLogFilename       = "qng.log"
 	defaultGenerate          = false
 	defaultBlockMinSize      = 0
-	// 122880 = 120 KB (120*1024)
-	defaultBlockMaxSize           = 122880
+	// 153600 = 150 KB (150*1024)
+	defaultBlockMaxSize           = 153600
 	defaultMaxRPCClients          = 10
 	defaultMaxRPCWebsockets       = 25
 	defaultMaxRPCConcurrentReqs   = 20
@@ -41,7 +41,7 @@ const (
 	defaultMinBlockDataCache      = 2000
 	defaultMinRelayTxFee          = int64(1e4)
 	defaultObsoleteHeight         = 5
-	defaultGBTTimeout             = 1000 // default gbt timeout 1s = 1000ms
+	defaultGBTTimeout             = 800 // default gbt timeout 800 ms
 )
 const (
 	defaultSigCacheMaxSize = 100000
