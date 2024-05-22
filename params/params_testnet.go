@@ -7,14 +7,15 @@
 package params
 
 import (
+	"math/big"
+	"time"
+
 	"github.com/Qitmeer/qng/common"
 	"github.com/Qitmeer/qng/common/math"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
-	"math/big"
-	"time"
 )
 
 // testNetPowLimit is the highest proof of work value a block can
@@ -74,14 +75,7 @@ var TestNetParams = Params{
 		// after this height the big graph will be the main pow graph
 		AdjustmentStartMainHeight: 365 * 1440 * 60 / testTargetTimePerBlock,
 	},
-	CoinbaseConfig: CoinbaseConfigs{
-		{
-			Height:                    61279,
-			Version:                   "0.10.4",
-			ExtraDataIncludedVer:      true,
-			ExtraDataIncludedNodeInfo: true,
-		},
-	},
+	CoinbaseConfig:           CoinbaseConfigs{},
 	ReduceMinDifficulty:      false,
 	MinDiffReductionTime:     0, // Does not apply since ReduceMinDifficulty false
 	GenerateSupported:        true,
