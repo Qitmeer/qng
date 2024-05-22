@@ -10,6 +10,9 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
@@ -25,8 +28,6 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
 	"github.com/Qitmeer/qng/params"
-	"math"
-	"time"
 )
 
 const (
@@ -288,7 +289,7 @@ func checkProofOfWork(header *types.BlockHeader, powConfig *pow.PowConfig, flags
 
 	// The block hash must be less than the claimed target unless the flag
 	// to avoid proof of work checks is set.
-	if flags&BFNoPoWCheck != BFNoPoWCheck {
+	if !flags.Has(BFNoPoWCheck) && !params.ActiveNetParams.Params.IsDevelopDiff() {
 		header.Pow.SetParams(powConfig)
 		header.Pow.SetMainHeight(pow.MainHeight(mHeight))
 		// The block hash must be less than the claimed target.
@@ -589,8 +590,7 @@ func (b *BlockChain) checkBlockContext(block *types.SerializedBlock, mainParent 
 		return err
 	}
 	header := &block.Block().Header
-	fastAdd := flags&BFFastAdd == BFFastAdd
-	if !fastAdd {
+	if !flags.Has(BFFastAdd) {
 		// A block must not exceed the maximum allowed size as defined
 		// by the network parameters and the current status of any hard
 		// fork votes to change it when serialized.
@@ -750,27 +750,28 @@ func (b *BlockChain) checkBlockHeaderContext(block *types.SerializedBlock, prevN
 	}
 
 	header := &block.Block().Header
-	fastAdd := flags&BFFastAdd == BFFastAdd
-	if !fastAdd {
-		instance := pow.GetInstance(header.Pow.GetPowType(), 0, []byte{})
-		instance.SetMainHeight(pow.MainHeight(prevNode.GetHeight() + 1))
-		instance.SetParams(b.params.PowConfig)
-		// Ensure the difficulty specified in the block header matches
-		// the calculated difficulty based on the previous block and
-		// difficulty retarget rules.
-		expDiff, err := b.calcNextRequiredDifficulty(prevNode,
-			header.Timestamp, instance)
-		if err != nil {
-			return err
-		}
-		blockDifficulty := header.Difficulty
-		if blockDifficulty != expDiff {
-			str := fmt.Sprintf("block difficulty of %d is not the"+
-				" expected value of %d", blockDifficulty,
-				expDiff)
-			return ruleError(ErrUnexpectedDifficulty, str)
-		}
+	if !flags.Has(BFFastAdd) {
+		if !b.params.IsDevelopDiff() {
+			instance := pow.GetInstance(header.Pow.GetPowType(), 0, []byte{})
+			instance.SetMainHeight(pow.MainHeight(prevNode.GetHeight() + 1))
+			instance.SetParams(b.params.PowConfig)
+			// Ensure the difficulty specified in the block header matches
+			// the calculated difficulty based on the previous block and
+			// difficulty retarget rules.
 
+			expDiff, err := b.calcNextRequiredDifficulty(prevNode,
+				header.Timestamp, instance)
+			if err != nil {
+				return err
+			}
+			blockDifficulty := header.Difficulty
+			if blockDifficulty != expDiff {
+				str := fmt.Sprintf("block difficulty of %d is not the"+
+					" expected value of %d", blockDifficulty,
+					expDiff)
+				return ruleError(ErrUnexpectedDifficulty, str)
+			}
+		}
 		// Ensure the timestamp for the block header is after the
 		// median time of the last several blocks (medianTimeBlocks).
 		medianTime := b.CalcPastMedianTime(prevNode)

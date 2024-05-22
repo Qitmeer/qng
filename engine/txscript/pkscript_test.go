@@ -2,24 +2,143 @@ package txscript
 
 import (
 	"bytes"
+	"github.com/Qitmeer/qng/core/types"
 	"testing"
 )
+
+// TestParsePkScript ensures that the supported script types can be parsed
+// correctly and re-derived into its raw byte representation.
+func TestParsePkScript(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		pkScript []byte
+		valid    bool
+	}{
+		{
+			name:     "empty output script",
+			pkScript: []byte{},
+			valid:    false,
+		},
+		{
+			name: "valid P2PKH",
+			pkScript: []byte{
+				// OP_DUP
+				0x76,
+				// OP_HASH160
+				0xa9,
+				// OP_DATA_20
+				0x14,
+				// <20-byte pubkey hash>
+				0xf0, 0x7a, 0xb8, 0xce, 0x72, 0xda, 0x4e, 0x76,
+				0x0b, 0x74, 0x7d, 0x48, 0xd6, 0x65, 0xec, 0x96,
+				0xad, 0xf0, 0x24, 0xf5,
+				// OP_EQUALVERIFY
+				0x88,
+				// OP_CHECKSIG
+				0xac,
+			},
+			valid: true,
+		},
+		// Invalid P2PKH - same as above but replaced OP_CHECKSIG with
+		// OP_CHECKSIGVERIFY.
+		{
+			name: "invalid P2PKH",
+			pkScript: []byte{
+				// OP_DUP
+				0x76,
+				// OP_HASH160
+				0xa9,
+				// OP_DATA_20
+				0x14,
+				// <20-byte pubkey hash>
+				0xf0, 0x7a, 0xb8, 0xce, 0x72, 0xda, 0x4e, 0x76,
+				0x0b, 0x74, 0x7d, 0x48, 0xd6, 0x65, 0xec, 0x96,
+				0xad, 0xf0, 0x24, 0xf5,
+				// OP_EQUALVERIFY
+				0x88,
+				// OP_CHECKSIGVERIFY
+				0xad,
+			},
+			valid: false,
+		},
+		{
+			name: "valid P2SH",
+			pkScript: []byte{
+				// OP_HASH160
+				0xA9,
+				// OP_DATA_20
+				0x14,
+				// <20-byte script hash>
+				0xec, 0x6f, 0x7a, 0x5a, 0xa8, 0xf2, 0xb1, 0x0c,
+				0xa5, 0x15, 0x04, 0x52, 0x3a, 0x60, 0xd4, 0x03,
+				0x06, 0xf6, 0x96, 0xcd,
+				// OP_EQUAL
+				0x87,
+			},
+			valid: true,
+		},
+		// Invalid P2SH - same as above but replaced OP_EQUAL with
+		// OP_EQUALVERIFY.
+		{
+			name: "invalid P2SH",
+			pkScript: []byte{
+				// OP_HASH160
+				0xA9,
+				// OP_DATA_20
+				0x14,
+				// <20-byte script hash>
+				0xec, 0x6f, 0x7a, 0x5a, 0xa8, 0xf2, 0xb1, 0x0c,
+				0xa5, 0x15, 0x04, 0x52, 0x3a, 0x60, 0xd4, 0x03,
+				0x06, 0xf6, 0x96, 0xcd,
+				// OP_EQUALVERIFY
+				0x88,
+			},
+			valid: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			pkScript, err := ParsePkScript(test.pkScript)
+			switch {
+			case err != nil && test.valid:
+				t.Fatalf("unable to parse valid pkScript=%x: %v",
+					test.pkScript, err)
+			case err == nil && !test.valid:
+				t.Fatalf("successfully parsed invalid pkScript=%x",
+					test.pkScript)
+			}
+
+			if !test.valid {
+				return
+			}
+
+			if !bytes.Equal(pkScript.Script(), test.pkScript) {
+				t.Fatalf("expected to re-derive pkScript=%x, "+
+					"got pkScript=%x", test.pkScript,
+					pkScript.Script())
+			}
+		})
+	}
+}
 
 // TestComputePkScript ensures that we can correctly re-derive an output's
 // pkScript by looking at the input's signature script/witness attempting to
 // spend it.
 func TestComputePkScript(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name      string
 		sigScript []byte
+		witness   types.TxWitness
 		class     ScriptClass
 		pkScript  []byte
 	}{
 		{
 			name:      "empty sigScript and witness",
 			sigScript: nil,
+			witness:   nil,
 			class:     NonStandardTy,
 			pkScript:  nil,
 		},
@@ -48,7 +167,8 @@ func TestComputePkScript(t *testing.T) {
 				0x1f, 0x1f, 0x7b, 0x73, 0x7d, 0x9a, 0x24, 0x49,
 				0x90,
 			},
-			class: PubKeyHashTy,
+			witness: nil,
+			class:   PubKeyHashTy,
 			pkScript: []byte{
 				// OP_DUP
 				0x76,
@@ -57,9 +177,9 @@ func TestComputePkScript(t *testing.T) {
 				// OP_DATA_20
 				0x14,
 				// <20-byte pubkey hash>
-				0x67, 0x8a, 0x56, 0x45, 0xcc, 0x5c, 0x5d, 0x1b,
-				0x13, 0x67, 0x69, 0xd0, 0x37, 0xad, 0xd2, 0x2f,
-				0x9e, 0x7d, 0x9, 0x82,
+				0xf0, 0x7a, 0xb8, 0xce, 0x72, 0xda, 0x4e, 0x76,
+				0x0b, 0x74, 0x7d, 0x48, 0xd6, 0x65, 0xec, 0x96,
+				0xad, 0xf0, 0x24, 0xf5,
 				// OP_EQUALVERIFY
 				0x88,
 				// OP_CHECKSIG
@@ -98,44 +218,49 @@ func TestComputePkScript(t *testing.T) {
 				0x3e, 0xfd, 0x9d, 0x41, 0x03, 0xb5, 0x59, 0xeb,
 				0x67, 0xcd, 0x52, 0xae,
 			},
-			class: ScriptHashTy,
+			witness: nil,
+			class:   ScriptHashTy,
 			pkScript: []byte{
 				// OP_HASH160
 				0xA9,
 				// OP_DATA_20
 				0x14,
 				// <20-byte script hash>
-				0x37, 0x27, 0xef, 0x45, 0xa, 0xbe, 0xa2, 0x38,
-				0x90, 0xc6, 0x5b, 0xad, 0x45, 0x92, 0x5a, 0xf4,
-				0xdf, 0xe9, 0xc5, 0xfa,
+				0x12, 0xd6, 0x9c, 0xd3, 0x38, 0xa3, 0x8d, 0x0d,
+				0x77, 0x83, 0xcf, 0x22, 0x64, 0x97, 0x63, 0x3d,
+				0x3c, 0x20, 0x79, 0xea,
 				// OP_EQUAL
 				0x87,
 			},
 		},
+		// Invalid P2SH (non push-data only script).
+		{
+			name:      "invalid P2SH sigScript",
+			sigScript: []byte{0x6b, 0x65, 0x6b}, // kek
+			witness:   nil,
+			class:     NonStandardTy,
+			pkScript:  nil,
+		},
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			valid := test.pkScript != nil
-			pkScript, err := ComputePkScript(
-				test.sigScript,
-			)
-			if err != nil && valid {
-				t.Fatalf("unable to compute pkScript: %v", err)
-			}
+		valid := test.pkScript != nil
+		pkScript, err := ComputePkScript(test.sigScript)
+		if err != nil && valid {
+			t.Fatalf("unable to compute pkScript: %v", err)
+		}
 
-			if !valid {
-				return
-			}
+		if !valid {
+			return
+		}
 
-			if pkScript.Class() != test.class {
-				t.Fatalf("expected pkScript of type %v, got %v",
-					test.class, pkScript.Class())
-			}
-			if !bytes.Equal(pkScript.Script(), test.pkScript) {
-				t.Fatalf("expected pkScript=%x, got pkScript=%x",
-					test.pkScript, pkScript.Script())
-			}
-		})
+		if pkScript.Class() != test.class {
+			t.Fatalf("%s: expected pkScript of type %v, got %v",
+				test.name, test.class, pkScript.Class())
+		}
+		if !bytes.Equal(pkScript.Script(), test.pkScript) {
+			t.Fatalf("%s: expected pkScript=%x, got pkScript=%x",
+				test.name, test.pkScript, pkScript.Script())
+		}
 	}
 }

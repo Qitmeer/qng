@@ -19,9 +19,6 @@ func (b *BlockChain) calcMeerGenesis(txs []*types.Tx) *hash.Hash {
 		if idx == 0 {
 			continue
 		}
-		if tx.IsDuplicate {
-			continue
-		}
 		if types.IsCrossChainExportTx(tx.Tx) {
 			has = true
 			break

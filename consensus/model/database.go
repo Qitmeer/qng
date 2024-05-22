@@ -20,6 +20,7 @@ type DataBase interface {
 	PutUtxo(key []byte, data []byte) error
 	DeleteUtxo(key []byte) error
 	ForeachUtxo(fn func(key []byte, data []byte) error) error
+	UpdateUtxo(opts []*common.UtxoOpt) error
 	GetTokenState(blockID uint) ([]byte, error)
 	PutTokenState(blockID uint, data []byte) error
 	DeleteTokenState(blockID uint) error
@@ -57,14 +58,14 @@ type DataBase interface {
 	PutTxHashs(block *types.SerializedBlock) error
 	GetTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error)
 	DeleteTxHashs(block *types.SerializedBlock) error
-	IsInvalidTxEmpty() bool
-	GetInvalidTxTip() (uint64, *hash.Hash, error)
-	PutInvalidTxTip(order uint64, bh *hash.Hash) error
+	IsInvalidTxIdxEmpty() bool
+	GetInvalidTxIdxTip() (uint64, *hash.Hash, error)
+	PutInvalidTxIdxTip(order uint64, bh *hash.Hash) error
 	PutInvalidTxs(sblock *types.SerializedBlock, block Block) error
 	DeleteInvalidTxs(sblock *types.SerializedBlock, block Block) error
 	GetInvalidTx(id *hash.Hash) (*types.Transaction, error)
 	GetInvalidTxIdByHash(fullHash *hash.Hash) (*hash.Hash, error)
-	CleanInvalidTxs() error
+	CleanInvalidTxIdx() error
 	GetAddrIdxTip() (*hash.Hash, uint, error)
 	PutAddrIdxTip(bh *hash.Hash, order uint) error
 	PutAddrIdx(sblock *types.SerializedBlock, block Block, stxos [][]byte) error
@@ -76,4 +77,9 @@ type DataBase interface {
 	GetEstimateFee() ([]byte, error)
 	PutEstimateFee(data []byte) error
 	DeleteEstimateFee() error
+	Snapshot() error
+	SnapshotInfo() string
+	DBEngine() string
+	StartTrack(info string) error
+	StopTrack() error
 }

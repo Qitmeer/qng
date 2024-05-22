@@ -122,7 +122,7 @@ var PrivNetParams = Params{
 	WorkDiffWindowSize:       160,
 	WorkDiffWindows:          20,
 	TargetTimePerBlock:       time.Second * privTargetTimePerBlock,
-	TargetTimespan:           time.Second * privTargetTimePerBlock * 16, // TimePerBlock * WindowSize
+	TargetTimespan:           time.Second * privTargetTimePerBlock * 160, // TimePerBlock * WindowSize
 	RetargetAdjustmentFactor: 2,
 
 	// Subsidy parameters.
@@ -139,6 +139,7 @@ var PrivNetParams = Params{
 
 	// Address encoding magics
 	NetworkAddressPrefix: "R",
+	Bech32HRPSegwit:      "r",
 	PubKeyAddrID:         [2]byte{0x25, 0xe5}, // starts with Rk
 	PubKeyHashAddrID:     [2]byte{0x0d, 0xf1}, // starts with Rm
 	PKHEdwardsAddrID:     [2]byte{0x0d, 0xe0}, // starts with Re

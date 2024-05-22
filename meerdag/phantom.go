@@ -603,10 +603,6 @@ func (ph *Phantom) Load() error {
 	if err != nil {
 		return err
 	}
-	diffs, err := DBGetDiffAnticone(ph.bd.db)
-	if err != nil {
-		return err
-	}
 
 	ph.mainChain.genesis = 0
 	ph.mainChain.tip = tips[0]
@@ -622,12 +618,17 @@ func (ph *Phantom) Load() error {
 		return fmt.Errorf("Main chain tip and tips is mismatch")
 	}
 
-	ph.bd.optimizeTips()
+	ph.bd.optimizeTips(true)
 
+	diffs, err := DBGetDiffAnticone(ph.bd.db)
+	if err != nil {
+		return err
+	}
 	for _, da := range diffs {
 		dab := ph.getBlock(da)
 		if dab == nil {
-			return fmt.Errorf("Can't find tip:%d", da)
+			log.Warn("Can't find tip", "block id", da)
+			continue
 		}
 		ph.diffAnticone.AddPair(da, dab)
 	}
@@ -820,6 +821,10 @@ func (ph *Phantom) CheckBlockOrderDB(maxDepth uint64) error {
 		}
 	}
 	return nil
+}
+
+func (ph *Phantom) AnticoneSize() int {
+	return ph.anticoneSize
 }
 
 // The main chain of DAG is support incremental expansion

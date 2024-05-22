@@ -44,7 +44,7 @@ func (s *Sync) CheckConsistency(hashOrOrder *protocol.HashOrNumber) (string, err
 		if pe.ChainState() == nil {
 			continue
 		}
-		if pe.ChainState().ProtocolVersion < protocol.ProtocolVersion {
+		if pe.ChainState().ProtocolVersion < protocol.ConsistencyProtocolVersion {
 			continue
 		}
 		pes = append(pes, pe)

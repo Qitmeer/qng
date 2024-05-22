@@ -2,6 +2,7 @@ package notifymgr
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/types"
@@ -65,14 +66,16 @@ func (ntmgr *NotifyMgr) AnnounceNewTransactions(newTxs []*types.TxDesc, filters 
 
 // RelayInventory relays the passed inventory vector to all connected peers
 // that are not already known to have it.
-func (ntmgr *NotifyMgr) RelayInventory(data interface{}, filters []peer.ID) {
+func (ntmgr *NotifyMgr) RelayInventory(block *types.SerializedBlock, flags uint32, source *peer.ID) {
 	if ntmgr.IsShutdown() {
 		return
 	}
-	_, ok := data.(types.BlockHeader)
-	if !ok {
-		log.Warn(fmt.Sprintf("No support relay data:%v", data))
-		return
+	fs := blockchain.BehaviorFlags(flags)
+	if fs.Has(blockchain.BFRPCAdd) || fs.Has(blockchain.BFBroadcast) {
+		err := ntmgr.Server.BroadcastBlock(block, source)
+		if err != nil {
+			log.Error(err.Error())
+		}
 	}
 	ntmgr.Server.PeerSync().RelayGraphState()
 }
@@ -93,7 +96,15 @@ func (ntmgr *NotifyMgr) AddRebroadcastInventory(newTxs []*types.TxDesc) {
 // Transaction has one confirmation on the main chain. Now we can mark it as no
 // longer needing rebroadcasting.
 func (ntmgr *NotifyMgr) TransactionConfirmed(tx *types.Tx) {
-	ntmgr.Server.Rebroadcast().RemoveInventory(tx.Hash())
+	ntmgr.Server.Rebroadcast().RemoveInventory([]*hash.Hash{tx.Hash()})
+}
+
+func (ntmgr *NotifyMgr) TransactionsConfirmed(txs []*types.Tx) {
+	hs := []*hash.Hash{}
+	for _, tx := range txs {
+		hs = append(hs, tx.Hash())
+	}
+	go ntmgr.Server.Rebroadcast().RemoveInventory(hs)
 }
 
 func (ntmgr *NotifyMgr) Start() error {
@@ -207,7 +218,7 @@ func (ntmgr *NotifyMgr) handleNotifyMsg(notification *blockchain.Notification) {
 			return
 		}
 		log.Trace("we are current, can do relay")
-		ntmgr.RelayInventory(block.Block().Header, nil)
+		ntmgr.RelayInventory(block, uint32(band.Flags), band.Source)
 
 	// A block has been connected to the main block chain.
 	case blockchain.BlockConnected:

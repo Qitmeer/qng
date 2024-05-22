@@ -111,7 +111,8 @@ var genesisMerkleRoot = merkle.CalcMerkleRoot(genesisTxs)
 // (2) The difficulty starts off at the value given by bits.
 // (3) The stake difficulty starts off at the value given by SBits.
 // (4) The timestamp, which guides when blocks can be built on top of it
-//      and what the initial difficulty calculations come out to be.
+//
+//	and what the initial difficulty calculations come out to be.
 //
 // The genesis block is valid by definition and none of the fields within
 // it are validated for correctness.
@@ -193,7 +194,6 @@ func buildTestNetGenesisCoinbaseTx(net protocol.Network) types.Transaction {
 	return tx
 }
 
-//
 var testNetGenesisCoinbaseTx = buildTestNetGenesisCoinbaseTx(protocol.TestNet)
 
 // testNetGenesisMerkleRoot is the hash of the first transaction in the genesis block
@@ -340,7 +340,6 @@ var privNetGenesisHash = privNetGenesisBlock.BlockHash()
 
 // TestMixNet ------------------------------------------------------------------------
 
-//
 var testPowNetGenesisCoinbaseTx = types.Transaction{
 	Version: 1,
 	TxIn: []*types.TxInput{
@@ -385,7 +384,7 @@ var testPowNetGenesisCoinbaseTx = types.Transaction{
 }
 
 var mixNetGenesisTx1 = buildMixNetGenesisTxOne()
-var mixnetGenesisTime = time.Unix(1660752000, 0) // 2022-08-18
+var mixnetGenesisTime = time.Unix(1716194998, 0) // 2024-05-20
 func buildMixNetGenesisTxOne() types.Transaction {
 	tx := types.Transaction{
 		Version: 1,

@@ -3,13 +3,13 @@ package rawdb
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/ethereum/go-ethereum/params"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/params"
 )
 
 const (
@@ -27,10 +27,7 @@ const (
 // The background thread will keep moving ancient chain segments from key-value
 // database to flat files for saving space on live database.
 type chainFreezer struct {
-	// WARNING: The `threshold` field is accessed atomically. On 32 bit platforms, only
-	// 64-bit aligned fields can be atomic. The struct is guaranteed to be so aligned,
-	// so take advantage of that (https://golang.org/pkg/sync/atomic/#pkg-note-BUG).
-	threshold uint64 // Number of recent blocks not to freeze (params.FullImmutabilityThreshold apart from tests)
+	threshold atomic.Uint64 // Number of recent blocks not to freeze (params.FullImmutabilityThreshold apart from tests)
 
 	*Freezer
 	quit    chan struct{}
@@ -44,12 +41,13 @@ func newChainFreezer(datadir string, namespace string, readonly bool) (*chainFre
 	if err != nil {
 		return nil, err
 	}
-	return &chainFreezer{
-		Freezer:   freezer,
-		threshold: params.FullImmutabilityThreshold,
-		quit:      make(chan struct{}),
-		trigger:   make(chan chan struct{}),
-	}, nil
+	cf := chainFreezer{
+		Freezer: freezer,
+		quit:    make(chan struct{}),
+		trigger: make(chan chan struct{}),
+	}
+	cf.threshold.Store(params.FullImmutabilityThreshold)
+	return &cf, nil
 }
 
 // Close closes the chain freezer instance and terminates the background thread.
@@ -113,16 +111,16 @@ func (f *chainFreezer) freeze(db ethdb.KeyValueStore) {
 			backoff = true
 			continue
 		}
-		threshold := atomic.LoadUint64(&f.threshold)
-		frozen := atomic.LoadUint64(&f.frozen)
+		threshold := f.threshold.Load()
+		frozen := f.frozen.Load()
 		switch {
 		case *mt < threshold:
-			log.Debug("Current full block not old enough", "DAG_ID", *mt, "hash", mb.GetHash(), "delay", threshold)
+			log.Debug("Current full block not old enough", "tip", *mt, "hash", mb.GetHash(), "delay", threshold)
 			backoff = true
 			continue
 
 		case *mt-threshold <= frozen:
-			log.Debug("Ancient blocks frozen already", "DAG_ID", *mt, "hash", mb.GetHash(), "frozen", frozen)
+			log.Debug("Ancient blocks frozen already", "tip", *mt, "hash", mb.GetHash(), "frozen", frozen)
 			backoff = true
 			continue
 		}
@@ -161,13 +159,13 @@ func (f *chainFreezer) freeze(db ethdb.KeyValueStore) {
 			log.Crit("Failed to delete frozen canonical blocks", "err", err)
 		}
 		batch.Reset()
-
+		frozen = f.frozen.Load()
 		// Log something friendly for the user
 		context := []interface{}{
 			"blocks", frozen - first, "elapsed", common.PrettyDuration(time.Since(start)), "DAG_ID", frozen - 1,
 		}
 		if n := len(ancients); n > 0 {
-			context = append(context, []interface{}{"hash", ancients[n-1].GetHash()}...)
+			context = append(context, []interface{}{"hash", ancients[n-1].GetHash(), "order", ancients[n-1].GetOrder()}...)
 		}
 		log.Debug("Deep froze chain segment", context...)
 
@@ -183,18 +181,24 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, id, limit uint64) ([]meerda
 
 	_, err := f.ModifyAncients(func(op ethdb.AncientWriteOp) error {
 		for ; id <= limit; id++ {
+			var header []byte
+			var block []byte
+			var dagbytes []byte
 			// Retrieve all the components of the canonical block.
 			mb := ReadDAGBlock(nfdb, id)
 			if mb == nil {
-				return fmt.Errorf("canonical hash missing, can't freeze block %d", id)
-			}
-			header := ReadHeaderRaw(nfdb, mb.GetHash())
-			if len(header) == 0 {
-				return fmt.Errorf("block header missing, can't freeze block %d %s", id, mb.GetHash().String())
-			}
-			block := ReadBodyRaw(nfdb, mb.GetHash())
-			if len(block) == 0 {
-				return fmt.Errorf("block body missing, can't freeze block %d %s", id, mb.GetHash().String())
+				log.Debug("Attempt to skip block freezing (possible cropping)", "id", id)
+			} else {
+				header = ReadHeaderRaw(nfdb, mb.GetHash())
+				if len(header) == 0 {
+					return fmt.Errorf("block header missing, can't freeze block %d %s", id, mb.GetHash().String())
+				}
+				block = ReadBodyRaw(nfdb, mb.GetHash())
+				if len(block) == 0 {
+					return fmt.Errorf("block body missing, can't freeze block %d %s", id, mb.GetHash().String())
+				}
+				dagbytes = mb.Bytes()
+				blocks = append(blocks, mb)
 			}
 
 			// Write to the batch.
@@ -204,10 +208,9 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, id, limit uint64) ([]meerda
 			if err := op.AppendRaw(ChainFreezerBlockTable, id, block); err != nil {
 				return fmt.Errorf("can't write hash to Freezer: %v", err)
 			}
-			if err := op.AppendRaw(ChainFreezerDAGBlockTable, id, mb.Bytes()); err != nil {
+			if err := op.AppendRaw(ChainFreezerDAGBlockTable, id, dagbytes); err != nil {
 				return fmt.Errorf("can't write header to Freezer: %v", err)
 			}
-			blocks = append(blocks, mb)
 		}
 		return nil
 	})

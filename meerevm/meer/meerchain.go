@@ -54,10 +54,7 @@ func (b *MeerChain) Start() error {
 		return err
 	}
 	//
-	rpcClient, err := b.chain.Node().Attach()
-	if err != nil {
-		log.Error(fmt.Sprintf("Failed to attach to self: %v", err))
-	}
+	rpcClient := b.chain.Node().Attach()
 	client := ethclient.NewClient(rpcClient)
 
 	blockNum, err := client.BlockNumber(b.Context())
@@ -164,7 +161,7 @@ func (b *MeerChain) buildBlock(parent *types.Header, qtxs []model.Tx, timestamp 
 		return nil, nil, nil, err
 	}
 
-	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, txs, uncles, receipts, nil)
+	block, err := engine.FinalizeAndAssemble(chainreader, header, statedb, &types.Body{Transactions: txs, Uncles: uncles}, receipts)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -345,7 +342,7 @@ func (b *MeerChain) prepareEnvironment(state model.BlockState) (*types.Header, e
 		}
 		log.Info("Try to restore block state for EVM", "evm.hash", list[i].GetEVMHash().String(), "evm.number", list[i].GetEVMNumber(), "state.order", list[i].GetOrder())
 		block := b.chain.Ether().BlockChain().GetBlock(list[i].GetEVMHash(), list[i].GetEVMNumber())
-		if block != nil {
+		if block == nil {
 			log.Info("Try to rebuild evm block", "state.order", list[i].GetOrder())
 			sb, err := b.consensus.BlockChain().BlockByOrder(list[i].GetOrder())
 			if err != nil {
@@ -442,7 +439,7 @@ func (b *MeerChain) validateTx(tx *types.Transaction, checkState bool) error {
 		if currentState.GetNonce(from) > tx.Nonce() {
 			return core.ErrNonceTooLow
 		}
-		if currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+		if currentState.GetBalance(from).ToBig().Cmp(tx.Cost()) < 0 {
 			return core.ErrInsufficientFunds
 		}
 	}
@@ -511,7 +508,7 @@ func (b *MeerChain) GetBalance(addre string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	ba := state.GetBalance(eAddr)
+	ba := state.GetBalance(eAddr).ToBig()
 	if ba == nil {
 		return 0, fmt.Errorf("No balance for address %s", eAddr)
 	}
@@ -520,8 +517,8 @@ func (b *MeerChain) GetBalance(addre string) (int64, error) {
 }
 
 func (b *MeerChain) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
-	tx, _, blockNumber, _, _ := b.chain.Backend().GetTransaction(nil, qcommon.ToEVMHash(txhash))
-	if tx == nil {
+	ret, tx, _, blockNumber, _, _ := b.chain.Backend().GetTransaction(nil, qcommon.ToEVMHash(txhash))
+	if !ret || tx == nil {
 		return 0
 	}
 	return blockNumber

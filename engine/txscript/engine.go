@@ -80,11 +80,16 @@ const (
 
 	// maxScriptSize is the maximum allowed length of a raw script.
 	maxScriptSize = 16384
+)
 
-	// TODO refactor script version, it's not supported now
+const (
 	// DefaultScriptVersion is the default scripting language version
 	// representing tx script.
-	DefaultScriptVersion = uint16(0)
+	DefaultScriptVersion = 0
+
+	// TaprootWitnessVersion is the witness version that defines the new
+	// taproot verification logic.
+	TaprootWitnessVersion = 1
 )
 
 // halforder is used to tame ECDSA malleability (see BIP0062).

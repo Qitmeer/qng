@@ -5,6 +5,13 @@ import (
 	"context"
 	ejson "encoding/json"
 	"fmt"
+	"math/rand"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/Qitmeer/qng/core/protocol"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/config"
@@ -23,10 +30,6 @@ import (
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/services/mining"
-	"math/rand"
-	"net/http"
-	"sync"
-	"time"
 )
 
 const (
@@ -195,7 +198,8 @@ func (m *Miner) StatsGbtTxEmptyAvgTimes() {
 	}
 }
 
-func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string, txcount int) {
+func (m *Miner) StatsSubmit(start time.Time, bh string, txcount int) {
+	currentReqMillSec := time.Since(start).Milliseconds()
 	m.stats.TotalSubmits++
 	totalSubmits.Update(m.stats.TotalSubmits)
 	if len(m.stats.Last100Submits) >= 100 {
@@ -211,7 +215,7 @@ func (m *Miner) StatsSubmit(currentReqMillSec int64, bh string, txcount int) {
 	if m.stats.TotalSubmits > 0 {
 		m.stats.SubmitAvgDuration = m.stats.TotalSubmitDuration / float64(m.stats.TotalSubmits)
 	}
-	submitDuration.Update(time.Duration(float64(currentReqMillSec)/1000) * time.Second)
+	submitDuration.Update(time.Since(start))
 	if float64(currentReqMillSec)/1000 > m.stats.MaxSubmitDuration {
 		m.stats.MaxSubmitDuration = float64(currentReqMillSec) / 1000
 		m.stats.MaxSubmitDurationBlockHash = bh
@@ -357,11 +361,6 @@ out:
 						}
 						if m.updateBlockTemplate(true) == nil {
 							m.worker.Update()
-						} else {
-							if msg.block != nil {
-								close(msg.block)
-								msg.block = nil
-							}
 						}
 						continue
 					}
@@ -598,14 +597,14 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 	defer m.submitLocker.Unlock()
 	m.totalSubmit++
 
-	err := m.consensus.BlockChain().(*blockchain.BlockChain).BlockDAG().CheckSubMainChainTip(block.Block().Parents)
+	err := m.CheckSubMainChainTip(block.Block().Parents)
 	if err != nil {
 		go m.BlockChainChange()
 		return nil, fmt.Errorf("The tips of block is expired:%s (error:%s)\n", block.Hash().String(), err.Error())
 	}
 	// Process this block using the same rules as blocks coming from other
 	// nodes. This will in turn relay it to the network like normal.
-	ib, IsOrphan, err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd)
+	ib, IsOrphan, err := m.consensus.BlockChain().(*blockchain.BlockChain).ProcessBlock(block, blockchain.BFRPCAdd, nil)
 	if err != nil {
 		// Anything other than a rule violation is an unexpected error,
 		// so log that error as an internal error.
@@ -654,16 +653,21 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 	if !m.IsEnable() || m.template == nil {
 		return nil, fmt.Errorf("You must enable miner by --miner.")
 	}
-	tHeader := &m.template.Block.Header
-	if !IsEqualForMiner(tHeader, header) {
+	if !IsEqualForMiner(&m.template.Block.Header, header) {
 		return nil, fmt.Errorf("You're overdue")
 	}
+
+	start := time.Now()
+	block, err := m.template.Block.Clone()
+	if err != nil {
+		return nil, err
+	}
 	if extraNonce <= 0 {
-		if !tHeader.TxRoot.IsEqual(&header.TxRoot) {
+		if !block.Header.TxRoot.IsEqual(&header.TxRoot) {
 			return nil, fmt.Errorf("You're overdue about tx root.")
 		}
 	} else {
-		ctx := types.NewTx(m.template.Block.Transactions[0]).Tx
+		ctx := types.NewTx(block.Transactions[0]).Tx
 		txRoot, err := mining.DoCalculateTransactionsRoot(ctx, m.template.TxMerklePath, m.template.TxWitnessRoot, extraNonce)
 		if err != nil {
 			return nil, err
@@ -671,23 +675,39 @@ func (m *Miner) submitBlockHeader(header *types.BlockHeader, extraNonce uint64) 
 		if !txRoot.IsEqual(&header.TxRoot) {
 			return nil, fmt.Errorf("You're overdue about tx root.")
 		}
-		tHeader.TxRoot = header.TxRoot
-		m.template.Block.Transactions[0] = ctx
+		block.Header.TxRoot = header.TxRoot
+		block.Transactions[0] = ctx
 	}
 
-	tHeader.Difficulty = header.Difficulty
-	tHeader.Timestamp = header.Timestamp
-	tHeader.Pow = header.Pow
-	block := types.NewBlock(m.template.Block)
-	return m.submitBlock(block)
+	block.Header.Difficulty = header.Difficulty
+	block.Header.Timestamp = header.Timestamp
+	block.Header.Pow = header.Pow
+	res, err := m.submitBlock(types.NewBlock(block))
+	if err == nil {
+		m.StatsSubmit(start, header.BlockHash().String(), len(block.Transactions)-1)
+	}
+	return res, err
 }
 
 func (m *Miner) CanMining() error {
-	currentOrder := m.BlockChain().BestSnapshot().GraphState.GetTotal() - 1
-	if currentOrder != 0 && !m.p2pSer.IsCurrent() {
+	if m.cfg.SubmitNoSynced {
+		return nil
+	}
+	if m.BlockChain().BestSnapshot().GraphState.GetMainOrder() <= 0 {
+		return nil
+	}
+	if !m.p2pSer.IsCurrent() {
+		gbtDownload.Update(1)
 		log.Trace("Client in initial download, qitmeer is downloading blocks...")
 		return rpc.RPCClientInInitialDownloadError("Client in initial download ",
 			"qitmeer is downloading blocks...")
+	}
+	if params.ActiveNetParams.Net == protocol.PrivNet {
+		return nil
+	}
+	if m.BlockChain().GetSelfAdd() >= meerdag.StableConfirmations {
+		gbtSideChain.Update(1)
+		return fmt.Errorf("Side chain depth too large")
 	}
 	return nil
 }
@@ -898,6 +918,41 @@ func (m *Miner) sendNotification(url string, jsonData []byte) {
 
 func (m *Miner) BlockChain() *blockchain.BlockChain {
 	return m.consensus.BlockChain().(*blockchain.BlockChain)
+}
+
+// Checking the sub main chain for the parents of tip
+func (m *Miner) CheckSubMainChainTip(parents []*hash.Hash) error {
+	if len(parents) == 0 {
+		return fmt.Errorf("Parents is empty")
+	}
+	var mt meerdag.IBlock
+	for k, pa := range parents {
+		ib := m.BlockChain().BlockDAG().GetBlock(pa)
+		if ib == nil {
+			return fmt.Errorf("Parent(%s) is overdue\n", pa.String())
+		}
+		if k == 0 {
+			mt = ib
+		}
+	}
+	if mt == nil {
+		return fmt.Errorf("No main tip:%v", parents)
+	}
+	mainTip := m.BlockChain().BlockDAG().GetMainChainTip()
+	if m.BlockChain().GetSelfAdd() > 0 {
+		if mt.GetHeight()+1 > mainTip.GetHeight() {
+			return nil
+		}
+	} else {
+		if mt.GetHeight()+1 >= mainTip.GetHeight() {
+			return nil
+		}
+	}
+
+	distance := mainTip.GetHeight() - mt.GetHeight()
+
+	return fmt.Errorf("main chain tip is overdue,submit main parent:%v (%d), but main tip is :%v (%d). Obsolete depth:%d\n",
+		mt.GetHash().String(), mt.GetHeight(), mainTip.GetHash().String(), mainTip.GetHeight(), distance)
 }
 
 func NewMiner(consensus model.Consensus, policy *mining.Policy, txpool *mempool.TxPool, p2pSer model.P2PService) *Miner {

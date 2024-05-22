@@ -2,15 +2,15 @@ package miner
 
 import (
 	"fmt"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/mining"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 const (
@@ -49,8 +49,7 @@ type CPUWorker struct {
 	workWg            sync.WaitGroup
 	updateNumWorks    chan struct{}
 	numWorks          uint32
-	updateWork        chan struct{}
-	hasNewWork        bool
+	hasNewWork        atomic.Bool
 
 	miner *Miner
 
@@ -274,15 +273,7 @@ func (w *CPUWorker) Update() {
 	if atomic.LoadInt32(&w.shutdown) != 0 {
 		return
 	}
-	w.Lock()
-	defer w.Unlock()
-
-	if w.discrete && w.discreteNum <= 0 {
-		return
-	}
-	w.hasNewWork = true
-	w.updateWork <- struct{}{}
-	w.hasNewWork = false
+	w.hasNewWork.Store(true)
 }
 
 func (w *CPUWorker) generateDiscrete(num int, block chan *hash.Hash) bool {
@@ -302,44 +293,60 @@ func (w *CPUWorker) generateDiscrete(num int, block chan *hash.Hash) bool {
 }
 
 func (w *CPUWorker) generateBlocks() {
-	log.Trace(fmt.Sprintf("Starting generate blocks worker:%s", w.GetType()))
+	log.Info(fmt.Sprintf("Starting generate blocks worker:%s", w.GetType()))
 out:
 	for {
 		// Quit when the miner is stopped.
 		select {
-		case <-w.updateWork:
-			if w.discrete && w.discreteNum <= 0 {
-				continue
-			}
-			if w.solveBlock() {
-				block := types.NewBlock(w.miner.template.Block)
-				info, err := w.miner.submitBlock(block)
-				if err != nil {
-					log.Error(fmt.Sprintf("Failed to submit new block:%s ,%v", block.Hash().String(), err))
-					w.cleanDiscrete()
-					continue
-				}
-				log.Info(fmt.Sprintf("%v", info))
-
-				if w.discrete && w.discreteNum > 0 {
-					if w.discreteBlock != nil {
-						w.discreteBlock <- block.Hash()
-					}
-					w.discreteNum--
-					if w.discreteNum <= 0 {
-						w.cleanDiscrete()
-					}
-				}
-			} else {
-				w.cleanDiscrete()
-			}
 		case <-w.quit:
 			break out
+		default:
+			// Non-blocking select to fall through
+		}
+		if w.discrete && w.discreteNum <= 0 || !w.hasNewWork.Load() {
+			time.Sleep(time.Second)
+			continue
+		}
+		start := time.Now()
+		if err := w.miner.CanMining(); err != nil {
+			log.Warn(err.Error())
+			time.Sleep(time.Second)
+			continue
+		} else if params.ActiveNetParams.Params.IsDevelopDiff() {
+			time.Sleep(params.ActiveNetParams.Params.TargetTimePerBlock)
+		}
+
+		sb := w.solveBlock()
+		if sb != nil {
+			w.hasNewWork.Store(false)
+			block := types.NewBlock(sb)
+			startSB := time.Now()
+			info, err := w.miner.submitBlock(block)
+			if err != nil {
+				log.Error(fmt.Sprintf("Failed to submit new block:%s ,%v", block.Hash().String(), err))
+				w.cleanDiscrete()
+				continue
+			} else {
+				w.miner.StatsSubmit(startSB, block.Block().BlockHash().String(), len(block.Block().Transactions)-1)
+			}
+			log.Info(fmt.Sprintf("%v", info), "cost", time.Since(start).String(), "txs", len(block.Transactions()))
+
+			if w.discrete && w.discreteNum > 0 {
+				if w.discreteBlock != nil {
+					w.discreteBlock <- block.Hash()
+				}
+				w.discreteNum--
+				if w.discreteNum <= 0 {
+					w.cleanDiscrete()
+				}
+			}
+		} else {
+			w.cleanDiscrete()
 		}
 	}
 
 	w.workWg.Done()
-	log.Trace(fmt.Sprintf("Generate blocks worker done:%s", w.GetType()))
+	log.Info(fmt.Sprintf("Generate blocks worker done:%s", w.GetType()))
 }
 
 func (w *CPUWorker) cleanDiscrete() {
@@ -352,17 +359,21 @@ func (w *CPUWorker) cleanDiscrete() {
 	}
 }
 
-func (w *CPUWorker) solveBlock() bool {
+func (w *CPUWorker) solveBlock() *types.Block {
 	if w.miner.template == nil {
-		return false
+		return nil
 	}
 	// Start a ticker which is used to signal checks for stale work and
 	// updates to the speed monitor.
-	ticker := time.NewTicker(333 * time.Millisecond)
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
 	// Create a couple of convenience variables.
-	block := w.miner.template.Block
+	block, err := w.miner.template.Block.Clone()
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
 	header := &block.Header
 
 	// Initial state.
@@ -390,7 +401,7 @@ func (w *CPUWorker) solveBlock() bool {
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
 		case <-w.quit:
-			return false
+			return nil
 
 		case <-ticker.C:
 			w.updateHashes <- hashesCompleted
@@ -400,16 +411,9 @@ func (w *CPUWorker) solveBlock() bool {
 			// has been updated since the block template was
 			// generated and it has been at least 3 seconds,
 			// or if it's been one minute.
-			if w.hasNewWork || roughtime.Now().After(lastGenerated.Add(gbtRegenerateSeconds*time.Second)) {
-				return false
+			if roughtime.Now().After(lastGenerated.Add(gbtRegenerateSeconds * time.Second)) {
+				return nil
 			}
-
-			err := mining.UpdateBlockTime(block, w.miner.BlockChain(), w.miner.timeSource, params.ActiveNetParams.Params)
-			if err != nil {
-				log.Warn(fmt.Sprintf("CPU miner unable to update block template time: %v", err))
-				return false
-			}
-
 		default:
 			// Non-blocking select to fall through
 		}
@@ -419,13 +423,16 @@ func (w *CPUWorker) solveBlock() bool {
 		instance.SetParams(params.ActiveNetParams.Params.PowConfig)
 		hashesCompleted += 2
 		header.Pow = instance
+		if params.ActiveNetParams.Params.IsDevelopDiff() {
+			return block
+		}
 		if header.Pow.FindSolver(header.BlockData(), header.BlockHash(), header.Difficulty) {
 			w.updateHashes <- hashesCompleted
-			return true
+			return block
 		}
 		// Each hash is actually a double hash (tow hashes), so
 	}
-	return false
+	return nil
 }
 
 func NewCPUWorker(miner *Miner) *CPUWorker {
@@ -438,7 +445,6 @@ func NewCPUWorker(miner *Miner) *CPUWorker {
 		queryHashesPerSec: make(chan float64),
 		updateNumWorks:    make(chan struct{}),
 		numWorks:          defaultNumWorkers,
-		updateWork:        make(chan struct{}),
 	}
 
 	return &w

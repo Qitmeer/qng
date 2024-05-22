@@ -39,6 +39,10 @@ func (s PkScript) Script() []byte {
 		script = make([]byte, scriptHashLen)
 		copy(script, s.script[:scriptHashLen])
 
+	case WitnessTaprootTy:
+		script = make([]byte, witnessTaprootLen)
+		copy(script, s.script[:witnessTaprootLen])
+
 	default:
 		// Unsupported script type.
 		return nil
@@ -63,21 +67,53 @@ func (s PkScript) String() string {
 	return str
 }
 
+// ParsePkScript parses an output script into the PkScript struct.
+// ErrUnsupportedScriptType is returned when attempting to parse an unsupported
+// script type.
+func ParsePkScript(pkScript []byte) (PkScript, error) {
+	var outputScript PkScript
+	scriptClass, _, _, err := ExtractPkScriptAddrs(pkScript, params.ActiveNetParams.Params)
+	if err != nil {
+		return outputScript, fmt.Errorf("unable to parse script type: %v", err)
+	}
+
+	if !isSupportedScriptType(scriptClass) {
+		return outputScript, ErrUnsupportedScriptType
+	}
+
+	outputScript.class = scriptClass
+	copy(outputScript.script[:], pkScript)
+
+	return outputScript, nil
+}
+
+// isSupportedScriptType determines whether the script type is supported by the
+// PkScript struct.
+func isSupportedScriptType(class ScriptClass) bool {
+	switch class {
+	case PubKeyHashTy, ScriptHashTy, WitnessTaprootTy:
+		return true
+	default:
+		return false
+	}
+}
+
 // ComputePkScript computes the script of an output by looking at the spending
+// input's signature script or witness.
 //
 // NOTE: Only P2PKH, P2SH redeem scripts are supported.
 func ComputePkScript(sigScript []byte) (PkScript, error) {
 	switch {
 	case len(sigScript) > 0:
-		return computeStandardPkScript(sigScript)
+		return computeNonWitnessPkScript(sigScript)
 	default:
 		return PkScript{}, ErrUnsupportedScriptType
 	}
 }
 
-// computeStandardPkScript computes the script of an output by looking at the
+// computeNonWitnessPkScript computes the script of an output by looking at the
 // spending input's signature script.
-func computeStandardPkScript(sigScript []byte) (PkScript, error) {
+func computeNonWitnessPkScript(sigScript []byte) (PkScript, error) {
 	switch {
 	// script types, we should expect to see a push only script.
 	case !IsPushOnlyScript(sigScript):

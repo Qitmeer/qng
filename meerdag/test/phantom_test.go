@@ -429,6 +429,7 @@ func Test_tips(t *testing.T) {
 
 func checkLoad(t *testing.T) {
 	cfg := common.DefaultConfig(os.TempDir())
+	cfg.DevNextGDB = false
 	db, err := database.New(cfg, system.InterruptListener())
 	if err != nil {
 		t.Fatal(err)
@@ -441,7 +442,7 @@ func checkLoad(t *testing.T) {
 		}
 		return tb
 	}
-	bd = meerdag.New(meerdag.PHANTOM, -1, db, getBlockData, meerdag.CreateMockBlockState, meerdag.CreateMockBlockStateFromBytes)
+	bd = meerdag.New(meerdag.PHANTOM, -1, db, getBlockData)
 	total, err := dbGetTotal()
 	if err != nil {
 		t.Fatal(err)
@@ -454,5 +455,132 @@ func checkLoad(t *testing.T) {
 	err = bd.Load(uint(total), geneis)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func Test_ForeachFig1(t *testing.T) {
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig1-blocks")
+	if ibd == nil {
+		t.FailNow()
+	}
+	ph := ibd.(*meerdag.Phantom)
+	order := []uint{bd.GetMainChainTip().GetID()}
+
+	ph.UpdateVirtualBlockOrder()
+
+	err := bd.Foreach(bd.GetMainChainTip(), meerdag.MaxId, meerdag.All, func(block meerdag.IBlock) (bool, error) {
+		t.Logf("block id:%d hash:%s order:%d", block.GetID(), block.GetHash().String(), block.GetOrder())
+		order = append(order, block.GetID())
+		return true, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	order = reverseBlockList(order)
+	target := changeToIDList(testData.PH_OrderFig1.Output)
+	for i := 0; i < len(order); i++ {
+		if order[i] != target[i] {
+			t.FailNow()
+		}
+	}
+	fmt.Printf("The Fig.1 Order from mainTip: ")
+	printBlockChainTag(order)
+}
+
+func Test_ForeachFig2(t *testing.T) {
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
+	if ibd == nil {
+		t.FailNow()
+	}
+	ph := ibd.(*meerdag.Phantom)
+	order := []uint{bd.GetMainChainTip().GetID()}
+
+	ph.UpdateVirtualBlockOrder()
+
+	err := bd.Foreach(bd.GetMainChainTip(), meerdag.MaxId, meerdag.All, func(block meerdag.IBlock) (bool, error) {
+		t.Logf("block id:%d hash:%s order:%d", block.GetID(), block.GetHash().String(), block.GetOrder())
+		order = append(order, block.GetID())
+		return true, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	order = reverseBlockList(order)
+	target := changeToIDList(testData.PH_OrderFig2.Output)
+	for i := 0; i < len(order); i++ {
+		if order[i] != target[i] {
+			t.FailNow()
+		}
+	}
+	fmt.Printf("The Fig.2 Order from mainTip: ")
+	printBlockChainTag(order)
+}
+
+func Test_ForeachFig4(t *testing.T) {
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig4-blocks")
+	if ibd == nil {
+		t.FailNow()
+	}
+	ph := ibd.(*meerdag.Phantom)
+	order := []uint{bd.GetMainChainTip().GetID()}
+
+	ph.UpdateVirtualBlockOrder()
+
+	err := bd.Foreach(bd.GetMainChainTip(), meerdag.MaxId, meerdag.All, func(block meerdag.IBlock) (bool, error) {
+		t.Logf("block id:%d hash:%s order:%d", block.GetID(), block.GetHash().String(), block.GetOrder())
+		order = append(order, block.GetID())
+		return true, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	order = reverseBlockList(order)
+	target := changeToIDList(testData.PH_OrderFig4.Output)
+	for i := 0; i < len(order); i++ {
+		if order[i] != target[i] {
+			t.FailNow()
+		}
+	}
+	fmt.Printf("The Fig.1 Order from mainTip: ")
+	printBlockChainTag(order)
+}
+
+func Test_ForeachDepth(t *testing.T) {
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
+	if ibd == nil {
+		t.FailNow()
+	}
+
+	mt := bd.GetMainChainTip()
+	for i := uint(0); i <= mt.GetOrder(); i++ {
+		count := uint(0)
+		err := bd.Foreach(mt, i, meerdag.All, func(block meerdag.IBlock) (bool, error) {
+			//t.Logf("depth:%d,block id:%d hash:%s order:%d", i, block.GetID(), block.GetHash().String(), block.GetOrder())
+			count++
+			return true, nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if count != i {
+			t.Fatalf("expect:%d != %d", i, count)
+		}
+		//t.Log("-------------")
+	}
+
+}
+
+func Test_LastBlock(t *testing.T) {
+	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
+	if ibd == nil {
+		t.FailNow()
+	}
+	lastBlock := bd.GetLastBlock()
+	lastBlockID := bd.GetLastBlockID()
+	if lastBlock.GetID() != lastBlockID {
+		t.FailNow()
+	}
+	if !tbMap["K"].GetHash().IsEqual(lastBlock.GetHash()) {
+		t.FailNow()
 	}
 }

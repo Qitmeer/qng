@@ -27,6 +27,7 @@ func randomString(strlen int) string {
 
 // TestGetSetID tests encoding/decoding and setting/getting of the ID key.
 func TestGetSetID(t *testing.T) {
+	t.Parallel()
 	id := ID("someid")
 	var r Record
 	r.Set(id)
@@ -38,6 +39,7 @@ func TestGetSetID(t *testing.T) {
 
 // TestGetSetIP4 tests encoding/decoding and setting/getting of the IP key.
 func TestGetSetIPv4(t *testing.T) {
+	t.Parallel()
 	ip := IPv4{192, 168, 0, 3}
 	var r Record
 	r.Set(ip)
@@ -49,6 +51,7 @@ func TestGetSetIPv4(t *testing.T) {
 
 // TestGetSetIP6 tests encoding/decoding and setting/getting of the IP6 key.
 func TestGetSetIPv6(t *testing.T) {
+	t.Parallel()
 	ip := IPv6{0x20, 0x01, 0x48, 0x60, 0, 0, 0x20, 0x01, 0, 0, 0, 0, 0, 0, 0x00, 0x68}
 	var r Record
 	r.Set(ip)
@@ -60,6 +63,7 @@ func TestGetSetIPv6(t *testing.T) {
 
 // TestGetSetUDP tests encoding/decoding and setting/getting of the UDP key.
 func TestGetSetUDP(t *testing.T) {
+	t.Parallel()
 	port := UDP(30309)
 	var r Record
 	r.Set(port)
@@ -70,6 +74,7 @@ func TestGetSetUDP(t *testing.T) {
 }
 
 func TestLoadErrors(t *testing.T) {
+	t.Parallel()
 	var r Record
 	ip4 := IPv4{127, 0, 0, 1}
 	r.Set(ip4)
@@ -98,6 +103,7 @@ func TestLoadErrors(t *testing.T) {
 
 // TestSortedGetAndSet tests that Set produced a sorted pairs slice.
 func TestSortedGetAndSet(t *testing.T) {
+	t.Parallel()
 	type pair struct {
 		k string
 		v uint32
@@ -135,6 +141,7 @@ func TestSortedGetAndSet(t *testing.T) {
 
 // TestDirty tests record signature removal on setting of new key/value pair in record.
 func TestDirty(t *testing.T) {
+	t.Parallel()
 	var r Record
 
 	if _, err := rlp.EncodeToBytes(r); err != errEncodeUnsigned {
@@ -158,6 +165,7 @@ func TestDirty(t *testing.T) {
 }
 
 func TestSeq(t *testing.T) {
+	t.Parallel()
 	var r Record
 
 	assert.Equal(t, uint64(0), r.Seq())
@@ -171,6 +179,7 @@ func TestSeq(t *testing.T) {
 
 // TestGetSetOverwrite tests value overwrite when setting a new value with an existing key in record.
 func TestGetSetOverwrite(t *testing.T) {
+	t.Parallel()
 	var r Record
 
 	ip := IPv4{192, 168, 0, 3}
@@ -186,6 +195,7 @@ func TestGetSetOverwrite(t *testing.T) {
 
 // TestSignEncodeAndDecode tests signing, RLP encoding and RLP decoding of a record.
 func TestSignEncodeAndDecode(t *testing.T) {
+	t.Parallel()
 	var r Record
 	r.Set(UDP(30303))
 	r.Set(IPv4{127, 0, 0, 1})
@@ -205,6 +215,7 @@ func TestSignEncodeAndDecode(t *testing.T) {
 
 // TestRecordTooBig tests that records bigger than SizeLimit bytes cannot be signed.
 func TestRecordTooBig(t *testing.T) {
+	t.Parallel()
 	var r Record
 	key := randomString(10)
 
@@ -221,6 +232,7 @@ func TestRecordTooBig(t *testing.T) {
 
 // TestSignEncodeAndDecodeRandom tests encoding/decoding of records containing random key/value pairs.
 func TestSignEncodeAndDecodeRandom(t *testing.T) {
+	t.Parallel()
 	var r Record
 
 	// random key/value pairs for testing

@@ -29,13 +29,15 @@ func ReadDAGBlock(db ethdb.Reader, id uint64) meerdag.IBlock {
 	if len(data) == 0 {
 		return nil
 	}
-	var block meerdag.IBlock
-	err := block.Decode(bytes.NewReader(data))
+	block := &meerdag.Block{}
+	block.SetID(uint(id))
+	ib := &meerdag.PhantomBlock{Block: block}
+	err := ib.Decode(bytes.NewReader(data))
 	if err != nil {
 		log.Error(err.Error())
 		return nil
 	}
-	return block
+	return ib
 }
 
 func WriteDAGBlockRaw(db ethdb.KeyValueWriter, id uint, data []byte) error {
@@ -68,7 +70,7 @@ func ReadBlockID(db ethdb.Reader, hash *hash.Hash) *uint64 {
 }
 
 func WriteBlockID(db ethdb.KeyValueWriter, hash *hash.Hash, id uint64) {
-	var serializedID [4]byte
+	var serializedID [8]byte
 	binary.BigEndian.PutUint64(serializedID[:], id)
 	if err := db.Put(blockIDKey(hash), serializedID[:]); err != nil {
 		log.Error("Failed to store block id to hash mapping", "err", err)
@@ -95,31 +97,14 @@ func ReadBlockHashByID(db ethdb.Reader, id uint64) (*hash.Hash, error) {
 // main chain
 
 func ReadMainChainTip(db ethdb.Reader) *uint64 {
-	data, err := db.Get(mainchainTipKey)
-	if err != nil {
-		log.Error(err.Error())
+	tips := ReadDAGTips(db)
+	if len(tips) <= 0 {
 		return nil
 	}
-	number := binary.BigEndian.Uint64(data)
-	return &number
-}
-
-func WriteMainChainTip(db ethdb.KeyValueWriter, mainchaintip uint64) error {
-	err := db.Put(mainchainTipKey, encodeBlockID(mainchaintip))
-	if err != nil {
-		log.Error(err.Error())
-		return err
+	if tips[0] == uint64(meerdag.MaxId) {
+		return nil
 	}
-	return nil
-}
-
-func DeleteMainChainTip(db ethdb.KeyValueWriter) error {
-	err := db.Delete(mainchainTipKey)
-	if err != nil {
-		log.Error(err.Error())
-		return err
-	}
-	return nil
+	return &tips[0]
 }
 
 func ReadMainChain(db ethdb.Reader, id uint64) bool {
@@ -144,7 +129,9 @@ func DeleteMainChain(db ethdb.KeyValueWriter, id uint64) {
 func ReadDAGInfo(db ethdb.Reader) []byte {
 	data, err := db.Get(dagInfoKey)
 	if len(data) == 0 {
-		log.Error(err.Error())
+		if err != nil {
+			log.Debug("dag info", "err", err.Error())
+		}
 		return nil
 	}
 	return data
@@ -161,7 +148,7 @@ func WriteDAGInfo(db ethdb.KeyValueWriter, data []byte) error {
 func ReadDAGTips(db ethdb.Reader) []uint64 {
 	data, err := db.Get(dagTipsKey)
 	if len(data) == 0 {
-		log.Error(err.Error())
+		log.Debug("dag tips", "err", err.Error())
 		return nil
 	}
 	var tips []uint64

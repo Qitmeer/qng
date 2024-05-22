@@ -7,6 +7,7 @@ package meer
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/config"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -53,4 +54,9 @@ func Cleanup(cfg *config.Config) {
 		log.Error(err.Error())
 	}
 	log.Info(fmt.Sprintf("Finished cleanup:%s", dbPath))
+}
+
+func Exist(cfg *config.Config) bool {
+	dbPath := path.Join(cfg.DataDir, ClientIdentifier)
+	return util.FileExists(dbPath)
 }

@@ -38,14 +38,14 @@ func init() {
 // the trie had since process startup. This isn't useful for anything apart from
 // trie debugging purposes.
 func CacheMisses() int64 {
-	return cacheMissCounter.Count()
+	return cacheMissCounter.Snapshot().Count()
 }
 
 // CacheUnloads retrieves a global counter measuring the number of cache unloads
 // the trie did since process startup. This isn't useful for anything apart from
 // trie debugging purposes.
 func CacheUnloads() int64 {
-	return cacheUnloadCounter.Count()
+	return cacheUnloadCounter.Snapshot().Count()
 }
 
 // LeafCallback is a callback type invoked when a trie operation reaches a leaf

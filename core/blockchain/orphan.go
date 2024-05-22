@@ -141,7 +141,7 @@ func (b *BlockChain) searchOrphansParentsInDB() {
 			if err != nil {
 				continue
 			}
-			b.addOrphanBlock(block)
+			b.addOrphanBlock(block, BFP2PAdd)
 			for _, h := range block.Block().Parents {
 				if !b.HaveBlock(h) && b.HasBlockInDB(h) {
 					bh := *h
@@ -179,7 +179,7 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 // It also imposes a maximum limit on the number of outstanding orphan
 // blocks and will remove the oldest received orphan block if the limit is
 // exceeded.
-func (b *BlockChain) addOrphanBlock(block *types.SerializedBlock) {
+func (b *BlockChain) addOrphanBlock(block *types.SerializedBlock, flags BehaviorFlags) {
 	serializedHeight, err := ExtractCoinbaseHeight(block.Block().Transactions[0])
 	if err != nil {
 		return
@@ -208,6 +208,7 @@ func (b *BlockChain) addOrphanBlock(block *types.SerializedBlock) {
 		block:      block,
 		expiration: expiration,
 		height:     serializedHeight,
+		flags:      flags,
 	}
 	b.orphans[*block.Hash()] = oBlock
 }
@@ -221,7 +222,7 @@ func (b *BlockChain) addOrphanBlock(block *types.SerializedBlock) {
 // are needed to pass along to maybeAcceptBlock.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) processOrphans(flags BehaviorFlags) error {
+func (b *BlockChain) processOrphans() error {
 	b.orphanLock.Lock()
 	if len(b.orphans) <= 0 {
 		b.orphanLock.Unlock()
@@ -258,7 +259,7 @@ func (b *BlockChain) processOrphans(flags BehaviorFlags) error {
 			continue
 		}
 		b.RemoveOrphanBlock(cur)
-		b.maybeAcceptBlock(cur.block, flags)
+		b.maybeAcceptBlock(cur.block, cur.flags, nil)
 	}
 	return nil
 }
@@ -283,7 +284,7 @@ func (b *BlockChain) RefreshOrphans() error {
 	b.refreshOrphans()
 	b.orphanLock.Unlock()
 
-	return b.processOrphans(BFP2PAdd)
+	return b.processOrphans()
 }
 
 func (b *BlockChain) refreshOrphans() {

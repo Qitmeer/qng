@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -22,6 +23,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"net"
 	"path/filepath"
+	"time"
 )
 
 var (
@@ -35,7 +37,6 @@ var (
 		utils.DiscoveryPortFlag,
 		utils.MiningEnabledFlag,
 		utils.MinerEtherbaseFlag,
-		utils.MinerNewPayloadTimeout,
 		utils.NATFlag,
 		utils.NoDiscoverFlag,
 		utils.DiscoveryV5Flag,
@@ -44,8 +45,9 @@ var (
 	}, utils.NetworkFlags...)
 )
 
-func MakeConfig(datadir string) (*eth.Config, error) {
-	genesis := Genesis()
+func MakeConfig(cfg *config.Config) (*eth.Config, error) {
+	datadir := cfg.DataDir
+	genesis := CurrentGenesis()
 
 	etherbase := common.Address{}
 	econfig := ethconfig.Defaults
@@ -62,6 +64,13 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 
 	econfig.TxPool.NoLocals = false
 
+	if cfg.EVMTrieTimeout > 0 {
+		econfig.TrieTimeout = time.Second * time.Duration(cfg.EVMTrieTimeout)
+	}
+	if len(cfg.StateScheme) > 0 {
+		econfig.StateScheme = cfg.StateScheme
+	}
+
 	nodeConf := node.DefaultConfig
 
 	nodeConf.DataDir = datadir
@@ -70,7 +79,9 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	nodeConf.HTTPModules = append(nodeConf.HTTPModules, "eth")
 	nodeConf.WSModules = append(nodeConf.WSModules, "eth")
 	nodeConf.IPCPath = ""
-	nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
+	if len(datadir) > 0 {
+		nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
+	}
 	//nodeConf.HTTPHost = node.DefaultHTTPHost
 	//nodeConf.WSHost = node.DefaultWSHost
 	nodeConf.HTTPPort, nodeConf.WSPort, nodeConf.AuthPort = getDefaultRPCPort()
@@ -97,7 +108,7 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 }
 
 func MakeParams(cfg *config.Config) (*eth.Config, []string, error) {
-	ecfg, err := MakeConfig(cfg.DataDir)
+	ecfg, err := MakeConfig(cfg)
 	if err != nil {
 		return ecfg, nil, err
 	}
@@ -136,16 +147,20 @@ func ChainConfig() *params.ChainConfig {
 	return nil
 }
 
-func Genesis() *core.Genesis {
-	switch qparams.ActiveNetParams.Net {
+func Genesis(net protocol.Network, alloc types.GenesisAlloc) *core.Genesis {
+	switch net {
 	case protocol.MainNet:
-		return QngGenesis()
+		return QngGenesis(alloc)
 	case protocol.TestNet:
-		return QngTestnetGenesis()
+		return QngTestnetGenesis(alloc)
 	case protocol.MixNet:
-		return QngMixnetGenesis()
+		return QngMixnetGenesis(alloc)
 	case protocol.PrivNet:
-		return QngPrivnetGenesis()
+		return QngPrivnetGenesis(alloc)
 	}
 	return nil
+}
+
+func CurrentGenesis() *core.Genesis {
+	return Genesis(qparams.ActiveNetParams.Net, nil)
 }

@@ -14,9 +14,13 @@ import (
 	"time"
 )
 
+const (
+	MaxRegainMempoolSize = 1000
+)
+
 type broadcastInventoryAdd relayMsg
 
-type broadcastInventoryDel *hash.Hash
+type broadcastInventoryDel []*hash.Hash
 
 type relayMsg struct {
 	hash *hash.Hash
@@ -94,7 +98,10 @@ out:
 			case broadcastInventoryAdd:
 				pendingInvs[*msg.hash] = msg.data
 			case broadcastInventoryDel:
-				delete(pendingInvs, *msg)
+				hs := []*hash.Hash(msg)
+				for _, h := range hs {
+					delete(pendingInvs, *h)
+				}
 			}
 
 		case <-timer.C:
@@ -155,13 +162,15 @@ func (r *Rebroadcast) AddInventory(h *hash.Hash, data interface{}) {
 	r.modifyRebroadcastInv <- broadcastInventoryAdd{hash: h, data: data}
 }
 
-func (r *Rebroadcast) RemoveInventory(h *hash.Hash) {
+func (r *Rebroadcast) RemoveInventory(hs []*hash.Hash) {
 	// Ignore if shutting down.
 	if atomic.LoadInt32(&r.shutdown) != 0 {
 		return
 	}
-
-	r.modifyRebroadcastInv <- broadcastInventoryDel(h)
+	if len(hs) <= 0 {
+		return
+	}
+	r.modifyRebroadcastInv <- broadcastInventoryDel(hs)
 }
 
 func (r *Rebroadcast) RegainMempool() {
@@ -176,7 +185,9 @@ func (r *Rebroadcast) onRegainMempool() {
 		return
 	}
 	mptxCount := r.s.TxMemPool().Count()
-
+	if mptxCount > MaxRegainMempoolSize {
+		return
+	}
 	canPeers := []*peers.Peer{}
 	for _, pe := range r.s.Peers().CanSyncPeers() {
 		if time.Since(pe.GetMempoolReqTime()) <= params.ActiveNetParams.TargetTimePerBlock {

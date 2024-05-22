@@ -5,8 +5,9 @@ package pow
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
 	"math/big"
+
+	"github.com/Qitmeer/qng/common/hash"
 )
 
 var (
@@ -17,6 +18,15 @@ var (
 	// oneLsh256 is 1 shifted left 256 bits.  It is defined here to avoid
 	// the overhead of creating it multiple times.
 	OneLsh256 = new(big.Int).Lsh(bigOne, 256)
+)
+
+const (
+	// MEER difficulty adjustment
+	DIFFICULTY_MODE_MEER = 0
+	// KASPAD difficulty adjustment
+	DIFFICULTY_MODE_KASPAD = 1
+	// DEVELOP difficulty adjustment
+	DIFFICULTY_MODE_DEVELOP = 2
 )
 
 // HashToBig converts a hash.Hash into a big.Int that can be used to
@@ -40,18 +50,21 @@ func HashToBig(hash *hash.Hash) *big.Int {
 // Like IEEE754 floating point, there are three basic components: the sign,
 // the exponent, and the mantissa.  They are broken out as follows:
 //
-//	* the most significant 8 bits represent the unsigned base 256 exponent
-// 	* bit 23 (the 24th bit) represents the sign bit
-//	* the least significant 23 bits represent the mantissa
+//   - the most significant 8 bits represent the unsigned base 256 exponent
 //
-//	-------------------------------------------------
-//	|   Exponent     |    Sign    |    Mantissa     |
-//	-------------------------------------------------
-//	| 8 bits [31-24] | 1 bit [23] | 23 bits [22-00] |
-//	-------------------------------------------------
+//   - bit 23 (the 24th bit) represents the sign bit
+//
+//   - the least significant 23 bits represent the mantissa
+//
+//     -------------------------------------------------
+//     |   Exponent     |    Sign    |    Mantissa     |
+//     -------------------------------------------------
+//     | 8 bits [31-24] | 1 bit [23] | 23 bits [22-00] |
+//     -------------------------------------------------
 //
 // The formula to calculate N is:
-// 	N = (-1^sign) * mantissa * 256^(exponent-3)
+//
+//	N = (-1^sign) * mantissa * 256^(exponent-3)
 //
 // This compact form is only used to encode unsigned 256-bit numbers which
 // represent difficulty targets, thus there really is not a need for a sign
@@ -190,7 +203,7 @@ func mergeDifficulty(oldDiff int64, newDiff1 int64, newDiff2 int64) int64 {
 	return summedChange.Int64()
 }
 
-//calc cuckoo diff
+// calc cuckoo diff
 func CalcCuckooDiff(scale uint64, blockHash hash.Hash) *big.Int {
 	c := HashToBig(&blockHash)
 	max := big.NewInt(1).Lsh(bigOne, 256)
@@ -207,7 +220,7 @@ func CalcCuckooDiff(scale uint64, blockHash hash.Hash) *big.Int {
 	return e
 }
 
-//calc cuckoo diff convert to target hash like 7fff000000000000000000000000000000000000000000000000000000000000
+// calc cuckoo diff convert to target hash like 7fff000000000000000000000000000000000000000000000000000000000000
 func CuckooDiffToTarget(scale uint64, diff *big.Int) string {
 	a := &big.Int{}
 	a.SetUint64(scale)
@@ -219,4 +232,33 @@ func CuckooDiffToTarget(scale uint64, diff *big.Int) string {
 	a.Div(a, diff)
 	b := a.Bytes()
 	return fmt.Sprintf("%064x", b)
+}
+
+// CompactToBigWithDestination is a version of CompactToBig that
+// takes a destination parameter. This is useful for saving memory,
+// as then the destination big.Int can be reused.
+// See CompactToBig for further details.
+func CompactToBigWithDestination(compact uint32, destination *big.Int) {
+	// Extract the mantissa, sign bit, and exponent.
+	mantissa := compact & 0x007fffff
+	isNegative := compact&0x00800000 != 0
+	exponent := uint(compact >> 24)
+
+	// Since the base for the exponent is 256, the exponent can be treated
+	// as the number of bytes to represent the full 256-bit number. So,
+	// treat the exponent as the number of bytes and shift the mantissa
+	// right or left accordingly. This is equivalent to:
+	// N = mantissa * 256^(exponent-3)
+	if exponent <= 3 {
+		mantissa >>= 8 * (3 - exponent)
+		destination.SetInt64(int64(mantissa))
+	} else {
+		destination.SetInt64(int64(mantissa))
+		destination.Lsh(destination, 8*(exponent-3))
+	}
+
+	// Make it negative if the sign bit is set.
+	if isNegative {
+		destination.Neg(destination)
+	}
 }

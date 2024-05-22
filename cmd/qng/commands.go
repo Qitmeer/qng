@@ -21,6 +21,7 @@ func commands() []*cli.Command {
 	cmds = append(cmds, consensusCmd())
 	cmds = append(cmds, blockchainCmd())
 	cmds = append(cmds, cmd.Commands...)
+	cmds = append(cmds, dbCmd())
 
 	for _, cmd := range cmds {
 		cmd.Before = loadConfig
@@ -61,7 +62,7 @@ func indexCmd() *cli.Command {
 					}
 					defer db.Close()
 
-					return db.CleanInvalidTxs()
+					return db.CleanInvalidTxIdx()
 				},
 			},
 		},
@@ -128,10 +129,9 @@ func consensusCmd() *cli.Command {
 }
 
 func loadConfig(ctx *cli.Context) error {
-	cfg, err := common.LoadConfig(ctx, false)
+	_, err := common.LoadConfig(ctx, false)
 	if err != nil {
 		return err
 	}
-	config.Cfg = cfg
 	return nil
 }

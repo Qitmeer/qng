@@ -31,7 +31,7 @@ var (
 	defaultRPCServer   = "127.0.0.1"
 	defaultPow         = "cuckaroo"
 	defaultSymbol      = "PMEER"
-	defaultTimeout     = 60
+	defaultTimeout     = 5
 	defaultMaxTxCount  = 100000000
 	defaultMaxSigCount = 400000000
 	defaultStatsServer = ""
@@ -51,29 +51,32 @@ type FileConfig struct {
 
 type OptionalConfig struct {
 	// Config / log options
-	CPUMiner      bool   `long:"cpuminer" description:"CPUMiner" default-mask:"false"`
-	CpuWorkers    int    `long:"cpuworkers" description:"CPUWorkers" default-mask:"1"`
-	Proxy         string `long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	ProxyUser     string `long:"proxyuser" description:"Username for proxy server"`
-	ProxyPass     string `long:"proxypass" default-mask:"-" description:"Password for proxy server"`
-	Timeout       int    `long:"timeout" description:"rpc timeout." default-mask:"60"`
-	UseDevices    string `long:"use_devices" description:"all gpu devices,you can use ./qitmeer-miner -l to see. examples:0,1 use the #0 device and #1 device"`
-	MaxTxCount    int    `long:"max_tx_count" description:"max pack tx count" default-mask:"10000000"`
-	MaxSigCount   int    `long:"max_sig_count" description:"max sign tx count" default-mask:"400000000"`
-	LogLevel      string `long:"log_level" description:"info|debug|error|warn|trace" default-mask:"info"`
-	StatsServer   string `long:"stats_server" description:"stats web server" default-mask:"127.0.0.1:1235"`
-	Restart       int    ` description:"restart server" default-mask:"0"`
-	Accept        int    ` description:"Accept count" default-mask:"0"`
-	Reject        int    ` description:"Reject count" default-mask:"0"`
-	Stale         int    ` description:"Stale count" default-mask:"0"`
-	Target        string ` description:"Target"`
-	NumOfChips    int    `long:"num_of_chips" description:"num of chips" default-mask:"1"`
-	TaskInterval  int    `long:"task_interval" description:"get blocktemplate interval" default-mask:"5000"`
-	TaskForceStop bool   `long:"task_force_stop" description:"force stop the current task when miner fail to get blocktemplate from the qitmeer full node." default-mask:"true"`
-	ForceSolo     bool   `long:"force_solo" description:"force solo mining" default-mask:"false"`
-	Freqs         string `long:"freqs" description:"freq settings" default-mask:"1000,200|"`
-	BaseDiff      uint   `long:"base_diff" description:"base_diff settings,default 4G" default-mask:"224"`
-	UartPath      string `long:"uart_path" description:"uarts path split with ," default-mask:"/dev/ttyS1"`
+	CPUMiner        bool   `long:"cpuminer" description:"CPUMiner" default-mask:"false"`
+	CpuWorkers      int    `long:"cpuworkers" description:"CPUWorkers" default-mask:"1"`
+	Proxy           string `long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
+	ProxyUser       string `long:"proxyuser" description:"Username for proxy server"`
+	ProxyPass       string `long:"proxypass" default-mask:"-" description:"Password for proxy server"`
+	Timeout         int    `long:"timeout" description:"rpc timeout." default-mask:"60"`
+	UseDevices      string `long:"use_devices" description:"all gpu devices,you can use ./qitmeer-miner -l to see. examples:0,1 use the #0 device and #1 device"`
+	MaxTxCount      int    `long:"max_tx_count" description:"max pack tx count" default-mask:"10000000"`
+	MaxSigCount     int    `long:"max_sig_count" description:"max sign tx count" default-mask:"400000000"`
+	LogLevel        string `long:"log_level" description:"info|debug|error|warn|trace" default-mask:"info"`
+	StatsServer     string `long:"stats_server" description:"stats web server" default-mask:"127.0.0.1:1235"`
+	Restart         int    ` description:"restart server" default-mask:"0"`
+	Accept          int    ` description:"Accept count" default-mask:"0"`
+	Reject          int    ` description:"Reject count" default-mask:"0"`
+	Stale           int    ` description:"Stale count" default-mask:"0"`
+	Target          string ` description:"Target"`
+	NumOfChips      int    `long:"num_of_chips" description:"num of chips" default-mask:"1"`
+	TaskInterval    int    `long:"task_interval" description:"get blocktemplate interval" default-mask:"5000"`
+	TaskForceStop   bool   `long:"task_force_stop" description:"force stop the current task when miner fail to get blocktemplate from the qitmeer full node." default-mask:"true"`
+	ForceSolo       bool   `long:"force_solo" description:"force solo mining" default-mask:"false"`
+	Freqs           string `long:"freqs" description:"freq settings" default-mask:"1000,200|"`
+	BaseDiff        uint   `long:"base_diff" description:"base_diff settings,default 4G" default-mask:"224"`
+	UartPath        string `long:"uart_path" description:"uarts path split with ," default-mask:"/dev/ttyS1"`
+	WindowSize      int    `long:"windowsize" description:"windows size" default-mask:"10"`
+	BlockPerTime    int    `long:"blockpertime" description:"block per time" default-mask:"1"`
+	EnableTxConfirm bool   `long:"enabletxconfirm" description:"enable tx confirm notification" default-mask:"false"`
 }
 
 type PoolConfig struct {
@@ -194,16 +197,19 @@ func LoadConfig() (*GlobalConfig, []string, error) {
 		NetWork: "testnet",
 	}
 	optionalCfg := OptionalConfig{
-		CPUMiner:      false,
-		Timeout:       defaultTimeout,
-		UseDevices:    "",
-		MaxTxCount:    defaultMaxTxCount,
-		MaxSigCount:   defaultMaxSigCount,
-		StatsServer:   defaultStatsServer,
-		TaskInterval:  5000,
-		TaskForceStop: true,
-		ForceSolo:     false,
-		NumOfChips:    14,
+		CPUMiner:        false,
+		Timeout:         defaultTimeout,
+		UseDevices:      "",
+		MaxTxCount:      defaultMaxTxCount,
+		MaxSigCount:     defaultMaxSigCount,
+		StatsServer:     defaultStatsServer,
+		TaskInterval:    5000,
+		TaskForceStop:   true,
+		ForceSolo:       false,
+		NumOfChips:      14,
+		WindowSize:      10,
+		BlockPerTime:    1,
+		EnableTxConfirm: false,
 	}
 
 	// Create the home directory if it doesn't already exist.

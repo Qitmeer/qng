@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/meerdag/anticone"
@@ -158,11 +159,11 @@ type GetBlockData func(*hash.Hash) IBlockData
 
 type CreateBlockState func(id uint64) model.BlockState
 
-var createBlockState CreateBlockState
+var createBlockState CreateBlockState = CreateMockBlockState
 
 type CreateBlockStateFromBytes func(data []byte) (model.BlockState, error)
 
-var createBlockStateFromBytes CreateBlockStateFromBytes
+var createBlockStateFromBytes CreateBlockStateFromBytes = CreateMockBlockStateFromBytes
 
 // The general foundation framework of Block DAG implement
 type MeerDAG struct {
@@ -237,7 +238,7 @@ func (bd *MeerDAG) init(dagType string, blockRate float64, db model.DataBase, ge
 	bd.commitBlock = NewIdSet()
 	bd.lastSnapshot = NewDAGSnapshot()
 	bd.blockRate = blockRate
-	bd.tipsDisLimit = StableConfirmations
+	bd.tipsDisLimit = MinBlockPruneSize
 	if bd.blockRate < 0 {
 		bd.blockRate = anticone.DefaultBlockRate
 	}
@@ -245,7 +246,7 @@ func (bd *MeerDAG) init(dagType string, blockRate float64, db model.DataBase, ge
 	bd.instance.Init(bd)
 
 	serializedData, err := bd.db.GetDagInfo()
-	if err != nil && len(serializedData) <= 0 {
+	if len(serializedData) <= 0 {
 		err = DBPutDAGInfo(bd)
 		if err != nil {
 			log.Error(err.Error())
@@ -395,7 +396,9 @@ func (bd *MeerDAG) AddBlock(b IBlockData) (*list.List, *list.List, IBlock, bool)
 	mainHeightGauge.Update(int64(curMT.GetHeight()))
 	mainLayerGauge.Update(int64(curMT.GetLayer()))
 	tipsTotalGauge.Update(int64(bd.tips.Size()))
-
+	if olds.Len() > 0 {
+		reorganizeGauge.Update(int64(olds.Len()))
+	}
 	return news, olds, ib, lastMT != curMT.GetID()
 }
 
@@ -924,6 +927,9 @@ func (bd *MeerDAG) checkLegality(parentsNode []IBlock) bool {
 
 // Checking the priority of block legitimacy
 func (bd *MeerDAG) checkPriority(parents []IBlock, b IBlockData) bool {
+	if forks.IsEmptyBlockForkHeight(int64(parents[0].GetHeight()) + 1) {
+		return true
+	}
 	if b.GetPriority() <= 0 {
 		return false
 	}
@@ -1244,7 +1250,7 @@ func (bd *MeerDAG) commit() error {
 	if err != nil {
 		return err
 	}
-	bd.optimizeTips()
+	bd.optimizeTips(false)
 	return nil
 }
 
@@ -1377,9 +1383,7 @@ out:
 	log.Trace("MeerDAG handler done")
 }
 
-func New(dagType string, blockRate float64, db model.DataBase, getBlockData GetBlockData, createBS CreateBlockState, createBSB CreateBlockStateFromBytes) *MeerDAG {
-	createBlockState = createBS
-	createBlockStateFromBytes = createBSB
+func New(dagType string, blockRate float64, db model.DataBase, getBlockData GetBlockData) *MeerDAG {
 	md := &MeerDAG{
 		quit:           make(chan struct{}),
 		blockDataCache: map[uint]time.Time{},
@@ -1388,4 +1392,9 @@ func New(dagType string, blockRate float64, db model.DataBase, getBlockData GetB
 	}
 	md.init(dagType, blockRate, db, getBlockData)
 	return md
+}
+
+func SetBlockStateFactory(createBS CreateBlockState, createBSB CreateBlockStateFromBytes) {
+	createBlockState = createBS
+	createBlockStateFromBytes = createBSB
 }

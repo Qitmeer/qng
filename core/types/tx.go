@@ -925,7 +925,7 @@ type TxInput struct {
 	// This number has more historical significance than relevant usage;
 	// however, its most relevant purpose is to enable “locking” of payments
 	// so that they cannot be redeemed until a certain time.
-	Sequence uint32 //work with LockTime (disable use 0xffffffff, bitcoin historical)
+	Sequence uint32 //work with LockTime (disable use 0xffffffff,  historical)
 	AmountIn Amount
 }
 
@@ -969,12 +969,33 @@ func (ti *TxInput) SerializeSizeWitness() int {
 	return s.VarIntSerializeSize(uint64(len(ti.SignScript))) + len(ti.SignScript)
 }
 
+// TxWitness defines the witness for a TxIn. A witness is to be interpreted as
+// a slice of byte slices, or a stack with one or many elements.
+type TxWitness [][]byte
+
+// SerializeSize returns the number of bytes it would take to serialize the the
+// transaction input's witness.
+func (t TxWitness) SerializeSize() int {
+	// A varint to signal the number of elements the witness has.
+	n := s.VarIntSerializeSize(uint64(len(t)))
+
+	// For each element in the witness, we'll need a varint to signal the
+	// size of the element, then finally the number of bytes the element
+	// itself comprises.
+	for _, witItem := range t {
+		n += s.VarIntSerializeSize(uint64(len(witItem)))
+		n += len(witItem)
+	}
+
+	return n
+}
+
 type TxOutput struct {
 	Amount   Amount
 	PkScript []byte //Here, asm/type -> OP_XXX OP_RETURN
 }
 
-// NewTxOutput returns a new bitcoin transaction output with the provided
+// NewTxOutput returns a new transaction output with the provided
 // transaction value and public key script.
 func NewTxOutput(amount Amount, pkScript []byte) *TxOutput {
 	return &TxOutput{
@@ -1102,14 +1123,14 @@ func (c scriptFreeList) Return(buf []byte) {
 	}
 }
 
-// NewTxFromBytes returns a new instance of a bitcoin transaction given the
+// NewTxFromBytes returns a new instance of a transaction given the
 // serialized bytes.  See Tx.
 func NewTxFromBytes(serializedTx []byte) (*Tx, error) {
 	br := bytes.NewReader(serializedTx)
 	return NewTxFromReader(br)
 }
 
-// NewTxFromReader returns a new instance of a bitcoin transaction given a
+// NewTxFromReader returns a new instance of a transaction given a
 // Reader to deserialize the transaction.  See Tx.
 func NewTxFromReader(r io.Reader) (*Tx, error) {
 	// Deserialize the bytes into a MsgTx.

@@ -61,6 +61,9 @@ type Config struct {
 	BlockPrioritySize uint32   `long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
 	miningAddrs       []types.Address
 	GBTNotify         []string `long:"gbtnotify" description:"HTTP URL list to be notified of new block template"`
+	ObsoleteHeight    int      `long:"obsoleteheight" description:"What is the maximum allowable height of block obsolescence for submission"`
+	SubmitNoSynced    bool     `long:"allowsubmitwhennotsynced" description:"Allow the node to accept blocks from RPC while not synced (this flag is mainly used for testing)"`
+	GBTTimeOut        int      `long:"gbttimeout" description:"Build block template timeout by Millisecond.(Can limit the number of transactions included in the block)"`
 
 	//WebSocket support
 	RPCMaxWebsockets     int `long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
@@ -127,8 +130,10 @@ type Config struct {
 
 	Cache         int `long:"cache" description:"Megabytes of memory allocated to internal caching (default = 1024 mainnet full node)"`
 	CacheDatabase int `long:"cache.database" description:"Percentage of cache memory allowance to use for database io"`
-	CacheSnapshot int `long:"cache.snapshot" description:"Percentage of cache memory allowance to use for snapshot caching (default = 10% full mode, 20% archive mode)"`
+	CacheSnapshot int `long:"cache.snapshot" description:"Percentage of cache memory allowance to use for snapshot caching (default = 5% full mode)"`
 
+	EVMTrieTimeout int    `long:"evmtrietimeout" description:"Set the interval time(seconds) for flush evm trie to disk"`
+	StateScheme    string `long:"state.scheme" description:"Scheme to use for storing ethereum state ('hash' or 'path')"`
 	// TODO: It will soon be discarded in the near future
 	DevNextGDB bool `long:"devnextgdb" description:"Enable next generation databases that only exist in development mode"`
 	// wallet

@@ -3,6 +3,7 @@ package tx
 import (
 	"bytes"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/Qitmeer/qng/common/hash"
@@ -41,6 +42,9 @@ type TxManager struct {
 	enableFeeEst bool
 
 	consensus model.Consensus
+
+	wg   sync.WaitGroup
+	quit chan struct{}
 }
 
 func (tm *TxManager) Start() error {
@@ -48,6 +52,9 @@ func (tm *TxManager) Start() error {
 	if err := tm.Service.Start(); err != nil {
 		return err
 	}
+	tm.wg.Add(1)
+	go tm.handler()
+
 	tm.LoadMempool()
 	return tm.initFeeEstimator()
 }
@@ -67,7 +74,7 @@ func (tm *TxManager) initFeeEstimator() error {
 	// or if it cannot be loaded, create a new one.
 	feeEstimationData, err := tm.consensus.DatabaseContext().GetEstimateFee()
 	if err != nil {
-		return err
+		log.Warn(err.Error())
 	}
 	if feeEstimationData != nil {
 		// delete it from the database so that we don't try to restore the
@@ -99,6 +106,9 @@ func (tm *TxManager) Stop() error {
 	if err := tm.Service.Stop(); err != nil {
 		return err
 	}
+	close(tm.quit)
+	tm.wg.Wait()
+
 	if tm.txMemPool.IsPersist() {
 		num, err := tm.txMemPool.Save()
 		if err != nil {
@@ -148,19 +158,24 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 		}
 
 		block := blockSlice[0].(*types.SerializedBlock)
-		txds := []*types.TxDesc{}
-		for _, tx := range block.Transactions()[1:] {
-			if tm.IsShutdown() {
-				return
+		if len(block.Transactions()) > 1 {
+			txds := []*types.TxDesc{}
+			for _, tx := range block.Transactions()[1:] {
+				if tm.IsShutdown() {
+					return
+				}
+				tm.MemPool().RemoveTransaction(tx, false)
+				tm.MemPool().RemoveDoubleSpends(tx)
+				tm.MemPool().RemoveOrphan(tx)
+				acceptedTxs := tm.MemPool().ProcessOrphans(tx)
+				if len(acceptedTxs) > 0 {
+					txds = append(txds, acceptedTxs...)
+				}
 			}
-			tm.MemPool().RemoveTransaction(tx, false)
-			tm.MemPool().RemoveDoubleSpends(tx)
-			tm.MemPool().RemoveOrphan(tx.Hash())
-			tm.ntmgr.TransactionConfirmed(tx)
-			acceptedTxs := tm.MemPool().ProcessOrphans(tx.Hash())
-			txds = append(txds, acceptedTxs...)
+			tm.ntmgr.TransactionsConfirmed(block.Transactions()[1:])
+			tm.ntmgr.AnnounceNewTransactions(txds, nil)
 		}
-		tm.ntmgr.AnnounceNewTransactions(txds, nil)
+
 		// Register block with the fee estimator, if it exists.
 		if tm.FeeEstimator() != nil && blockSlice[1].(bool) {
 			err := tm.FeeEstimator().RegisterBlock(block, blockSlice[2].(meerdag.IBlock).GetHeight())
@@ -187,6 +202,42 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 
 func (tm *TxManager) GetChain() *blockchain.BlockChain {
 	return tm.consensus.BlockChain().(*blockchain.BlockChain)
+}
+
+func (tm *TxManager) handler() {
+	stallTicker := time.NewTicker(time.Minute)
+	defer stallTicker.Stop()
+
+out:
+	for {
+		select {
+		case <-stallTicker.C:
+			tm.handleStallSample()
+
+		case <-tm.quit:
+			break out
+		}
+	}
+
+cleanup:
+	for {
+		select {
+		default:
+			break cleanup
+		}
+	}
+
+	tm.wg.Done()
+	log.Trace("TxManager handler done")
+}
+
+func (tm *TxManager) handleStallSample() {
+	if tm.IsShutdown() {
+		return
+	}
+	if tm.txMemPool.PruneDirty() {
+		tm.txMemPool.DoPruneExpiredTx()
+	}
 }
 
 func NewTxManager(consensus model.Consensus, ntmgr model.Notify) (*TxManager, error) {
@@ -236,7 +287,8 @@ func NewTxManager(consensus model.Consensus, ntmgr model.Notify) (*TxManager, er
 		txMemPool:    txMemPool,
 		ntmgr:        ntmgr,
 		invalidTx:    invalidTx,
-		enableFeeEst: cfg.Estimatefee}
+		enableFeeEst: cfg.Estimatefee,
+		quit:         make(chan struct{})}
 	consensus.BlockChain().(*blockchain.BlockChain).Subscribe(tm.handleNotifyMsg)
 	return tm, nil
 }

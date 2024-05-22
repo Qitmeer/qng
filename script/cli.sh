@@ -548,6 +548,20 @@ function sendToAddress() {
   get_result "$data"
 }
 
+function importRawKey() {
+     local privkey=$1
+     local password=$2
+     local data='{"jsonrpc":"2.0","method":"wallet_importRawKey","params":["'$privkey'","'$password'"],"id":null}'
+     get_result "$data"
+}
+
+function listAccount() {
+     local privkey=$1
+     local password=$2
+     local data='{"jsonrpc":"2.0","method":"wallet_listAccount","params":[],"id":null}'
+     get_result "$data"
+}
+
 function add_balance() {
   local address=$1
   local data='{"jsonrpc":"2.0","method":"addBalance","params":["'$address'"],"id":null}'
@@ -729,6 +743,28 @@ function dag_info(){
   get_result "$data"
 }
 
+function chain_info(){
+  local count=$1
+  local start=$2
+  local end=$3
+  if [ "$count" == "" ]; then
+    count=0
+  fi
+  if [ "$start" == "" ]; then
+      start=0
+  fi
+  if [ "$end" == "" ]; then
+     end=0
+  fi
+  local data='{"jsonrpc":"2.0","method":"getChainInfo","params":['$count','$start','$end'],"id":1}'
+  get_result "$data"
+}
+
+function database_info(){
+  local data='{"jsonrpc":"2.0","method":"getDatabaseInfo","params":[],"id":1}'
+  get_result "$data"
+}
+
 function get_stateroot(){
   local order=$1
   local verbose=$2
@@ -826,6 +862,8 @@ function usage(){
   echo "  getaddresses <private key>"
   echo "  modules"
   echo "  daginfo"
+  echo "  chaininfo <count> <start> <end>"
+  echo "  dbinfo"
   echo "  config"
   echo "block  :"
   echo "  block <order|hash>"
@@ -894,7 +932,8 @@ function usage(){
   echo "  unlock (accountIndex) password timeout"
   echo "  lock (address)"
   echo "  sendtoaddress fromAddress addressAmounts({\"RmN6q2ZdNaCtgpq2BE5ZaUbfQxXwRU1yTYf\":{\"amount\":100000000,\"coinid\":0}}) locktime"
-
+  echo "  importrawkey(privkey password)"
+  echo "  listaccount"
 }
 
 # -------------------
@@ -1552,6 +1591,14 @@ elif [ "$1" == "daginfo" ]; then
   shift
   dag_info $@
 
+elif [ "$1" == "chaininfo" ]; then
+  shift
+  chain_info $@
+
+elif [ "$1" == "dbinfo" ]; then
+  shift
+  database_info $@
+
 elif [ "$1" == "stateroot" ]; then
   shift
   get_stateroot $@
@@ -1570,7 +1617,12 @@ elif [ "$1" == "lock" ]; then
 elif [ "$1" == "sendtoaddress" ]; then
   shift
   sendToAddress "$@"
-  
+elif [ "$1" == "importrawkey" ]; then
+  shift
+  importRawKey "$@"
+elif [ "$1" == "listaccount" ]; then
+  shift
+  listAccount "$@"
 
 elif [ "$1" == "list_command" ]; then
   usage

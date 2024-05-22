@@ -11,4 +11,5 @@ var (
 
 	tipsTotalGauge   = metrics.NewRegisteredGauge("meerdag/tips/total", nil)
 	unsequencedGauge = metrics.NewRegisteredGauge("meerdag/unsequenced", nil)
+	reorganizeGauge  = metrics.NewRegisteredGauge("meerdag/reorganize", nil)
 )

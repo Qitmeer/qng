@@ -7,13 +7,13 @@ package p2p
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/version"
+	ds "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoreds"
 	"net"
 	"path"
 	"time"
 
-	ds "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -41,16 +41,18 @@ const (
 // buildOptions for the libp2p host.
 func (s *Service) buildOptions(ip net.IP, priKey crypto.PrivKey) []libp2p.Option {
 	cfg := s.cfg
-	listen, err := multiAddressBuilder(ip.String(), cfg.TCPPort)
-	if err != nil {
-		log.Error(fmt.Sprintf("Failed to p2p listen: %v", err))
-		return nil
-	}
 	options := []libp2p.Option{
 		privKeyOption(priKey),
-		libp2p.ListenAddrs(listen),
 		libp2p.UserAgent(s.cfg.UserAgent),
 		libp2p.ConnectionGater(s),
+	}
+	if !s.cfg.DisableListen {
+		listen, err := multiAddressBuilder(ip.String(), cfg.TCPPort)
+		if err != nil {
+			log.Error(fmt.Sprintf("Failed to p2p listen: %v", err))
+			return nil
+		}
+		options = append(options, libp2p.ListenAddrs(listen))
 	}
 	if !s.cfg.NoDiscovery {
 		options = append(options, s.KademliaDHTOption())
@@ -101,7 +103,7 @@ func (s *Service) buildOptions(ip net.IP, priKey crypto.PrivKey) []libp2p.Option
 			log.Error(fmt.Sprintf("Invalid local ip provided: %s", cfg.LocalIP))
 			return options
 		}
-		listen, err = multiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
+		listen, err := multiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
 		if err != nil {
 			log.Error(fmt.Sprintf("Failed to p2p listen: %v", err))
 			return nil
@@ -109,20 +111,24 @@ func (s *Service) buildOptions(ip net.IP, priKey crypto.PrivKey) []libp2p.Option
 		options = append(options, libp2p.ListenAddrs(listen))
 	}
 
-	dsPath := path.Join(s.cfg.DataDir, PeerStore)
-	peerDS, err := ds.NewDatastore(dsPath, nil)
-	if err != nil {
-		log.Error(err.Error())
-		return nil
-	}
-	log.Info(fmt.Sprintf("Start Peers from:%s", dsPath))
+	if len(s.cfg.DataDir) > 0 {
+		dsPath := path.Join(s.cfg.DataDir, PeerStore)
+		log.Info(fmt.Sprintf("Start Peers from:%s", dsPath))
+		peerDS, err := ds.NewDatastore(dsPath, nil)
+		if err != nil {
+			log.Error(err.Error())
+			return nil
+		}
 
-	ps, err := pstoreds.NewPeerstore(s.Context(), peerDS, pstoreds.DefaultOpts())
-	if err != nil {
-		log.Error(err.Error())
-		return nil
+		ps, err := pstoreds.NewPeerstore(s.Context(), peerDS, pstoreds.DefaultOpts())
+		if err != nil {
+			log.Error(err.Error())
+			return nil
+		}
+		options = append(options, libp2p.Peerstore(ps))
+	} else {
+		options = append(options, libp2p.DefaultPeerstore)
 	}
-	options = append(options, libp2p.Peerstore(ps))
 
 	return options
 }

@@ -649,7 +649,7 @@ func SignTxOutput(chainParams *params.Params, tx *types.Transaction, idx int,
 	return mergedScript, nil
 }
 
-//TODO refactor SignTxOut remove depends on params & types.Transaction
+// TODO refactor SignTxOut remove depends on params & types.Transaction
 func SignTxOut(tx types.ScriptTx, idx int,
 	pkScript []byte, hashType SigHashType, kdb KeyDB, sdb ScriptDB,
 	previousScript []byte, sigType ecc.EcType) ([]byte, error) {
@@ -670,7 +670,7 @@ func sign2(tx types.ScriptTx, idx int,
 	sigType sigTypes) ([]byte,
 	ScriptClass, []types.Address, int, error) {
 
-	s, err := ParsePkScript(subScript)
+	s, err := ParseSTDScript(subScript)
 
 	if err != nil {
 		return nil, NonStandardTy, nil, 0, err
@@ -1048,7 +1048,7 @@ func mergeScripts2(tx types.ScriptTx, idx int,
 
 		// We already know this information somewhere up the stack,
 		// therefore the error is ignored.
-		s, _ := ParsePkScript(script)
+		s, _ := ParseSTDScript(script)
 		class := s.GetClass()
 		addresses := s.GetAddresses()
 		nrequired := 0

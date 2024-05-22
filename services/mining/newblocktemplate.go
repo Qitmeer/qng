@@ -2,6 +2,8 @@ package mining
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/address"
@@ -17,7 +19,6 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/mempool"
 	"golang.org/x/net/context"
-	"time"
 )
 
 // NewBlockTemplate returns a new block template that is ready to be solved
@@ -90,6 +91,13 @@ import (
 func NewBlockTemplate(policy *Policy, params *params.Params,
 	sigCache *txscript.SigCache, txpool *mempool.TxPool, timeSource model.MedianTimeSource,
 	consensus model.Consensus, payToAddress types.Address, parents []*hash.Hash, powType pow.PowType, coinbaseFlags CoinbaseFlags) (*types.BlockTemplate, error) {
+	timeout := params.TargetTimePerBlock / 2
+	if consensus.Config().GBTTimeOut > 0 {
+		timeout = time.Duration(consensus.Config().GBTTimeOut) * time.Millisecond
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
 	if onEnd := log.LogAndMeasureExecutionTime(log.Root(), "NewBlockTemplate"); onEnd != nil {
 		defer onEnd()
 	}
@@ -209,7 +217,14 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 
 	log.Debug("Inclusion to new block", "transactions", len(sourceTxns))
 
+precheck:
 	for _, txDesc := range sourceTxns {
+		select {
+		case <-ctx.Done():
+			log.Info(fmt.Sprintf("NewBlockTemplate will timed out(%s) in precheck, so we will return the result as soon as possible.", (params.TargetTimePerBlock / 2).String()))
+			break precheck
+		default:
+		}
 		// A block can't have more than one coinbase or contain
 		// non-finalized transactions.
 		tx := txDesc.Tx
@@ -312,16 +327,13 @@ func NewBlockTemplate(policy *Policy, params *params.Params,
 
 	fetchUtxo := map[string]struct{}{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), params.TargetTimePerBlock/2)
-	defer cancel()
-
 	// Choose which transactions make it into the block.
 mempool:
 	for weightedRandQueue.Len() > 0 {
 		//
 		select {
 		case <-ctx.Done():
-			log.Info(fmt.Sprintf("NewBlockTemplate will timed out(%s), so we will return the result as soon as possible.", (params.TargetTimePerBlock / 2).String()))
+			log.Info(fmt.Sprintf("NewBlockTemplate will timed out(%s) in mempool, so we will return the result as soon as possible.", (params.TargetTimePerBlock / 2).String()))
 			break mempool
 		default:
 		}

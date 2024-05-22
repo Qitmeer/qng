@@ -189,7 +189,7 @@ func (qm *QitmeerFull) GetPeerServer() *p2p.Service {
 func (qm *QitmeerFull) GetRpcServer() *rpc.RpcServer {
 	var service *rpc.RpcServer
 	if err := qm.Services().FetchService(&service); err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 		return nil
 	}
 	return service
@@ -206,6 +206,15 @@ func (qm *QitmeerFull) GetTxManager() *tx.TxManager {
 
 func (qm *QitmeerFull) GetAccountManager() *acct.AccountManager {
 	var service *acct.AccountManager
+	if err := qm.Services().FetchService(&service); err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return service
+}
+
+func (qm *QitmeerFull) GetWalletManager() *wallet.WalletManager {
+	var service *wallet.WalletManager
 	if err := qm.Services().FetchService(&service); err != nil {
 		log.Error(err.Error())
 		return nil

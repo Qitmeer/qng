@@ -108,7 +108,7 @@ func (tu *TypeUpdate) CheckSanity() error {
 }
 
 func NewTypeUpdateFromTx(tx *types.Transaction) (*TypeUpdate, error) {
-	script, err := txscript.ParsePkScript(tx.TxOut[0].PkScript)
+	script, err := txscript.ParseSTDScript(tx.TxOut[0].PkScript)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, err

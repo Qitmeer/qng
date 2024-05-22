@@ -48,9 +48,11 @@ type PowConfig struct {
 
 	//is init
 	init bool
+
+	DifficultyMode int
 }
 
-//global cache
+// global cache
 func GetPowConfig() *PowConfig {
 	if PowConfigInstance != nil {
 		return PowConfigInstance
