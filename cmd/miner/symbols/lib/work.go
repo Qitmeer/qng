@@ -34,6 +34,8 @@ type QitmeerWork struct {
 	WorkLock    sync.Mutex
 	WsClient    *client.Client
 	LastSubmit  time.Time
+	GbtID       int64
+	SubmitID    int64
 }
 
 func (this *QitmeerWork) GetPowType() pow.PowType {
@@ -83,14 +85,14 @@ func (this *QitmeerWork) Get() bool {
 
 // BuildBlock
 func (this *QitmeerWork) BuildBlock(header *types.BlockHeader) bool {
-	this.Rpc.GbtID++
+	this.GbtID++
 	this.Block = &BlockHeader{}
 	this.Block.ParentRoot = header.ParentRoot
 	this.Block.WorkData = header.BlockData()
 	this.Block.Target = fmt.Sprintf("%064x", pow.CompactToBig(header.Difficulty))
-	this.Block.GBTID = this.Rpc.GbtID
-	common.LatestGBTID = this.Rpc.GbtID
-	common.MinerLoger.Debug(fmt.Sprintf("getRemoteBlockTemplate , target :%s , GBTID:%d", this.Block.Target, this.Rpc.GbtID))
+	this.Block.GBTID = this.GbtID
+	common.LatestGBTID = this.GbtID
+	common.MinerLoger.Debug(fmt.Sprintf("getRemoteBlockTemplate , target :%s , GBTID:%d", this.Block.Target, this.GbtID))
 	this.GetWorkTime = time.Now().Unix()
 	return true
 }
@@ -100,13 +102,13 @@ func (this *QitmeerWork) Submit(header *types.BlockHeader, gbtID string) (string
 	this.Lock()
 	defer this.Unlock()
 	gbtIDInt64, _ := strconv.ParseInt(gbtID, 10, 64)
-	if this.Rpc.GbtID != gbtIDInt64 {
-		common.MinerLoger.Debug(fmt.Sprintf("gbt old , target :%d , current:%d", this.Rpc.GbtID, gbtIDInt64))
+	if this.GbtID != gbtIDInt64 {
+		common.MinerLoger.Debug(fmt.Sprintf("gbt old , target :%d , current:%d", this.GbtID, gbtIDInt64))
 		return "", 0, ErrSameWork
 	}
-	this.Rpc.SubmitID++
+	this.SubmitID++
 
-	id := fmt.Sprintf("miner_submit_gbtID:%s_id:%d", gbtID, this.Rpc.SubmitID)
+	id := fmt.Sprintf("miner_submit_gbtID:%s_id:%d", gbtID, this.SubmitID)
 	res, err := this.WsClient.SubmitBlockHeader(header)
 	if err != nil {
 		common.MinerLoger.Error("[submit error] " + id + " " + err.Error())
