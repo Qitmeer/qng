@@ -1,6 +1,6 @@
 module rpcclient
 
-go 1.18
+go 1.22.3
 
 replace github.com/Qitmeer/qng => ../../../
 
@@ -13,9 +13,9 @@ require (
 	github.com/dchest/blake256 v1.1.0 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/jrick/logrotate v1.0.0 // indirect
-	github.com/mattn/go-colorable v0.1.12 // indirect
-	github.com/mattn/go-isatty v0.0.16 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e // indirect
-	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
+	golang.org/x/crypto v0.22.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 )
