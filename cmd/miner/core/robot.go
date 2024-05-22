@@ -5,9 +5,10 @@ package core
 
 import (
 	"context"
-	"github.com/Qitmeer/qng/cmd/miner/common"
 	"strings"
 	"sync"
+
+	"github.com/Qitmeer/qng/cmd/miner/common"
 )
 
 //var devicesTypesForMining = cl.DeviceTypeAll
@@ -30,13 +31,12 @@ type MinerRobot struct {
 	Quit             context.Context
 	Work             *Work
 	ClDevices        []string
-	Rpc              *common.RpcClient
 	Pool             bool
 	SubmitStr        chan string
 	UseDevices       []string
 }
 
-//init GPU device
+// init GPU device
 func (this *MinerRobot) InitDevice() {
 	this.UseDevices = []string{}
 	if this.Cfg.OptionConfig.UseDevices != "" {
