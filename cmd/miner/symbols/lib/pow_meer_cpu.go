@@ -111,7 +111,7 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 			}
 			hData := make([]byte, 128)
 			copy(hData[0:types.MaxBlockHeaderPayload-pow.PROOFDATA_LENGTH], this.header.BlockData())
-			nonce++
+			nonce = common.RandUint64()
 			this.AllDiffOneShares++
 			b := make([]byte, 8)
 			binary.LittleEndian.PutUint64(b, nonce)
