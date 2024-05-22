@@ -52,10 +52,6 @@ type Checkpoint struct {
 	Hash  *hash.Hash
 }
 
-const (
-	CoinbaseVersionV1 = "0.10.4"
-)
-
 // Params defines a qitmeer network by its parameters.  These parameters may be
 // used by qitmeer applications to differentiate networks as well as addresses
 // and keys for one network from those intended for use on another network.
