@@ -121,7 +121,7 @@ func (tt *TokenType) Deserialize(data []byte) (int, error) {
 }
 
 func (tt *TokenType) GetAddress() types.Address {
-	script, err := txscript.ParsePkScript(tt.Owners)
+	script, err := txscript.ParseSTDScript(tt.Owners)
 	if err != nil {
 		log.Error(err.Error())
 		return nil

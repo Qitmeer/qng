@@ -15,4 +15,7 @@ var (
 	gbtRequestDuration   = metrics.NewRegisteredTimer("mining/gbtRequestDuration", nil)
 	gbtDuration          = metrics.NewRegisteredTimer("mining/gbtDuration", nil)
 	mempoolEmptyDuration = metrics.NewRegisteredTimer("mining/mempoolEmptyDuration", nil)
+
+	gbtDownload  = metrics.NewRegisteredGauge("mining/gbtDownload", nil)
+	gbtSideChain = metrics.NewRegisteredGauge("mining/gbtSideChain", nil)
 )

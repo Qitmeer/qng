@@ -8,13 +8,14 @@ package params
 import (
 	"encoding/hex"
 	"errors"
+	"strings"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
-	"strings"
-	"time"
 )
 
 // CheckForDuplicateHashes checks for duplicate hashes when validating blocks.
@@ -50,10 +51,6 @@ type Checkpoint struct {
 	Layer uint64
 	Hash  *hash.Hash
 }
-
-const (
-	CoinbaseVersionV1 = "0.10.4"
-)
 
 // Params defines a qitmeer network by its parameters.  These parameters may be
 // used by qitmeer applications to differentiate networks as well as addresses
@@ -191,6 +188,9 @@ type Params struct {
 	// for any given address encoded as a string.
 	NetworkAddressPrefix string
 
+	// Human-readable part for Bech32 encoded segwit addresses
+	Bech32HRPSegwit string
+
 	// Address encoding magics
 	PubKeyAddrID     [2]byte // First 2 bytes of a P2PK address
 	PubKeyHashAddrID [2]byte // First 2 bytes of P2PKH address
@@ -290,6 +290,10 @@ func (p *Params) HasTax() bool {
 	return false
 }
 
+func (p *Params) IsDevelopDiff() bool {
+	return p.PowConfig.DifficultyMode == pow.DIFFICULTY_MODE_DEVELOP
+}
+
 var (
 	// ErrDuplicateNet describes an error where the parameters for a network
 	// could not be set due to the network already being a standard
@@ -303,10 +307,11 @@ var (
 )
 
 var (
-	registeredNets    = make(map[protocol.Network]struct{})
-	pubKeyHashAddrIDs = make(map[[2]byte]struct{})
-	scriptHashAddrIDs = make(map[[2]byte]struct{})
-	hdPrivToPubKeyIDs = make(map[[4]byte][]byte)
+	registeredNets       = make(map[protocol.Network]struct{})
+	pubKeyHashAddrIDs    = make(map[[2]byte]struct{})
+	scriptHashAddrIDs    = make(map[[2]byte]struct{})
+	hdPrivToPubKeyIDs    = make(map[[4]byte][]byte)
+	bech32SegwitPrefixes = make(map[string]struct{})
 )
 
 // Register registers the network parameters for a Bitcoin network.  This may
@@ -327,6 +332,9 @@ func Register(params *Params) error {
 	scriptHashAddrIDs[params.ScriptHashAddrID] = struct{}{}
 	hdPrivToPubKeyIDs[params.HDPrivateKeyID] = params.HDPublicKeyID[:]
 
+	// A valid Bech32 encoded segwit address always has as prefix the
+	// human-readable part for the given net followed by '1'.
+	bech32SegwitPrefixes[params.Bech32HRPSegwit+"1"] = struct{}{}
 	return nil
 }
 
@@ -353,4 +361,13 @@ func hexMustDecode(hexStr string) []byte {
 		panic(err)
 	}
 	return b
+}
+
+// IsBech32SegwitPrefix returns whether the prefix is a known prefix for segwit
+// addresses on any default or registered network.  This is used when decoding
+// an address string into a specific address type.
+func IsBech32SegwitPrefix(prefix string) bool {
+	prefix = strings.ToLower(prefix)
+	_, ok := bech32SegwitPrefixes[prefix]
+	return ok
 }

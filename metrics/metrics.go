@@ -23,20 +23,12 @@ import (
 func init() {
 	// enablerFlags is the CLI flag names to use to enable metrics collections.
 	var enablerFlags = []string{"metrics"}
-	// expensiveEnablerFlags is the CLI flag names to use to enable metrics collections.
-	var expensiveEnablerFlags = []string{"metrics.expensive"}
 	for _, arg := range os.Args {
 		flag := strings.TrimLeft(arg, "-")
 		for _, enabler := range enablerFlags {
 			if !emetrics.Enabled && flag == enabler {
 				log.Info("Enabling metrics collection.")
 				emetrics.Enabled = true
-			}
-		}
-		for _, enabler := range expensiveEnablerFlags {
-			if !emetrics.EnabledExpensive && flag == enabler {
-				log.Info("Enabling expensive metrics collection.")
-				emetrics.EnabledExpensive = true
 			}
 		}
 	}

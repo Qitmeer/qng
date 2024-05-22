@@ -6,6 +6,7 @@ import (
 )
 
 func Test_TXWeightedRandom(t *testing.T) {
+	t.Parallel()
 	const reserve = 10
 	itemQueue := newWeightedRandQueue(reserve)
 	for i := 0; i < reserve; i++ {

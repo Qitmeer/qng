@@ -7,14 +7,15 @@
 package params
 
 import (
+	"math/big"
+	"time"
+
 	"github.com/Qitmeer/qng/common"
 	"github.com/Qitmeer/qng/common/math"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
-	"math/big"
-	"time"
 )
 
 // testNetPowLimit is the highest proof of work value a block can
@@ -23,10 +24,10 @@ var testNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 242), commo
 var maxNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 0), common.Big1)
 
 // target time per block unit second(s)
-const testTargetTimePerBlock = 15
+const testTargetTimePerBlock = 3
 
-// Difficulty check interval is about 15*30 = 7.5 mins
-const testWorkDiffWindowSize = 30
+// Difficulty check interval is about 3*60 = 3 mins
+const testWorkDiffWindowSize = 60
 
 // TestNetParams defines the network parameters for the test network.
 var TestNetParams = Params{
@@ -74,14 +75,7 @@ var TestNetParams = Params{
 		// after this height the big graph will be the main pow graph
 		AdjustmentStartMainHeight: 365 * 1440 * 60 / testTargetTimePerBlock,
 	},
-	CoinbaseConfig: CoinbaseConfigs{
-		{
-			Height:                    61279,
-			Version:                   "0.10.4",
-			ExtraDataIncludedVer:      true,
-			ExtraDataIncludedNodeInfo: true,
-		},
-	},
+	CoinbaseConfig:           CoinbaseConfigs{},
 	ReduceMinDifficulty:      false,
 	MinDiffReductionTime:     0, // Does not apply since ReduceMinDifficulty false
 	GenerateSupported:        true,
@@ -111,6 +105,7 @@ var TestNetParams = Params{
 
 	// Address encoding magics
 	NetworkAddressPrefix: "T",
+	Bech32HRPSegwit:      "t",
 	PubKeyAddrID:         [2]byte{0x28, 0xf5}, // starts with Tk
 	PubKeyHashAddrID:     [2]byte{0x0f, 0x14}, // starts with Tn (to distinguish 0.9.x testnet)
 	PKHEdwardsAddrID:     [2]byte{0x0f, 0x01}, // starts with Te

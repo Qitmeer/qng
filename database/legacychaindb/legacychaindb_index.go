@@ -50,15 +50,6 @@ var (
 	errInterruptRequested = errors.New("interrupt requested")
 )
 
-// internalBucket is an abstraction over a database bucket.  It is used to make
-// the code easier to test since it allows mock objects in the tests to only
-// implement these functions instead of everything a database.Bucket supports.
-type internalBucket interface {
-	Get(key []byte) []byte
-	Put(key []byte, value []byte) error
-	Delete(key []byte) error
-}
-
 func (cdb *LegacyChainDB) PutTxIdxEntrys(sblock *types.SerializedBlock, block model.Block) error {
 	return cdb.doPutTxIndexEntrys(sblock, block.GetID())
 }
@@ -217,15 +208,15 @@ func (cdb *LegacyChainDB) InvalidtxindexStore() model.InvalidTxIndexStore {
 	return cdb.invalidtxindexStore
 }
 
-func (cdb *LegacyChainDB) IsInvalidTxEmpty() bool {
+func (cdb *LegacyChainDB) IsInvalidTxIdxEmpty() bool {
 	return cdb.InvalidtxindexStore().IsEmpty()
 }
 
-func (cdb *LegacyChainDB) GetInvalidTxTip() (uint64, *hash.Hash, error) {
+func (cdb *LegacyChainDB) GetInvalidTxIdxTip() (uint64, *hash.Hash, error) {
 	return cdb.InvalidtxindexStore().Tip(model.NewStagingArea())
 }
 
-func (cdb *LegacyChainDB) PutInvalidTxTip(order uint64, bh *hash.Hash) error {
+func (cdb *LegacyChainDB) PutInvalidTxIdxTip(order uint64, bh *hash.Hash) error {
 	stagingArea := model.NewStagingArea()
 	cdb.InvalidtxindexStore().StageTip(stagingArea, bh, order)
 	return staging.CommitAllChanges(cdb.DB(), stagingArea)
@@ -253,7 +244,7 @@ func (cdb *LegacyChainDB) GetInvalidTxIdByHash(fullHash *hash.Hash) (*hash.Hash,
 	return cdb.InvalidtxindexStore().GetIdByHash(stagingArea, fullHash)
 }
 
-func (cdb *LegacyChainDB) CleanInvalidTxs() error {
+func (cdb *LegacyChainDB) CleanInvalidTxIdx() error {
 	log.Info("Start clean invalidtx index")
 	if cdb.InvalidtxindexStore().IsEmpty() {
 		return fmt.Errorf("No data needs to be deleted")

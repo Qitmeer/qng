@@ -27,6 +27,9 @@ const (
 	// scriptHashLen is the length of a P2SH script.
 	scriptHashLen = 23
 
+	// witnessV1TaprootLen is the length of a P2TR script.
+	witnessTaprootLen = 34
+
 	// maxLen is the maximum script length supported by ParsePkScript.
 	maxLen = 34
 
@@ -339,7 +342,7 @@ func DisasmString(buf []byte) (string, error) {
 	return disbuf.String(), err
 }
 
-// removeOpcode will remove any opcode matching ``opcode'' from the opcode
+// removeOpcode will remove any opcode matching “opcode” from the opcode
 // stream in pkscript
 func removeOpcode(pkscript []ParsedOpcode, opcode byte) []ParsedOpcode {
 	retScript := make([]ParsedOpcode, 0, len(pkscript))

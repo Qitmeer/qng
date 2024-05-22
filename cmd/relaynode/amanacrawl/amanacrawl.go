@@ -158,7 +158,7 @@ func listen(ln *enode.LocalNode, addr string) (*net.UDPConn, error) {
 }
 
 func parseBootnodes(ctx *cli.Context) ([]*enode.Node, error) {
-	s := params.RinkebyBootnodes
+	s := params.SepoliaBootnodes
 	if ctx.IsSet(bootnodesFlag.Name) {
 		input := ctx.String(bootnodesFlag.Name)
 		if input == "" {
@@ -230,7 +230,7 @@ func amanaFilter(ns nodeSet) (nodeSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	filter := forkid.NewStaticFilter(cfg.Eth.Genesis.Config, cfg.Eth.Genesis.ToBlock().Hash())
+	filter := forkid.NewStaticFilter(cfg.Eth.Genesis.Config, cfg.Eth.Genesis.ToBlock())
 
 	f := func(n nodeJSON) bool {
 		var eth struct {

@@ -1,6 +1,7 @@
 //go:build !asic
 
-/**
+/*
+*
 Qitmeer
 james
 */
@@ -10,16 +11,17 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/cmd/miner/common"
-	"github.com/Qitmeer/qng/cmd/miner/core"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/core/types/pow"
 	"math/big"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Qitmeer/qng/cmd/miner/common"
+	"github.com/Qitmeer/qng/cmd/miner/core"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/core/types/pow"
 )
 
 type MeerCrypto struct {
@@ -53,11 +55,17 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 	this.Started = time.Now().Unix()
 	this.AllDiffOneShares = 0
 	this.IsRunning = true
+	var currentGBTID int64
 	for {
 		this.AllDiffOneShares = 0
 		select {
 		case w = <-this.NewWork:
 			this.Work = w.(*QitmeerWork)
+			currentGBTID = w.(*QitmeerWork).Block.GBTID
+			if common.LatestGBTID != currentGBTID { //the height may be reduced if reorg
+				common.MinerLoger.Debug("task expired", "current", currentGBTID, "need", common.LatestGBTID)
+				continue
+			}
 		case <-this.Quit.Done():
 			common.MinerLoger.Debug("mining service exit")
 			return
@@ -94,9 +102,13 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 			}
 			// if has new work ,current calc stop
 			if this.HasNewWork || this.ForceStop {
+				common.MinerLoger.Debug("HasNewWork")
 				break
 			}
-
+			if common.LatestGBTID != currentGBTID { //the height may be reduced if reorg
+				common.MinerLoger.Debug("task expired", "current", currentGBTID, "need", common.LatestGBTID)
+				break
+			}
 			hData := make([]byte, 128)
 			copy(hData[0:types.MaxBlockHeaderPayload-pow.PROOFDATA_LENGTH], this.header.BlockData())
 			nonce++
@@ -109,14 +121,16 @@ func (this *MeerCrypto) Mine(wg *sync.WaitGroup) {
 				common.MinerLoger.Debug(fmt.Sprintf("device #%d found hash : %s nonce:%d target:%064x", this.MinerId, h, nonce, this.header.TargetDiff))
 				subm := hex.EncodeToString(hData[:117])
 				if !this.Pool {
-					subm += "-" + fmt.Sprintf("%d", this.Work.Block.GBTID)
+					subm += "-" + fmt.Sprintf("%d", currentGBTID)
 				} else {
 					subm += "-" + this.header.JobID + "-" + this.header.Exnonce2
 				}
-				this.SubmitData <- subm
-				if !this.Pool { // solo only submit once in one task
+				if common.LatestGBTID != currentGBTID { //the height may be reduced if reorg
 					break
 				}
+				common.Timeout(func() { //prevent stuck
+					this.SubmitData <- subm
+				}, int64(this.Cfg.OptionConfig.Timeout), func() {})
 			}
 		}
 	}

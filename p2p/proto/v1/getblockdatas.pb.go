@@ -164,16 +164,64 @@ func (m *BlockData) GetBlockBytes() []byte {
 	return nil
 }
 
+type BroadcastBlock struct {
+	Block                *BlockData `protobuf:"bytes,1,opt,name=block,proto3" json:"block,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}   `json:"-"`
+	XXX_unrecognized     []byte     `json:"-"`
+	XXX_sizecache        int32      `json:"-"`
+}
+
+func (m *BroadcastBlock) Reset()         { *m = BroadcastBlock{} }
+func (m *BroadcastBlock) String() string { return proto.CompactTextString(m) }
+func (*BroadcastBlock) ProtoMessage()    {}
+func (*BroadcastBlock) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5c509316b8da1820, []int{3}
+}
+func (m *BroadcastBlock) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *BroadcastBlock) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_BroadcastBlock.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *BroadcastBlock) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BroadcastBlock.Merge(m, src)
+}
+func (m *BroadcastBlock) XXX_Size() int {
+	return m.Size()
+}
+func (m *BroadcastBlock) XXX_DiscardUnknown() {
+	xxx_messageInfo_BroadcastBlock.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BroadcastBlock proto.InternalMessageInfo
+
+func (m *BroadcastBlock) GetBlock() *BlockData {
+	if m != nil {
+		return m.Block
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*GetBlockDatas)(nil), "qitmeer.p2p.v1.GetBlockDatas")
 	proto.RegisterType((*BlockDatas)(nil), "qitmeer.p2p.v1.BlockDatas")
 	proto.RegisterType((*BlockData)(nil), "qitmeer.p2p.v1.BlockData")
+	proto.RegisterType((*BroadcastBlock)(nil), "qitmeer.p2p.v1.BroadcastBlock")
 }
 
 func init() { proto.RegisterFile("getblockdatas.proto", fileDescriptor_5c509316b8da1820) }
 
 var fileDescriptor_5c509316b8da1820 = []byte{
-	// 249 bytes of a gzipped FileDescriptorProto
+	// 279 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x4e, 0x4f, 0x2d, 0x49,
 	0xca, 0xc9, 0x4f, 0xce, 0x4e, 0x49, 0x2c, 0x49, 0x2c, 0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17,
 	0xe2, 0x2b, 0xcc, 0x2c, 0xc9, 0x4d, 0x4d, 0x2d, 0xd2, 0x2b, 0x30, 0x2a, 0xd0, 0x2b, 0x33, 0x94,
@@ -187,9 +235,11 @@ var fileDescriptor_5c509316b8da1820 = []byte{
 	0x37, 0x51, 0x12, 0xdd, 0x44, 0xb8, 0x62, 0xfc, 0xc6, 0x3a, 0x71, 0x71, 0xc2, 0x55, 0x0a, 0x99,
 	0x72, 0x71, 0x81, 0x83, 0xc6, 0xa9, 0xb2, 0x24, 0xb5, 0x58, 0x22, 0x45, 0x81, 0x51, 0x83, 0xc7,
 	0x49, 0xf4, 0xd3, 0x3d, 0x79, 0x41, 0xb8, 0x6e, 0x43, 0x03, 0x13, 0x0b, 0x53, 0x73, 0x33, 0xa5,
-	0x20, 0x24, 0x85, 0x4e, 0x02, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24, 0xc7, 0xf8, 0xe0, 0x91,
-	0x1c, 0xe3, 0x8c, 0xc7, 0x72, 0x0c, 0x49, 0x6c, 0xe0, 0x80, 0x30, 0x06, 0x04, 0x00, 0x00, 0xff,
-	0xff, 0x9f, 0xb2, 0x9e, 0x9d, 0x6d, 0x01, 0x00, 0x00,
+	0x20, 0x24, 0x85, 0x4a, 0x8e, 0x5c, 0x7c, 0x4e, 0x45, 0xf9, 0x89, 0x29, 0xc9, 0x89, 0xc5, 0x10,
+	0x5f, 0x0b, 0xe9, 0x73, 0xb1, 0x82, 0xe5, 0x25, 0x18, 0x15, 0x18, 0xf1, 0x3a, 0x2e, 0x08, 0xa2,
+	0xce, 0x49, 0xe0, 0xc4, 0x23, 0x39, 0xc6, 0x0b, 0x8f, 0xe4, 0x18, 0x1f, 0x3c, 0x92, 0x63, 0x9c,
+	0xf1, 0x58, 0x8e, 0x21, 0x89, 0x0d, 0x1c, 0x96, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0x31,
+	0x44, 0x6b, 0xfb, 0xb0, 0x01, 0x00, 0x00,
 }
 
 func (m *GetBlockDatas) Marshal() (dAtA []byte, err error) {
@@ -310,6 +360,45 @@ func (m *BlockData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *BroadcastBlock) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *BroadcastBlock) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BroadcastBlock) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Block != nil {
+		{
+			size, err := m.Block.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGetblockdatas(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintGetblockdatas(dAtA []byte, offset int, v uint64) int {
 	offset -= sovGetblockdatas(v)
 	base := offset
@@ -366,6 +455,22 @@ func (m *BlockData) Size() (n int) {
 	l = len(m.BlockBytes)
 	if l > 0 {
 		n += 2 + l + sovGetblockdatas(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *BroadcastBlock) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Block != nil {
+		l = m.Block.Size()
+		n += 1 + l + sovGetblockdatas(uint64(l))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -616,6 +721,96 @@ func (m *BlockData) Unmarshal(dAtA []byte) error {
 			m.BlockBytes = append(m.BlockBytes[:0], dAtA[iNdEx:postIndex]...)
 			if m.BlockBytes == nil {
 				m.BlockBytes = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGetblockdatas(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthGetblockdatas
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthGetblockdatas
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *BroadcastBlock) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGetblockdatas
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: BroadcastBlock: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: BroadcastBlock: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Block", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGetblockdatas
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGetblockdatas
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGetblockdatas
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Block == nil {
+				m.Block = &BlockData{}
+			}
+			if err := m.Block.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
 			iNdEx = postIndex
 		default:

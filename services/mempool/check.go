@@ -282,8 +282,11 @@ func isDust(txOut *types.TxOutput, minRelayTxFee types.Amount) bool {
 //
 // This function MUST be called with the mempool lock held (for reads).
 func (mp *TxPool) checkPoolDoubleSpend(tx *types.Tx) error {
+	mp.mtx.RLock()
+	defer mp.mtx.RUnlock()
 	for _, txIn := range tx.Transaction().TxIn {
-		if txR, exists := mp.outpoints[txIn.PreviousOut]; exists {
+		txR, exists := mp.outpoints[txIn.PreviousOut]
+		if exists {
 			str := fmt.Sprintf("transaction %v in the pool "+
 				"already spends the same coins", txR.Hash())
 			return txRuleError(message.RejectDuplicate, str)

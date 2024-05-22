@@ -12,11 +12,13 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 	"math/big"
 )
 
@@ -159,7 +161,7 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 	}
 	statedb.IntermediateRoot(chainConfig.IsEIP158(vmContext.BlockNumber))
 	// Commit block
-	_, err := statedb.Commit(chainConfig.IsEIP158(vmContext.BlockNumber))
+	_, err := statedb.Commit(vmContext.BlockNumber.Uint64(), chainConfig.IsEIP158(vmContext.BlockNumber))
 	if err != nil {
 		return nil, fmt.Errorf("could not commit state: %v", err)
 	}
@@ -175,13 +177,13 @@ func MakePreState(db ethdb.Database, accounts core.GenesisAlloc) *state.StateDB 
 	for addr, a := range accounts {
 		statedb.SetCode(addr, a.Code)
 		statedb.SetNonce(addr, a.Nonce)
-		statedb.SetBalance(addr, a.Balance)
+		statedb.SetBalance(addr, uint256.MustFromBig(a.Balance), tracing.BalanceIncreaseGenesisBalance)
 		for k, v := range a.Storage {
 			statedb.SetState(addr, k, v)
 		}
 	}
 	// Commit and re-open to start with a clean state.
-	root, _ := statedb.Commit(false)
+	root, _ := statedb.Commit(0, false)
 	statedb, _ = state.New(root, sdb, nil)
 	return statedb
 }
@@ -233,7 +235,7 @@ func UpdateAlloc(genesis *core.Genesis, contracts []Contract) error {
 	if err != nil {
 		return err
 	}
-	genesis.Alloc = core.GenesisAlloc(alloc)
+	genesis.Alloc = types.GenesisAlloc(alloc)
 
 	b, err := json.MarshalIndent(alloc, "", " ")
 	if err != nil {

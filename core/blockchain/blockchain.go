@@ -5,6 +5,11 @@ package blockchain
 import (
 	"container/list"
 	"fmt"
+	"sort"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/system"
@@ -15,10 +20,10 @@ import (
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/merkle"
 	"github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/core/shutdown"
 	"github.com/Qitmeer/qng/core/state"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/core/types/pow/difficultymanager"
 	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/engine/txscript"
 	l "github.com/Qitmeer/qng/log"
@@ -29,9 +34,6 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/progresslog"
 	"github.com/schollz/progressbar/v3"
-	"sort"
-	"sync"
-	"time"
 )
 
 const (
@@ -128,8 +130,6 @@ type BlockChain struct {
 
 	Acct model.Acct
 
-	shutdownTracker *shutdown.Tracker
-
 	consensus model.Consensus
 
 	progressLogger *progresslog.BlockProgressLogger
@@ -138,7 +138,12 @@ type BlockChain struct {
 	wg      sync.WaitGroup
 	quit    chan struct{}
 
-	meerChain *meer.MeerChain
+	meerChain         *meer.MeerChain
+	difficultyManager model.DifficultyManager
+
+	processQueueMap sync.Map
+
+	selfAdd atomic.Int64
 }
 
 func (b *BlockChain) Init() error {
@@ -172,6 +177,8 @@ func (b *BlockChain) Init() error {
 	for _, v := range tips {
 		log.Info(fmt.Sprintf("hash=%s,order=%s,height=%d", v.GetHash(), meerdag.GetOrderLogStr(v.GetOrder()), v.GetHeight()))
 	}
+
+	b.difficultyManager = difficultymanager.NewDiffManager(b.Consensus(), b.params)
 	return nil
 }
 
@@ -179,11 +186,6 @@ func (b *BlockChain) Init() error {
 // database.  When the db does not yet contain any chain state, both it and the
 // chain state are initialized to the genesis block.
 func (b *BlockChain) initChainState() error {
-	err := b.shutdownTracker.Check()
-	if err != nil {
-		return err
-	}
-
 	// Determine the state of the database.
 	var isStateInitialized bool
 	dbInfo, err := b.DB().GetInfo()
@@ -360,7 +362,8 @@ func (b *BlockChain) Start() error {
 		return err
 	}
 	log.Info("prepare evm environment", "mainTipOrder", mainTip.GetOrder(), "mainTipHash", mainTip.GetHash().String(), "hash", evmHead.Hash().String(), "number", evmHead.Number.Uint64(), "root", evmHead.Root.String())
-	return nil
+
+	return b.DB().Snapshot()
 }
 
 func (b *BlockChain) Stop() error {
@@ -1018,6 +1021,15 @@ func (b *BlockChain) Consensus() model.Consensus {
 	return b.consensus
 }
 
+func (b *BlockChain) ProcessQueueSize() int {
+	size := 0
+	b.processQueueMap.Range(func(key, value any) bool {
+		size++
+		return true
+	})
+	return size
+}
+
 // New returns a BlockChain instance using the provided configuration details.
 func New(consensus model.Consensus) (*BlockChain, error) {
 	// Enforce required config fields.
@@ -1056,18 +1068,16 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 		indexManager:       consensus.IndexManager(),
 		orphans:            make(map[hash.Hash]*orphanBlock),
 		CacheNotifications: []*Notification{},
-		shutdownTracker:    shutdown.NewTracker(config.DataDir),
 		headerList:         list.New(),
 		progressLogger:     progresslog.NewBlockProgressLogger("Processed", log),
 		msgChan:            make(chan *processMsg),
 		quit:               make(chan struct{}),
 	}
+	b.selfAdd.Store(0)
+
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
-	b.bd = meerdag.New(config.DAGType,
-		1.0/float64(par.TargetTimePerBlock/time.Second),
-		b.DB(), b.getBlockData, state.CreateBlockState, state.CreateBlockStateFromBytes)
-	b.bd.SetTipsDisLimit(int64(par.CoinbaseMaturity))
+	b.bd = meerdag.New(config.DAGType, 1.0/float64(par.TargetTimePerBlock/time.Second), b.DB(), b.getBlockData)
 	b.bd.SetCacheSize(config.DAGCacheSize, config.BlockDataCacheSize)
 
 	b.InitServices()
@@ -1080,4 +1090,8 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 	b.meerChain = mchain
 	b.Services().RegisterService(b.meerChain)
 	return &b, nil
+}
+
+func init() {
+	meerdag.SetBlockStateFactory(state.CreateBlockState, state.CreateBlockStateFromBytes)
 }

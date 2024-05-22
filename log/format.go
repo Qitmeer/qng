@@ -39,7 +39,7 @@ var locationEnabled uint32
 
 // locationLength is the maxmimum path length encountered, which all logs are
 // padded to to aid in alignment.
-var locationLength uint32
+var LocationLength uint32
 
 // fieldPadding is a global map with maximum field value lengths seen until now
 // to allow padding log contexts in a bit smarter way.
@@ -75,12 +75,11 @@ type TerminalStringer interface {
 // a terminal with color-coded level output and terser human friendly timestamp.
 // This format should only be used for interactive programs or while developing.
 //
-//     [TIME] [LEVEL] MESAGE key=value key=value ...
+//	[TIME] [LEVEL] MESAGE key=value key=value ...
 //
 // Example:
 //
-//     [May 16 20:58:45] [DBUG] remove route ns=haproxy addr=127.0.0.1:50002
-//
+//	[May 16 20:58:45] [DBUG] remove route ns=haproxy addr=127.0.0.1:50002
 func TerminalFormat(usecolor bool) Format {
 	return FormatFunc(func(r *Record) []byte {
 		var color = 0
@@ -110,10 +109,10 @@ func TerminalFormat(usecolor bool) Format {
 				location = strings.TrimPrefix(location, prefix)
 			}
 			// Maintain the maximum location length for fancyer alignment
-			align := int(atomic.LoadUint32(&locationLength))
+			align := int(atomic.LoadUint32(&LocationLength))
 			if align < len(location) {
 				align = len(location)
-				atomic.StoreUint32(&locationLength, uint32(align))
+				atomic.StoreUint32(&LocationLength, uint32(align))
 			}
 			padding := strings.Repeat(" ", align-len(location))
 
@@ -145,7 +144,6 @@ func TerminalFormat(usecolor bool) Format {
 // format for key/value pairs.
 //
 // For more details see: http://godoc.org/github.com/kr/logfmt
-//
 func LogfmtFormat() Format {
 	return FormatFunc(func(r *Record) []byte {
 		common := []interface{}{r.KeyNames.Time, r.Time, r.KeyNames.Lvl, r.Lvl, r.KeyNames.Msg, r.Msg}

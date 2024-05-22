@@ -2,9 +2,9 @@ name: GoTest
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main,dev/1.2 ]
   pull_request:
-    branches: [ main ]
+    branches: [ main,dev/1.2 ]
 
   workflow_dispatch:
 
@@ -20,7 +20,9 @@ jobs:
           go-version: 1.21.0
 
       - name: npm
-        run: sudo apt -y install nodejs
+        run: |
+          sudo apt update
+          sudo apt -y install nodejs
 
       - name: solc
         run: sudo npm install solc@0.8.3 -g
@@ -43,11 +45,6 @@ jobs:
           export GO111MODULE=on
           go mod tidy -compat=1.21
           make qng
-
-      - name: BaseTest
-        run: |
-          PATH=$PATH:$(pwd)/build/bin
-          go test basetest/base_test.go
 
       - name: Test
         run: |

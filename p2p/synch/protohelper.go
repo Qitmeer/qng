@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/p2p/peers"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"reflect"
 )
@@ -66,20 +67,10 @@ func getMessageString(message interface{}) string {
 		}
 		return str
 	case pb.GetBlockDatas:
-		locs := changePBHashsToHashs(msg.Locator)
-		str += fmt.Sprintf(" locator:")
-		for _, loc := range locs {
-			str += " "
-			str += loc.String()
-		}
+		str += fmt.Sprintf(" locator:%d", len(msg.Locator))
 		return str
 	case pb.GetBlocks:
-		locs := changePBHashsToHashs(msg.Locator)
-		str += fmt.Sprintf(" locator:")
-		for _, loc := range locs {
-			str += " "
-			str += loc.String()
-		}
+		str += fmt.Sprintf(" locator:%d", len(msg.Locator))
 		return str
 	case *pb.GraphState:
 		gs := changePBGraphStateToGraphState(msg)
@@ -88,36 +79,33 @@ func getMessageString(message interface{}) string {
 		}
 		return str
 	case *pb.Inventory:
-		str += " invs:"
-		for _, inv := range msg.Invs {
-			str += fmt.Sprintf(" %d:%s", inv.Type, changePBHashToHash(inv.Hash))
-		}
+		str += fmt.Sprintf(" invs:%d", len(msg.Invs))
 		return str
 	case *pb.MemPoolRequest:
 		str += fmt.Sprintf(" txsNum:%d", msg.TxsNum)
 		return str
 	case *pb.SyncDAG:
-		mls := changePBHashsToHashs(msg.MainLocator)
 		gs := changePBGraphStateToGraphState(msg.GraphState)
-		str += fmt.Sprintf(" mainlocator:")
-		for _, loc := range mls {
-			str += " "
-			str += loc.String()
-		}
+		str += fmt.Sprintf(" mainlocator:%d", len(msg.MainLocator))
 		if gs != nil {
 			str += fmt.Sprintf(" graphstate:%s", gs.String())
 		}
 		return str
 	case *pb.GetTxs:
-		txs := changePBHashsToHashs(msg.Txs)
-		str += fmt.Sprintf(" txs:")
-		for _, tx := range txs {
-			str += " "
-			str += tx.String()
+		str += fmt.Sprintf(" txs:%d", len(msg.Txs))
+		return str
+	case *pb.BroadcastBlock:
+		block, err := types.NewBlockFromBytes(msg.Block.BlockBytes)
+		if err != nil {
+			return err.Error()
 		}
+		str += fmt.Sprintf(" blockHash:%s", block.Hash().String())
 		return str
 	}
 	str += fmt.Sprintf("%v", message)
+	if len(str) > peers.MaxBadResponses {
+		str = str[0:peers.MaxBadResponses]
+	}
 	return str
 }
 

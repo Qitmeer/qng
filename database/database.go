@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/shutdown"
@@ -26,19 +27,19 @@ func New(cfg *config.Config, interrupt <-chan struct{}) (model.DataBase, error) 
 }
 
 func Cleanup(cfg *config.Config) {
-	var dbPath string
-	if cfg.DevNextGDB {
-		dbPath = cfg.ResolveDataPath(chaindb.DBDirectoryName)
-	} else {
-		dbPath = legacychaindb.BlockDbPath(cfg)
+	dbPaths := []string{cfg.ResolveDataPath(chaindb.DBDirectoryName), legacychaindb.BlockDbPath(cfg)}
+	for _, dbPath := range dbPaths {
+		if util.FileExists(dbPath) {
+			err := remove(dbPath)
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
 	}
-	err := remove(dbPath)
-	if err != nil {
-		log.Error(err.Error())
-	}
+
 	meer.Cleanup(cfg)
 	amana.Cleanup(cfg)
-	err = shutdown.NewTracker(cfg.DataDir).Done()
+	err := shutdown.NewTracker(cfg.DataDir).Done()
 	if err != nil {
 		log.Error(err.Error())
 	}

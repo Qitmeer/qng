@@ -7,6 +7,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/meerdag"
 )
 
@@ -57,6 +58,10 @@ func (b *BlockChain) GetBlockByOrder(order uint64) model.Block {
 
 func (b *BlockChain) GetBlockById(id uint) model.Block {
 	return b.bd.GetBlockById(id)
+}
+
+func (b *BlockChain) GetMainChainTip() model.Block {
+	return b.bd.GetMainChainTip()
 }
 
 // BlockOrderByHash returns the order of the block with the given hash in the
@@ -338,8 +343,9 @@ func (b *BlockChain) fetchHeaderByHash(hash *hash.Hash) (*types.BlockHeader, err
 	return nil, fmt.Errorf("unable to find block header %v db %v", hash, err)
 }
 
-func (b *BlockChain) GetBlockHeader(ib meerdag.IBlock) *types.BlockHeader {
-	if ib == nil {
+func (b *BlockChain) GetBlockHeader(block model.Block) *types.BlockHeader {
+	ib, ok := block.(meerdag.IBlock)
+	if ib == nil || !ok {
 		return nil
 	}
 	if ib.GetData() != nil {
@@ -356,4 +362,17 @@ func (b *BlockChain) GetBlockHeader(ib meerdag.IBlock) *types.BlockHeader {
 		return nil
 	}
 	return header
+}
+
+func (b *BlockChain) ForeachBlueBlocks(start model.Block, depth uint, powType pow.PowType, fn func(block model.Block, header *types.BlockHeader) error) error {
+	return b.bd.Foreach(start.(meerdag.IBlock), depth, meerdag.Blue, func(block meerdag.IBlock) (bool, error) {
+		blockHeader := b.GetBlockHeader(block)
+		if blockHeader == nil {
+			return false, fmt.Errorf("No blockHeader:%s", block.GetHash().String())
+		}
+		if blockHeader.Pow.GetPowType() != powType {
+			return false, nil
+		}
+		return true, fn(block, blockHeader)
+	})
 }

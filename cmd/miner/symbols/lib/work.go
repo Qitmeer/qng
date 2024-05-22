@@ -8,14 +8,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/Qitmeer/qng/cmd/miner/common"
 	"github.com/Qitmeer/qng/cmd/miner/core"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/rpc/client"
-	"strings"
-	"sync"
-	"time"
 )
 
 var ErrSameWork = fmt.Errorf("Same work, Had Submitted!")
@@ -31,6 +33,7 @@ type QitmeerWork struct {
 	Ing         bool
 	WorkLock    sync.Mutex
 	WsClient    *client.Client
+	LastSubmit  time.Time
 }
 
 func (this *QitmeerWork) GetPowType() pow.PowType {
@@ -47,16 +50,21 @@ func (this *QitmeerWork) Get() bool {
 	if this.Ing {
 		return false
 	}
+	this.Ing = true
+	if time.Since(this.LastSubmit) < time.Duration(this.Cfg.OptionConfig.TaskInterval)*time.Millisecond {
+		<-time.After(time.Since(this.LastSubmit))
+		this.Ing = false
+		return this.Get()
+	}
+
 	defer func() {
 		this.Ing = false
 	}()
-	this.Ing = true
 	for {
 		if this.WsClient == nil || this.WsClient.Disconnected() {
 			return false
 		}
 		this.ForceUpdate = false
-		this.Rpc.GbtID++
 		header, err := this.WsClient.GetRemoteGBT(this.GetPowType())
 		if err != nil {
 			time.Sleep(time.Duration(this.Cfg.OptionConfig.TaskInterval) * time.Millisecond)
@@ -65,23 +73,39 @@ func (this *QitmeerWork) Get() bool {
 		}
 		if this.Block != nil && this.Block.ParentRoot == header.ParentRoot &&
 			(time.Now().Unix()-this.GetWorkTime) < int64(this.Cfg.OptionConfig.Timeout)*10 {
+			common.MinerLoger.Warn("GetRemoteGBT Repeat", "old block parent root", this.Block.ParentRoot, "current", header.ParentRoot)
 			//not has new work
 			return false
 		}
-		this.Block = &BlockHeader{}
-		this.Block.ParentRoot = header.ParentRoot
-		this.Block.WorkData = header.BlockData()
-		this.Block.Target = fmt.Sprintf("%064x", pow.CompactToBig(header.Difficulty))
-		common.MinerLoger.Info(fmt.Sprintf("getRemoteBlockTemplate , target :%s", this.Block.Target))
-		return true
+		return this.BuildBlock(header)
 	}
+}
+
+// BuildBlock
+func (this *QitmeerWork) BuildBlock(header *types.BlockHeader) bool {
+	this.Rpc.GbtID++
+	this.Block = &BlockHeader{}
+	this.Block.ParentRoot = header.ParentRoot
+	this.Block.WorkData = header.BlockData()
+	this.Block.Target = fmt.Sprintf("%064x", pow.CompactToBig(header.Difficulty))
+	this.Block.GBTID = this.Rpc.GbtID
+	common.LatestGBTID = this.Rpc.GbtID
+	common.MinerLoger.Debug(fmt.Sprintf("getRemoteBlockTemplate , target :%s , GBTID:%d", this.Block.Target, this.Rpc.GbtID))
+	this.GetWorkTime = time.Now().Unix()
+	return true
 }
 
 // submit
 func (this *QitmeerWork) Submit(header *types.BlockHeader, gbtID string) (string, int, error) {
 	this.Lock()
 	defer this.Unlock()
+	gbtIDInt64, _ := strconv.ParseInt(gbtID, 10, 64)
+	if this.Rpc.GbtID != gbtIDInt64 {
+		common.MinerLoger.Debug(fmt.Sprintf("gbt old , target :%d , current:%d", this.Rpc.GbtID, gbtIDInt64))
+		return "", 0, ErrSameWork
+	}
 	this.Rpc.SubmitID++
+
 	id := fmt.Sprintf("miner_submit_gbtID:%s_id:%d", gbtID, this.Rpc.SubmitID)
 	res, err := this.WsClient.SubmitBlockHeader(header)
 	if err != nil {
@@ -123,7 +147,7 @@ func (this *QitmeerWork) PoolGet() bool {
 	return false
 }
 
-//pool submit work
+// pool submit work
 func (this *QitmeerWork) PoolSubmit(subm string) error {
 	if this.LastSub == subm {
 		return ErrSameWork

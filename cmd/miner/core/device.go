@@ -1,4 +1,5 @@
-/**
+/*
+*
 Qitmeer
 james
 */
@@ -7,10 +8,11 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/Qitmeer/qng/cmd/miner/common"
 	"math"
 	"sync"
 	"time"
+
+	"github.com/Qitmeer/qng/cmd/miner/common"
 )
 
 type BaseDevice interface {
@@ -64,7 +66,7 @@ type Device struct {
 
 func (this *Device) Init(i int, pool bool, ctx context.Context, cfg *common.GlobalConfig, allCount uint64) {
 	this.MinerId = uint32(i)
-	this.NewWork = make(chan BaseWork, 1)
+	this.NewWork = make(chan BaseWork, 20)
 	this.Cfg = cfg
 	this.DeviceName = "CPU Miner"
 	this.CurrentWorkID = 0

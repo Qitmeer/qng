@@ -4,12 +4,25 @@ import (
 	"encoding/hex"
 	ejson "encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"time"
 
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 )
+
+// ImportRawKey stores the given hex encoded ECDSA key into the key directory,
+// encrypting it with the passphrase.
+func (api *PrivateWalletManagerAPI) ImportRawKey(privkey string, password string) (common.Address, error) {
+	key, err := crypto.HexToECDSA(privkey)
+	if err != nil {
+		return common.Address{}, err
+	}
+	acc, err := api.a.qks.KeyStore.ImportECDSA(key, password)
+	return acc.Address, err
+}
 
 func (api *PrivateWalletManagerAPI) ListAccount() (interface{}, error) {
 	accs := api.a.qks.KeyStore.Accounts()

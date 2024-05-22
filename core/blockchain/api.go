@@ -259,15 +259,54 @@ func (api *PublicBlockAPI) IsBlue(h hash.Hash) (interface{}, error) {
 
 // Return a list hash of the tip blocks of the DAG at this moment.
 func (api *PublicBlockAPI) Tips() (interface{}, error) {
-	tipsList, err := api.chain.TipGeneration()
-	if err != nil {
-		return nil, err
+	tips := api.chain.BlockDAG().GetTipsList()
+	tipinfos := json.TipsInfo{Count: len(tips), Valid: []qjson.TipInfo{}}
+	validtips := api.chain.BlockDAG().GetValidTips(meerdag.MaxPriority)
+	mtheight := api.chain.BlockDAG().GetMainChainTip().GetHeight()
+
+	temp := map[hash.Hash]struct{}{}
+	for _, tiphash := range validtips {
+		temp[*tiphash] = struct{}{}
 	}
-	tips := []string{}
-	for _, v := range tipsList {
-		tips = append(tips, v.String())
+	getTipInfo := func(block meerdag.IBlock, valid bool) qjson.TipInfo {
+		pruneHeight := int64(block.GetHeight()) + api.chain.BlockDAG().GetTipsDisLimit()
+		pruneCD := pruneHeight - int64(mtheight)
+		if pruneCD < 0 {
+			pruneCD = 0
+		}
+		if valid {
+			return qjson.TipInfo{ID: uint64(block.GetID()),
+				Hash:   block.GetHash().String(),
+				Height: uint64(block.GetHeight())}
+		} else {
+			return qjson.TipInfo{ID: uint64(block.GetID()),
+				Hash:        block.GetHash().String(),
+				Height:      uint64(block.GetHeight()),
+				PruneHeight: uint64(pruneHeight),
+				PruneCD:     uint64(pruneCD)}
+		}
 	}
-	return tips, nil
+	for _, tip := range tips {
+		if tip.GetHash().IsEqual(validtips[0]) {
+			tipinfos.Valid = append(tipinfos.Valid, getTipInfo(tip, true))
+			break
+		}
+	}
+	for _, tip := range tips {
+		if tip.GetHash().IsEqual(validtips[0]) {
+			continue
+		}
+		if _, ok := temp[*tip.GetHash()]; ok {
+			tipinfos.Valid = append(tipinfos.Valid, getTipInfo(tip, true))
+		} else {
+			if len(tipinfos.Invalid) <= 0 {
+				tipinfos.Invalid = []qjson.TipInfo{getTipInfo(tip, false)}
+			} else {
+				tipinfos.Invalid = append(tipinfos.Invalid, getTipInfo(tip, false))
+			}
+		}
+	}
+	return tipinfos, nil
 }
 
 // GetCoinbase
@@ -420,15 +459,14 @@ func (api *PublicBlockAPI) makeBlock(h hash.Hash, verbose *bool, inclTx *bool, f
 	}
 	confirmations := int64(api.chain.BlockDAG().GetConfirmations(block.GetID()))
 	bd := api.chain.BlockDAG()
-	ib := bd.GetBlock(&h)
-	cs := bd.GetChildren(ib)
+	cs := bd.GetChildren(block)
 	children := []*hash.Hash{}
 	if cs != nil && !cs.IsEmpty() {
 		for _, v := range cs.GetMap() {
 			children = append(children, v.(meerdag.IBlock).GetHash())
 		}
 	}
-	api.chain.SetDAGDuplicateTxs(blk, ib)
+	api.chain.SetDAGDuplicateTxs(blk, block)
 	coinbaseFees := api.chain.CalculateFees(blk)
 	coinbaseAmout := types.AmountMap{}
 

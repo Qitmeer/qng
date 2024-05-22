@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/meerdag"
@@ -29,9 +30,10 @@ const (
 type PeerSync struct {
 	sy *Sync
 
-	splock   sync.RWMutex
-	syncPeer *peers.Peer
-	lastSync time.Time
+	splock      sync.RWMutex
+	syncPeer    *peers.Peer
+	lastSync    time.Time
+	lastBlockID uint
 	// dag sync
 	dagSync *meerdag.DAGSync
 
@@ -167,9 +169,15 @@ func (ps *PeerSync) handleStallSample() {
 	if atomic.LoadInt32(&ps.shutdown) != 0 {
 		return
 	}
-	if time.Since(ps.lastSync) >= ps.sy.PeerInterval {
-		ps.TryAgainUpdateSyncPeer(true)
+	lbid := ps.Chain().BlockDAG().GetLastBlockID()
+	if ps.lastBlockID <= 0 {
+		ps.lastBlockID = lbid
+		return
 	}
+	if ps.lastBlockID != lbid {
+		return
+	}
+	ps.TryAgainUpdateSyncPeer(true)
 }
 
 func (ps *PeerSync) Pause() bool {
@@ -238,7 +246,7 @@ func (ps *PeerSync) PeerUpdate(pe *peers.Peer, immediately bool) {
 		return
 	}
 
-	pe.RunRate(PeerUpdate, DefaultRateTaskTime, func() {
+	pe.RunRate(PeerUpdate, UpdateGraphStateTime, func() {
 		ps.OnPeerUpdate(pe)
 	})
 
@@ -318,8 +326,10 @@ func (ps *PeerSync) startSync() {
 		startTime := time.Now()
 		ps.lastSync = startTime
 		longSyncMod := false
+
 		if gs.GetTotal() >= best.GraphState.GetTotal()+MaxBlockLocatorsPerMsg {
 			longSyncMod = true
+			ps.sy.p2p.Consensus().Events().Send(event.New(event.DownloaderStart))
 		}
 		refresh := true
 		add := 0
@@ -346,14 +356,13 @@ func (ps *PeerSync) startSync() {
 		log.Info("The sync of graph state has ended", "spend", time.Since(startTime).Truncate(time.Second).String(), "processID", ps.processID)
 		if add > 0 {
 			if longSyncMod && !ps.IsInterrupt() {
-				if ps.IsCompleteForSyncPeer() {
-					log.Info("Your synchronization has been completed.")
-				}
-
 				if ps.IsCurrent() {
 					log.Info("You're up to date now.")
 				}
 			}
+		}
+		if longSyncMod {
+			ps.sy.p2p.Consensus().Events().Send(event.New(event.DownloaderEnd))
 		}
 		ps.SetSyncPeer(nil)
 		ps.processwg.Done()
@@ -416,6 +425,27 @@ func (ps *PeerSync) IsCurrent() bool {
 	}
 
 	return ps.IsCompleteForSyncPeer()
+}
+
+func (ps *PeerSync) IsNearlySynced() bool {
+	if !ps.Chain().IsCurrent() {
+		return false
+	}
+	if len(ps.sy.peers.CanSyncPeers()) <= 0 {
+		return true
+	}
+	best := ps.Chain().BestSnapshot()
+	for _, sp := range ps.sy.peers.CanSyncPeers() {
+		gs := sp.GraphState()
+		if gs == nil {
+			continue
+		}
+		if best.GraphState.GetMainOrder()+meerdag.StableConfirmations >= gs.GetMainOrder() {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func (ps *PeerSync) IsCompleteForSyncPeer() bool {

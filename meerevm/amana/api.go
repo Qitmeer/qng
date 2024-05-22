@@ -78,7 +78,7 @@ func (api *PublicAmanaServiceAPI) GetAmanaPeerInfo() (interface{}, error) {
 			if err != nil {
 				continue
 			}
-			filter := forkid.NewStaticFilter(api.q.chain.Config().Eth.Genesis.Config, api.q.chain.Config().Eth.Genesis.ToBlock().Hash())
+			filter := forkid.NewStaticFilter(api.q.chain.Config().Eth.Genesis.Config, api.q.chain.Config().Eth.Genesis.ToBlock())
 
 			var eth struct {
 				ForkID forkid.ID

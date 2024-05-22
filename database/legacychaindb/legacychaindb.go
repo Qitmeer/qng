@@ -8,10 +8,13 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/dbnamespace"
+	"github.com/Qitmeer/qng/core/shutdown"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/database/rawdb"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/params"
 	"math"
 )
@@ -25,6 +28,9 @@ type LegacyChainDB struct {
 
 	invalidtxindexStore model.InvalidTxIndexStore
 	chainParams         *params.Params
+
+	hasInit         bool
+	shutdownTracker *shutdown.Tracker
 }
 
 func (cdb *LegacyChainDB) Name() string {
@@ -32,6 +38,11 @@ func (cdb *LegacyChainDB) Name() string {
 }
 
 func (cdb *LegacyChainDB) Init() error {
+	log.Info("Init", "name", cdb.Name())
+	if cdb.hasInit {
+		return fmt.Errorf("%s: Need to thoroughly clean up old data", cdb.Name())
+	}
+
 	var err error
 	err = cdb.db.Update(func(dbTx legacydb.Tx) error {
 		meta := dbTx.Metadata()
@@ -109,8 +120,24 @@ func (cdb *LegacyChainDB) DB() legacydb.DB {
 	return cdb.db
 }
 
+func (cdb *LegacyChainDB) DBEngine() string {
+	return cdb.cfg.DbType
+}
+
+func (cdb *LegacyChainDB) Snapshot() error {
+	return nil
+}
+
+func (cdb *LegacyChainDB) SnapshotInfo() string {
+	return "No support"
+}
+
 func (cdb *LegacyChainDB) Rebuild(mgr model.IndexManager) error {
-	err := cdb.CleanInvalidTxs()
+	err := cdb.CleanInvalidTxIdx()
+	if err != nil {
+		log.Info(err.Error())
+	}
+	err = cdb.CleanAddrIdx(false)
 	if err != nil {
 		log.Info(err.Error())
 	}
@@ -220,6 +247,28 @@ func (cdb *LegacyChainDB) ForeachUtxo(fn func(key []byte, data []byte) error) er
 			}
 		}
 		return nil
+	})
+}
+
+func (cdb *LegacyChainDB) UpdateUtxo(opts []*common.UtxoOpt) error {
+	if len(opts) <= 0 {
+		return nil
+	}
+
+	return cdb.db.Update(func(dbTx legacydb.Tx) error {
+		bucket := dbTx.Metadata().Bucket(dbnamespace.UtxoSetBucketName)
+		var err error
+		for _, opt := range opts {
+			if opt.Add {
+				err = bucket.Put(opt.Key, opt.Data)
+			} else {
+				err = bucket.Delete(opt.Key)
+			}
+			if err != nil {
+				return err
+			}
+		}
+		return err
 	})
 }
 
@@ -656,6 +705,20 @@ func (cdb *LegacyChainDB) DeleteEstimateFee() error {
 	})
 }
 
+func (cdb *LegacyChainDB) StartTrack(info string) error {
+	if cdb.shutdownTracker == nil {
+		return nil
+	}
+	return cdb.shutdownTracker.Wait(info)
+}
+
+func (cdb *LegacyChainDB) StopTrack() error {
+	if cdb.shutdownTracker == nil {
+		return nil
+	}
+	return cdb.shutdownTracker.Done()
+}
+
 func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) {
 	// Load the block database.
 	db, err := LoadBlockDB(cfg)
@@ -669,10 +732,12 @@ func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) 
 	}
 
 	cdb := &LegacyChainDB{
-		cfg:         cfg,
-		db:          db,
-		interrupt:   interrupt,
-		chainParams: params.ActiveNetParams.Params,
+		cfg:             cfg,
+		db:              db,
+		interrupt:       interrupt,
+		chainParams:     params.ActiveNetParams.Params,
+		hasInit:         meer.Exist(cfg),
+		shutdownTracker: shutdown.NewTracker(cfg.DataDir),
 	}
 	if cfg.DropAddrIndex {
 		if err := cdb.CleanAddrIdx(false); err != nil {
@@ -680,6 +745,10 @@ func New(cfg *config.Config, interrupt <-chan struct{}) (*LegacyChainDB, error) 
 			return nil, err
 		}
 		return nil, nil
+	}
+	err = cdb.shutdownTracker.Check()
+	if err != nil {
+		return nil, err
 	}
 	return cdb, nil
 }

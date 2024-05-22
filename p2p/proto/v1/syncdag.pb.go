@@ -141,15 +141,71 @@ func (m *SubDAG) GetBlocks() []*Hash {
 	return nil
 }
 
+type ContinueSyncDAG struct {
+	SyncPoint            *Hash    `protobuf:"bytes,1,opt,name=syncPoint,proto3" json:"syncPoint,omitempty"`
+	Start                *Hash    `protobuf:"bytes,2,opt,name=start,proto3" json:"start,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ContinueSyncDAG) Reset()         { *m = ContinueSyncDAG{} }
+func (m *ContinueSyncDAG) String() string { return proto.CompactTextString(m) }
+func (*ContinueSyncDAG) ProtoMessage()    {}
+func (*ContinueSyncDAG) Descriptor() ([]byte, []int) {
+	return fileDescriptor_9cb77bcde7ac0e2c, []int{2}
+}
+func (m *ContinueSyncDAG) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ContinueSyncDAG) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ContinueSyncDAG.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ContinueSyncDAG) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ContinueSyncDAG.Merge(m, src)
+}
+func (m *ContinueSyncDAG) XXX_Size() int {
+	return m.Size()
+}
+func (m *ContinueSyncDAG) XXX_DiscardUnknown() {
+	xxx_messageInfo_ContinueSyncDAG.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ContinueSyncDAG proto.InternalMessageInfo
+
+func (m *ContinueSyncDAG) GetSyncPoint() *Hash {
+	if m != nil {
+		return m.SyncPoint
+	}
+	return nil
+}
+
+func (m *ContinueSyncDAG) GetStart() *Hash {
+	if m != nil {
+		return m.Start
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*SyncDAG)(nil), "qitmeer.p2p.v1.SyncDAG")
 	proto.RegisterType((*SubDAG)(nil), "qitmeer.p2p.v1.SubDAG")
+	proto.RegisterType((*ContinueSyncDAG)(nil), "qitmeer.p2p.v1.ContinueSyncDAG")
 }
 
 func init() { proto.RegisterFile("syncdag.proto", fileDescriptor_9cb77bcde7ac0e2c) }
 
 var fileDescriptor_9cb77bcde7ac0e2c = []byte{
-	// 286 bytes of a gzipped FileDescriptorProto
+	// 317 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x2d, 0xae, 0xcc, 0x4b,
 	0x4e, 0x49, 0x4c, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x2b, 0xcc, 0x2c, 0xc9, 0x4d,
 	0x4d, 0x2d, 0xd2, 0x2b, 0x30, 0x2a, 0xd0, 0x2b, 0x33, 0x94, 0xd2, 0x4d, 0xcf, 0x2c, 0xc9, 0x28,
@@ -165,9 +221,11 @@ var fileDescriptor_9cb77bcde7ac0e2c = []byte{
 	0x12, 0xc8, 0x41, 0x46, 0x5c, 0x9c, 0xa0, 0xd0, 0x08, 0xc8, 0xcf, 0xcc, 0x2b, 0x91, 0x60, 0x04,
 	0x9b, 0x82, 0xd5, 0x39, 0x41, 0x08, 0x65, 0x94, 0x58, 0x2d, 0xe4, 0xc0, 0xc5, 0x96, 0x94, 0x93,
 	0x9f, 0x9c, 0x5d, 0x2c, 0xc1, 0x8c, 0xc7, 0xef, 0x42, 0x9f, 0xee, 0xc9, 0xf3, 0xc1, 0xfd, 0x6e,
-	0x64, 0x60, 0x60, 0xa0, 0x14, 0x04, 0xd5, 0xe7, 0x24, 0x70, 0xe2, 0x91, 0x1c, 0xe3, 0x85, 0x47,
-	0x72, 0x8c, 0x0f, 0x1e, 0xc9, 0x31, 0xce, 0x78, 0x2c, 0xc7, 0x90, 0xc4, 0x06, 0x0e, 0x67, 0x63,
-	0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0xad, 0xb1, 0x4e, 0x55, 0xd8, 0x01, 0x00, 0x00,
+	0x64, 0x60, 0x60, 0xa0, 0x14, 0x04, 0xd5, 0xa7, 0x54, 0xc8, 0xc5, 0xef, 0x9c, 0x9f, 0x57, 0x92,
+	0x99, 0x57, 0x9a, 0x0a, 0x0b, 0x55, 0x72, 0x3c, 0xa1, 0xc5, 0xc5, 0x5a, 0x5c, 0x92, 0x58, 0x54,
+	0x02, 0x75, 0x3f, 0x76, 0xf5, 0x10, 0x25, 0x4e, 0x02, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24,
+	0xc7, 0xf8, 0xe0, 0x91, 0x1c, 0xe3, 0x8c, 0xc7, 0x72, 0x0c, 0x49, 0x6c, 0xe0, 0xa8, 0x35, 0x06,
+	0x04, 0x00, 0x00, 0xff, 0xff, 0xd8, 0x6c, 0x62, 0x9c, 0x4b, 0x02, 0x00, 0x00,
 }
 
 func (m *SyncDAG) Marshal() (dAtA []byte, err error) {
@@ -288,6 +346,57 @@ func (m *SubDAG) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *ContinueSyncDAG) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ContinueSyncDAG) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ContinueSyncDAG) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Start != nil {
+		{
+			size, err := m.Start.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSyncdag(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.SyncPoint != nil {
+		{
+			size, err := m.SyncPoint.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSyncdag(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintSyncdag(dAtA []byte, offset int, v uint64) int {
 	offset -= sovSyncdag(v)
 	base := offset
@@ -340,6 +449,26 @@ func (m *SubDAG) Size() (n int) {
 			l = e.Size()
 			n += 1 + l + sovSyncdag(uint64(l))
 		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ContinueSyncDAG) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.SyncPoint != nil {
+		l = m.SyncPoint.Size()
+		n += 1 + l + sovSyncdag(uint64(l))
+	}
+	if m.Start != nil {
+		l = m.Start.Size()
+		n += 1 + l + sovSyncdag(uint64(l))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -609,6 +738,132 @@ func (m *SubDAG) Unmarshal(dAtA []byte) error {
 			}
 			m.Blocks = append(m.Blocks, &Hash{})
 			if err := m.Blocks[len(m.Blocks)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSyncdag(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthSyncdag
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthSyncdag
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ContinueSyncDAG) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSyncdag
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ContinueSyncDAG: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ContinueSyncDAG: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SyncPoint", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSyncdag
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSyncdag
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSyncdag
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.SyncPoint == nil {
+				m.SyncPoint = &Hash{}
+			}
+			if err := m.SyncPoint.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Start", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSyncdag
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSyncdag
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSyncdag
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Start == nil {
+				m.Start = &Hash{}
+			}
+			if err := m.Start.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

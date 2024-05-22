@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qng/core/event"
 	"github.com/Qitmeer/qng/core/json"
 	pv "github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/Qitmeer/qng/p2p/discover"
@@ -479,6 +480,30 @@ func (s *Service) BroadcastMessage(data interface{}) {
 
 }
 
+func (s *Service) BroadcastBlock(block *types.SerializedBlock, source *peer.ID) error {
+	for _, pe := range s.Peers().CanSyncPeers() {
+		if source != nil {
+			if pe.GetID() == *source {
+				continue
+			}
+		}
+		if pe.ChainState().ProtocolVersion < uint32(pv.BroadcastblockProtocolVersion) {
+			continue
+		}
+		go func(pe *peers.Peer) {
+			blockBytes, err := block.Bytes()
+			if err != nil {
+				log.Error(err.Error())
+				return
+			}
+			if _, err := s.sy.Send(pe, synch.RPCBroadcastBlock, &pb.BroadcastBlock{Block: &pb.BlockData{BlockBytes: blockBytes}}); err != nil {
+				log.Error(err.Error())
+			}
+		}(pe)
+	}
+	return nil
+}
+
 func (s *Service) GetBanlist() map[peer.ID][]*json.BadResponse {
 	result := map[peer.ID][]*json.BadResponse{}
 	bads := s.Peers().Bad()
@@ -574,6 +599,10 @@ func (s *Service) RegainMempool() {
 
 func (s *Service) IsCurrent() bool {
 	return s.PeerSync().IsCurrent()
+}
+
+func (s *Service) IsNearlySynced() bool {
+	return s.PeerSync().IsNearlySynced()
 }
 
 func (s *Service) IsRunning() bool {
@@ -677,7 +706,7 @@ func NewService(cfg *config.Config, consensus model.Consensus, param *params.Par
 	if len(cfg.Listener) > 0 {
 		ipAddr = net.ParseIP(cfg.Listener)
 	}
-	if ipAddr == nil {
+	if ipAddr == nil && !cfg.DisableListen {
 		ipAddr = IpAddr()
 	}
 
@@ -697,15 +726,18 @@ func NewService(cfg *config.Config, consensus model.Consensus, param *params.Par
 		return nil, err
 	}
 	opts := s.buildOptions(ipAddr, s.privKey)
-	h, err := libp2p.New(opts...)
+	if cfg.DisableListen {
+		opts = append(opts, libp2p.DisableMetrics())
+		s.host, err = libp2p.NewWithoutDefaults(opts...)
+	} else {
+		s.host, err = libp2p.New(opts...)
+	}
 	if err != nil {
 		log.Error("Failed to create p2p host")
 		return nil, err
 	}
 
-	s.host = h
-
-	s.cfg.BootstrapNodeAddr = filterBootStrapAddrs(h.ID().String(), s.cfg.BootstrapNodeAddr)
+	s.cfg.BootstrapNodeAddr = filterBootStrapAddrs(s.host.ID().String(), s.cfg.BootstrapNodeAddr)
 
 	psOpts := []pubsub.Option{
 		pubsub.WithMessageSigning(false),
@@ -753,6 +785,8 @@ func logIPAddr(id peer.ID, addrs ...multiaddr.Multiaddr) {
 	}
 	if correctAddr != nil {
 		log.Info(fmt.Sprintf("Node started p2p server:multiAddr=%s", correctAddr.String()+"/p2p/"+id.String()))
+	} else {
+		log.Warn("QNG P2P server will be useless, neither dialing nor listening")
 	}
 }
 

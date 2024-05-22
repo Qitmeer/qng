@@ -13,9 +13,11 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/holiman/uint256"
 	"golang.org/x/crypto/sha3"
 	"math/big"
 	"runtime"
@@ -160,17 +162,16 @@ func (me *MeerEngine) Prepare(chain consensus.ChainHeaderReader, header *types.H
 	return nil
 }
 
-func (me *MeerEngine) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, withdrawals []*types.Withdrawal) {
+func (me *MeerEngine) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, body *types.Body) {
 	me.OnExtraStateChange(chain, header, state)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 }
 
-func (me *MeerEngine) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, withdrawals []*types.Withdrawal) (*types.Block, error) {
-	// Finalize block
-	me.Finalize(chain, header, state, txs, uncles, nil)
+func (me *MeerEngine) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, body *types.Body, receipts []*types.Receipt) (*types.Block, error) {
+	me.Finalize(chain, header, state, body)
 
 	// Header seems complete, assemble into a block and return
-	return types.NewBlock(header, txs, uncles, receipts, trie.NewStackTrie(nil)), nil
+	return types.NewBlock(header, body, receipts, trie.NewStackTrie(nil)), nil
 }
 
 func (me *MeerEngine) SealHash(header *types.Header) (hash common.Hash) {
@@ -221,13 +222,13 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 		me.log.Error(fmt.Sprintf("rlp decoding failed: %v", err))
 		return
 	}
-	oldBalance := state.GetBalance(*tx.To())
+	oldBalance := state.GetBalance(*tx.To()).ToBig()
 	if oldBalance == nil {
 		oldBalance = big.NewInt(0)
 	}
 
 	if tx.Nonce() == uint64(qtypes.TxTypeCrossChainExport) {
-		state.AddBalance(*tx.To(), tx.Value())
+		state.AddBalance(*tx.To(), uint256.MustFromBig(tx.Value()), tracing.BalanceChangeTransfer)
 		me.log.Debug(fmt.Sprintf("Cross chain(%s):%s(MEER) => %s(ETH)", tx.To().String(), tx.Value().String(), tx.Value().String()))
 	} else {
 		fee := big.NewInt(0).Sub(oldBalance, tx.Value())
@@ -241,7 +242,7 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 			efee := big.NewInt(0).Sub(fee, mfee)
 			if efee.Sign() > 0 {
 				feeStr = fmt.Sprintf("fee:%s(MEER)+%s(ETH)", mfee.String(), efee.String())
-				state.AddBalance(header.Coinbase, efee)
+				state.AddBalance(header.Coinbase, uint256.MustFromBig(efee), tracing.BalanceIncreaseRewardMineBlock)
 				nonce := state.GetNonce(header.Coinbase)
 				state.SetNonce(header.Coinbase, nonce)
 			} else {
@@ -250,11 +251,11 @@ func (me *MeerEngine) OnExtraStateChange(chain consensus.ChainHeaderReader, head
 		} else {
 			feeStr = fmt.Sprintf("fee:%s(MEER)", fee.String())
 		}
-		state.SubBalance(*tx.To(), oldBalance)
+		state.SubBalance(*tx.To(), uint256.MustFromBig(oldBalance), tracing.BalanceChangeTransfer)
 		me.log.Debug(fmt.Sprintf("Cross chain(%s):%s(ETH) => %s(MEER) + %s", tx.To().String(), oldBalance.String(), tx.Value().String(), feeStr))
 	}
 
-	newBalance := state.GetBalance(*tx.To())
+	newBalance := state.GetBalance(*tx.To()).ToBig()
 
 	changeB := big.NewInt(0)
 	changeB = changeB.Sub(newBalance, oldBalance)

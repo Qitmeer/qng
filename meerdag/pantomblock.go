@@ -1,6 +1,7 @@
 package meerdag
 
 import (
+	"bytes"
 	s "github.com/Qitmeer/qng/core/serialization"
 	"io"
 )
@@ -161,6 +162,35 @@ func (pb *PhantomBlock) GetRedDiffAnticone() *IdSet {
 	return pb.redDiffAnticone
 }
 
+func (pb *PhantomBlock) GetDiffAnticoneList(filterType FilterType) []uint {
+	if pb.GetDiffAnticoneSize() <= 0 {
+		return nil
+	}
+	list := []uint{}
+	for i := 0; i < pb.GetDiffAnticoneSize(); i++ {
+		list = append(list, MaxId)
+	}
+	if filterType == Blue ||
+		filterType == All {
+		if pb.GetBlueDiffAnticoneSize() > 0 {
+			for k, v := range pb.GetBlueDiffAnticone().GetMap() {
+				idx := v.(uint) - 1
+				list[idx] = k
+			}
+		}
+	}
+	if filterType == Red ||
+		filterType == All {
+		if pb.GetRedDiffAnticoneSize() > 0 {
+			for k, v := range pb.GetRedDiffAnticone().GetMap() {
+				idx := v.(uint) - 1
+				list[idx] = k
+			}
+		}
+	}
+	return list
+}
+
 func (pb *PhantomBlock) GetBlueDiffAnticoneSize() int {
 	if pb.blueDiffAnticone == nil {
 		return 0
@@ -228,4 +258,14 @@ func (pb *PhantomBlock) CleanDiffAnticone() {
 	if pb.redDiffAnticone != nil {
 		pb.redDiffAnticone.Clean()
 	}
+}
+
+func (pb *PhantomBlock) Bytes() []byte {
+	var buff bytes.Buffer
+	err := pb.Encode(&buff)
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return buff.Bytes()
 }

@@ -5,6 +5,7 @@ import (
 )
 
 func Test_HasId(t *testing.T) {
+	t.Parallel()
 	hl := IdSlice{}
 	hl = append(hl, 0)
 

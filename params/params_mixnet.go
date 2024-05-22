@@ -7,9 +7,10 @@
 package params
 
 import (
-	"github.com/Qitmeer/qng/core/types"
 	"math/big"
 	"time"
+
+	"github.com/Qitmeer/qng/core/types"
 
 	"github.com/Qitmeer/qng/common"
 	"github.com/Qitmeer/qng/core/protocol"
@@ -23,10 +24,10 @@ import (
 var testMixNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 242), common.Big1)
 
 // target time per block unit second(s)
-const mixTargetTimePerBlock = 15
+const mixTargetTimePerBlock = 1
 
-// Difficulty check interval is about 30*15 = 7.5 mins
-const mixWorkDiffWindowSize = 30
+// The DAA should take the median of 60 blocks, so in order to do that we need 60 window size.
+const mixWorkDiffWindowSize = 60
 
 // testPowNetParams defines the network parameters for the test network.
 var MixNetParams = Params{
@@ -50,14 +51,7 @@ var MixNetParams = Params{
 		GenesisAmountUnit: 1000 * 1e8,                              // 1000 MEER every utxo
 		MaxLockHeight:     86400 / mixTargetTimePerBlock * 365 * 5, // max lock height
 	},
-	CoinbaseConfig: CoinbaseConfigs{
-		{
-			Height:                    23000,
-			Version:                   CoinbaseVersionV1,
-			ExtraDataIncludedVer:      true,
-			ExtraDataIncludedNodeInfo: true,
-		},
-	},
+	CoinbaseConfig: CoinbaseConfigs{},
 	PowConfig: &pow.PowConfig{
 		Blake2bdPowLimit:             testMixNetPowLimit,
 		Blake2bdPowLimitBits:         0x2003ffff,
@@ -85,6 +79,7 @@ var MixNetParams = Params{
 		},
 		// after this height the big graph will be the main pow graph
 		AdjustmentStartMainHeight: 1440 * 15 / mixTargetTimePerBlock,
+		DifficultyMode:            pow.DIFFICULTY_MODE_MEER,
 	},
 
 	WorkDiffAlpha:            1,
@@ -110,6 +105,7 @@ var MixNetParams = Params{
 
 	// Address encoding magics
 	NetworkAddressPrefix: "X",
+	Bech32HRPSegwit:      "x",
 	PubKeyAddrID:         [2]byte{0x2f, 0x16}, // starts with Xx
 	PubKeyHashAddrID:     [2]byte{0x11, 0x52}, // starts with Xm
 	PKHEdwardsAddrID:     [2]byte{0x11, 0x41}, // starts with Xe
@@ -126,7 +122,7 @@ var MixNetParams = Params{
 	SLIP0044CoinType: 813,
 	LegacyCoinType:   223,
 
-	CoinbaseMaturity:     720,
+	CoinbaseMaturity:     16,
 	OrganizationPkScript: hexMustDecode("76a91429209320e66d96839785dd07e643a7f1592edc5a88ac"),
 	TokenAdminPkScript:   hexMustDecode("00000000c96d6d76a914b8834294977b26a44094fe2216f8a7d59af1130888ac"),
 }

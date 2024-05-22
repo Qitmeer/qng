@@ -6,6 +6,7 @@ import (
 )
 
 func Test_Has(t *testing.T) {
+	t.Parallel()
 	hl := HashSlice{}
 	hl = append(hl, &hash.ZeroHash)
 

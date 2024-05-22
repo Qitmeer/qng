@@ -38,6 +38,8 @@ const (
 	RPCGetBlockDatas = "/qitmeer/req/getblockdatas/1"
 	// RPCGetBlocks defines the topic for the get blocks rpc method.
 	RPCSyncDAG = "/qitmeer/req/syncdag/1"
+	// RPCContinueSyncDAG defines the topic for the get blocks rpc method.
+	RPCContinueSyncDAG = "/qitmeer/req/continuesyncdag/1"
 	// RPCTransaction defines the topic for the transaction rpc method.
 	RPCTransaction = "/qitmeer/req/transaction/1"
 	// RPCInventory defines the topic for the inventory rpc method.
@@ -60,6 +62,8 @@ const (
 	RPCGetData = "/qitmeer/req/getdata/1"
 	// RPCStateRoot defines the topic for the stateroot rpc method.
 	RPCStateRoot = "/qitmeer/req/stateroot/1"
+	// RPCBroadcastBlock defines the topic for the broadcast block rpc method.
+	RPCBroadcastBlock = "/qitmeer/req/broadcastblock/1"
 )
 
 // Time to first byte timeout. The maximum time to wait for first byte of
@@ -164,6 +168,12 @@ func (s *Sync) registerRPCHandlers() {
 	)
 
 	s.registerRPC(
+		RPCContinueSyncDAG,
+		&pb.ContinueSyncDAG{},
+		s.conSyncDAGHandler,
+	)
+
+	s.registerRPC(
 		RPCTransaction,
 		&pb.GetTxs{},
 		s.txHandler,
@@ -228,6 +238,12 @@ func (s *Sync) registerRPCHandlers() {
 		&pb.StateRootReq{},
 		s.stateRootHandler,
 	)
+
+	s.registerRPC(
+		RPCBroadcastBlock,
+		&pb.BroadcastBlock{},
+		s.broadcastBlockHandler,
+	)
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
@@ -274,12 +290,16 @@ func (s *Sync) Send(pe *peers.Peer, protocol string, message interface{}) (inter
 		e = s.SendPingRequest(stream, pe)
 	case RPCSyncDAG:
 		ret, e = s.sendSyncDAGRequest(stream, pe)
+	case RPCContinueSyncDAG:
+		ret, e = s.sendSyncDAGRequest(stream, pe)
 	case RPCSyncQNR:
 		ret, e = s.sendQNRRequest(stream, pe)
 	case RPCTransaction:
 		ret, e = s.sendTxRequest(stream, pe)
 	case RPCStateRoot:
 		ret, e = s.sendStateRootRequest(stream, pe)
+	case RPCBroadcastBlock:
+		e = s.sendBroadcastBlockRequest(stream, pe)
 	default:
 		return nil, fmt.Errorf("Can't support:%s", protocol)
 	}

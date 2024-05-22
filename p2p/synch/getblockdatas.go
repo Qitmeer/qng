@@ -231,7 +231,8 @@ func (ps *PeerSync) processGetBlockDatas(pe *peers.Peer, blocks []*hash.Hash) *P
 			block = b.Block
 		}
 		//
-		_, IsOrphan, err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags)
+		pid := pe.GetID()
+		_, IsOrphan, err := ps.sy.p2p.BlockChain().ProcessBlock(block, behaviorFlags, &pid)
 		if err != nil {
 			log.Error(fmt.Sprintf("Failed to process block:hash=%s err=%s", block.Hash(), err), "processID", ps.processID)
 			continue
@@ -332,4 +333,55 @@ func (ps *PeerSync) OnGetData(sp *peers.Peer, invList []*pb.InvVect) error {
 		}
 	}
 	return nil
+}
+
+func (s *Sync) sendBroadcastBlockRequest(stream network.Stream, pe *peers.Peer) *common.Error {
+	e := ReadRspCode(stream, s.p2p)
+	if !e.Code.IsSuccess() {
+		e.Add("get block date request rsp")
+		return e
+	}
+	msg := new(uint64)
+	if err := DecodeMessage(stream, s.p2p, msg); err != nil {
+		return common.NewError(common.ErrStreamRead, err)
+	}
+	if *msg != 0 {
+		log.Trace("broadcast block is added")
+	}
+	return nil
+}
+
+func (s *Sync) broadcastBlockHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *peers.Peer) *common.Error {
+	m, ok := msg.(*pb.BroadcastBlock)
+	if !ok {
+		err := fmt.Errorf("message is not type *pb.Hash")
+		return ErrMessage(err)
+	}
+	block, err := types.NewBlockFromBytes(m.Block.BlockBytes)
+	if err != nil {
+		return ErrMessage(err)
+	}
+	ret := uint64(0)
+	if s.p2p.BlockChain().BlockDAG().HasBlock(block.Hash()) ||
+		s.p2p.BlockChain().IsOrphan(block.Hash()) ||
+		s.p2p.BlockChain().HasBlockInDB(block.Hash()) {
+		return s.EncodeResponseMsg(stream, ret)
+	}
+	for _, ph := range block.Block().Parents {
+		if !s.p2p.BlockChain().BlockDAG().HasBlock(ph) {
+			return s.EncodeResponseMsg(stream, ret)
+		}
+	}
+	peid := pe.GetID()
+	go func() {
+		if s.p2p.BlockChain().BlockDAG().HasBlock(block.Hash()) {
+			return
+		}
+		_, _, err = s.p2p.BlockChain().ProcessBlock(block, blockchain.BFBroadcast, &peid)
+		if err != nil {
+			log.Trace("Failed to process block", "hash", block.Hash(), "error", err)
+		}
+	}()
+	ret = 1
+	return s.EncodeResponseMsg(stream, ret)
 }

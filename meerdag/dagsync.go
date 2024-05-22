@@ -13,8 +13,9 @@ const MaxMainLocatorNum = 32
 type SyncMode byte
 
 const (
-	DirectMode SyncMode = 0
-	SubDAGMode SyncMode = 1
+	DirectMode   SyncMode = 0
+	SubDAGMode   SyncMode = 1
+	ContinueMode SyncMode = 2
 )
 
 type DAGSync struct {
@@ -37,6 +38,23 @@ func (ds *DAGSync) CalcSyncBlocks(gs *GraphState, locator []*hash.Hash, mode Syn
 			return result, nil
 		}
 		return ds.bd.sortBlock(locator), nil
+	} else if mode == ContinueMode {
+		result := []*hash.Hash{}
+		if len(locator) <= 0 {
+			return result, nil
+		}
+		point := ds.bd.getBlock(locator[0])
+		if point == nil {
+			return result, nil
+		}
+		if !ds.bd.isOnMainChain(point.GetID()) {
+			return result, nil
+		}
+		startBlock := ds.bd.getBlock(locator[1])
+		if startBlock == nil {
+			return result, nil
+		}
+		return ds.getBlockChainFromMain(startBlock, maxHashes), point.GetHash()
 	}
 
 	var point IBlock
@@ -164,6 +182,28 @@ func (ds *DAGSync) getBlockChainFromMain(point IBlock, maxHashes uint) []*hash.H
 		result = append(result, block.GetHash())
 		if uint(len(result)) >= maxHashes {
 			break
+		}
+	}
+	rlen := len(result)
+	if uint(rlen) < maxHashes {
+		pdb, ok := ds.bd.GetInstance().(*Phantom)
+		if ok {
+			if !pdb.GetDiffAnticone().IsEmpty() {
+				da := pdb.GetDiffAnticone().SortList(false)
+				for _, id := range da {
+					block := ds.bd.getBlockById(id)
+					if block == nil {
+						continue
+					}
+					if ds.bd.CanPrune(block, mainTip) {
+						continue
+					}
+					result = append(result, block.GetHash())
+					if uint(len(result)) >= maxHashes {
+						break
+					}
+				}
+			}
 		}
 	}
 	return result

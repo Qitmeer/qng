@@ -86,3 +86,17 @@ type TokenState struct {
 	Balance    int64  `json:"balance,omitempty"`
 	LockedMeer int64  `json:"lockedMEER,omitempty"`
 }
+
+type TipInfo struct {
+	ID          uint64 `json:"id"`
+	Hash        string `json:"hash"`
+	Height      uint64 `json:"height"`
+	PruneHeight uint64 `json:"pruneheight,omitempty"`
+	PruneCD     uint64 `json:"prunecd,omitempty"`
+}
+
+type TipsInfo struct {
+	Count   int       `json:"count"`
+	Valid   []TipInfo `json:"valid"`
+	Invalid []TipInfo `json:"invalid,omitempty"`
+}
