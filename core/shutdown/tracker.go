@@ -2,7 +2,6 @@ package shutdown
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 )
@@ -23,6 +22,10 @@ func (t *Tracker) Check() error {
 	}
 	if len(bhbs) <= 0 {
 		return nil
+	}
+	max_file_size := 512
+	if len(bhbs) > max_file_size*1024 { // 512 kb
+		return fmt.Errorf("file size large than %d kb : %s", max_file_size, t.filePath)
 	}
 	err = fmt.Errorf("Illegal withdrawal at block:%s, you can cleanup your block data base by '--cleanup'.", string(bhbs))
 	log.Error(err.Error())
@@ -72,7 +75,7 @@ func ReadFile(path string) ([]byte, error) {
 		}
 	}
 
-	ba, err := ioutil.ReadFile(path)
+	ba, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
