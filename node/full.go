@@ -13,13 +13,10 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain"
 	"github.com/Qitmeer/qng/core/coinbase"
-	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/p2p"
-	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/services/acct"
@@ -157,18 +154,6 @@ func (qm *QitmeerFull) RegisterWalletService(cfg *config.Config) error {
 	}
 	qm.Services().RegisterService(walletmgr)
 	return nil
-}
-
-func (qm *QitmeerFull) RegisterAmana() error {
-	if !qm.node.Config.Amana ||
-		params.ActiveNetParams.Net == protocol.MainNet {
-		return nil
-	}
-	ser, err := amana.New(qm.node.Config, qm.node.consensus)
-	if err != nil {
-		return err
-	}
-	return qm.Services().RegisterService(ser)
 }
 
 // return address api
