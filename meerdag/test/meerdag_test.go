@@ -149,7 +149,24 @@ var testDataFilePath string = "./testData.json"
 
 var tbMap map[string]meerdag.IBlock
 
+func getConfig(memory bool) *config.Config {
+	cfg := common.DefaultConfig(os.TempDir())
+	cfg.DevNextGDB = true
+	if memory {
+		cfg.DataDir = ""
+	}
+	return cfg
+}
+
 func InitBlockDAG(dagType string, graph string) meerdag.ConsensusAlgorithm {
+	return initBlockDAG(dagType, graph, getConfig(true))
+}
+
+func InitBlockDAGByDiskDB(dagType string, graph string) meerdag.ConsensusAlgorithm {
+	return initBlockDAG(dagType, graph, getConfig(false))
+}
+
+func initBlockDAG(dagType string, graph string, cfg *config.Config) meerdag.ConsensusAlgorithm {
 	output := io.Writer(os.Stdout)
 	glogger := l.NewGlogHandler(l.StreamHandler(output, l.TerminalFormat(false)))
 	glogger.Verbosity(l.LvlError)
@@ -184,8 +201,7 @@ func InitBlockDAG(dagType string, graph string) meerdag.ConsensusAlgorithm {
 	if blen < 2 {
 		return nil
 	}
-	cfg := common.DefaultConfig(os.TempDir())
-	cfg.DevNextGDB = false
+	database.Cleanup(cfg)
 	db, err := loadBlockDB(cfg)
 	if err != nil {
 		fmt.Println(err)
@@ -356,9 +372,6 @@ func reverseBlockList(s []uint) []uint {
 }
 
 func loadBlockDB(cfg *config.Config) (model.DataBase, error) {
-	ccfg := *cfg
-	ccfg.Cleanup = true
-	database.Cleanup(&ccfg)
 	db, err := database.New(cfg, system.InterruptListener())
 	if err != nil {
 		return nil, err
