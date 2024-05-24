@@ -3,11 +3,7 @@ package test
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/system"
-	"github.com/Qitmeer/qng/database"
 	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/services/common"
-	"os"
 	"strconv"
 	"testing"
 )
@@ -390,7 +386,7 @@ func Test_Rollback(t *testing.T) {
 }
 
 func Test_tips(t *testing.T) {
-	ibd := InitBlockDAG(meerdag.PHANTOM, "PH_fig2-blocks")
+	ibd := InitBlockDAGByDiskDB(meerdag.PHANTOM, "PH_fig2-blocks")
 	if ibd == nil {
 		t.FailNow()
 	}
@@ -428,9 +424,7 @@ func Test_tips(t *testing.T) {
 }
 
 func checkLoad(t *testing.T) {
-	cfg := common.DefaultConfig(os.TempDir())
-	cfg.DevNextGDB = false
-	db, err := database.New(cfg, system.InterruptListener())
+	db, err := loadBlockDB(getConfig(false))
 	if err != nil {
 		t.Fatal(err)
 	}

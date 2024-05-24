@@ -27,6 +27,9 @@ func New(cfg *config.Config, interrupt <-chan struct{}) (model.DataBase, error) 
 }
 
 func Cleanup(cfg *config.Config) {
+	if len(cfg.DataDir) <= 0 {
+		return // do nothing when using the memory db
+	}
 	dbPaths := []string{cfg.ResolveDataPath(chaindb.DBDirectoryName), legacychaindb.BlockDbPath(cfg)}
 	for _, dbPath := range dbPaths {
 		if util.FileExists(dbPath) {
