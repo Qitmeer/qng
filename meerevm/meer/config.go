@@ -9,7 +9,6 @@ import (
 	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -49,7 +48,6 @@ func MakeConfig(cfg *config.Config) (*eth.Config, error) {
 	datadir := cfg.DataDir
 	genesis := CurrentGenesis()
 
-	etherbase := common.Address{}
 	econfig := ethconfig.Defaults
 
 	econfig.NetworkId = genesis.Config.ChainID.Uint64()
@@ -57,10 +55,6 @@ func MakeConfig(cfg *config.Config) (*eth.Config, error) {
 	econfig.NoPruning = false
 	econfig.SkipBcVersionCheck = false
 	econfig.ConsensusEngine = createConsensusEngine
-
-	econfig.Miner.Etherbase = etherbase
-	econfig.Miner.ExtraData = []byte{byte(0)}
-	econfig.Miner.External = &MeerPool{}
 
 	econfig.TxPool.NoLocals = false
 

@@ -1,7 +1,6 @@
 package meer
 
 import (
-	"fmt"
 	"github.com/Qitmeer/qng/consensus/model"
 	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
 	qtypes "github.com/Qitmeer/qng/core/types"
@@ -104,26 +103,4 @@ func BuildEVMBlock(block *qtypes.SerializedBlock) (*mmeer.Block, error) {
 		}
 	}
 	return result, nil
-}
-
-const (
-	commitInterruptNone int32 = iota
-	commitInterruptNewHead
-	commitInterruptResubmit
-	commitInterruptTimeout
-)
-
-// signalToErr converts the interruption signal to a concrete error type for return.
-// The given signal must be a valid interruption signal.
-func signalToErr(signal int32) error {
-	switch signal {
-	case commitInterruptNewHead:
-		return errBlockInterruptedByNewHead
-	case commitInterruptResubmit:
-		return errBlockInterruptedByRecommit
-	case commitInterruptTimeout:
-		return errBlockInterruptedByTimeout
-	default:
-		panic(fmt.Errorf("undefined signal %d", signal))
-	}
 }
