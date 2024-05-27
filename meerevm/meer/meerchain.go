@@ -145,7 +145,7 @@ func (b *MeerChain) buildBlock(parent *types.Header, qtxs []model.Tx, timestamp 
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	gaslimit := core.CalcGasLimit(parentBlock.GasLimit(), b.meerpool.config.GasCeil)
+	gaslimit := core.CalcGasLimit(parentBlock.GasLimit(), b.chain.Config().Eth.Miner.GasCeil)
 
 	if forks.NeedFixedGasLimit(parent.Number.Int64(), config.ChainID.Int64()) {
 		gaslimit = 0x10000000000000
@@ -172,7 +172,7 @@ func (b *MeerChain) fillBlock(qtxs []model.Tx, header *types.Header, statedb *st
 	txs := []*types.Transaction{}
 	receipts := []*types.Receipt{}
 
-	header.Coinbase = b.chain.Config().Eth.Miner.Etherbase
+	header.Coinbase = common.Address{}
 	for _, tx := range qtxs {
 		if tx.GetTxType() == qtypes.TxTypeCrossChainVM ||
 			tx.GetTxType() == qtypes.TxTypeCrossChainImport {
@@ -549,12 +549,14 @@ func NewMeerChain(consensus model.Consensus) (*MeerChain, error) {
 		log.Error(err.Error())
 		return nil, err
 	}
-
-	mc := &MeerChain{
-		chain:     chain,
-		meerpool:  chain.Config().Eth.Miner.External.(*MeerPool),
-		consensus: consensus,
+	err = chain.Ether().Miner().SetExtra(nil)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, err
 	}
-	mc.meerpool.init(consensus, &chain.Config().Eth.Miner, chain.Config().Eth.Genesis.Config, chain.Ether().Engine(), chain.Ether(), chain.Ether().EventMux())
-	return mc, nil
+	return &MeerChain{
+		chain:     chain,
+		meerpool:  newMeerPool(consensus, chain.Ether()),
+		consensus: consensus,
+	}, nil
 }
