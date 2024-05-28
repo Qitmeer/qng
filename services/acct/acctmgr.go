@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"sync"
 
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/address"
@@ -22,13 +23,14 @@ import (
 // account manager communicate with various backends for signing transactions.
 type AccountManager struct {
 	service.Service
-	chain    *blockchain.BlockChain
-	cfg      *config.Config
-	db       legacydb.DB
-	info     *AcctInfo
-	utxoops  []*UTXOOP
-	watchers map[string]*AcctBalanceWatcher
-	events   *event.Feed
+	chain     *blockchain.BlockChain
+	cfg       *config.Config
+	db        legacydb.DB
+	info      *AcctInfo
+	utxoops   []*UTXOOP
+	watchLock sync.RWMutex
+	watchers  map[string]*AcctBalanceWatcher
+	events    *event.Feed
 }
 
 func (a *AccountManager) SetEvents(evs *event.Feed) {
@@ -313,13 +315,17 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *utxo.UtxoE
 		au := NewAcctUTXO()
 		au.SetBalance(uint64(entry.Amount().Value))
 
+		a.watchLock.RLock()
 		wb, exist := a.watchers[addrStr]
+		a.watchLock.RUnlock()
 		if entry.IsCoinBase() {
 			au.SetCoinbase()
 			//
 			if !exist {
 				wb = NewAcctBalanceWatcher(addrStr, balance)
+				a.watchLock.Lock()
 				a.watchers[addrStr] = wb
+				a.watchLock.Unlock()
 			}
 			opk := OutpointKey(op)
 			uw := BuildUTXOWatcher(opk, au, entry, a)
@@ -330,7 +336,9 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *utxo.UtxoE
 			au.SetCLTV()
 			if !exist {
 				wb = NewAcctBalanceWatcher(addrStr, balance)
+				a.watchLock.Lock()
 				a.watchers[addrStr] = wb
+				a.watchLock.Unlock()
 			}
 			opk := OutpointKey(op)
 			uw := BuildUTXOWatcher(opk, au, entry, a)
@@ -406,13 +414,17 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *utxo.UtxoE
 
 func (a *AccountManager) DelWatcher(addr string, op *types.TxOutPoint) {
 	if op != nil {
+		a.watchLock.RLock()
 		wb, exist := a.watchers[addr]
+		a.watchLock.RUnlock()
 		if !exist {
 			return
 		}
 		wb.Del(OutpointKey(op))
 	} else {
+		a.watchLock.Lock()
 		delete(a.watchers, addr)
+		a.watchLock.Unlock()
 	}
 }
 
@@ -449,10 +461,14 @@ func (a *AccountManager) initWatchers(dbTx legacydb.Tx) error {
 				return nil
 			}
 			addrStr := string(k)
+			a.watchLock.RLock()
 			wb, exist := a.watchers[addrStr]
+			a.watchLock.RUnlock()
 			if !exist {
 				wb = NewAcctBalanceWatcher(addrStr, balance)
+				a.watchLock.Lock()
 				a.watchers[addrStr] = wb
+				a.watchLock.Unlock()
 			}
 			kus = append(kus, ku)
 			aus = append(aus, au)
@@ -472,6 +488,8 @@ func (a *AccountManager) initWatchers(dbTx legacydb.Tx) error {
 			}
 		}
 	}
+	a.watchLock.RLock()
+	defer a.watchLock.RUnlock()
 	if len(a.watchers) > 0 {
 		for _, w := range a.watchers {
 			err = w.Update(a)
@@ -514,7 +532,8 @@ func (a *AccountManager) Commit() error {
 			return err
 		}
 	}
-
+	a.watchLock.RLock()
+	defer a.watchLock.RUnlock()
 	if len(a.watchers) > 0 {
 		for _, w := range a.watchers {
 			err = w.Update(a)
@@ -534,7 +553,9 @@ func (a *AccountManager) GetBalance(addr string) (uint64, error) {
 		return 0, fmt.Errorf("network error:%s", addr)
 	}
 	result := uint64(0)
+	a.watchLock.RLock()
 	wb, exist := a.watchers[addr]
+	a.watchLock.RUnlock()
 	if exist {
 		return wb.GetBalance(), nil
 	}
@@ -562,7 +583,9 @@ func (a *AccountManager) GetUTXOs(addr string) ([]UTXOResult, error) {
 		if len(us) > 0 {
 			for k, v := range us {
 				ur := UTXOResult{Type: v.TypeStr(), Amount: v.balance, Status: "valid"}
+				a.watchLock.RLock()
 				wb, exist := a.watchers[addr]
+				a.watchLock.RUnlock()
 				if exist {
 					wu := wb.GetByOPS(k)
 					if wu != nil {
@@ -606,7 +629,9 @@ func (a *AccountManager) AddAddress(addr string) error {
 	if a.info.Has(addr) {
 		return fmt.Errorf(fmt.Sprintf("Already exists:%s", addr))
 	}
+	a.watchLock.RLock()
 	_, exist := a.watchers[addr]
+	a.watchLock.RUnlock()
 	if exist {
 		return fmt.Errorf(fmt.Sprintf("Already exists watcher:%s", addr))
 	}
