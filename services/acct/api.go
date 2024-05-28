@@ -32,8 +32,10 @@ func (api *PublicAccountManagerAPI) GetAcctInfo() (interface{}, error) {
 		Mode:    api.a.cfg.AcctMode,
 		Version: api.a.info.version,
 		Total:   api.a.info.total,
-		Watcher: uint32(len(api.a.watchers)),
 	}
+	api.a.watchLock.RLock()
+	ai.Watcher = uint32(len(api.a.watchers))
+	api.a.watchLock.RUnlock()
 	if api.a.info.GetAddrTotal() > 0 {
 		ai.Addrs = api.a.info.addrs
 	}
