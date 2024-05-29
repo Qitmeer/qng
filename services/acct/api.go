@@ -43,7 +43,7 @@ func (api *PublicAccountManagerAPI) GetAcctInfo() (interface{}, error) {
 	return ai, nil
 }
 
-func (api *PublicAccountManagerAPI) GetBalanceInfo(addr string, coinID types.CoinID) (interface{}, error) {
+func (api *PublicAccountManagerAPI) GetBalanceInfo(addr string, coinID types.CoinID, verbose bool) (interface{}, error) {
 	result := BalanceInfoResult{CoinId: coinID.Name()}
 	if coinID == types.MEERA {
 		bal, err := api.a.GetBalance(addr)
@@ -51,9 +51,11 @@ func (api *PublicAccountManagerAPI) GetBalanceInfo(addr string, coinID types.Coi
 			return nil, err
 		}
 		result.Balance = int64(bal)
-		result.UTXOs, err = api.a.GetUTXOs(addr)
-		if err != nil {
-			return nil, err
+		if verbose {
+			result.UTXOs, err = api.a.GetUTXOs(addr)
+			if err != nil {
+				return nil, err
+			}
 		}
 		return result, nil
 	} else if coinID == types.MEERB {
