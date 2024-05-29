@@ -516,11 +516,15 @@ function get_balance() {
 function get_balance_info() {
   local address=$1
   local coinID=$2
+  local verbose=$3
   if [ "$coinID" == "" ]; then
     coinID=0
   fi
+  if [ "$verbose" == "" ]; then
+    verbose="false"
+  fi
 
-  local data='{"jsonrpc":"2.0","method":"getBalanceInfo","params":["'$address'",'$coinID'],"id":null}'
+  local data='{"jsonrpc":"2.0","method":"getBalanceInfo","params":["'$address'",'$coinID','$verbose'],"id":null}'
   get_result "$data"
 }
 
@@ -863,7 +867,7 @@ function usage(){
   echo "  amanapeerinfo"
   echo "  acctinfo"
   echo "  getbalance <address> <coinID>"
-  echo "  getbalanceinfo <address> <coinID>"
+  echo "  getbalanceinfo <address> <coinID> <verbose,default=false>"
   echo "  addbalance <address>"
   echo "  delbalance <address>"
   echo "  getaddresses <private key>"
