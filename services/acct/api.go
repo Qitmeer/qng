@@ -36,6 +36,7 @@ func (api *PublicAccountManagerAPI) GetAcctInfo() (interface{}, error) {
 	api.a.watchLock.RLock()
 	ai.Watcher = uint32(len(api.a.watchers))
 	api.a.watchLock.RUnlock()
+	ai.UtxoWatcher = uint32(api.a.getUtxoWatcherSize())
 	if api.a.info.GetAddrTotal() > 0 {
 		ai.Addrs = api.a.info.addrs
 	}
