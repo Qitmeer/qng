@@ -644,6 +644,24 @@ func (a *AccountManager) AddAddress(addr string) error {
 	}
 	return a.rebuild([]string{addr})
 }
+
+func (a *AccountManager) DelAddress(addr string) error {
+	if !a.cfg.AcctMode {
+		return fmt.Errorf("Please enable --acctmode")
+	}
+	if !address.IsForCurNetwork(addr) {
+		return fmt.Errorf("network error:%s", addr)
+	}
+	if !a.info.Has(addr) {
+		return fmt.Errorf(fmt.Sprintf("Account does not exist:%s", addr))
+	}
+	a.DelWatcher(addr, nil)
+	a.info.Del(addr)
+	return a.db.Update(func(dbTx legacydb.Tx) error {
+		return a.cleanBalanceDB(dbTx, addr)
+	})
+}
+
 func (a *AccountManager) GetChain() *blockchain.BlockChain {
 	return a.chain
 }
