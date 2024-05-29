@@ -69,3 +69,7 @@ func (api *PublicAccountManagerAPI) GetBalanceInfo(addr string, coinID types.Coi
 func (api *PublicAccountManagerAPI) AddBalance(addr string) (interface{}, error) {
 	return nil, api.a.AddAddress(addr)
 }
+
+func (api *PublicAccountManagerAPI) DelBalance(addr string) (interface{}, error) {
+	return nil, api.a.DelAddress(addr)
+}
