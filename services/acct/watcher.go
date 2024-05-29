@@ -3,6 +3,7 @@ package acct
 import (
 	"encoding/hex"
 	"fmt"
+	"sync"
 
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
@@ -19,6 +20,8 @@ type AcctBalanceWatcher struct {
 	unlocUTXONum uint32
 
 	watchers map[string]AcctUTXOIWatcher
+
+	lock sync.RWMutex
 }
 
 func (aw *AcctBalanceWatcher) Add(op []byte, au AcctUTXOIWatcher) {
@@ -26,19 +29,25 @@ func (aw *AcctBalanceWatcher) Add(op []byte, au AcctUTXOIWatcher) {
 		return
 	}
 	key := hex.EncodeToString(op)
+	aw.lock.Lock()
 	aw.watchers[key] = au
+	aw.lock.Unlock()
 	log.Trace(fmt.Sprintf("Balance (%s) add utxo watcher:%s %s", aw.address, key, au.GetName()))
 }
 
 func (aw *AcctBalanceWatcher) Del(op []byte) {
 	key := hex.EncodeToString(op)
+	aw.lock.Lock()
 	delete(aw.watchers, key)
+	aw.lock.Unlock()
 	log.Trace(fmt.Sprintf("Balance (%s) del utxo watcher:%s", aw.address, key))
 }
 
 func (aw *AcctBalanceWatcher) Has(op []byte) bool {
 	ops := hex.EncodeToString(op)
+	aw.lock.RLock()
 	_, exist := aw.watchers[ops]
+	aw.lock.RUnlock()
 	return exist
 }
 
@@ -48,7 +57,10 @@ func (aw *AcctBalanceWatcher) Get(op []byte) AcctUTXOIWatcher {
 }
 
 func (aw *AcctBalanceWatcher) GetByOPS(ops string) AcctUTXOIWatcher {
-	return aw.watchers[ops]
+	aw.lock.RLock()
+	ret := aw.watchers[ops]
+	aw.lock.RUnlock()
+	return ret
 }
 
 func (aw *AcctBalanceWatcher) GetBalance() uint64 {
@@ -58,6 +70,8 @@ func (aw *AcctBalanceWatcher) GetBalance() uint64 {
 func (aw *AcctBalanceWatcher) Update(am *AccountManager) error {
 	aw.unlocked = 0
 	aw.unlocUTXONum = 0
+	aw.lock.RLock()
+	defer aw.lock.RUnlock()
 	for k, w := range aw.watchers {
 		err := w.Update(am)
 		if err != nil {
@@ -76,7 +90,7 @@ func (aw *AcctBalanceWatcher) Update(am *AccountManager) error {
 			if err != nil {
 				return err
 			}
-			am.events.Send(event.New(&types.AutoCollectUtxo{
+			go am.events.Send(event.New(&types.AutoCollectUtxo{
 				Op:      *op,
 				Address: aw.address,
 				Amount:  w.GetBalance(),
