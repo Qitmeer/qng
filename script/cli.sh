@@ -568,6 +568,12 @@ function add_balance() {
   get_result "$data"
 }
 
+function del_balance() {
+  local address=$1
+  local data='{"jsonrpc":"2.0","method":"delBalance","params":["'$address'"],"id":null}'
+  get_result "$data"
+}
+
 function get_acctinfo() {
    local data='{"jsonrpc":"2.0","method":"getAcctInfo","params":[],"id":null}'
    get_result "$data"
@@ -859,6 +865,7 @@ function usage(){
   echo "  getbalance <address> <coinID>"
   echo "  getbalanceinfo <address> <coinID>"
   echo "  addbalance <address>"
+  echo "  delbalance <address>"
   echo "  getaddresses <private key>"
   echo "  modules"
   echo "  daginfo"
@@ -1298,6 +1305,9 @@ elif [ "$1" == "getbalanceinfo" ]; then
 elif [ "$1" == "addbalance" ]; then
   shift
   add_balance $@
+elif [ "$1" == "delbalance" ]; then
+  shift
+  del_balance $@
 elif [ "$1" == "rpcmax" ]; then
   shift
   set_rpc_maxclients $@
