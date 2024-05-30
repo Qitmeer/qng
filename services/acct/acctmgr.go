@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/consensus/model"
 	"sync"
 
 	"github.com/Qitmeer/qng/config"
@@ -31,6 +32,7 @@ type AccountManager struct {
 	watchLock sync.RWMutex
 	watchers  map[string]*AcctBalanceWatcher
 	events    *event.Feed
+	statpoint model.Block
 }
 
 func (a *AccountManager) SetEvents(evs *event.Feed) {
@@ -509,7 +511,7 @@ func (a *AccountManager) Apply(add bool, op *types.TxOutPoint, entry interface{}
 	return nil
 }
 
-func (a *AccountManager) Commit() error {
+func (a *AccountManager) Commit(point model.Block) error {
 	if !a.cfg.AcctMode {
 		return nil
 	}
@@ -542,6 +544,7 @@ func (a *AccountManager) Commit() error {
 			}
 		}
 	}
+	a.statpoint = point
 	return nil
 }
 
@@ -577,15 +580,16 @@ func (a *AccountManager) GetBalance(addr string) (uint64, error) {
 	return result, nil
 }
 
-func (a *AccountManager) GetUTXOs(addr string) ([]UTXOResult, error) {
+func (a *AccountManager) GetUTXOs(addr string, limit *int, locked *bool, amount *uint64) ([]UTXOResult, uint64, error) {
 	err := a.checkAddress(addr)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if !a.info.Has(addr) {
-		return nil, fmt.Errorf("Please track this account:%s", addr)
+		return nil, 0, fmt.Errorf("Please track this account:%s", addr)
 	}
 	utxos := []UTXOResult{}
+	totalAmount := uint64(0)
 	err = a.db.Update(func(dbTx legacydb.Tx) error {
 		us := DBGetACCTUTXOs(dbTx, addr)
 		if len(us) > 0 {
@@ -598,8 +602,14 @@ func (a *AccountManager) GetUTXOs(addr string) ([]UTXOResult, error) {
 					wu := wb.GetByOPS(k)
 					if wu != nil {
 						if wu.IsUnlocked() {
+							if locked != nil && *locked {
+								continue
+							}
 							ur.Status = "unlocked"
 						} else {
+							if locked != nil && !(*locked) {
+								continue
+							}
 							ur.Status = "locked"
 						}
 					}
@@ -616,15 +626,26 @@ func (a *AccountManager) GetUTXOs(addr string) ([]UTXOResult, error) {
 				ur.PreTxHash = op.Hash.String()
 				ur.PreOutIdx = op.OutIndex
 				utxos = append(utxos, ur)
+
+				if limit != nil {
+					if len(utxos) >= *limit {
+						break
+					}
+				}
+				totalAmount += ur.Amount
+				if amount != nil {
+					if totalAmount >= *amount {
+						break
+					}
+				}
 			}
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-
-	return utxos, nil
+	return utxos, totalAmount, nil
 }
 
 func (a *AccountManager) AddAddress(addr string) error {

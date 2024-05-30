@@ -115,12 +115,12 @@ type SubsidyInfo struct {
 }
 
 type AcctInfo struct {
-	Mode        bool     `json:"mode"`
-	Version     uint32   `json:"version"`
-	Total       uint32   `json:"total"`
-	Watcher     uint32   `json:"watcher"`
-	UtxoWatcher uint32   `json:"utxowatcher"`
-	Addrs       []string `json:"addrs,omitempty"`
+	Mode      bool     `json:"mode"`
+	Version   uint32   `json:"version"`
+	StatPoint string   `json:"statpoint"`
+	StatOrder uint32   `json:"statorder"`
+	Total     uint32   `json:"total"`
+	Addrs     []string `json:"addrs,omitempty"`
 }
 
 type MeerDAGInfoResult struct {
