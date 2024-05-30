@@ -311,7 +311,7 @@ func (b *BlockChain) maybeAcceptBlock(block *types.SerializedBlock, flags Behavi
 		Source:               source,
 	})
 	if b.Acct != nil {
-		err = b.Acct.Commit()
+		err = b.Acct.Commit(ib)
 		if err != nil {
 			log.Error(err.Error())
 		}

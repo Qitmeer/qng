@@ -528,7 +528,33 @@ function get_balance_info() {
   get_result "$data"
 }
 
+function get_utxos() {
+  local address=$1
+  local limit=$2
+  local locked=$3
+  if [ "$limit" == "" ]; then
+    limit=0
+  fi
+  if [ "$locked" == "" ]; then
+      local data='{"jsonrpc":"2.0","method":"getUTXOs","params":["'$address'",'$limit'],"id":null}'
+      get_result "$data"
+  else
+      local data='{"jsonrpc":"2.0","method":"getUTXOs","params":["'$address'",'$limit','$locked'],"id":null}'
+      get_result "$data"
+  fi
+}
 
+function get_valid_utxos() {
+  local address=$1
+  local amount=$2
+  if [ "$amount" == "" ]; then
+    amount=0
+  fi
+  if [ "$locked" == "" ]; then
+      local data='{"jsonrpc":"2.0","method":"getValidUTXOs","params":["'$address'",'$amount'],"id":null}'
+      get_result "$data"
+  fi
+}
 
 function unlock() {
   local account=$1
@@ -580,6 +606,11 @@ function del_balance() {
 
 function get_acctinfo() {
    local data='{"jsonrpc":"2.0","method":"getAcctInfo","params":[],"id":null}'
+   get_result "$data"
+}
+
+function get_acctdebuginfo() {
+   local data='{"jsonrpc":"2.0","method":"getAcctDebugInfo","params":[],"id":null}'
    get_result "$data"
 }
 
@@ -866,6 +897,7 @@ function usage(){
   echo "  amanainfo"
   echo "  amanapeerinfo"
   echo "  acctinfo"
+  echo "  acctdebuginfo"
   echo "  getbalance <address> <coinID>"
   echo "  getbalanceinfo <address> <coinID> <verbose,default=false>"
   echo "  addbalance <address>"
@@ -912,6 +944,8 @@ function usage(){
   echo "  getrawtxs <address>"
   echo "utxo   :"
   echo "  getutxo <tx_id> <index> <include_mempool,default=true>"
+  echo "  getutxos <address> <limit> <locked,default=nil is all>"
+  echo "  getvalidutxos <address> <amount>"
   echo "miner  :"
   echo "  template"
   echo "  miningstats"
@@ -1299,6 +1333,9 @@ elif [ "$1" == "rpcinfo" ]; then
 elif [ "$1" == "acctinfo" ]; then
   shift
   get_acctinfo $@
+elif [ "$1" == "acctdebuginfo" ]; then
+  shift
+  get_acctdebuginfo $@
 elif [ "$1" == "getbalance" ]; then
   shift
   get_balance $@
@@ -1306,6 +1343,12 @@ elif [ "$1" == "getbalance" ]; then
 elif [ "$1" == "getbalanceinfo" ]; then
   shift
   get_balance_info $@
+elif [ "$1" == "getutxos" ]; then
+  shift
+  get_utxos $@
+elif [ "$1" == "getvalidutxos" ]; then
+  shift
+  get_valid_utxos $@
 elif [ "$1" == "addbalance" ]; then
   shift
   add_balance $@
