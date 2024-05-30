@@ -100,6 +100,12 @@ func (aw *AcctBalanceWatcher) Update(am *AccountManager) error {
 	return nil
 }
 
+func (aw *AcctBalanceWatcher) GetWatchersSize() int {
+	aw.lock.RLock()
+	defer aw.lock.RUnlock()
+	return len(aw.watchers)
+}
+
 func NewAcctBalanceWatcher(address string, ab *AcctBalance) *AcctBalanceWatcher {
 	return &AcctBalanceWatcher{
 		address:  address,
