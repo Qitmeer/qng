@@ -17,7 +17,7 @@ type UTXOResult struct {
 
 type ValidUTXOsResult struct {
 	Amount uint64       `json:"amount"`
-	Num    int          `json:"total"`
+	Total  int          `json:"total"`
 	UTXOs  []UTXOResult `json:"utxos,omitempty"`
 }
 
