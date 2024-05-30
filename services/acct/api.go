@@ -98,6 +98,7 @@ func (api *PublicAccountManagerAPI) GetValidUTXOs(addr string, amount uint64) (i
 		amount = math.MaxUint64
 	}
 	ret.UTXOs, ret.Amount, err = api.a.GetUTXOs(addr, nil, &locked, &amount)
+	ret.Total = len(ret.UTXOs)
 	return ret, err
 }
 
