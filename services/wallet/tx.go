@@ -80,23 +80,10 @@ func (a *WalletManager) CollectUtxoToEvm() {
 }
 
 func (a *WalletManager) getAvailableUtxos(addr string, amount int64) ([]acct.UTXOResult, int64, error) {
-	otxoList := make([]acct.UTXOResult, 0)
-	utxos, err := a.am.GetUTXOs(addr)
-	if err != nil {
-		return nil, 0, err
-	}
-	sum := uint64(0)
-	for _, utxo := range utxos {
-		if utxo.Status != "unlocked" && utxo.Status != "valid" {
-			continue
-		}
-		sum += utxo.Amount
-		otxoList = append(otxoList, utxo)
-		if sum > uint64(amount) {
-			break
-		}
-	}
-	return otxoList, int64(sum), err
+	locked := false
+	am := uint64(amount)
+	utxos, sum, err := a.am.GetUTXOs(addr, nil, &locked, &am)
+	return utxos, int64(sum), err
 }
 
 func (a *WalletManager) sendTx(fromAddress string, amounts json.AddressAmountV3, targetLockTime, lockTime int64) (string, error) {

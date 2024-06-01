@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/meerevm/meer"
+	"math"
 )
 
 // PublicEthereumAPI provides an API to access Ethereum full node-related
@@ -31,15 +32,26 @@ func (api *PublicAccountManagerAPI) GetAcctInfo() (interface{}, error) {
 	ai := json.AcctInfo{
 		Mode:    api.a.cfg.AcctMode,
 		Version: api.a.info.version,
-		Total:   api.a.info.total,
+		Total:   uint32(api.a.info.GetAddrTotal()),
+	}
+	if api.a.info.GetAddrTotal() > 0 {
+		ai.Addrs = api.a.info.addrs
+	}
+	if api.a.statpoint != nil {
+		ai.StatPoint = api.a.statpoint.GetHash().String()
+		ai.StatOrder = uint32(api.a.statpoint.GetOrder())
+	}
+	return ai, nil
+}
+
+func (api *PublicAccountManagerAPI) GetAcctDebugInfo() (interface{}, error) {
+	ai := AcctDebugInfo{
+		Total: api.a.info.total,
 	}
 	api.a.watchLock.RLock()
 	ai.Watcher = uint32(len(api.a.watchers))
 	api.a.watchLock.RUnlock()
 	ai.UtxoWatcher = uint32(api.a.getUtxoWatcherSize())
-	if api.a.info.GetAddrTotal() > 0 {
-		ai.Addrs = api.a.info.addrs
-	}
 	return ai, nil
 }
 
@@ -52,7 +64,7 @@ func (api *PublicAccountManagerAPI) GetBalanceInfo(addr string, coinID types.Coi
 		}
 		result.Balance = int64(bal)
 		if verbose {
-			result.UTXOs, err = api.a.GetUTXOs(addr)
+			result.UTXOs, result.TotalBalance, err = api.a.GetUTXOs(addr, nil, nil, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -67,6 +79,27 @@ func (api *PublicAccountManagerAPI) GetBalanceInfo(addr string, coinID types.Coi
 		return result, nil
 	}
 	return nil, fmt.Errorf("Not support %v", coinID)
+}
+
+func (api *PublicAccountManagerAPI) GetUTXOs(addr string, limit *int, locked *bool) (interface{}, error) {
+	lt := math.MaxInt
+	if limit != nil && *limit > 0 {
+		lt = *limit
+	}
+	ret, _, err := api.a.GetUTXOs(addr, &lt, locked, nil)
+	return ret, err
+}
+
+func (api *PublicAccountManagerAPI) GetValidUTXOs(addr string, amount uint64) (interface{}, error) {
+	ret := ValidUTXOsResult{}
+	locked := false
+	var err error
+	if amount <= 0 {
+		amount = math.MaxUint64
+	}
+	ret.UTXOs, ret.Amount, err = api.a.GetUTXOs(addr, nil, &locked, &amount)
+	ret.Total = len(ret.UTXOs)
+	return ret, err
 }
 
 func (api *PublicAccountManagerAPI) AddBalance(addr string) (interface{}, error) {
