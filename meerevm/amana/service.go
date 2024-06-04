@@ -96,7 +96,7 @@ func (q *AmanaService) APIs() []api.API {
 }
 
 func (q *AmanaService) initMiner() error {
-	if !q.cfg.Generate {
+	if !q.chain.Context().IsSet(utils.UnlockedAccountFlag.Name) {
 		return nil
 	}
 	var unlocks []string
@@ -107,7 +107,7 @@ func (q *AmanaService) initMiner() error {
 		}
 	}
 	if len(unlocks) <= 0 {
-		return fmt.Errorf("No Amana miner addresses specified via --miningaddr.")
+		return fmt.Errorf("No Amana miner addresses specified via --unlock.")
 	}
 	eb := qcommon.HexToAddress(unlocks[0])
 	wallet, err := q.chain.Ether().AccountManager().Find(accounts.Account{Address: eb})
