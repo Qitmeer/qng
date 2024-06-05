@@ -218,8 +218,8 @@ func DeleteBlock(db ethdb.KeyValueWriter, hash *hash.Hash) {
 func ReadSpendJournal(db ethdb.Reader, hash *hash.Hash) []byte {
 	data, err := db.Get(spendJournalKey(hash))
 	if len(data) == 0 {
-		if err != nil {
-			log.Debug("spend journal", "err", err.Error())
+		if isErrWithoutNotFound(err) {
+			log.Error("spend journal", "err", err.Error())
 		}
 		return nil
 	}
@@ -260,7 +260,9 @@ func CleanSpendJournal(db ethdb.Database) error {
 func ReadUtxo(db ethdb.Reader, opd []byte) []byte {
 	data, err := db.Get(utxoKey(opd))
 	if len(data) == 0 {
-		log.Debug("read utxo", "err", err.Error())
+		if isErrWithoutNotFound(err) {
+			log.Error("read utxo", "err", err.Error())
+		}
 		return nil
 	}
 	return data
@@ -314,7 +316,9 @@ func CleanUtxo(db ethdb.Database) error {
 func ReadTokenState(db ethdb.Reader, id uint64) []byte {
 	data, err := db.Get(tokenStateKey(id))
 	if len(data) == 0 {
-		log.Debug("read token state", "err", err.Error())
+		if isErrWithoutNotFound(err) {
+			log.Error("read token state", "err", err.Error())
+		}
 		return nil
 	}
 	return data
