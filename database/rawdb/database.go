@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/cockroachdb/pebble"
 	"github.com/olekukonko/tablewriter"
 	"os"
 	"path"
@@ -15,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/ethdb/leveldb"
 	"github.com/ethereum/go-ethereum/ethdb/memorydb"
+	ldb "github.com/syndtr/goleveldb/leveldb"
 )
 
 // freezerdb is a database wrapper that enabled freezer data retrievals.
@@ -530,4 +532,15 @@ func ReadChainMetadata(db ethdb.KeyValueStore) [][]string {
 		{"snapshotRoot", fmt.Sprintf("%v", ReadSnapshotRoot(db))},
 	}
 	return data
+}
+
+func isErrNotFound(err error) bool {
+	return err == pebble.ErrNotFound || err == ldb.ErrNotFound
+}
+
+func isErrWithoutNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	return !isErrNotFound(err)
 }

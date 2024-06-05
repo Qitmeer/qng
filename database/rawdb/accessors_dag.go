@@ -129,8 +129,8 @@ func DeleteMainChain(db ethdb.KeyValueWriter, id uint64) {
 func ReadDAGInfo(db ethdb.Reader) []byte {
 	data, err := db.Get(dagInfoKey)
 	if len(data) == 0 {
-		if err != nil {
-			log.Debug("dag info", "err", err.Error())
+		if isErrWithoutNotFound(err) {
+			log.Error("dag info", "err", err.Error())
 		}
 		return nil
 	}
@@ -148,7 +148,9 @@ func WriteDAGInfo(db ethdb.KeyValueWriter, data []byte) error {
 func ReadDAGTips(db ethdb.Reader) []uint64 {
 	data, err := db.Get(dagTipsKey)
 	if len(data) == 0 {
-		log.Debug("dag tips", "err", err.Error())
+		if isErrWithoutNotFound(err) {
+			log.Error("dag tips", "err", err.Error())
+		}
 		return nil
 	}
 	var tips []uint64

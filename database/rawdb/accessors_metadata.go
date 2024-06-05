@@ -203,7 +203,9 @@ func UpdateUncleanShutdownMarker(db ethdb.KeyValueStore) {
 func ReadBestChainState(db ethdb.Reader) []byte {
 	data, err := db.Get(bestChainStateKey)
 	if err != nil {
-		log.Debug("best chain state", "err", err.Error())
+		if isErrWithoutNotFound(err) {
+			log.Error("best chain state", "err", err.Error())
+		}
 		return nil
 	}
 	return data
@@ -220,7 +222,9 @@ func WriteBestChainState(db ethdb.KeyValueWriter, data []byte) error {
 func ReadEstimateFee(db ethdb.Reader) []byte {
 	data, err := db.Get(EstimateFeeDatabaseKey)
 	if err != nil {
-		log.Debug("estimate fee", "err", err.Error())
+		if isErrWithoutNotFound(err) {
+			log.Error("estimate fee", "err", err.Error())
+		}
 		return nil
 	}
 	return data

@@ -11,7 +11,9 @@ import (
 func ReadTxLookupEntry(db ethdb.Reader, hash *hash.Hash) *uint64 {
 	data, err := db.Get(txLookupKey(hash))
 	if len(data) == 0 {
-		log.Trace("tx lookup entry", "err", err.Error())
+		if isErrWithoutNotFound(err) {
+			log.Error("tx lookup entry", "err", err.Error())
+		}
 		return nil
 	}
 	id := binary.BigEndian.Uint64(data)
@@ -66,7 +68,9 @@ func ReadTransaction(db ethdb.Reader, hash *hash.Hash) (*types.Tx, uint64, *hash
 func ReadTxIdByFullHash(db ethdb.Reader, full *hash.Hash) *hash.Hash {
 	data, err := db.Get(txFullHashKey(full))
 	if len(data) == 0 {
-		log.Error(err.Error())
+		if isErrWithoutNotFound(err) {
+			log.Error(err.Error())
+		}
 		return nil
 	}
 	fhash, err := hash.NewHash(data)
@@ -89,7 +93,9 @@ func DeleteTxIdByFullHash(db ethdb.KeyValueWriter, full *hash.Hash) error {
 func ReadInvalidTxLookupEntry(db ethdb.Reader, hash *hash.Hash) *uint64 {
 	data, err := db.Get(invalidtxLookupKey(hash))
 	if len(data) == 0 {
-		log.Error(err.Error())
+		if isErrWithoutNotFound(err) {
+			log.Error(err.Error())
+		}
 		return nil
 	}
 	id := binary.BigEndian.Uint64(data)
@@ -165,7 +171,9 @@ func CleanInvalidTxs(db ethdb.Database) error {
 func ReadInvalidTxIdByFullHash(db ethdb.Reader, full *hash.Hash) *hash.Hash {
 	data, err := db.Get(invalidtxFullHashKey(full))
 	if len(data) == 0 {
-		log.Debug("read invalid tx id", "err", err.Error())
+		if isErrWithoutNotFound(err) {
+			log.Error("read invalid tx id", "err", err.Error())
+		}
 		return nil
 	}
 	fhash, err := hash.NewHash(data)

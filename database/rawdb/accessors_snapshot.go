@@ -63,7 +63,9 @@ func DeleteSnapshotRoot(db ethdb.KeyValueWriter) {
 func ReadBlockOrderSnapshot(db ethdb.KeyValueReader, order uint64) *uint64 {
 	data, err := db.Get(blockOrderKey(order))
 	if err != nil {
-		log.Error(err.Error())
+		if isErrWithoutNotFound(err) {
+			log.Error(err.Error())
+		}
 		return nil
 	}
 	id := binary.BigEndian.Uint64(data)
