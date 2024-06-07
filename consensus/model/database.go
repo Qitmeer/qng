@@ -69,6 +69,7 @@ type DataBase interface {
 	GetAddrIdxTip() (*hash.Hash, uint, error)
 	PutAddrIdxTip(bh *hash.Hash, order uint) error
 	PutAddrIdx(sblock *types.SerializedBlock, block Block, stxos [][]byte) error
+	RebuildAddrIndex(interrupt <-chan struct{}) (bool, error)
 	GetTxForAddress(addr types.Address, numToSkip, numRequested uint32, reverse bool) ([]*common.RetrievedTx, uint32, error)
 	DeleteAddrIdx(sblock *types.SerializedBlock, stxos [][]byte) error
 	CleanAddrIdx(finish bool) error

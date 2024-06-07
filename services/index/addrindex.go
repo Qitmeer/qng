@@ -16,6 +16,7 @@ import (
 	"github.com/Qitmeer/qng/services/progresslog"
 	"math"
 	"sync"
+	"time"
 
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/address"
@@ -194,6 +195,7 @@ func (idx *AddrIndex) NeedsInputs() bool {
 //
 // This is part of the Indexer interface.
 func (idx *AddrIndex) Init() error {
+	start := time.Now()
 	err := idx.DB().CleanAddrIdx(true)
 	// Finish any drops that were previously interrupted.
 	if err != nil {
@@ -225,12 +227,9 @@ func (idx *AddrIndex) Init() error {
 			if err != nil {
 				return err
 			}
-			spentTxos = nil
-			if idx.NeedsInputs() {
-				spentTxos, err = chain.FetchSpendJournalPKS(block)
-				if err != nil {
-					return err
-				}
+			spentTxos, err = chain.FetchSpendJournalPKS(block)
+			if err != nil {
+				return err
 			}
 			err = idx.DisconnectBlock(block, nil, spentTxos)
 			if err != nil {
@@ -241,6 +240,19 @@ func (idx *AddrIndex) Init() error {
 			if system.InterruptRequested(idx.consensus.Interrupt()) {
 				return errInterruptRequested
 			}
+		}
+	} else {
+		success, err := idx.DB().RebuildAddrIndex(idx.consensus.Interrupt())
+		if success {
+			if err == nil {
+				mt := chain.GetMainChainTip()
+				err = idx.DB().PutAddrIdxTip(mt.GetHash(), mt.GetOrder())
+				if err != nil {
+					log.Error(err.Error())
+				}
+				log.Info(fmt.Sprintf("Indexes caught up to order %d", bestOrder), "cost", time.Since(start).String())
+			}
+			return err
 		}
 	}
 
@@ -264,7 +276,6 @@ func (idx *AddrIndex) Init() error {
 	// each block that needs to be indexed.
 	log.Info(fmt.Sprintf("Catching up indexes from order %d to %d", lowestOrder,
 		bestOrder))
-
 	for order := lowestOrder + 1; order <= int64(bestOrder); order++ {
 		if system.InterruptRequested(idx.consensus.Interrupt()) {
 			return errInterruptRequested
@@ -278,19 +289,11 @@ func (idx *AddrIndex) Init() error {
 		if err != nil {
 			return err
 		}
-
-		if system.InterruptRequested(idx.consensus.Interrupt()) {
-			return errInterruptRequested
-		}
 		chain.SetDAGDuplicateTxs(block, blk)
 		// Connect the block for all indexes that need it.
-		spentTxos = nil
-
-		if spentTxos == nil && idx.NeedsInputs() {
-			spentTxos, err = chain.FetchSpendJournalPKS(block)
-			if err != nil {
-				return err
-			}
+		spentTxos, err = chain.FetchSpendJournalPKS(block)
+		if err != nil {
+			return err
 		}
 		err = idx.ConnectBlock(block, blk, spentTxos)
 		if err != nil {
@@ -299,7 +302,12 @@ func (idx *AddrIndex) Init() error {
 		progressLogger.LogBlockOrder(blk.GetOrder(), block)
 	}
 
-	log.Info(fmt.Sprintf("Indexes caught up to order %d", bestOrder))
+	log.Info(fmt.Sprintf("Indexes caught up to order %d", bestOrder), "cost", time.Since(start).String())
+	return nil
+}
+
+func (idx *AddrIndex) rebuildFor() error {
+
 	return nil
 }
 
@@ -598,6 +606,10 @@ func addrIndexPkScript(data WriteAddrIdxData, pkScript []byte, txIdx int) {
 		indexedTxns = append(indexedTxns, txIdx)
 		data[addrKey] = indexedTxns
 	}
+}
+
+func AddrIndexPkScript(data WriteAddrIdxData, pkScript []byte, txIdx int) {
+	addrIndexPkScript(data, pkScript, txIdx)
 }
 
 // AddrIndexBlock extract all of the standard addresses from all of the transactions

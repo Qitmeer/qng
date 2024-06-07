@@ -255,6 +255,20 @@ func CleanSpendJournal(db ethdb.Database) error {
 	return nil
 }
 
+func ForeachSpendJournal(db ethdb.KeyValueStore, fn func(key []byte, data []byte) error) error {
+	it := db.NewIterator(spendJournalPrefix, nil)
+	defer it.Release()
+
+	for it.Next() {
+		key := it.Key()[len(spendJournalPrefix):]
+		err := fn(key, it.Value())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // utxo
 
 func ReadUtxo(db ethdb.Reader, opd []byte) []byte {

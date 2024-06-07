@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/serialization"
 	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/legacydb"
 	"github.com/Qitmeer/qng/params"
 	"os"
@@ -243,16 +244,10 @@ func OutpointKey(outpoint *types.TxOutPoint) []byte {
 }
 
 func parseOutpoint(opk []byte) (*types.TxOutPoint, error) {
-	txhash, err := hash.NewHash(opk[:hash.HashSize])
+	ret, err := common.ParseOutpoint(opk)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, err
 	}
-	txOutIdex, size := serialization.DeserializeVLQ(opk[hash.HashSize:])
-	if size <= 0 {
-		err := fmt.Errorf("DeserializeVLQ:%s %v", txhash.String(), opk[hash.HashSize:])
-		log.Error(err.Error())
-		return nil, err
-	}
-	return types.NewOutPoint(txhash, uint32(txOutIdex)), nil
+	return ret, nil
 }
