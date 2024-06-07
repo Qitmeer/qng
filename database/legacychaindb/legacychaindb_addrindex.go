@@ -202,6 +202,10 @@ func (cdb *LegacyChainDB) CleanAddrIdx(finish bool) error {
 	return nil
 }
 
+func (cdb *LegacyChainDB) RebuildAddrIndex(interrupt <-chan struct{}) (bool, error) {
+	return false, nil
+}
+
 type bucket struct {
 	db legacydb.DB
 }

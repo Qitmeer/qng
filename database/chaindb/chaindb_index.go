@@ -2,14 +2,20 @@ package chaindb
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/database/common"
 	"github.com/Qitmeer/qng/database/rawdb"
+	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/index"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"time"
 )
 
 func (cdb *ChainDB) PutTxIdxEntrys(sblock *types.SerializedBlock, block model.Block) error {
@@ -219,6 +225,132 @@ func (cdb *ChainDB) CleanAddrIdx(finish bool) error {
 		return nil
 	}
 	return rawdb.CleanAddrIdx(cdb.DB())
+}
+
+func (cdb *ChainDB) RebuildAddrIndex(interrupt <-chan struct{}) (bool, error) {
+	start := time.Now()
+	processLog := func(task string, cur int, max int) {
+		if time.Since(start) < time.Second*10 {
+			return
+		}
+		log.Info(task, "cur", cur, "max", max)
+		start = time.Now()
+	}
+	ops := []*types.TxOutPoint{}
+	entrys := []*utxo.UtxoEntry{}
+	err := rawdb.ForeachUtxo(cdb.DB(), func(key []byte, data []byte) error {
+		op, err := common.ParseOutpoint(key)
+		if err != nil {
+			return err
+		}
+		serializedUtxo := data
+		// Deserialize the utxo entry and return it.
+		entry, err := utxo.DeserializeUtxoEntry(serializedUtxo)
+		if err != nil {
+			return err
+		}
+		if entry.IsSpent() {
+			return nil
+		}
+		ops = append(ops, op)
+		entrys = append(entrys, entry)
+		processLog("Find utxo", len(ops)-1, len(ops))
+		return nil
+	})
+	if err != nil {
+		return true, err
+	}
+	if system.InterruptRequested(interrupt) {
+		return true, fmt.Errorf("RebuildAddrIndex:interrupt")
+	}
+	b := &bucket{db: rawdb.NewMemoryDatabase()}
+	if len(ops) > 0 {
+		for i := 0; i < len(ops); i++ {
+			_, addrs, _, err := txscript.ExtractPkScriptAddrs(entrys[i].PkScript(), params.ActiveNetParams.Params)
+			if err != nil {
+				return true, err
+			}
+
+			if len(addrs) == 0 {
+				continue
+			}
+			tx, blockid, _, txIdx := rawdb.ReadTransaction(cdb.db, &ops[i].Hash)
+			if tx == nil {
+				continue
+			}
+			for _, addr := range addrs {
+				addrKey, err := index.AddrToKey(addr)
+				if err != nil {
+					continue
+				}
+				err = index.DBPutAddrIndexEntry(b, addrKey, uint32(blockid), types.TxLoc{TxStart: txIdx, TxLen: 0}, rawdb.AddridxPrefix)
+				if err != nil {
+					return true, err
+				}
+			}
+			processLog("Index addr for utxo", i, len(ops))
+		}
+	}
+	if system.InterruptRequested(interrupt) {
+		return true, fmt.Errorf("RebuildAddrIndex:interrupt")
+	}
+	stxos := []utxo.SpentTxOut{}
+	err = rawdb.ForeachSpendJournal(cdb.DB(), func(key []byte, data []byte) error {
+		sts, err := utxo.DeserializeSpendJournalEntry(data)
+		if err != nil {
+			return err
+		}
+		stxos = append(stxos, sts...)
+		processLog("Find spend journal", len(sts), len(stxos))
+		return nil
+	})
+	if err != nil {
+		return true, err
+	}
+	if len(stxos) <= 0 {
+		return true, nil
+	}
+	if system.InterruptRequested(interrupt) {
+		return true, fmt.Errorf("RebuildAddrIndex:interrupt")
+	}
+	for i := 0; i < len(stxos); i++ {
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(stxos[i].PkScript, params.ActiveNetParams.Params)
+		if err != nil {
+			return true, err
+		}
+
+		if len(addrs) == 0 {
+			continue
+		}
+
+		blockID := rawdb.ReadBlockID(cdb.db, &stxos[i].BlockHash)
+		if blockID == nil {
+			continue
+		}
+		for _, addr := range addrs {
+			addrKey, err := index.AddrToKey(addr)
+			if err != nil {
+				continue
+			}
+			err = index.DBPutAddrIndexEntry(b, addrKey, uint32(*blockID), types.TxLoc{TxStart: int(stxos[i].TxIndex), TxLen: 0}, rawdb.AddridxPrefix)
+			if err != nil {
+				return true, err
+			}
+		}
+		processLog("Index addr for spend journal", i, len(stxos))
+	}
+	if system.InterruptRequested(interrupt) {
+		return true, fmt.Errorf("RebuildAddrIndex:interrupt")
+	}
+	batch := cdb.db.NewBatch()
+	it := b.db.NewIterator(nil, nil)
+	total := 0
+	for it.Next() {
+		batch.Put(it.Key(), it.Value())
+		total++
+	}
+	log.Info("Write batch", "objects", total, "size", batch.ValueSize())
+	return true, batch.Write()
 }
 
 type bucket struct {

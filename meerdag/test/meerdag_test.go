@@ -155,6 +155,7 @@ func getConfig(memory bool) *config.Config {
 	if memory {
 		cfg.DataDir = ""
 	}
+	cfg.CacheSnapshot = 0
 	return cfg
 }
 

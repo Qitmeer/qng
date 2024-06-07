@@ -222,7 +222,7 @@ func decodeSpentTxOut(serialized []byte, stxo *SpentTxOut) (int, error) {
 // format comments, this function also requires the transactions that spend the
 // txouts and a utxo view that contains any remaining existing utxos in the
 // transactions referenced by the inputs to the passed transasctions.
-func deserializeSpendJournalEntry(serialized []byte, txns []*types.Transaction) ([]SpentTxOut, error) {
+func DeserializeSpendJournalEntry(serialized []byte) ([]SpentTxOut, error) {
 	// When a block has no spent txouts there is nothing to serialize.
 	if len(serialized) == 0 {
 		return nil, nil
@@ -294,8 +294,7 @@ func DBFetchSpendJournalEntry(db model.DataBase, block *types.SerializedBlock) (
 		return nil, err
 	}
 	// Exclude the coinbase transaction since it can't spend anything.
-	blockTxns := block.Block().Transactions[1:]
-	stxos, err := deserializeSpendJournalEntry(data, blockTxns)
+	stxos, err := DeserializeSpendJournalEntry(data)
 	if err != nil {
 		// Ensure any deserialization errors are returned as database
 		// corruption errors.
