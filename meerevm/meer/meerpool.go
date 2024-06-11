@@ -9,6 +9,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
+	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/miner"
@@ -114,6 +115,9 @@ func (m *MeerPool) handler() {
 	defer m.chainHeadSub.Unsubscribe()
 	defer m.wg.Done()
 
+	stallTicker := time.NewTicker(params.ActiveNetParams.TargetTimePerBlock)
+	defer stallTicker.Stop()
+
 	for {
 		select {
 		case ev := <-m.txsCh:
@@ -140,8 +144,18 @@ func (m *MeerPool) handler() {
 		case msg := <-m.resetTemplate:
 			m.updateTemplate(true)
 			msg.reply <- struct{}{}
+		case <-stallTicker.C:
+			m.handleStallSample()
 		}
 	}
+}
+
+func (m *MeerPool) handleStallSample() {
+	block := m.payload.ResolveFullBlock()
+	if time.Since(time.Unix(int64(block.Time()), 0)) <= params.ActiveNetParams.TargetTimePerBlock {
+		return
+	}
+	go m.ResetTemplate()
 }
 
 func (m *MeerPool) updateSnapshot() error {
