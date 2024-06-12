@@ -2,7 +2,6 @@ package eth
 
 import (
 	"github.com/Qitmeer/qng/params"
-	"github.com/ethereum/go-ethereum/eth/downloader"
 )
 
 type dnsConfig struct {
@@ -24,9 +23,6 @@ func SetDNSDiscoveryDefaults(cfg *Config) {
 		return
 	}
 	protocol := "all"
-	if cfg.Eth.SyncMode == downloader.LightSync {
-		protocol = "les"
-	}
 	cfg.Eth.EthDiscoveryURLs = []string{}
 	for _, dc := range dnscfgs {
 		url := dc.prefix + protocol + "." + cfg.Node.Name + "." + params.ActiveNetParams.Name + "." + dc.domain
