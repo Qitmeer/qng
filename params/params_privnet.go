@@ -119,10 +119,10 @@ var PrivNetParams = Params{
 	MaximumBlockSizes:        []int{1000000, 1310720},
 	MaxTxSize:                1000000,
 	WorkDiffAlpha:            1,
-	WorkDiffWindowSize:       160,
+	WorkDiffWindowSize:       1600,
 	WorkDiffWindows:          20,
 	TargetTimePerBlock:       time.Second * privTargetTimePerBlock,
-	TargetTimespan:           time.Second * privTargetTimePerBlock * 160, // TimePerBlock * WindowSize
+	TargetTimespan:           time.Second * privTargetTimePerBlock * 1600, // TimePerBlock * WindowSize
 	RetargetAdjustmentFactor: 2,
 
 	// Subsidy parameters.
