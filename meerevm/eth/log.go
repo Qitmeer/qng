@@ -28,6 +28,7 @@ const (
 
 var spaces = []byte("                                        ")
 var glogger *log.GlogHandler
+var agentTH *agentTerminalHandler
 
 func InitLog(DebugLevel string, DebugPrintOrigins bool) {
 	lvl, err := qlog.LvlFromString(DebugLevel)
@@ -36,8 +37,11 @@ func InitLog(DebugLevel string, DebugPrintOrigins bool) {
 	}
 	if glogger == nil {
 		usecolor := qlog.LogWrite().IsUseColor()
-		glogger = log.NewGlogHandler(NewTerminalHandler(qlog.LogWrite(), lvl, usecolor, DebugPrintOrigins))
+		agentTH = NewTerminalHandler(qlog.LogWrite(), lvl, usecolor, DebugPrintOrigins)
+		glogger = log.NewGlogHandler(agentTH)
 		log.SetDefault(log.NewLogger(glogger))
+	} else {
+		agentTH.lvl = lvl
 	}
 	glogger.Verbosity(log.FromLegacyLevel(int(lvl)))
 	qlog.LocationTrims = append(qlog.LocationTrims, "github.com/ethereum/go-ethereum/")
@@ -71,6 +75,9 @@ func NewTerminalHandler(wr io.Writer, lvl qlog.Lvl, useColor bool, locationEnabl
 func (h *agentTerminalHandler) Handle(_ context.Context, r slog.Record) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if !h.enabledRecord(&r) {
+		return nil
+	}
 	buf := h.format(h.buf, r, h.useColor)
 	h.wr.Write(buf)
 	h.buf = buf[:0]
