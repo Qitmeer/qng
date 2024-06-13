@@ -21,7 +21,7 @@ import (
 var privNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 255), common.Big1)
 
 // target time per block unit second(s)
-const privTargetTimePerBlock = 30
+const privTargetTimePerBlock = 1
 
 // PirvNetParams defines the network parameters for the private test network.
 // This network is similar to the normal test network except it is
