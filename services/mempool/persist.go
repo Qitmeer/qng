@@ -20,7 +20,7 @@ const (
 )
 
 func (mp *TxPool) Save() (int, error) {
-	txds := mp.TxDescs()
+	txds := mp.TxDescs(true)
 	if len(txds) <= 0 {
 		log.Info("There are no transactions to save in mempool.")
 		return 0, nil

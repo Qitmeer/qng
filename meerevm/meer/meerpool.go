@@ -69,11 +69,12 @@ type MeerPool struct {
 	resetTemplate chan *resetTemplateMsg
 
 	qTxPool model.TxPool
-	notify  model.Notify
 
 	syncing atomic.Bool // The indicator whether the node is still syncing.
+	dirty   atomic.Bool
 
 	payload *miner.Payload
+	p2pSer  model.P2PService
 }
 
 func (m *MeerPool) Start() {
@@ -81,7 +82,6 @@ func (m *MeerPool) Start() {
 		log.Info("Meer pool was started")
 		return
 	}
-
 	atomic.StoreInt32(&m.running, 1)
 
 	m.quit = make(chan struct{})
@@ -130,8 +130,8 @@ func (m *MeerPool) handler() {
 				}
 				continue
 			}
-			m.AnnounceNewTransactions(ev.Txs)
-
+			m.qTxPool.TriggerDirty()
+			m.dirty.Store(true)
 		// System stopped
 		case <-m.quit:
 			return
@@ -151,6 +151,15 @@ func (m *MeerPool) handler() {
 }
 
 func (m *MeerPool) handleStallSample() {
+	if m.syncing.Load() {
+		return
+	}
+	if !m.eth.Synced() && m.p2pSer.IsCurrent() {
+		m.eth.SetSynced()
+	}
+	if !m.dirty.Load() {
+		return
+	}
 	block := m.payload.ResolveFullBlock()
 	if time.Since(time.Unix(int64(block.Time()), 0)) <= params.ActiveNetParams.TargetTimePerBlock {
 		return
@@ -224,6 +233,7 @@ func (m *MeerPool) updateTemplate(force bool) error {
 		return err
 	}
 	m.payload = payload
+	m.dirty.Store(false)
 	return m.updateSnapshot()
 }
 
@@ -338,52 +348,6 @@ func (m *MeerPool) RemoveTx(tx *qtypes.Tx) error {
 	return nil
 }
 
-func (m *MeerPool) AnnounceNewTransactions(txs []*types.Transaction) error {
-	if m.ethTxPool.All().LocalCount() <= 0 {
-		return nil
-	}
-	localTxs := []*qtypes.TxDesc{}
-
-	for _, tx := range txs {
-		if m.ethTxPool.All().GetLocal(tx.Hash()) == nil {
-			continue
-		}
-		var mtx *qtypes.Tx
-		m.remoteMu.RLock()
-		qtx, ok := m.remoteTxsM[tx.Hash().String()]
-		m.remoteMu.RUnlock()
-		if ok {
-			mtx = qtx
-		} else {
-			mtx = qcommon.ToQNGTx(tx, 0, true)
-		}
-		//
-		cost := tx.Cost()
-		cost = cost.Sub(cost, tx.Value())
-		cost = cost.Div(cost, qcommon.Precision)
-		fee := cost.Int64()
-
-		td := &qtypes.TxDesc{
-			Tx:       mtx,
-			Added:    time.Now(),
-			Height:   m.qTxPool.GetMainHeight(),
-			Fee:      fee,
-			FeePerKB: fee * 1000 / int64(mtx.Tx.SerializeSize()),
-		}
-
-		localTxs = append(localTxs, td)
-		m.qTxPool.AddTransaction(td.Tx, uint64(td.Height), td.Fee)
-	}
-	if len(localTxs) <= 0 {
-		return nil
-	}
-	//
-	m.notify.AnnounceNewTransactions(localTxs, nil)
-	go m.notify.AddRebroadcastInventory(localTxs)
-
-	return nil
-}
-
 func (m *MeerPool) ResetTemplate() error {
 	log.Debug("Try to reset meer pool")
 	msg := &resetTemplateMsg{reply: make(chan struct{})}
@@ -396,8 +360,8 @@ func (m *MeerPool) SetTxPool(tp model.TxPool) {
 	m.qTxPool = tp
 }
 
-func (m *MeerPool) SetNotify(notify model.Notify) {
-	m.notify = notify
+func (m *MeerPool) SetP2P(ser model.P2PService) {
+	m.p2pSer = ser
 }
 
 func (m *MeerPool) subscribe() {

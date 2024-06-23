@@ -77,14 +77,16 @@ type TxDesc struct {
 // The descriptors are to be treated as read only.
 //
 // This function is safe for concurrent access.
-func (mp *TxPool) TxDescs() []*TxDesc {
+func (mp *TxPool) TxDescs(all bool) []*TxDesc {
 	mp.mtx.RLock()
 	descs := []*TxDesc{}
 	for _, desc := range mp.pool {
 		descs = append(descs, desc)
 	}
 	mp.mtx.RUnlock()
-
+	if !all {
+		return descs
+	}
 	etxs, _, err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().GetTxs()
 	if err != nil {
 		log.Error(err.Error())
@@ -275,6 +277,18 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 	mp.dirty.Store(true)
 
 	return txD
+}
+
+func (mp *TxPool) TriggerDirty() {
+	if mp.LastUpdated().Day() == time.Now().Day() {
+		newDailyTxCount.Inc(1)
+	} else {
+		newDailyTxCount.Update(1)
+	}
+
+	atomic.StoreInt64(&mp.lastUpdated, roughtime.Now().Unix())
+
+	mp.dirty.Store(true)
 }
 
 // Call addTransaction
