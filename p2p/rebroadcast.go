@@ -118,7 +118,7 @@ out:
 					break
 				}
 				if _, ok := data.(*types.TxDesc); ok {
-					if !r.s.TxMemPool().HaveTransactionUTXO(&dh) {
+					if !r.s.TxMemPool().HaveTransaction(&dh) {
 						delete(pendingInvs, dh)
 						continue
 					}

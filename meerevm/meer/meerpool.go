@@ -46,11 +46,6 @@ type MeerPool struct {
 	running int32
 
 	consensus model.Consensus
-
-	remoteTxsM  map[string]*qtypes.Tx
-	remoteQTxsM map[string]*snapshotTx
-	remoteMu    sync.RWMutex
-
 	config    *miner.Config
 	eth       *eth.Ethereum
 	ethTxPool *legacypool.LegacyPool
@@ -182,28 +177,14 @@ func (m *MeerPool) updateSnapshot() error {
 	txsNum := len(block.Transactions())
 	if txsNum > 0 {
 		for _, tx := range block.Transactions() {
-			var mtx *qtypes.Tx
-			m.remoteMu.RLock()
-			qtx, ok := m.remoteTxsM[tx.Hash().String()]
-			m.remoteMu.RUnlock()
-			if ok {
-				mtx = qtx
-			} else {
-				mtx = qcommon.ToQNGTx(tx, 0, true)
-			}
-			if mtx == nil {
-				continue
-			}
+			mtx := qcommon.ToQNGTx(tx, 0, true)
 			stx := &snapshotTx{tx: mtx, eHash: tx.Hash()}
 			m.snapshotQTxsM[mtx.Hash().String()] = stx
 			m.snapshotTxsM[tx.Hash().String()] = stx
 		}
 	}
 	//
-	m.remoteMu.RLock()
-	remoteSize := len(m.remoteTxsM)
-	m.remoteMu.RUnlock()
-	log.Debug("update meerpool snapshot", "size", txsNum, "remoteSize", remoteSize)
+	log.Debug("update meerpool snapshot", "size", txsNum)
 	return nil
 }
 
@@ -237,43 +218,6 @@ func (m *MeerPool) updateTemplate(force bool) error {
 	return m.updateSnapshot()
 }
 
-func (m *MeerPool) AddTx(tx *qtypes.Tx, local bool) (int64, error) {
-	if local {
-		log.Warn("This function is not supported for the time being: local meer tx")
-		return 0, nil
-	}
-	if !opreturn.IsMeerEVMTx(tx.Tx) {
-		return 0, fmt.Errorf("%s is not %v", tx.Hash().String(), qtypes.TxTypeCrossChainVM)
-	}
-	h := qcommon.ToEVMHash(&tx.Tx.TxIn[0].PreviousOut.Hash)
-	if m.eth.TxPool().Has(h) {
-		return 0, fmt.Errorf("already exists:%s (evm:%s)", tx.Hash().String(), h.String())
-	}
-	txb := qcommon.ToTxHex(tx.Tx.TxIn[0].SignScript)
-	var txmb = &types.Transaction{}
-	err := txmb.UnmarshalBinary(txb)
-	if err != nil {
-		return 0, err
-	}
-
-	errs := m.ethTxPool.AddRemotesSync(types.Transactions{txmb})
-	if len(errs) > 0 && errs[0] != nil {
-		return 0, errs[0]
-	}
-	m.remoteMu.Lock()
-	m.remoteTxsM[txmb.Hash().String()] = tx
-	m.remoteQTxsM[tx.Hash().String()] = &snapshotTx{tx: tx, eHash: txmb.Hash()}
-	remoteSize := len(m.remoteTxsM)
-	m.remoteMu.Unlock()
-	log.Debug("Meer pool:add", "hash", tx.Hash(), "eHash", txmb.Hash(), "size", remoteSize)
-
-	//
-	cost := txmb.Cost()
-	cost = cost.Sub(cost, txmb.Value())
-	cost = cost.Div(cost, qcommon.Precision)
-	return cost.Int64(), nil
-}
-
 func (m *MeerPool) GetTxs() ([]*qtypes.Tx, []*hash.Hash, error) {
 	m.snapshotMu.RLock()
 	defer m.snapshotMu.RUnlock()
@@ -296,19 +240,10 @@ func (m *MeerPool) GetTxs() ([]*qtypes.Tx, []*hash.Hash, error) {
 }
 
 // all: contain txs in pending and queue
-func (m *MeerPool) HasTx(h *hash.Hash, all bool) bool {
+func (m *MeerPool) HasTx(h *hash.Hash) bool {
 	m.snapshotMu.RLock()
 	_, ok := m.snapshotQTxsM[h.String()]
 	m.snapshotMu.RUnlock()
-
-	if all && !ok {
-		m.remoteMu.RLock()
-		stx, okR := m.remoteQTxsM[h.String()]
-		m.remoteMu.RUnlock()
-		if okR && stx != nil {
-			ok = m.eth.TxPool().Has(stx.eHash)
-		}
-	}
 	return ok
 }
 
@@ -329,22 +264,11 @@ func (m *MeerPool) RemoveTx(tx *qtypes.Tx) error {
 	if !opreturn.IsMeerEVMTx(tx.Tx) {
 		return fmt.Errorf("%s is not %v", tx.Hash().String(), qtypes.TxTypeCrossChainVM)
 	}
-
-	m.remoteMu.Lock()
 	h := qcommon.ToEVMHash(&tx.Tx.TxIn[0].PreviousOut.Hash)
-	_, ok := m.remoteTxsM[h.String()]
-	if ok {
-		delete(m.remoteTxsM, h.String())
-		delete(m.remoteQTxsM, tx.Hash().String())
-		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from remote, size:%d", tx.Hash().String(), h, len(m.remoteTxsM)))
-	}
-	m.remoteMu.Unlock()
-
 	if m.eth.TxPool().Has(h) {
 		m.ethTxPool.RemoveTx(h, false)
 		log.Debug(fmt.Sprintf("Meer pool:remove tx %s(%s) from eth", tx.Hash(), h))
 	}
-
 	return nil
 }
 
@@ -403,8 +327,6 @@ func newMeerPool(consensus model.Consensus, eth *eth.Ethereum) *MeerPool {
 	m.chainHeadCh = make(chan core.ChainHeadEvent, chainHeadChanSize)
 	m.quit = make(chan struct{})
 	m.resetTemplate = make(chan *resetTemplateMsg)
-	m.remoteTxsM = map[string]*qtypes.Tx{}
-	m.remoteQTxsM = map[string]*snapshotTx{}
 	m.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(m.chainHeadCh)
 	for _, sp := range eth.TxPool().Subpools() {
 		ltp, ok := sp.(*legacypool.LegacyPool)
