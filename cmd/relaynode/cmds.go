@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/cmd/relaynode/amanacrawl"
 	"github.com/Qitmeer/qng/cmd/relaynode/config"
-	"github.com/Qitmeer/qng/p2p"
+	"github.com/Qitmeer/qng/p2p/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/urfave/cli/v2"
 )
@@ -28,11 +28,11 @@ func amanaWriteAddressCmd() *cli.Command {
 		},
 		Action: func(ctx *cli.Context) error {
 			cfg := config.Conf
-			pk, err := p2p.PrivateKey(cfg.DataDir, cfg.PrivateKey, 0600)
+			pk, err := common.PrivateKey(cfg.DataDir, cfg.PrivateKey, 0600)
 			if err != nil {
 				return err
 			}
-			nk, err := p2p.ToECDSAPrivKey(pk)
+			nk, err := common.ToECDSAPrivKey(pk)
 			if err != nil {
 				return err
 			}

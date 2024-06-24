@@ -77,11 +77,11 @@ type TxDesc struct {
 // The descriptors are to be treated as read only.
 //
 // This function is safe for concurrent access.
-func (mp *TxPool) TxDescs(all bool) []*TxDesc {
+func (mp *TxPool) TxDescs(all bool) []*types.TxDesc {
 	mp.mtx.RLock()
-	descs := []*TxDesc{}
+	descs := []*types.TxDesc{}
 	for _, desc := range mp.pool {
-		descs = append(descs, desc)
+		descs = append(descs, &desc.TxDesc)
 	}
 	mp.mtx.RUnlock()
 	if !all {
@@ -94,12 +94,10 @@ func (mp *TxPool) TxDescs(all bool) []*TxDesc {
 	}
 
 	for _, tx := range etxs {
-		txDesc := &TxDesc{
-			TxDesc: types.TxDesc{
-				Tx:     tx,
-				Added:  roughtime.Now(),
-				Height: mp.GetMainHeight(),
-			},
+		txDesc := &types.TxDesc{
+			Tx:     tx,
+			Added:  roughtime.Now(),
+			Height: mp.GetMainHeight(),
 		}
 		descs = append(descs, txDesc)
 	}

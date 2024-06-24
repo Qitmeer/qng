@@ -33,6 +33,12 @@ type TxPool interface {
 	IsSupportVMTx() bool
 
 	TriggerDirty()
+
+	Count() int
+
+	FetchTransactions(txHashs []*hash.Hash) ([]*types.Tx, error)
+
+	TxDescs(all bool) []*types.TxDesc
 }
 
 type FeeEstimator interface {

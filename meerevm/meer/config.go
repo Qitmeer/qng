@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/meerevm/eth"
 	mconsensus "github.com/Qitmeer/qng/meerevm/meer/consensus"
 	mparams "github.com/Qitmeer/qng/meerevm/params"
+	"github.com/Qitmeer/qng/p2p/common"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -19,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/urfave/cli/v2"
 	"path/filepath"
 	"time"
 )
@@ -28,11 +28,7 @@ var (
 	// ClientIdentifier is a hard coded identifier to report into the network.
 	ClientIdentifier = "meereth"
 
-	exclusionFlags = append([]cli.Flag{
-		utils.SyncTargetFlag,
-		utils.DiscoveryPortFlag,
-		utils.MiningEnabledFlag,
-	}, utils.NetworkFlags...)
+	exclusionFlags = utils.NetworkFlags
 )
 
 func MakeConfig(cfg *config.Config) (*eth.Config, error) {
@@ -71,6 +67,14 @@ func MakeConfig(cfg *config.Config) (*eth.Config, error) {
 	nodeConf.P2P.ListenAddr = fmt.Sprintf(":%d", p2pPort)
 	nodeConf.P2P.BootstrapNodes = getBootstrapNodes(p2pPort)
 
+	pk, err := common.PrivateKey(cfg.DataDir, "", 0600)
+	if err != nil {
+		return nil, err
+	}
+	nodeConf.P2P.PrivateKey, err = common.ToECDSAPrivKey(pk)
+	if err != nil {
+		return nil, err
+	}
 	ecfg := &eth.Config{
 		Eth:     econfig,
 		Node:    nodeConf,

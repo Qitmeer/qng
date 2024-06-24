@@ -79,7 +79,7 @@ func (node *Node) Init(cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	pk, err := p2p.PrivateKey(cfg.DataDir, cfg.PrivateKey, 0600)
+	pk, err := common.PrivateKey(cfg.DataDir, cfg.PrivateKey, 0600)
 	if err != nil {
 		return err
 	}
@@ -339,7 +339,7 @@ func (node *Node) IncreaseBytesSent(pid peer.ID, size int) {
 func (node *Node) IncreaseBytesRecv(pid peer.ID, size int) {
 }
 
-func (node *Node) chainStateHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream,pe *p.Peer) *common.Error {
+func (node *Node) chainStateHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream, pe *p.Peer) *common.Error {
 	pid := stream.Conn().RemotePeer()
 	log.Log.Trace(fmt.Sprintf("chainStateHandler:%s", pid))
 
