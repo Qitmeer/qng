@@ -24,8 +24,11 @@ const (
 	// Support continue block sync for DAG search
 	BroadcastblockProtocolVersion uint32 = 45
 
+	// Support meerevm tx transmission
+	MeerPoolProtocolVersion uint32 = 46
+
 	// ProtocolVersion is the latest protocol version this package supports.
-	ProtocolVersion uint32 = BroadcastblockProtocolVersion
+	ProtocolVersion uint32 = MeerPoolProtocolVersion
 )
 
 // Network represents which qitmeer network a message belongs to.
