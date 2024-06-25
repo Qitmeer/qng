@@ -11,18 +11,18 @@ import (
 
 func commands() []*cli.Command {
 	cmds := []*cli.Command{}
-	cmds = append(cmds, amanaWriteAddressCmd())
+	cmds = append(cmds, bootWriteAddressCmd())
 	cmds = append(cmds, amanacrawl.Cmd())
 	return cmds
 }
 
-func amanaWriteAddressCmd() *cli.Command {
+func bootWriteAddressCmd() *cli.Command {
 	return &cli.Command{
-		Name:        "amanawriteaddress",
+		Name:        "bootwriteaddress",
 		Aliases:     []string{"qw"},
-		Category:    "Amana",
-		Usage:       "Amana writeaddress",
-		Description: "Amana manager",
+		Category:    "Boot",
+		Usage:       "Boot writeaddress",
+		Description: "Boot manager",
 		Before: func(context *cli.Context) error {
 			return config.Conf.Load()
 		},
