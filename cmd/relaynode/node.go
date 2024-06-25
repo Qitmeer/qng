@@ -7,7 +7,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/Qitmeer/qng/cmd/relaynode/amanaboot"
+	"github.com/Qitmeer/qng/cmd/relaynode/boot"
 	rconfig "github.com/Qitmeer/qng/cmd/relaynode/config"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
@@ -77,7 +77,7 @@ func (node *Node) init(cfg *rconfig.Config) error {
 	if err := node.RegisterRpcService(); err != nil {
 		return err
 	}
-	if err := node.RegisterAmanaService(); err != nil {
+	if err := node.RegisterBootService(); err != nil {
 		return err
 	}
 
@@ -305,15 +305,15 @@ func (node *Node) RegisterRpcService() error {
 
 }
 
-func (node *Node) RegisterAmanaService() error {
-	if !node.cfg.AmanaBoot.Enable {
+func (node *Node) RegisterBootService() error {
+	if !node.cfg.Boot.Enable {
 		return nil
 	}
 	nk, err := common.ToECDSAPrivKey(node.privateKey)
 	if err != nil {
 		return err
 	}
-	aSer, err := amanaboot.NewAmanaBootService(node.cfg, nk)
+	aSer, err := boot.NewBootService(node.cfg, nk)
 	if err != nil {
 		return err
 	}
@@ -464,8 +464,8 @@ func (node *Node) GetRpcServer() *rpc.RpcServer {
 	return service
 }
 
-func (node *Node) GetAmanaService() *amanaboot.AmanaBootService {
-	var service *amanaboot.AmanaBootService
+func (node *Node) GetBootService() *boot.BootService {
+	var service *boot.BootService
 	if err := node.Services().FetchService(&service); err != nil {
 		log.Error(err.Error())
 		return nil
