@@ -272,7 +272,7 @@ func NewHarness(t *testing.T, params *params.Params, args ...string) (*Harness, 
 	config := newNodeConfig(testDir, extraArgs)
 
 	// use auto-genereated p2p/rpc port settings instead of default
-	config.listen, config.rpclisten, config.evmlisten, config.evmWSlisten = genListenArgs()
+	config.listen, config.rpclisten, config.evmlisten, config.evmWSlisten, config.evmP2PListen = genListenArgs()
 
 	// create node
 	newNode, err := newNode(t, config)
@@ -315,21 +315,22 @@ func AllHarnesses() []*Harness {
 
 const (
 	// the minimum and maximum p2p and rpc port numbers used by a test harness.
-	minP2PPort   = 28200               // 28200 The min is inclusive
-	maxP2PPort   = minP2PPort + 10000  // 38199 The max is exclusive
-	minRPCPort   = maxP2PPort          // 38200
-	maxRPCPort   = minRPCPort + 10000  // 48199
-	minEVMPort   = maxRPCPort          // 48200
-	maxEVMPort   = minEVMPort + 2000   // 53199
-	minEVMWSPort = maxEVMPort          // 53200
-	maxEVMWSPort = minEVMWSPort + 2000 // 58199
-
+	minP2PPort    = 28200               // 28200 The min is inclusive
+	maxP2PPort    = minP2PPort + 10000  // 38199 The max is exclusive
+	minRPCPort    = maxP2PPort          // 38200
+	maxRPCPort    = minRPCPort + 10000  // 48199
+	minEVMPort    = maxRPCPort          // 48200
+	maxEVMPort    = minEVMPort + 2000   // 53199
+	minEVMWSPort  = maxEVMPort          // 53200
+	maxEVMWSPort  = minEVMWSPort + 2000 // 58199
+	minEVMP2PPort = maxEVMWSPort
+	maxEVMP2PPort = minEVMP2PPort + 2000
 )
 
 // GenListenArgs returns auto generated args for p2p listen and rpc listen in the format of
 // ["--listen=127.0.0.1:12345", --rpclisten=127.0.0.1:12346"].
 // in order to support multiple test node running at the same time.
-func genListenArgs() (string, string, string, string) {
+func genListenArgs() (string, string, string, string, string) {
 	localhost := "127.0.0.1"
 	genPort := func(min, max int) string {
 		port := min + len(harnessInstances) + (42 * harnessMainProcessId % (max - min))
@@ -339,5 +340,6 @@ func genListenArgs() (string, string, string, string) {
 	rpc := net.JoinHostPort(localhost, genPort(minRPCPort, maxRPCPort))
 	evm := genPort(minEVMPort, maxEVMPort)
 	evmWS := genPort(minEVMWSPort, maxEVMWSPort)
-	return p2p, rpc, evm, evmWS
+	evmP2P := genPort(minEVMP2PPort, maxEVMP2PPort)
+	return p2p, rpc, evm, evmWS, evmP2P
 }
