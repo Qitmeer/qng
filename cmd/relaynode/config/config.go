@@ -216,43 +216,43 @@ var (
 		Destination: &Conf.MaxPeers,
 	}
 
-	EnableAmana = &cli.BoolFlag{
-		Name:        "amana",
+	EnableBoot = &cli.BoolFlag{
+		Name:        "boot",
 		Aliases:     []string{"am"},
-		Usage:       "Enable Amana support",
+		Usage:       "Enable Boot support",
 		Value:       false,
-		Destination: &Conf.AmanaBoot.Enable,
+		Destination: &Conf.Boot.Enable,
 	}
 
-	AmanaListenAddr = &cli.StringFlag{
+	BootListenAddr = &cli.StringFlag{
 		Name:        "addr",
 		Aliases:     []string{"qa"},
-		Usage:       "Amana listen address",
+		Usage:       "Boot listen address",
 		Value:       defaultAmanaListenAddr,
-		Destination: &Conf.AmanaBoot.ListenAddr,
+		Destination: &Conf.Boot.ListenAddr,
 	}
 
-	AmanaNAT = &cli.StringFlag{
+	BootNAT = &cli.StringFlag{
 		Name:        "nat",
 		Aliases:     []string{"na"},
-		Usage:       "Amana port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
+		Usage:       "Boot port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
 		Value:       "none",
-		Destination: &Conf.AmanaBoot.Natdesc,
+		Destination: &Conf.Boot.Natdesc,
 	}
 
-	AmanaNetrestrict = &cli.StringFlag{
+	BootNetrestrict = &cli.StringFlag{
 		Name:        "netrestrict",
 		Aliases:     []string{"ne"},
 		Usage:       "Amana restrict network communication to the given IP networks (CIDR masks)",
 		Value:       "",
-		Destination: &Conf.AmanaBoot.Netrestrict,
+		Destination: &Conf.Boot.Netrestrict,
 	}
 
 	AmanaRunv5 = &cli.BoolFlag{
 		Name:        "v5",
 		Usage:       "run a v5 topic discovery Amana",
 		Value:       false,
-		Destination: &Conf.AmanaBoot.Runv5,
+		Destination: &Conf.Boot.Runv5,
 	}
 
 	AppFlags = []cli.Flag{
@@ -279,10 +279,10 @@ var (
 		DisableTLS,
 		EnableRelay,
 		MaxPeers,
-		EnableAmana,
-		AmanaListenAddr,
-		AmanaNAT,
-		AmanaNetrestrict,
+		EnableBoot,
+		BootListenAddr,
+		BootNAT,
+		BootNetrestrict,
 		AmanaRunv5,
 	}
 )
@@ -313,7 +313,7 @@ type Config struct {
 	EnableRelay   bool
 	MaxPeers      int
 
-	AmanaBoot AmanaBootConfig
+	Boot BootConfig
 }
 
 func (c *Config) Load() error {

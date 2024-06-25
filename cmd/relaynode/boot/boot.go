@@ -1,4 +1,4 @@
-package amanaboot
+package boot
 
 import (
 	"crypto/ecdsa"
@@ -13,39 +13,39 @@ import (
 	"net"
 )
 
-type AmanaBootService struct {
+type BootService struct {
 	service.Service
 	cfg       *config.Config
 	nodeKey   *ecdsa.PrivateKey
 	localNode *enode.Node
 }
 
-func (s *AmanaBootService) Start() error {
+func (s *BootService) Start() error {
 	if err := s.Service.Start(); err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("Start Amana Boot Service ..."))
+	log.Info(fmt.Sprintf("Start Boot Service ..."))
 
 	eth.InitLog(s.cfg.DebugLevel, s.cfg.DebugPrintOrigins)
 
 	var err error
 	var natm nat.Interface
-	if len(s.cfg.AmanaBoot.Natdesc) > 0 {
-		natm, err = nat.Parse(s.cfg.AmanaBoot.Natdesc)
+	if len(s.cfg.Boot.Natdesc) > 0 {
+		natm, err = nat.Parse(s.cfg.Boot.Natdesc)
 		if err != nil {
 			return fmt.Errorf("--nat: %v", err)
 		}
 	}
 
 	var restrictList *netutil.Netlist
-	if len(s.cfg.AmanaBoot.Netrestrict) > 0 {
-		restrictList, err = netutil.ParseNetlist(s.cfg.AmanaBoot.Netrestrict)
+	if len(s.cfg.Boot.Netrestrict) > 0 {
+		restrictList, err = netutil.ParseNetlist(s.cfg.Boot.Netrestrict)
 		if err != nil {
 			return fmt.Errorf("--netrestrict: %v", err)
 		}
 	}
 
-	addr, err := net.ResolveUDPAddr("udp", s.cfg.AmanaBoot.ListenAddr)
+	addr, err := net.ResolveUDPAddr("udp", s.cfg.Boot.ListenAddr)
 	if err != nil {
 		return fmt.Errorf("ResolveUDPAddr: %v", err)
 	}
@@ -56,7 +56,7 @@ func (s *AmanaBootService) Start() error {
 	realaddr := conn.LocalAddr().(*net.UDPAddr)
 	if natm != nil {
 		if !realaddr.IP.IsLoopback() {
-			go nat.Map(natm, nil, "udp", realaddr.Port, realaddr.Port, "Amana discovery")
+			go nat.Map(natm, nil, "udp", realaddr.Port, realaddr.Port, "Boot discovery")
 		}
 		if ext, err := natm.ExternalIP(); err == nil {
 			realaddr = &net.UDPAddr{IP: ext, Port: realaddr.Port}
@@ -71,7 +71,7 @@ func (s *AmanaBootService) Start() error {
 		PrivateKey:  s.nodeKey,
 		NetRestrict: restrictList,
 	}
-	if s.cfg.AmanaBoot.Runv5 {
+	if s.cfg.Boot.Runv5 {
 		if _, err := discover.ListenV5(conn, ln, cfg); err != nil {
 			return err
 		}
@@ -83,28 +83,28 @@ func (s *AmanaBootService) Start() error {
 	return nil
 }
 
-func (s *AmanaBootService) Stop() error {
+func (s *BootService) Stop() error {
 	if err := s.Service.Stop(); err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("Stop Amana Boot Service"))
+	log.Info(fmt.Sprintf("Stop Boot Service"))
 	return nil
 }
 
-func (s *AmanaBootService) Node() *enode.Node {
+func (s *BootService) Node() *enode.Node {
 	return s.localNode
 }
 
-func (s *AmanaBootService) setLocalNode(nodeKey *ecdsa.PublicKey, addr net.UDPAddr) {
+func (s *BootService) setLocalNode(nodeKey *ecdsa.PublicKey, addr net.UDPAddr) {
 	if addr.IP.IsUnspecified() {
 		addr.IP = net.IP{127, 0, 0, 1}
 	}
 	s.localNode = enode.NewV4(nodeKey, addr.IP, 0, addr.Port)
-	log.Info(fmt.Sprintf("Amana:%s", s.localNode.URLv4()))
+	log.Info(fmt.Sprintf("Boot:%s", s.localNode.URLv4()))
 }
 
-func NewAmanaBootService(cfg *config.Config, nodeKey *ecdsa.PrivateKey) (*AmanaBootService, error) {
-	return &AmanaBootService{
+func NewBootService(cfg *config.Config, nodeKey *ecdsa.PrivateKey) (*BootService, error) {
+	return &BootService{
 		cfg:     cfg,
 		nodeKey: nodeKey,
 	}, nil

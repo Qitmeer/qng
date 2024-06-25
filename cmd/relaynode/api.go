@@ -144,9 +144,9 @@ func (api *PublicRelayAPI) GetNodeInfo() (interface{}, error) {
 	if len(hostaddrs) > 0 {
 		ret.Addresss = hostaddrs
 	}
-	amanaSer := api.node.GetAmanaService()
-	if amanaSer != nil {
-		ret.Addresss = append(ret.Addresss, fmt.Sprintf("Amana: %s", amanaSer.Node().URLv4()))
+	bSer := api.node.GetBootService()
+	if bSer != nil {
+		ret.Addresss = append(ret.Addresss, fmt.Sprintf("Boot: %s", bSer.Node().URLv4()))
 	}
 	return ret, nil
 }

@@ -1,6 +1,6 @@
 package config
 
-type AmanaBootConfig struct {
+type BootConfig struct {
 	Enable      bool
 	ListenAddr  string
 	Natdesc     string
