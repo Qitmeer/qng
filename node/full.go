@@ -294,7 +294,7 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 
 	//
 	bc.MeerChain().(*meer.MeerChain).MeerPool().SetTxPool(txManager.MemPool())
-	bc.MeerChain().(*meer.MeerChain).MeerPool().SetNotify(qm.nfManager)
+	bc.MeerChain().(*meer.MeerChain).MeerPool().SetP2P(qm.GetPeerServer())
 	//
 	if err := qm.RegisterMinerService(); err != nil {
 		return nil, err

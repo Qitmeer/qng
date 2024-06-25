@@ -10,7 +10,7 @@ import (
 	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/meerevm/eth"
 	"github.com/Qitmeer/qng/node/service"
-	"github.com/Qitmeer/qng/p2p"
+	pcommon "github.com/Qitmeer/qng/p2p/common"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/forkid"
@@ -42,11 +42,11 @@ func (s *AmanaCrawlService) Start() error {
 
 	eth.InitLog(s.cfg.DebugLevel, s.cfg.DebugPrintOrigins)
 
-	pk, err := p2p.PrivateKey(s.cfg.DataDir, s.cfg.PrivateKey, 0600)
+	pk, err := pcommon.PrivateKey(s.cfg.DataDir, s.cfg.PrivateKey, 0600)
 	if err != nil {
 		return err
 	}
-	nk, err := p2p.ToECDSAPrivKey(pk)
+	nk, err := pcommon.ToECDSAPrivKey(pk)
 	if err != nil {
 		return err
 	}

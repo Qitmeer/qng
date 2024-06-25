@@ -58,6 +58,9 @@ func (ntmgr *NotifyMgr) AnnounceNewTransactions(newTxs []*types.TxDesc, filters 
 	defer ntmgr.Unlock()
 
 	for _, tx := range newTxs {
+		if types.IsCrossChainVMTx(tx.Tx.Tx) {
+			continue
+		}
 		ntmgr.nds = append(ntmgr.nds, &notify.NotifyData{Data: tx, Filters: filters})
 	}
 
@@ -89,6 +92,9 @@ func (ntmgr *NotifyMgr) AddRebroadcastInventory(newTxs []*types.TxDesc) {
 		return
 	}
 	for _, tx := range newTxs {
+		if types.IsCrossChainVMTx(tx.Tx.Tx) {
+			continue
+		}
 		ntmgr.Server.Rebroadcast().AddInventory(tx.Tx.Hash(), tx)
 	}
 }

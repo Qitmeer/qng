@@ -10,14 +10,12 @@ import (
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
-	"net"
 	"path/filepath"
 )
 
@@ -82,38 +80,6 @@ func createConsensusEngine(config *params.ChainConfig, db ethdb.Database) (conse
 	return mconsensus.New(config.Clique, db), nil
 }
 
-func getBootstrapNodes(port int) []*enode.Node {
-	db, _ := enode.OpenDB("")
-	key, _ := crypto.GenerateKey()
-	ln := enode.NewLocalNode(db, key)
-	ln.SetFallbackIP(net.IP{127, 0, 0, 1})
-	ln.SetFallbackUDP(port)
-
-	urls := []string{}
-	switch qparams.ActiveNetParams.Net {
-	case protocol.MainNet:
-		urls = append(urls, ln.Node().String())
-	case protocol.TestNet:
-		urls = append(urls, "enr:-KO4QMjjjBd9NKfXaf2LCEmEVcl7q2m9ArnKOJxGaIvkC5L3Fn6zqJxi1ON4nFkH3Go4fE5oDa7uUxLWeBgsSHbWb3SGAYdv5iIng2V0aMfGhE5aFCGAgmlkgnY0gmlwhC0gC3eJc2VjcDI1NmsxoQK6ou0UT10hfVO8-b-2zWawj1_l8xflj764RASTmM8f64RzbmFwwIN0Y3CCSGCDdWRwgkhg")
-	case protocol.MixNet:
-		urls = append(urls, ln.Node().String())
-	default:
-		urls = append(urls, ln.Node().String())
-	}
-	bootstrapNodes := []*enode.Node{}
-	for _, url := range urls {
-		if url != "" {
-			node, err := enode.Parse(enode.ValidSchemes, url)
-			if err != nil {
-				log.Crit("Bootstrap URL invalid", "enode", url, "err", err)
-				continue
-			}
-			bootstrapNodes = append(bootstrapNodes, node)
-		}
-	}
-	return bootstrapNodes
-}
-
 func Genesis() *core.Genesis {
 	switch qparams.ActiveNetParams.Net {
 	case protocol.MainNet:
@@ -126,4 +92,19 @@ func Genesis() *core.Genesis {
 		return AmanaPrivnetGenesis()
 	}
 	return nil
+}
+
+func getBootstrapNodes(port int) []*enode.Node {
+	urls := []string{}
+	switch qparams.ActiveNetParams.Net {
+	case protocol.MainNet:
+		urls = MainnetBootnodes
+	case protocol.TestNet:
+		urls = TestnetBootnodes
+	case protocol.MixNet:
+		urls = MixnetBootnodes
+	case protocol.PrivNet:
+		urls = PrivnetBootnodes
+	}
+	return eth.GetBootstrapNodes(port, urls)
 }

@@ -357,7 +357,7 @@ mempool:
 				originHash := &txIn.PreviousOut.Hash
 				entry := utxos.LookupEntry(txIn.PreviousOut)
 				if entry == nil || entry.IsSpent() {
-					if !txpool.HaveTransactionUTXO(originHash) {
+					if !txpool.HaveTransaction(originHash) {
 						log.Trace(fmt.Sprintf("Skipping tx %s because it "+
 							"references unspent output %v "+
 							"which is not available",

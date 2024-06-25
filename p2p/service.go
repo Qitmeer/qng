@@ -23,7 +23,6 @@ import (
 	"github.com/Qitmeer/qng/p2p/runutil"
 	"github.com/Qitmeer/qng/p2p/synch"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/Qitmeer/qng/services/notifymgr/notify"
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
@@ -82,7 +81,7 @@ type Service struct {
 
 	blockChain  *blockchain.BlockChain
 	timeSource  model.MedianTimeSource
-	txMemPool   *mempool.TxPool
+	txMemPool   model.TxPool
 	notify      model.Notify
 	rebroadcast *Rebroadcast
 
@@ -440,11 +439,11 @@ func (s *Service) BlockChain() *blockchain.BlockChain {
 	return s.blockChain
 }
 
-func (s *Service) SetTxMemPool(txMemPool *mempool.TxPool) {
+func (s *Service) SetTxMemPool(txMemPool model.TxPool) {
 	s.txMemPool = txMemPool
 }
 
-func (s *Service) TxMemPool() *mempool.TxPool {
+func (s *Service) TxMemPool() model.TxPool {
 	return s.txMemPool
 }
 

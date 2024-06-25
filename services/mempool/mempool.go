@@ -77,14 +77,16 @@ type TxDesc struct {
 // The descriptors are to be treated as read only.
 //
 // This function is safe for concurrent access.
-func (mp *TxPool) TxDescs() []*TxDesc {
+func (mp *TxPool) TxDescs(all bool) []*types.TxDesc {
 	mp.mtx.RLock()
-	descs := []*TxDesc{}
+	descs := []*types.TxDesc{}
 	for _, desc := range mp.pool {
-		descs = append(descs, desc)
+		descs = append(descs, &desc.TxDesc)
 	}
 	mp.mtx.RUnlock()
-
+	if !all {
+		return descs
+	}
 	etxs, _, err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().GetTxs()
 	if err != nil {
 		log.Error(err.Error())
@@ -92,12 +94,10 @@ func (mp *TxPool) TxDescs() []*TxDesc {
 	}
 
 	for _, tx := range etxs {
-		txDesc := &TxDesc{
-			TxDesc: types.TxDesc{
-				Tx:     tx,
-				Added:  roughtime.Now(),
-				Height: mp.GetMainHeight(),
-			},
+		txDesc := &types.TxDesc{
+			Tx:     tx,
+			Added:  roughtime.Now(),
+			Height: mp.GetMainHeight(),
 		}
 		descs = append(descs, txDesc)
 	}
@@ -277,6 +277,18 @@ func (mp *TxPool) addTransaction(utxoView *utxo.UtxoViewpoint,
 	return txD
 }
 
+func (mp *TxPool) TriggerDirty() {
+	if mp.LastUpdated().Day() == time.Now().Day() {
+		newDailyTxCount.Inc(1)
+	} else {
+		newDailyTxCount.Update(1)
+	}
+
+	atomic.StoreInt64(&mp.lastUpdated, roughtime.Now().Unix())
+
+	mp.dirty.Store(true)
+}
+
 // Call addTransaction
 func (mp *TxPool) AddTransaction(tx *types.Tx, height uint64, fee int64) {
 	mp.addTransaction(nil, tx, height, fee)
@@ -299,7 +311,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 	// Don't accept the transaction if it already exists in the pool.  This
 	// applies to orphan transactions as well.  This check is intended to
 	// be a quick check to weed out duplicates.
-	if mp.haveTransaction(txHash) {
+	if mp.HaveTransaction(txHash) {
 		str := fmt.Sprintf("already have transaction %v", txHash)
 		return nil, nil, txRuleError(message.RejectDuplicate, str)
 	}
@@ -496,18 +508,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 		log.Debug(fmt.Sprintf("Accepted import transaction ,txHash(qng):%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
 		return nil, txD, nil
 	} else if opreturn.IsMeerEVMTx(tx.Tx) {
-		if mp.cfg.BC.HasTx(txHash) {
-			return nil, nil, fmt.Errorf("Already have transaction %v", txHash)
-		}
-		fee, err := mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().AddTx(tx, false)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		txD := mp.addTransaction(nil, tx, nextBlockHeight, fee)
-
-		log.Debug(fmt.Sprintf("Accepted meerevm transaction ,txHash(qng):%s ,pool size:%d , fee:%d", txHash, len(mp.pool), fee))
-		return nil, txD, nil
+		return nil, nil, fmt.Errorf("Unsupported this MeerEVMTx %v", txHash)
 	}
 	// Fetch all of the unspent transaction outputs referenced by the inputs
 	// to this transaction.  This function also attempts to fetch the
@@ -1153,9 +1154,7 @@ func (mp *TxPool) HaveAllTransactions(hashes []hash.Hash) bool {
 // in the main pool or in the orphan pool.
 //
 // This function MUST be called with the mempool lock held (for reads).
-func (mp *TxPool) haveTransaction(hash *hash.Hash) bool {
-	start := time.Now()
-	defer mempoolHaveTransaction.Update(time.Now().Sub(start))
+func (mp *TxPool) haveTransactionAll(hash *hash.Hash) bool {
 	return mp.isTransactionInPool(hash, true) || mp.isOrphanInPool(hash)
 }
 
@@ -1164,10 +1163,12 @@ func (mp *TxPool) haveTransaction(hash *hash.Hash) bool {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) HaveTransaction(hash *hash.Hash) bool {
+	start := time.Now()
+	defer mempoolHaveTransaction.Update(time.Now().Sub(start))
 	return mp.haveTransaction(hash)
 }
 
-func (mp *TxPool) HaveTransactionUTXO(hash *hash.Hash) bool {
+func (mp *TxPool) haveTransaction(hash *hash.Hash) bool {
 	// Protect concurrent access.
 	haveTx := mp.isTransactionInPool(hash, false) || mp.isOrphanInPool(hash)
 	return haveTx
@@ -1189,7 +1190,7 @@ func (mp *TxPool) isTransactionInPool(hash *hash.Hash, all bool) bool {
 	if !all {
 		return false
 	}
-	return mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().HasTx(hash, true)
+	return mp.cfg.BC.MeerChain().(*meer.MeerChain).MeerPool().HasTx(hash)
 }
 
 // IsTransactionInPool returns whether or not the passed transaction already

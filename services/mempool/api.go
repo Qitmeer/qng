@@ -28,7 +28,7 @@ func (api *PublicMempoolAPI) GetMempool(txType *string, verbose bool) (interface
 	// TODO verbose
 	// The response is simply an array of the transaction hashes if the
 	// verbose flag is not set.
-	descs := api.txPool.TxDescs()
+	descs := api.txPool.TxDescs(true)
 	hashStrings := make([]string, 0, len(descs))
 	for i := range descs {
 		hashStrings = append(hashStrings, descs[i].Tx.Hash().String())
@@ -68,9 +68,9 @@ func (api *PublicMempoolAPI) EstimateFee(numBlocks int64) (interface{}, error) {
 }
 
 func (api *PublicMempoolAPI) CleanMempool() (interface{}, error) {
-	descs := api.txPool.TxDescs()
+	descs := api.txPool.TxDescs(true)
 	for i := range descs {
-		api.txPool.RemoveTransaction(descs[i].Tx,true)
+		api.txPool.RemoveTransaction(descs[i].Tx, true)
 	}
 	return len(descs), nil
 }

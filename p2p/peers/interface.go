@@ -9,7 +9,6 @@ import (
 	"github.com/Qitmeer/qng/p2p/encoder"
 	pb "github.com/Qitmeer/qng/p2p/proto/v1"
 	"github.com/Qitmeer/qng/p2p/qnode"
-	"github.com/Qitmeer/qng/services/mempool"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
@@ -22,7 +21,7 @@ type P2P interface {
 	Context() context.Context
 	Encoding() encoder.NetworkEncoding
 	Config() *common.Config
-	TxMemPool() *mempool.TxPool
+	TxMemPool() model.TxPool
 	Metadata() *pb.MetaData
 	MetadataSeq() uint64
 	TimeSource() model.MedianTimeSource

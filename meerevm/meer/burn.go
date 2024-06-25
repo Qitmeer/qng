@@ -83,7 +83,7 @@ func BuildBurnBalance(burnStr string) map[common.Hash]common.Hash {
 	for k, v := range burnM {
 		log.Trace(k, "burn amount", v)
 	}
-	log.Debug("All burn amount", allBurnAmount)
+	log.Debug("All burn", "amount", allBurnAmount)
 	return storage
 }
 

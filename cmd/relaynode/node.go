@@ -65,7 +65,7 @@ func (node *Node) init(cfg *rconfig.Config) error {
 	}
 	node.cfg = cfg
 
-	pk, err := p2p.PrivateKey(cfg.DataDir, cfg.PrivateKey, 0600)
+	pk, err := common.PrivateKey(cfg.DataDir, cfg.PrivateKey, 0600)
 	if err != nil {
 		return err
 	}
@@ -309,7 +309,7 @@ func (node *Node) RegisterAmanaService() error {
 	if !node.cfg.AmanaBoot.Enable {
 		return nil
 	}
-	nk, err := p2p.ToECDSAPrivKey(node.privateKey)
+	nk, err := common.ToECDSAPrivKey(node.privateKey)
 	if err != nil {
 		return err
 	}

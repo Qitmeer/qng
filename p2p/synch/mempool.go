@@ -32,9 +32,6 @@ func (s *Sync) HandlerMemPool(ctx context.Context, msg interface{}, stream libp2
 		err := fmt.Errorf("message is not type *MsgFilterLoad")
 		return ErrMessage(err)
 	}
-	if s.p2p.Consensus().Config().Miner {
-		return s.EncodeResponseMsg(stream, nil)
-	}
 	curCount := uint64(s.p2p.TxMemPool().Count())
 	if mpr.TxsNum != curCount && curCount != 0 {
 		err := s.peerSync.OnMemPool(pe, &MsgMemPool{})
@@ -63,7 +60,7 @@ func (ps *PeerSync) OnMemPool(sp *peers.Peer, msg *MsgMemPool) error {
 	// per message.  The NewMsgInvSizeHint function automatically limits
 	// the passed hint to the maximum allowed, so it's safe to pass it
 	// without double checking it here.
-	txDescs := ps.sy.p2p.TxMemPool().TxDescs()
+	txDescs := ps.sy.p2p.TxMemPool().TxDescs(false)
 
 	invs := []*pb.InvVect{}
 	for _, txDesc := range txDescs {
