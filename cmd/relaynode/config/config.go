@@ -16,17 +16,17 @@ import (
 )
 
 const (
-	defaultDataDirname     = "relay"
-	defaultPort            = "2001"
-	DefaultIP              = "0.0.0.0"
-	defaultLogDirname      = "logs"
-	defaultLogFilename     = "relaynode.log"
-	defaultRPCKeyFile      = "rpc.key"
-	defaultRPCCertFile     = "rpc.cert"
-	defaultMaxRPCClients   = 10
-	defaultRPCListener     = "127.0.0.1:2002"
-	defaultMaxPeers        = 1000
-	defaultAmanaListenAddr = ":2003"
+	defaultDataDirname    = "relay"
+	defaultPort           = "2001"
+	DefaultIP             = "0.0.0.0"
+	defaultLogDirname     = "logs"
+	defaultLogFilename    = "relaynode.log"
+	defaultRPCKeyFile     = "rpc.key"
+	defaultRPCCertFile    = "rpc.cert"
+	defaultMaxRPCClients  = 10
+	defaultRPCListener    = "127.0.0.1:2002"
+	defaultMaxPeers       = 1000
+	defaultBootListenAddr = ":2003"
 )
 
 var (
@@ -228,7 +228,7 @@ var (
 		Name:        "addr",
 		Aliases:     []string{"qa"},
 		Usage:       "Boot listen address",
-		Value:       defaultAmanaListenAddr,
+		Value:       defaultBootListenAddr,
 		Destination: &Conf.Boot.ListenAddr,
 	}
 
@@ -243,14 +243,14 @@ var (
 	BootNetrestrict = &cli.StringFlag{
 		Name:        "netrestrict",
 		Aliases:     []string{"ne"},
-		Usage:       "Amana restrict network communication to the given IP networks (CIDR masks)",
+		Usage:       "Boot restrict network communication to the given IP networks (CIDR masks)",
 		Value:       "",
 		Destination: &Conf.Boot.Netrestrict,
 	}
 
-	AmanaRunv5 = &cli.BoolFlag{
+	BootRunv5 = &cli.BoolFlag{
 		Name:        "v5",
-		Usage:       "run a v5 topic discovery Amana",
+		Usage:       "run a v5 topic discovery Boot",
 		Value:       false,
 		Destination: &Conf.Boot.Runv5,
 	}
@@ -283,7 +283,7 @@ var (
 		BootListenAddr,
 		BootNAT,
 		BootNetrestrict,
-		AmanaRunv5,
+		BootRunv5,
 	}
 )
 

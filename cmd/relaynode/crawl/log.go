@@ -2,7 +2,7 @@
  * Copyright (c) 2017-2020 The qitmeer developers
  */
 
-package amanacrawl
+package crawl
 
 import (
 	l "github.com/Qitmeer/qng/log"
@@ -20,5 +20,5 @@ func UseLogger(logger l.Logger) {
 
 // The default amount of logging is none.
 func init() {
-	UseLogger(l.New(l.Ctx{"module": "AmanaCrawl"}))
+	UseLogger(l.New(l.Ctx{"module": "CRAWL"}))
 }

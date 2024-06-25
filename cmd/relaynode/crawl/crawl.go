@@ -1,4 +1,4 @@
-package amanacrawl
+package crawl
 
 import (
 	"time"
