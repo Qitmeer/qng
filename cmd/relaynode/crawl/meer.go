@@ -25,7 +25,9 @@ func meerCmd() *cli.Command {
 		},
 		Action: func(ctx *cli.Context) error {
 			cfg := config.Conf
-			ecfg, err := meer.MakeConfig(common.DefaultConfig("."))
+			qcfg := common.DefaultConfig(".")
+			qcfg.DataDir = cfg.DataDir
+			ecfg, err := meer.MakeConfig(qcfg)
 			if err != nil {
 				return err
 			}
