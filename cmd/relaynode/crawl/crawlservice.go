@@ -174,6 +174,7 @@ func parseBootnodes(ctx *cli.Context) ([]*enode.Node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid bootstrap node: %v", err)
 		}
+		log.Debug("parse bootnode", nodes[i].IPAddr().String(), nodes[i].String())
 	}
 	return nodes, nil
 }
