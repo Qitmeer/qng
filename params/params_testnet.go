@@ -33,8 +33,8 @@ const testWorkDiffWindowSize = 60
 var TestNetParams = Params{
 	Name:           "testnet",
 	Net:            protocol.TestNet,
-	DefaultPort:    "18150",
-	DefaultUDPPort: 18160,
+	DefaultPort:    "18130",
+	DefaultUDPPort: 18140,
 	Bootstrap: []string{
 		"/dns4/node.meerscan.io/tcp/28130/p2p/16Uiu2HAmTdcrQ2S4MD6UxeR81Su8DQdt2eB7vLzJA7LrawNf93T2",
 		"/dns4/ns-cn.qitmeer.xyz/tcp/18150/p2p/16Uiu2HAm45YEQXf5sYgpebp1NvPS96ypvvpz5uPx7iPHmau94vVk",
