@@ -182,7 +182,7 @@ func (ntmgr *NotifyMgr) handleStallSample() {
 	ntmgr.Server.RelayInventory(ntmgr.nds)
 
 	if len(txds) > 0 {
-		if ntmgr.RpcServer != nil && ntmgr.RpcServer.IsStarted() {
+		if ntmgr.RpcServer != nil && ntmgr.RpcServer.IsStarted() && !ntmgr.RpcServer.IsShutdown() {
 			ntmgr.RpcServer.NotifyNewTransactions(txds)
 		}
 	}

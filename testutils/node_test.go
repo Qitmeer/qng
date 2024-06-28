@@ -30,7 +30,7 @@ func TestNewNodeCmdArgs(t *testing.T) {
 		"qng",
 		"--listen=127.0.0.1:38130",
 		"--rpclisten=127.0.0.1:38131",
-		`--evmenv="--http --http.port=18545 --ws --ws.port=18546"`,
+		`--evmenv="--http --http.port=18545 --ws --ws.port=18546 --port=40303"`,
 		"--rpcuser=testuser",
 		"--rpcpass=testpass",
 		"--appdata=.*/test.*$",

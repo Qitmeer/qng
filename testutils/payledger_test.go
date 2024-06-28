@@ -1,9 +1,8 @@
-package main
+package testutils
 
 import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/testutils"
 	"testing"
 	"time"
 )
@@ -13,7 +12,7 @@ func TestLockedLedger(t *testing.T) {
 	genesisTxHash := params.ActiveNetParams.Params.GenesisBlock.Transactions()[1].Hash()
 
 	args := []string{"--modules=miner", "--modules=qitmeer"}
-	h, err := testutils.NewHarness(t, params.ActiveNetParams.Params, args...)
+	h, err := NewHarness(t, params.ActiveNetParams.Params, args...)
 	defer h.Teardown()
 	if err != nil {
 		t.Errorf("new harness failed: %v", err)
@@ -38,13 +37,13 @@ func TestLockedLedger(t *testing.T) {
 		}
 	}
 
-	testutils.AssertBlockOrderAndHeight(t, h, 1, 1, 0)
-	testutils.GenerateBlock(t, h, 2)
-	testutils.AssertBlockOrderAndHeight(t, h, 3, 3, 2)
+	AssertBlockOrderAndHeight(t, h, 1, 1, 0)
+	GenerateBlock(t, h, 2)
+	AssertBlockOrderAndHeight(t, h, 3, 3, 2)
 
 	spendAmt := types.Amount{Value: 50 * types.AtomsPerCoin, Id: types.MEERA}
 
 	lockTime := int64(2)
-	txid, addr := testutils.Spend(t, h, spendAmt, types.NewOutPoint(genesisTxHash, 406), &lockTime)
+	txid, addr := Spend(t, h, spendAmt, types.NewOutPoint(genesisTxHash, 406), &lockTime)
 	t.Logf("[%v]: tx %v which spend %v has been sent, address:%s", h.Node.Id(), txid, spendAmt.String(), addr.String())
 }

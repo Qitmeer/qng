@@ -472,6 +472,9 @@ func (s *Service) PeerSync() *synch.PeerSync {
 }
 
 func (s *Service) RelayInventory(nds []*notify.NotifyData) {
+	if s.IsShutdown() {
+		return
+	}
 	s.PeerSync().RelayInventory(nds)
 }
 
