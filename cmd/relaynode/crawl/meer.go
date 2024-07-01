@@ -57,7 +57,13 @@ func meerNodesCmd() *cli.Command {
 		},
 		Action: func(ctx *cli.Context) error {
 			cfg := config.Conf
-			nodesFile := getNodesFilePath(cfg.DataDir)
+			qcfg := common.DefaultConfig(".")
+			qcfg.DataDir = cfg.DataDir
+			ecfg, err := meer.MakeConfig(qcfg)
+			if err != nil {
+				return err
+			}
+			nodesFile := getNodesFilePath(cfg.DataDir, ecfg.Node.Name)
 			if !ecommon.FileExist(nodesFile) {
 				return fmt.Errorf("Can't find nodes file:%s", nodesFile)
 			}
@@ -70,32 +76,6 @@ func meerNodesCmd() *cli.Command {
 			}
 			log.Info("Finished node", "count", len(ns))
 			return nil
-		},
-		After: func(ctx *cli.Context) error {
-			return nil
-		},
-	}
-}
-
-func bootNodesCmd() *cli.Command {
-	return &cli.Command{
-		Name:        "bootnodes",
-		Aliases:     []string{"mn"},
-		Category:    "crawl",
-		Usage:       "Show boot nodes info",
-		Description: "Show boot nodes info",
-		Flags: []cli.Flag{
-			bootnodesFlag,
-		},
-		Before: func(ctx *cli.Context) error {
-			return config.Conf.Load()
-		},
-		Action: func(ctx *cli.Context) error {
-			if !commandHasFlag(ctx, bootnodesFlag) {
-				return fmt.Errorf("No bootnodes config")
-			}
-			_, err := parseBootnodes(ctx)
-			return err
 		},
 		After: func(ctx *cli.Context) error {
 			return nil
