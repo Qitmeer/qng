@@ -52,11 +52,6 @@ func meerNodesCmd() *cli.Command {
 		Category:    "crawl",
 		Usage:       "Show nodes found in the DHT for Meer from nodes.json file",
 		Description: "Show nodes found in the DHT for Meer from nodes.json file",
-		Flags: []cli.Flag{
-			bootnodesFlag,
-			nodedbFlag,
-			crawlTimeoutFlag,
-		},
 		Before: func(ctx *cli.Context) error {
 			return config.Conf.Load()
 		},
@@ -75,6 +70,32 @@ func meerNodesCmd() *cli.Command {
 			}
 			log.Info("Finished node", "count", len(ns))
 			return nil
+		},
+		After: func(ctx *cli.Context) error {
+			return nil
+		},
+	}
+}
+
+func bootNodesCmd() *cli.Command {
+	return &cli.Command{
+		Name:        "bootnodes",
+		Aliases:     []string{"mn"},
+		Category:    "crawl",
+		Usage:       "Show boot nodes info",
+		Description: "Show boot nodes info",
+		Flags: []cli.Flag{
+			bootnodesFlag,
+		},
+		Before: func(ctx *cli.Context) error {
+			return config.Conf.Load()
+		},
+		Action: func(ctx *cli.Context) error {
+			if !commandHasFlag(ctx, bootnodesFlag) {
+				return fmt.Errorf("No bootnodes config")
+			}
+			_, err := parseBootnodes(ctx)
+			return err
 		},
 		After: func(ctx *cli.Context) error {
 			return nil
