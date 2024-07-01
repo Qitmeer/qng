@@ -26,7 +26,7 @@ var (
 )
 
 func Cmds() []*cli.Command {
-	return []*cli.Command{amanaCmd(), meerCmd()}
+	return []*cli.Command{amanaCmd(), meerCmd(), meerNodesCmd()}
 }
 
 // commandHasFlag returns true if the current command supports the given flag.
