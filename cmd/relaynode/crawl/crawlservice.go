@@ -56,7 +56,7 @@ func (s *CrawlService) Start() error {
 
 func (s *CrawlService) discv4Crawl() error {
 	ctx := s.ctx
-	nodesFile := getNodesFilePath(s.cfg.DataDir)
+	nodesFile := getNodesFilePath(s.cfg.DataDir, s.ecfg.Node.Name)
 	var inputSet nodeSet
 	if common.FileExist(nodesFile) {
 		is, err := loadNodesJSON(nodesFile)
@@ -174,8 +174,9 @@ func parseBootnodes(ctx *cli.Context) ([]*enode.Node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid bootstrap node: %v", err)
 		}
-		log.Debug("parse bootnode", nodes[i].IPAddr().String(), nodes[i].String())
+		log.Info("parse bootnode", nodes[i].IPAddr().String(), nodes[i].String())
 	}
+	log.Info("Finished bootnodes", "count", len(s))
 	return nodes, nil
 }
 
@@ -222,8 +223,8 @@ func decodeRecordBase64(b []byte) ([]byte, bool) {
 	return dec[:n], err == nil
 }
 
-func getNodesFilePath(dataDir string) string {
-	nfp := path.Join(dataDir, qparams.ActiveNetParams.Name)
+func getNodesFilePath(dataDir string, node string) string {
+	nfp := path.Join(dataDir, qparams.ActiveNetParams.Name, node)
 	return path.Join(nfp, "nodes.json")
 }
 

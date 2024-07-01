@@ -1,6 +1,8 @@
 package crawl
 
 import (
+	"fmt"
+	"github.com/Qitmeer/qng/cmd/relaynode/config"
 	"github.com/urfave/cli/v2"
 	"time"
 )
@@ -26,7 +28,7 @@ var (
 )
 
 func Cmds() []*cli.Command {
-	return []*cli.Command{amanaCmd(), meerCmd()}
+	return []*cli.Command{amanaCmd(), amanaNodesCmd(), meerCmd(), meerNodesCmd(), bootNodesCmd()}
 }
 
 // commandHasFlag returns true if the current command supports the given flag.
@@ -42,4 +44,30 @@ func commandHasFlag(ctx *cli.Context, flag cli.Flag) bool {
 		}
 	}
 	return false
+}
+
+func bootNodesCmd() *cli.Command {
+	return &cli.Command{
+		Name:        "bootnodes",
+		Aliases:     []string{"mn"},
+		Category:    "crawl",
+		Usage:       "Show boot nodes info",
+		Description: "Show boot nodes info",
+		Flags: []cli.Flag{
+			bootnodesFlag,
+		},
+		Before: func(ctx *cli.Context) error {
+			return config.Conf.Load()
+		},
+		Action: func(ctx *cli.Context) error {
+			if !commandHasFlag(ctx, bootnodesFlag) {
+				return fmt.Errorf("No bootnodes config")
+			}
+			_, err := parseBootnodes(ctx)
+			return err
+		},
+		After: func(ctx *cli.Context) error {
+			return nil
+		},
+	}
 }
