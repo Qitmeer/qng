@@ -154,3 +154,12 @@ func ProtocolDHT() protocol.ID {
 		return "/qitmeer/kad/1.0.0/privnet"
 	}
 }
+
+func Cleanup(dataDir string) {
+	dsPath := path.Join(dataDir, PeerStore)
+	err := os.RemoveAll(dsPath)
+	if err != nil {
+		log.Error(err.Error())
+	}
+	log.Info(fmt.Sprintf("Finished cleanup:%s", dsPath))
+}
