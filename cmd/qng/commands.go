@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/consensus"
@@ -9,9 +10,11 @@ import (
 	"github.com/Qitmeer/qng/meerevm/amana"
 	"github.com/Qitmeer/qng/meerevm/cmd"
 	"github.com/Qitmeer/qng/meerevm/meer"
+	"github.com/Qitmeer/qng/p2p"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/version"
 	"github.com/urfave/cli/v2"
+	"os"
 	"runtime"
 )
 
@@ -22,6 +25,7 @@ func commands() []*cli.Command {
 	cmds = append(cmds, blockchainCmd())
 	cmds = append(cmds, cmd.Commands...)
 	cmds = append(cmds, dbCmd())
+	cmds = append(cmds, cleanupCmd())
 
 	for _, cmd := range cmds {
 		cmd.Before = loadConfig
@@ -124,6 +128,56 @@ func consensusCmd() *cli.Command {
 					return cons.Rebuild()
 				},
 			},
+		},
+	}
+}
+
+func cleanupCmd() *cli.Command {
+	removeAll := false
+	return &cli.Command{
+		Name:        "cleanup",
+		Aliases:     []string{"cl"},
+		Usage:       "Delete all status data, including cache",
+		Description: "Delete all status data, including cache",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:        "all",
+				Aliases:     []string{"a"},
+				Usage:       "Delete all data including blockchain data, peerstore, logs",
+				Destination: &removeAll,
+			},
+		},
+		Action: func(ctx *cli.Context) error {
+			cfg := config.Cfg
+			cfg.Cleanup = true
+			defer func() {
+				if log.LogWrite() != nil {
+					log.LogWrite().Close()
+				}
+			}()
+			interrupt := system.InterruptListener()
+			log.Info("System info", "QNG Version", version.String(), "Go version", runtime.Version())
+			log.Info("System info", "Home dir", cfg.HomeDir)
+			if cfg.NoFileLogging {
+				log.Info("File logging disabled")
+			}
+			_, err := database.New(cfg, interrupt)
+			if err != nil {
+				log.Error("load block database", "error", err)
+				return err
+			}
+			if !removeAll {
+				return nil
+			}
+			p2p.Cleanup(cfg.DataDir)
+			if len(cfg.LogDir) > 0 {
+				err = os.RemoveAll(cfg.LogDir)
+				if err != nil {
+					log.Error(err.Error())
+				}
+				log.Info(fmt.Sprintf("Finished cleanup:%s", cfg.LogDir))
+			}
+			return nil
 		},
 	}
 }
