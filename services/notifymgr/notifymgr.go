@@ -180,7 +180,7 @@ func (ntmgr *NotifyMgr) handleStallSample() {
 		switch value := nd.Data.(type) {
 		case *types.TxDesc:
 			log.Trace(fmt.Sprintf("Announce new transaction :hash=%s height=%d add=%s", value.Tx.Hash().String(), value.Height, value.Added.String()))
-			txds = append(txds, value)
+			txds = append(txds, value.Tx)
 			nds = append(nds, nd)
 		case types.BlockHeader:
 			nds = append(nds, nd)
