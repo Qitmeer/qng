@@ -212,7 +212,7 @@ func (h *Harness) NotifyTxsByAddr(reload bool, addr []string, outpoint []cmds.Ou
 
 // Register NotifyNewTransactions
 func (h *Harness) NotifyNewTransactions(verbose bool) error {
-	return h.Notifier.NotifyNewTransactions(verbose)
+	return h.Notifier.NotifyNewTransactions(verbose, true)
 }
 
 // Register Rescan by address

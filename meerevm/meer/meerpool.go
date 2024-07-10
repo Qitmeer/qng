@@ -126,6 +126,7 @@ func (m *MeerPool) handler() {
 				continue
 			}
 			m.qTxPool.TriggerDirty()
+			m.p2pSer.Notify().AnnounceNewTransactions(nil, ev.Txs, nil)
 			m.dirty.Store(true)
 		// System stopped
 		case <-m.quit:

@@ -346,6 +346,23 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		c.ntfnHandlers.OnTxAccepted(hash, amt)
 
+		// OnMeerTxAccepted
+	case cmds.MeerTxAcceptedNtfnMethod:
+		// Ignore the notification if the client is not interested in
+		// it.
+		if c.ntfnHandlers.OnMeerTxAccepted == nil {
+			return
+		}
+
+		tx, err := parseMeerTxAcceptedNtfnParams(ntfn.Params)
+		if err != nil {
+			log.Warn(fmt.Sprintf("Received invalid meer tx accepted "+
+				"notification: %v", err))
+			return
+		}
+
+		c.ntfnHandlers.OnMeerTxAccepted(tx)
+
 	// OnTxAcceptedVerbose
 	case cmds.TxAcceptedVerboseNtfnMethod:
 		// Ignore the notification if the client is not interested in
@@ -927,10 +944,10 @@ func (c *Client) reregisterNtfns() error {
 			return err
 		}
 	}
-	if stateCopy.notifyNewTx || stateCopy.notifyNewTxVerbose {
+	if stateCopy.notifyNewTx || stateCopy.notifyNewTxVerbose || stateCopy.notifyMeerTx {
 		log.Debug(fmt.Sprintf("Reregistering [notifynewtransactions] (verbose=%v)",
 			stateCopy.notifyNewTxVerbose))
-		err := c.NotifyNewTransactions(stateCopy.notifyNewTxVerbose)
+		err := c.NotifyNewTransactions(stateCopy.notifyNewTxVerbose, stateCopy.notifyMeerTx)
 		if err != nil {
 			return err
 		}
