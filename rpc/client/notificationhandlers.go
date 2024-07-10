@@ -12,6 +12,7 @@ import (
 	j "github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
+	etypes "github.com/ethereum/go-ethereum/core/types"
 	"time"
 )
 
@@ -22,6 +23,7 @@ type NotificationHandlers struct {
 	OnBlockAccepted     func(hash *hash.Hash, height, order int64, t time.Time, txs []*types.Transaction)
 	OnReorganization    func(hash *hash.Hash, order int64, olds []*hash.Hash)
 	OnTxAccepted        func(hash *hash.Hash, amounts types.AmountGroup)
+	OnMeerTxAccepted    func(tx *etypes.Transaction)
 	OnTxAcceptedVerbose func(c *Client, tx *j.DecodeRawTransactionResult)
 	OnTxConfirm         func(txConfirm *cmds.TxConfirmResult)
 	OnRescanProgress    func(param *cmds.RescanProgressNtfn)
@@ -166,6 +168,27 @@ func parseTxAcceptedNtfnParams(params []json.RawMessage) (*hash.Hash,
 	}
 
 	return txHash, amouts, nil
+}
+
+func parseMeerTxAcceptedNtfnParams(params []json.RawMessage) (*etypes.Transaction, error) {
+	if len(params) != 1 {
+		return nil, wrongNumParams(len(params))
+	}
+	var txHex string
+	err := json.Unmarshal(params[0], &txHex)
+	if err != nil {
+		return nil, err
+	}
+
+	bs, err := hex.DecodeString(txHex)
+	if err != nil {
+		return nil, err
+	}
+	var tx = &etypes.Transaction{}
+	if err := tx.UnmarshalBinary(bs); err != nil {
+		return nil, err
+	}
+	return tx, nil
 }
 
 func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*j.DecodeRawTransactionResult,

@@ -173,7 +173,7 @@ func (tm *TxManager) handleNotifyMsg(notification *blockchain.Notification) {
 				}
 			}
 			tm.ntmgr.TransactionsConfirmed(block.Transactions()[1:])
-			tm.ntmgr.AnnounceNewTransactions(txds, nil)
+			tm.ntmgr.AnnounceNewTransactions(txds, nil, nil)
 		}
 
 		// Register block with the fee estimator, if it exists.
@@ -332,7 +332,7 @@ func (tm *TxManager) ProcessRawTx(serializedTx []byte, highFees bool) (string, e
 			tx.Hash(), err)
 		return "", rpc.RpcDeserializationError("rejected: %v", err)
 	}
-	tm.ntmgr.AnnounceNewTransactions(acceptedTxs, nil)
+	tm.ntmgr.AnnounceNewTransactions(acceptedTxs, nil, nil)
 	tm.ntmgr.AddRebroadcastInventory(acceptedTxs)
 	return tx.Hash().String(), nil
 }

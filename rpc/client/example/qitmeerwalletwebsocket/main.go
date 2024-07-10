@@ -80,7 +80,7 @@ func main() {
 	log.Println("NotifyBlocks: Registration Complete")
 	// time.Sleep(20 * time.Second)
 	// Register for transaction connect and disconnect notifications.
-	if err := c.NotifyNewTransactions(true); err != nil {
+	if err := c.NotifyNewTransactions(true, true); err != nil {
 		log.Fatal(err)
 	}
 	// first add addresses

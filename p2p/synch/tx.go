@@ -79,7 +79,7 @@ func (s *Sync) handleTxMsg(msg *pb.Transaction, pid peer.ID) (*hash.Hash, error)
 	if err != nil {
 		return &txh, fmt.Errorf("Failed to process transaction %v: %v\n", tx.TxHash().String(), err.Error())
 	}
-	s.p2p.Notify().AnnounceNewTransactions(acceptedTxs, []peer.ID{pid})
+	s.p2p.Notify().AnnounceNewTransactions(acceptedTxs, nil, []peer.ID{pid})
 
 	return &txh, nil
 }

@@ -57,6 +57,9 @@ type wsClient struct {
 	// information about all new transactions.
 	verboseTxUpdates bool
 
+	// meerTxUpdates specifies whether a client has requested all meer evm txs
+	meerTxUpdates bool
+
 	// filterData is the new generation transaction filter backported from
 	// github.com/decred/dcrd for the new backported `loadtxfilter` and
 	// `rescanblocks` methods.

@@ -12,6 +12,7 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/Qitmeer/qng/rpc/websocket"
+	etypes "github.com/ethereum/go-ethereum/core/types"
 	"sync"
 	"time"
 )
@@ -29,7 +30,7 @@ type notificationReorganization struct {
 
 type notificationTxAcceptedByMempool struct {
 	isNew bool
-	tx    *types.Tx
+	tx    interface{}
 }
 
 type notificationTxByBlock struct {
@@ -132,7 +133,15 @@ out:
 			case *notificationTxAcceptedByMempool:
 
 				if n.isNew && len(txNotifications) != 0 {
-					m.notifyForNewTx(txNotifications, n.tx)
+					tx, ok := n.tx.(*types.Tx)
+					if ok {
+						m.notifyForNewTx(txNotifications, tx)
+					} else {
+						etx, ok := n.tx.(*etypes.Transaction)
+						if ok {
+							m.notifyForNewMeerTx(txNotifications, etx)
+						}
+					}
 				}
 			case *notificationBlockTemplate:
 				bt := (*json.RemoteGBTResult)(n)
@@ -344,7 +353,7 @@ func (m *wsNotificationManager) RegisterNotifyComplete(wsc *wsClient) {
 	m.queueNotification <- (*notificationScanComplete)(wsc)
 }
 
-func (m *wsNotificationManager) NotifyMempoolTx(tx *types.Tx, isNew bool) {
+func (m *wsNotificationManager) NotifyMempoolTx(tx interface{}, isNew bool) {
 	n := &notificationTxAcceptedByMempool{
 		isNew: isNew,
 		tx:    tx,
@@ -507,6 +516,39 @@ func (m *wsNotificationManager) notifyForNewTx(clients map[chan struct{}]*wsClie
 		if wsc.verboseTxUpdates {
 			wsc.QueueNotification(marshalledJSONVerbose)
 		} else {
+			wsc.QueueNotification(marshalledJSON)
+		}
+	}
+}
+
+func (m *wsNotificationManager) notifyForNewMeerTx(clients map[chan struct{}]*wsClient, tx *etypes.Transaction) {
+	if len(clients) <= 0 {
+		return
+	}
+	needMeerTx := false
+	for _, wsc := range clients {
+		if wsc.meerTxUpdates {
+			needMeerTx = true
+		}
+		if needMeerTx {
+			break
+		}
+	}
+	if !needMeerTx {
+		return
+	}
+
+	var marshalledJSON []byte
+	var err error
+
+	ntfn := cmds.NewMeerTxAcceptedNtfn(tx)
+	marshalledJSON, err = cmds.MarshalCmd(nil, ntfn)
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed to marshal tx notification: %s", err.Error()))
+		return
+	}
+	for _, wsc := range clients {
+		if wsc.meerTxUpdates {
 			wsc.QueueNotification(marshalledJSON)
 		}
 	}

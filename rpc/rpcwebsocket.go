@@ -92,10 +92,10 @@ func (s *RpcServer) handleNotifyMsg(notification *blockchain.Notification) {
 	}
 }
 
-func (s *RpcServer) NotifyNewTransactions(txns []*types.TxDesc) {
+func (s *RpcServer) NotifyNewTransactions(txns []interface{}) {
 	for _, txD := range txns {
 		// Notify websocket clients about mempool transactions.
-		s.ntfnMgr.NotifyMempoolTx(txD.Tx, true)
+		s.ntfnMgr.NotifyMempoolTx(txD, true)
 	}
 }
 
@@ -168,6 +168,7 @@ func handleNotifyNewTransactions(wsc *wsClient, icmd interface{}) (interface{}, 
 		return nil, cmds.ErrRPCInternal
 	}
 	wsc.verboseTxUpdates = cmd.Verbose
+	wsc.meerTxUpdates = cmd.Meer
 	wsc.server.ntfnMgr.RegisterNewMempoolTxsUpdates(wsc)
 	return nil, nil
 }

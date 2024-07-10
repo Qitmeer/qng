@@ -218,7 +218,7 @@ func (r FutureNotifyNewTransactionsResult) Receive() error {
 	return err
 }
 
-func (c *Client) NotifyNewTransactionsAsync(verbose bool) FutureNotifyNewTransactionsResult {
+func (c *Client) NotifyNewTransactionsAsync(verbose bool, meer bool) FutureNotifyNewTransactionsResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
 		return newFutureError(ErrWebsocketsRequired)
@@ -230,12 +230,12 @@ func (c *Client) NotifyNewTransactionsAsync(verbose bool) FutureNotifyNewTransac
 		return newNilFutureResult()
 	}
 
-	cmd := cmds.NewNotifyNewTransactionsCmd(verbose)
+	cmd := cmds.NewNotifyNewTransactionsCmd(verbose, meer)
 	return c.sendCmd(cmd)
 }
 
-func (c *Client) NotifyNewTransactions(verbose bool) error {
-	return c.NotifyNewTransactionsAsync(verbose).Receive()
+func (c *Client) NotifyNewTransactions(verbose bool, meer bool) error {
+	return c.NotifyNewTransactionsAsync(verbose, meer).Receive()
 }
 
 type FutureStopNotifyNewTransactionsResult chan *response

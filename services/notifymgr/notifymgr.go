@@ -12,6 +12,7 @@ import (
 	"github.com/Qitmeer/qng/rpc"
 	"github.com/Qitmeer/qng/services/notifymgr/notify"
 	"github.com/Qitmeer/qng/services/zmq"
+	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"sync"
 	"time"
@@ -46,11 +47,11 @@ type NotifyMgr struct {
 // both websocket and getblocktemplate long poll clients of the passed
 // transactions.  This function should be called whenever new transactions
 // are added to the mempool.
-func (ntmgr *NotifyMgr) AnnounceNewTransactions(newTxs []*types.TxDesc, filters []peer.ID) {
+func (ntmgr *NotifyMgr) AnnounceNewTransactions(newTxs []*types.TxDesc, meerTxs []*etypes.Transaction, filters []peer.ID) {
 	if ntmgr.IsShutdown() {
 		return
 	}
-	if len(newTxs) <= 0 {
+	if len(newTxs) <= 0 && len(meerTxs) <= 0 {
 		return
 	}
 
@@ -63,7 +64,9 @@ func (ntmgr *NotifyMgr) AnnounceNewTransactions(newTxs []*types.TxDesc, filters 
 		}
 		ntmgr.nds = append(ntmgr.nds, &notify.NotifyData{Data: tx, Filters: filters})
 	}
-
+	for _, tx := range meerTxs {
+		ntmgr.nds = append(ntmgr.nds, &notify.NotifyData{Data: tx, Filters: filters})
+	}
 	ntmgr.Reset()
 }
 
@@ -170,16 +173,23 @@ func (ntmgr *NotifyMgr) handleStallSample() {
 		return
 	}
 
-	txds := []*types.TxDesc{}
-	for _, nd := range ntmgr.nds {
-		txd, ok := nd.Data.(*types.TxDesc)
-		if ok {
-			log.Trace(fmt.Sprintf("Announce new transaction :hash=%s height=%d add=%s", txd.Tx.Hash().String(), txd.Height, txd.Added.String()))
+	txds := []interface{}{}
+	nds := []*notify.NotifyData{}
 
-			txds = append(txds, txd)
+	for _, nd := range ntmgr.nds {
+		switch value := nd.Data.(type) {
+		case *types.TxDesc:
+			log.Trace(fmt.Sprintf("Announce new transaction :hash=%s height=%d add=%s", value.Tx.Hash().String(), value.Height, value.Added.String()))
+			txds = append(txds, value)
+			nds = append(nds, nd)
+		case types.BlockHeader:
+			nds = append(nds, nd)
+		case *etypes.Transaction:
+			txds = append(txds, value)
 		}
+
 	}
-	ntmgr.Server.RelayInventory(ntmgr.nds)
+	ntmgr.Server.RelayInventory(nds)
 
 	if len(txds) > 0 {
 		if ntmgr.RpcServer != nil && ntmgr.RpcServer.IsStarted() && !ntmgr.RpcServer.IsShutdown() {

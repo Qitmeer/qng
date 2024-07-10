@@ -1,8 +1,10 @@
 package cmds
 
 import (
+	"encoding/hex"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
+	etypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 const (
@@ -11,6 +13,7 @@ const (
 	BlockAcceptedNtfnMethod     = "blockAccepted"
 	ReorganizationNtfnMethod    = "reorganization"
 	TxAcceptedNtfnMethod        = "txaccepted"
+	MeerTxAcceptedNtfnMethod    = "meertxaccepted"
 	TxAcceptedVerboseNtfnMethod = "txacceptedverbose"
 	TxConfirmNtfnMethod         = "txconfirm"
 	RescanProgressNtfnMethod    = "rescanprocess"
@@ -93,6 +96,21 @@ func NewTxAcceptedNtfn(txHash string, amounts types.AmountGroup) *TxAcceptedNtfn
 	}
 }
 
+type MeerTxAcceptedNtfn struct {
+	TxHex string
+}
+
+func NewMeerTxAcceptedNtfn(tx *etypes.Transaction) *MeerTxAcceptedNtfn {
+	txmb, err := tx.MarshalBinary()
+	if err != nil {
+		log.Error(err.Error())
+		return nil
+	}
+	return &MeerTxAcceptedNtfn{
+		TxHex: hex.EncodeToString(txmb),
+	}
+}
+
 type TxConfirmResult struct {
 	Confirms uint64
 	Tx       string
@@ -127,6 +145,7 @@ func init() {
 	MustRegisterCmd(BlockAcceptedNtfnMethod, (*BlockAcceptedNtfn)(nil), flags, NotifyNameSpace)
 	MustRegisterCmd(ReorganizationNtfnMethod, (*ReorganizationNtfn)(nil), flags, NotifyNameSpace)
 	MustRegisterCmd(TxAcceptedNtfnMethod, (*TxAcceptedNtfn)(nil), flags, NotifyNameSpace)
+	MustRegisterCmd(MeerTxAcceptedNtfnMethod, (*MeerTxAcceptedNtfn)(nil), flags, NotifyNameSpace)
 	MustRegisterCmd(TxAcceptedVerboseNtfnMethod, (*TxAcceptedVerboseNtfn)(nil), flags, NotifyNameSpace)
 	MustRegisterCmd(TxConfirmNtfnMethod, (*NotificationTxConfirmNtfn)(nil), flags, NotifyNameSpace)
 	MustRegisterCmd(RescanProgressNtfnMethod, (*RescanProgressNtfn)(nil), flags, NotifyNameSpace)

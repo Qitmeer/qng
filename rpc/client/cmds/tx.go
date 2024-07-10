@@ -115,6 +115,7 @@ func NewGetMempoolCmd(txType string, verbose bool) *GetMempoolCmd {
 // ws
 type NotifyNewTransactionsCmd struct {
 	Verbose bool
+	Meer    bool
 }
 
 // OutPoint describes a transaction outpoint that will be marshalled to and
@@ -125,7 +126,6 @@ type OutPoint struct {
 }
 
 // RescanCmd defines the rescan JSON-RPC command.
-//
 type RescanCmd struct {
 	BeginBlock uint64
 	Addresses  []string
@@ -160,9 +160,10 @@ type UnNotifyTxsByAddrCmd struct {
 	Addresses []string
 }
 
-func NewNotifyNewTransactionsCmd(verbose bool) *NotifyNewTransactionsCmd {
+func NewNotifyNewTransactionsCmd(verbose bool, meer bool) *NotifyNewTransactionsCmd {
 	return &NotifyNewTransactionsCmd{
 		Verbose: verbose,
+		Meer:    meer,
 	}
 }
 
