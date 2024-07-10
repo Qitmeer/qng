@@ -221,7 +221,7 @@ func AssertTxNotConfirm(t *testing.T, h *Harness, txid string) {
 func TimeoutFunc(t *testing.T, f func() bool, timeout int) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	start := time.Now().UnixNano()
+	start := time.Now()
 	go func() {
 		defer wg.Done()
 		t1 := time.NewTicker(time.Duration(timeout) * time.Second)
@@ -238,7 +238,7 @@ func TimeoutFunc(t *testing.T, f func() bool, timeout int) {
 		}
 	}()
 	wg.Wait()
-	t.Logf("time use:%.4f ms", float64(time.Now().UnixNano())/float64(start))
+	t.Logf("time use:%.4f ms", float64(time.Since(start).Milliseconds()))
 }
 
 func ConvertEthToMeer(amount *big.Int) *big.Int {
