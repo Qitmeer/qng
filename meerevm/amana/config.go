@@ -7,6 +7,7 @@ import (
 	mconsensus "github.com/Qitmeer/qng/meerevm/amana/consensus"
 	mcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
+	"github.com/Qitmeer/qng/p2p/common"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
@@ -45,6 +46,14 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	nodeConf.P2P.ListenAddr = fmt.Sprintf(":%d", p2pPort)
 	nodeConf.P2P.BootstrapNodes = getBootstrapNodes(p2pPort)
 
+	pk, err := common.PrivateKey(datadir, "", 0600)
+	if err != nil {
+		return nil, err
+	}
+	nodeConf.P2P.PrivateKey, err = common.ToECDSAPrivKey(pk)
+	if err != nil {
+		return nil, err
+	}
 	cfg := &eth.Config{
 		Eth:     econfig,
 		Node:    nodeConf,
