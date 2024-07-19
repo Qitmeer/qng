@@ -8,6 +8,7 @@ import (
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -187,6 +188,12 @@ func (c *backend) sealBlock(withdrawals []*types.Withdrawal, timestamp uint64) e
 		return err
 	}
 	c.lastBlockTime = payload.Timestamp
+
+	// Broadcast the block and announce chain insertion event
+	fb := c.eth.BlockChain().GetBlockByHash(c.eth.BlockChain().CurrentBlock().Hash())
+	if fb != nil {
+		c.eth.EventMux().Post(core.NewMinedBlockEvent{Block: fb})
+	}
 	return nil
 }
 
