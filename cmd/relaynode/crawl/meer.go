@@ -72,7 +72,7 @@ func meerNodesCmd() *cli.Command {
 				return err
 			}
 			for id, n := range ns {
-				log.Info("node", "id", id.String(), "ip", n.N.IPAddr().String(), "url", n.N.String())
+				log.Info("node", "id", id.String(), "ip", n.N.IPAddr().String(), "tcp", n.N.TCP(), "udp", n.N.UDP(), "url", n.N.String())
 			}
 			log.Info("Finished node", "count", len(ns))
 			return nil
