@@ -16,7 +16,7 @@ import (
 // mechanisms of the proof-of-authority scheme.
 type API struct {
 	chain econsensus.ChainHeaderReader
-	amana   *Amana
+	amana *Amana
 }
 
 // GetSnapshot retrieves the state snapshot at a given block.
@@ -192,6 +192,13 @@ func (sb *blockNumberOrHashOrRLP) UnmarshalJSON(data []byte) error {
 // Can be called with either a blocknumber, blockhash or an rlp encoded blob.
 // The RLP encoded blob can either be a block or a header.
 func (api *API) GetSigner(rlpOrBlockNr *blockNumberOrHashOrRLP) (common.Address, error) {
+	if rlpOrBlockNr == nil {
+		header := api.chain.CurrentHeader()
+		if header == nil {
+			return common.Address{}, fmt.Errorf("missing block")
+		}
+		return api.amana.Author(header)
+	}
 	if len(rlpOrBlockNr.RLP) == 0 {
 		blockNrOrHash := rlpOrBlockNr.BlockNumberOrHash
 		var header *types.Header
