@@ -1,6 +1,9 @@
 package rawdb
 
-import "path/filepath"
+import (
+	"github.com/ethereum/go-ethereum/ethdb"
+	"path/filepath"
+)
 
 // The list of table names of chain freezer.
 const (
@@ -47,7 +50,15 @@ var (
 // freezers the collections of all builtin freezers.
 var freezers = []string{chainFreezerName}
 
-// NewStateFreezer initializes the freezer for state history.
-func NewStateFreezer(ancientDir string, readOnly bool) (*ResettableFreezer, error) {
-	return NewResettableFreezer(filepath.Join(ancientDir, stateFreezerName), "state", readOnly, stateHistoryTableSize, stateFreezerNoSnappy)
+// NewStateFreezer initializes the ancient store for state history.
+//
+//   - if the empty directory is given, initializes the pure in-memory
+//     state freezer (e.g. dev mode).
+//   - if non-empty directory is given, initializes the regular file-based
+//     state freezer.
+func NewStateFreezer(ancientDir string, readOnly bool) (ethdb.ResettableAncientStore, error) {
+	if ancientDir == "" {
+		return NewMemoryFreezer(readOnly, stateFreezerNoSnappy), nil
+	}
+	return newResettableFreezer(filepath.Join(ancientDir, stateFreezerName), "state", readOnly, stateHistoryTableSize, stateFreezerNoSnappy)
 }

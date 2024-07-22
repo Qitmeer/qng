@@ -239,17 +239,13 @@ func inspect(ctx *cli.Context) error {
 	return rawdb.InspectDatabase(db, prefix, start)
 }
 
-func showLeveldbStats(db ethdb.Stater) {
-	if stats, err := db.Stat("leveldb.stats"); err != nil {
+func showDBStats(db ethdb.KeyValueStater) {
+	stats, err := db.Stat()
+	if err != nil {
 		log.Warn("Failed to read database stats", "error", err)
-	} else {
-		fmt.Println(stats)
+		return
 	}
-	if ioStats, err := db.Stat("leveldb.iostats"); err != nil {
-		log.Warn("Failed to read database iostats", "error", err)
-	} else {
-		fmt.Println(ioStats)
-	}
+	fmt.Println(stats)
 }
 
 func dbStats(ctx *cli.Context) error {
@@ -259,7 +255,7 @@ func dbStats(ctx *cli.Context) error {
 	db := utils.MakeChainDatabase(ctx, stack, true)
 	defer db.Close()
 
-	showLeveldbStats(db)
+	showDBStats(db)
 	return nil
 }
 
@@ -271,7 +267,7 @@ func dbCompact(ctx *cli.Context) error {
 	defer db.Close()
 
 	log.Info("Stats before compaction")
-	showLeveldbStats(db)
+	showDBStats(db)
 
 	log.Info("Triggering compaction")
 	if err := db.Compact(nil, nil); err != nil {
@@ -279,7 +275,7 @@ func dbCompact(ctx *cli.Context) error {
 		return err
 	}
 	log.Info("Stats after compaction")
-	showLeveldbStats(db)
+	showDBStats(db)
 	return nil
 }
 

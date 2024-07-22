@@ -171,12 +171,18 @@ func (batch *freezerTableBatch) commit() error {
 	if err != nil {
 		return err
 	}
+	if err := batch.t.head.Sync(); err != nil {
+		return err
+	}
 	dataSize := int64(len(batch.dataBuffer))
 	batch.dataBuffer = batch.dataBuffer[:0]
 
 	// Write indices.
 	_, err = batch.t.index.Write(batch.indexBuffer)
 	if err != nil {
+		return err
+	}
+	if err := batch.t.head.Sync(); err != nil {
 		return err
 	}
 	indexSize := int64(len(batch.indexBuffer))
