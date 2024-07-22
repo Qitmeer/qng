@@ -29,22 +29,30 @@ const (
 type chainFreezer struct {
 	threshold atomic.Uint64 // Number of recent blocks not to freeze (params.FullImmutabilityThreshold apart from tests)
 
-	*Freezer
-	quit    chan struct{}
-	wg      sync.WaitGroup
-	trigger chan chan struct{} // Manual blocking freeze trigger, test determinism
+	ethdb.AncientStore // Ancient store for storing cold chain segment
+	quit               chan struct{}
+	wg                 sync.WaitGroup
+	trigger            chan chan struct{} // Manual blocking freeze trigger, test determinism
 }
 
 // newChainFreezer initializes the freezer for ancient chain data.
 func newChainFreezer(datadir string, namespace string, readonly bool) (*chainFreezer, error) {
-	freezer, err := NewChainFreezer(datadir, namespace, readonly)
+	var (
+		err     error
+		freezer ethdb.AncientStore
+	)
+	if datadir == "" {
+		freezer = NewMemoryFreezer(readonly, chainFreezerNoSnappy)
+	} else {
+		freezer, err = NewFreezer(datadir, namespace, readonly, freezerTableSize, chainFreezerNoSnappy)
+	}
 	if err != nil {
 		return nil, err
 	}
 	cf := chainFreezer{
-		Freezer: freezer,
-		quit:    make(chan struct{}),
-		trigger: make(chan chan struct{}),
+		AncientStore: freezer,
+		quit:         make(chan struct{}),
+		trigger:      make(chan chan struct{}),
 	}
 	cf.threshold.Store(params.FullImmutabilityThreshold)
 	return &cf, nil
@@ -58,7 +66,7 @@ func (f *chainFreezer) Close() error {
 		close(f.quit)
 	}
 	f.wg.Wait()
-	return f.Freezer.Close()
+	return f.AncientStore.Close()
 }
 
 // freeze is a background thread that periodically checks the blockchain for any
@@ -112,7 +120,7 @@ func (f *chainFreezer) freeze(db ethdb.KeyValueStore) {
 			continue
 		}
 		threshold := f.threshold.Load()
-		frozen := f.frozen.Load()
+		frozen, _ := f.Ancients() // no error will occur, safe to ignore
 		switch {
 		case *mt < threshold:
 			log.Debug("Current full block not old enough", "tip", *mt, "hash", mb.GetHash(), "delay", threshold)
@@ -159,7 +167,7 @@ func (f *chainFreezer) freeze(db ethdb.KeyValueStore) {
 			log.Crit("Failed to delete frozen canonical blocks", "err", err)
 		}
 		batch.Reset()
-		frozen = f.frozen.Load()
+		frozen, _ = f.Ancients() // Needs reload after during freezeRange
 		// Log something friendly for the user
 		context := []interface{}{
 			"blocks", frozen - first, "elapsed", common.PrettyDuration(time.Since(start)), "DAG_ID", frozen - 1,
