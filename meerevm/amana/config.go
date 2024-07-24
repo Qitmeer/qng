@@ -54,13 +54,11 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg := &eth.Config{
+	return &eth.Config{
 		Eth:     econfig,
 		Node:    nodeConf,
 		Metrics: metrics.DefaultConfig,
-	}
-	eth.SetDNSDiscoveryDefaults(cfg)
-	return cfg, nil
+	}, nil
 }
 
 func MakeParams(cfg *config.Config) (*eth.Config, []string, error) {

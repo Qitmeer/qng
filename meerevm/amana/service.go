@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	qcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"strings"
 )
 
 type AmanaService struct {
@@ -96,20 +95,10 @@ func (q *AmanaService) APIs() []api.API {
 }
 
 func (q *AmanaService) initMiner() error {
-	if !q.chain.Context().IsSet(utils.UnlockedAccountFlag.Name) {
+	if q.chain.Config().Eth.Miner.PendingFeeRecipient == (qcommon.Address{}) {
 		return nil
 	}
-	var unlocks []string
-	inputs := strings.Split(q.chain.Context().String(utils.UnlockedAccountFlag.Name), ",")
-	for _, input := range inputs {
-		if trimmed := strings.TrimSpace(input); trimmed != "" {
-			unlocks = append(unlocks, trimmed)
-		}
-	}
-	if len(unlocks) <= 0 {
-		return fmt.Errorf("No Amana miner addresses specified via --unlock.")
-	}
-	eb := qcommon.HexToAddress(unlocks[0])
+	eb := q.chain.Config().Eth.Miner.PendingFeeRecipient
 	wallet, err := q.chain.Ether().AccountManager().Find(accounts.Account{Address: eb})
 	if wallet == nil || err != nil {
 		return fmt.Errorf("Etherbase account unavailable locally, signer missing: %v, %s", err, eb.String())
