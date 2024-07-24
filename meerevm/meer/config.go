@@ -75,13 +75,12 @@ func MakeConfig(cfg *config.Config) (*eth.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	ecfg := &eth.Config{
+
+	return &eth.Config{
 		Eth:     econfig,
 		Node:    nodeConf,
 		Metrics: metrics.DefaultConfig,
-	}
-	eth.SetDNSDiscoveryDefaults(ecfg)
-	return ecfg, nil
+	}, nil
 }
 
 func MakeParams(cfg *config.Config) (*eth.Config, []string, error) {

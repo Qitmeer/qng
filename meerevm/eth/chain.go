@@ -131,6 +131,10 @@ func NewETHChain(config *Config, args []string) (*ETHChain, error) {
 func prepare(ctx *cli.Context, cfg *Config) {
 	log.Info(fmt.Sprintf("Prepare %s on NetWork(%d)...", cfg.Node.Name, cfg.Eth.NetworkId))
 
+	if !ctx.IsSet(utils.NoDiscoverFlag.Name) {
+		SetDNSDiscoveryDefaults(cfg)
+	}
+
 	if ctx.IsSet(utils.MetricsEnableInfluxDBFlag.Name) {
 		if !ctx.IsSet(utils.MetricsInfluxDBDatabaseFlag.Name) {
 			ctx.Set(utils.MetricsInfluxDBDatabaseFlag.Name, "qng")
