@@ -12,6 +12,30 @@ web3._extend({
 			params: 2,
 			inputFormatter: [null, null]
 		}),
+		new web3._extend.Method({
+			name: 'addPeer',
+			call: 'qng_addPeer',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'delPeer',
+			call: 'qng_delPeer',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'ping',
+			call: 'qng_ping',
+			params: 3,
+			inputFormatter: [null, null, null]
+		}),
+		new web3._extend.Method({
+			name: 'setLibp2pLogLevel',
+			call: 'qng_setLibp2pLogLevel',
+			params: 1,
+			inputFormatter: [null]
+		}),
 
 		new web3._extend.Method({
 			name: 'removeBan',
@@ -19,6 +43,21 @@ web3._extend({
 			params: 1,
 			inputFormatter: [null]
 		}),
+
+		new web3._extend.Method({
+			name: 'checkConsistency',
+			call: 'qng_checkConsistency',
+			params: 1,
+			inputFormatter: [null]
+		}),
+
+		new web3._extend.Method({
+			name: 'disableRelayTx',
+			call: 'qng_disableRelayTx',
+			params: 1,
+			inputFormatter: [null]
+		}),
+
 		new web3._extend.Method({
 			name: 'setRpcMaxClients',
 			call: 'qng_setRpcMaxClients',
@@ -117,6 +156,18 @@ web3._extend({
 			call: 'qng_getFees',
 			params: 1,
 		}),
+		new web3._extend.Method({
+			name: 'getStateRoot',
+			call: 'qng_getStateRoot',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
+			name: 'getBlockByNumber',
+			call: 'qng_getBlockByNumber',
+			params: 4,
+			inputFormatter: [null, null, null, null]
+		}),
 
 		new web3._extend.Method({
 			name: 'getMempool',
@@ -135,6 +186,7 @@ web3._extend({
 			call: 'qng_getBlockTemplate',
 			params: 2,
 		}),
+
 		new web3._extend.Method({
 			name: 'submitBlock',
 			call: 'qng_submitBlock',
@@ -143,17 +195,17 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getRemoteGBT',
 			call: 'qng_getRemoteGBT',
-			params: 1,
+			params: 2,
 		}),
 		new web3._extend.Method({
 			name: 'submitBlockHeader',
 			call: 'qng_submitBlockHeader',
-			params: 1,
+			params: 2,
 		}),
 		new web3._extend.Method({
 			name: 'generate',
 			call: 'qng_generate',
-			params: 1,
+			params: 2,
 		}),
 
 		new web3._extend.Method({
@@ -197,6 +249,16 @@ web3._extend({
 			params: 2,
 		}),
 		new web3._extend.Method({
+			name: 'getMeerEVMTxHashByID',
+			call: 'qng_getMeerEVMTxHashByID',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'getTxIDByMeerEVMTxHash',
+			call: 'qng_getTxIDByMeerEVMTxHash',
+			params: 1,
+		}),
+		new web3._extend.Method({
 			name: 'txSign',
 			call: 'qng_txSign',
 			params: 3,
@@ -219,6 +281,42 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'createExportRawTransactionV2',
 			call: 'qng_createExportRawTransactionV2',
+			params: 3,
+		}),
+
+		new web3._extend.Method({
+			name: 'getBalanceInfo',
+			call: 'qng_getBalanceInfo',
+			params: 3,
+		}),
+
+		new web3._extend.Method({
+			name: 'getUTXOs',
+			call: 'qng_getUTXOs',
+			params: 3,
+		}),
+
+		new web3._extend.Method({
+			name: 'getValidUTXOs',
+			call: 'qng_getValidUTXOs',
+			params: 2,
+		}),
+
+		new web3._extend.Method({
+			name: 'addBalance',
+			call: 'qng_addBalance',
+			params: 1,
+		}),
+
+		new web3._extend.Method({
+			name: 'delBalance',
+			call: 'qng_delBalance',
+			params: 1,
+		}),
+
+		new web3._extend.Method({
+			name: 'getChainInfo',
+			call: 'qng_getChainInfo',
 			params: 3,
 		}),
 	],
@@ -300,11 +398,6 @@ web3._extend({
 		}),
 
 		new web3._extend.Property({
-			name: 'getVMsInfo',
-			getter: 'qng_getVMsInfo'
-		}),
-
-		new web3._extend.Property({
 			name: 'getAmanaNodeInfo',
 			getter: 'qng_getAmanaNodeInfo'
 		}),
@@ -312,6 +405,66 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'getAmanaPeerInfo',
 			getter: 'qng_getAmanaPeerInfo'
+		}),
+
+		new web3._extend.Property({
+			name: 'getMeerChainInfo',
+			getter: 'qng_getMeerChainInfo'
+		}),
+
+		new web3._extend.Property({
+			name: 'reloadPeers',
+			getter: 'qng_reloadPeers'
+		}),
+
+		new web3._extend.Property({
+			name: 'resetPeers',
+			getter: 'qng_resetPeers'
+		}),
+
+		new web3._extend.Property({
+			name: 'pause',
+			getter: 'qng_pause'
+		}),
+
+		new web3._extend.Property({
+			name: 'cleanMempool',
+			getter: 'qng_cleanMempool'
+		}),
+
+		new web3._extend.Property({
+			name: 'getMiningStats',
+			getter: 'qng_getMiningStats'
+		}),
+
+		new web3._extend.Property({
+			name: 'getAcctInfo',
+			getter: 'qng_getAcctInfo'
+		}),
+
+		new web3._extend.Property({
+			name: 'getAcctDebugInfo',
+			getter: 'qng_getAcctDebugInfo'
+		}),
+
+		new web3._extend.Property({
+			name: 'getRpcModules',
+			getter: 'qng_getRpcModules'
+		}),
+
+		new web3._extend.Property({
+			name: 'getMeerDAGInfo',
+			getter: 'qng_getMeerDAGInfo'
+		}),
+
+		new web3._extend.Property({
+			name: 'getDatabaseInfo',
+			getter: 'qng_getDatabaseInfo'
+		}),
+
+		new web3._extend.Property({
+			name: 'getConfig',
+			getter: 'qng_getConfig'
 		}),
 	]
 });
