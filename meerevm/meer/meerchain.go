@@ -74,10 +74,6 @@ func (b *MeerChain) Start() error {
 	if err != nil {
 		return nil
 	}
-
-	log.Debug(fmt.Sprintf("Etherbase:%v balance:%v", b.chain.Config().Eth.Miner.Etherbase, state.GetBalance(b.chain.Config().Eth.Miner.Etherbase)))
-
-	//
 	for addr := range b.chain.Config().Eth.Genesis.Alloc {
 		log.Debug(fmt.Sprintf("Alloc address:%v balance:%v", addr.String(), state.GetBalance(addr)))
 	}
