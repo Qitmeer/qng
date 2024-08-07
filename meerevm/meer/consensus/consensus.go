@@ -164,6 +164,9 @@ func (me *MeerEngine) Prepare(chain consensus.ChainHeaderReader, header *types.H
 
 func (me *MeerEngine) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, body *types.Body) {
 	me.OnExtraStateChange(chain, header, state)
+	if me.StateChange != nil {
+		me.StateChange(header, state, body)
+	}
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 }
 

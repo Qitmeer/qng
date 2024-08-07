@@ -482,7 +482,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			}
 			return nil, nil, err
 		}
-		fee, err := mp.cfg.BC.MeerVerifyTx(itx)
+		fee, err := mp.cfg.BC.MeerVerifyTx(itx, utxoView)
 		if err != nil {
 			return nil, nil, err
 		}

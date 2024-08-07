@@ -23,8 +23,8 @@ github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a h1:LUGOJG/lF0TlnlYT
 github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:gbGKdXSJn71Mc2xcKJHqC/waPiX0byZae67zarj83m4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a h1:O2Erw/YvYAkIqkc2uvP/WwuWf0V8S0+pjU/FKHmjFU4=
 github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a/go.mod h1:KiA7g46zc6dkgf/3NbEpJirY75v656WYlmSQNR1wTVk=
-github.com/Qitmeer/go-ethereum v1.14.7-q.0 h1:a/ELXVuSxBJCb12Uu8aQeZ2b2yM4moGDCYVVxnHmxxk=
-github.com/Qitmeer/go-ethereum v1.14.7-q.0/go.mod h1:sDHXAtQUXgVZSmaTTHLkTJD/SMm6MQC+eNQxUloNe1Q=
+github.com/Qitmeer/go-ethereum v1.14.7-q.1 h1:UmoaGFPXyAKKwMjrA9UN4GYrc68neKXIQKvhi30DYcg=
+github.com/Qitmeer/go-ethereum v1.14.7-q.1/go.mod h1:sDHXAtQUXgVZSmaTTHLkTJD/SMm6MQC+eNQxUloNe1Q=
 github.com/Qitmeer/go-secp256k1 v0.5.1 h1:t3u4VMSz7LRn9Ki1lecG7tyTNwbLGILt1CwdOAA5N7M=
 github.com/Qitmeer/go-secp256k1 v0.5.1/go.mod h1:AkrSQDAMwdV4+pXUQnEAPvPbUiIN4DAHMAm0ueneJB8=
 github.com/StackExchange/wmi v1.2.1 h1:VIkavFPXSjcnS+O8yTq7NI32k0R5Aj+v39y29VYDOSA=

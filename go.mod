@@ -12,7 +12,7 @@ require (
 	github.com/dchest/blake256 v1.1.0
 	github.com/deckarep/golang-set v1.8.0
 	github.com/dgraph-io/ristretto v0.0.2
-	github.com/ethereum/go-ethereum v1.14.5
+	github.com/ethereum/go-ethereum v1.14.7
 	github.com/ferranbt/fastssz v0.1.2
 	github.com/go-stack/stack v1.8.1
 	github.com/gofrs/flock v0.8.1
@@ -219,6 +219,6 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/ethereum/go-ethereum v1.14.5 => github.com/Qitmeer/go-ethereum v1.14.7-q.0
+replace github.com/ethereum/go-ethereum v1.14.7 => github.com/Qitmeer/go-ethereum v1.14.7-q.1
 
 replace github.com/karalabe/usb v0.0.2 => github.com/dindinw/karalabe-usb v0.0.0-20230613095851-cd69a62c9c30

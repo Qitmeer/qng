@@ -1005,7 +1005,7 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 			if err != nil {
 				return err
 			}
-			fee, err := b.MeerVerifyTx(itx)
+			fee, err := b.MeerVerifyTx(itx, utxoView)
 			if err != nil {
 				return err
 			}
@@ -1027,7 +1027,11 @@ func (b *BlockChain) checkTransactionsAndConnect(node *BlockNode, block *types.S
 				}
 				tx.Object = vtx
 			}
-			_, err = b.MeerVerifyTx(vtx)
+			_, err = b.MeerVerifyTx(vtx, utxoView)
+			if err != nil {
+				return err
+			}
+			err = b.connectVMTransaction(tx, vtx, stxos, utxoView)
 			if err != nil {
 				return err
 			}

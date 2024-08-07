@@ -11,9 +11,11 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
+	mconsensus "github.com/Qitmeer/qng/meerevm/meer/consensus"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
@@ -22,11 +24,13 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/holiman/uint256"
 	"math/big"
 	"reflect"
 )
@@ -41,6 +45,8 @@ type MeerChain struct {
 	chain     *eth.ETHChain
 	meerpool  *MeerPool
 	consensus model.Consensus
+
+	block *mmeer.Block
 }
 
 func (b *MeerChain) Start() error {
@@ -99,9 +105,11 @@ func (b *MeerChain) Stop() error {
 }
 
 func (b *MeerChain) CheckConnectBlock(block *mmeer.Block) error {
+	b.block = block
 	parent := b.chain.Ether().BlockChain().CurrentBlock()
 	mblock, _, _, err := b.buildBlock(parent, block.Transactions(), block.Timestamp().Unix())
 	if err != nil {
+		b.block = nil
 		return err
 	}
 	block.EvmBlock = mblock
@@ -114,6 +122,7 @@ func (b *MeerChain) ConnectBlock(block *mmeer.Block) (uint64, error) {
 		return 0, fmt.Errorf("No EVM block:%d", block.ID())
 	}
 	st, err := b.chain.Ether().BlockChain().InsertChain(types.Blocks{mblock})
+	b.block = nil
 	if err != nil {
 		return 0, err
 	}
@@ -233,8 +242,7 @@ func (b *MeerChain) fillBlock(qtxs []model.Tx, header *types.Header, statedb *st
 			}
 			header.Extra = txmb
 		} else if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
-			txmb := tx.(*mmeer.VMTx).ETx
-			err := b.addTx(txmb, header, statedb, &txs, &receipts, gasPool)
+			err := b.addTx(tx.(*mmeer.VMTx), header, statedb, &txs, &receipts, gasPool)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -245,7 +253,8 @@ func (b *MeerChain) fillBlock(qtxs []model.Tx, header *types.Header, statedb *st
 	return txs, receipts, nil
 }
 
-func (b *MeerChain) addTx(tx *types.Transaction, header *types.Header, statedb *state.StateDB, txs *[]*types.Transaction, receipts *[]*types.Receipt, gasPool *core.GasPool) error {
+func (b *MeerChain) addTx(vmtx *mmeer.VMTx, header *types.Header, statedb *state.StateDB, txs *[]*types.Transaction, receipts *[]*types.Receipt, gasPool *core.GasPool) error {
+	tx := vmtx.ETx
 	config := b.chain.Config().Eth.Genesis.Config
 	statedb.SetTxContext(tx.Hash(), len(*txs))
 
@@ -257,11 +266,45 @@ func (b *MeerChain) addTx(tx *types.Transaction, header *types.Header, statedb *
 		statedb.RevertToSnapshot(snap)
 		return err
 	}
-
 	*txs = append(*txs, tx)
 	*receipts = append(*receipts, receipt)
 
 	return nil
+}
+
+func (b *MeerChain) OnStateChange(header *types.Header, state *state.StateDB, body *types.Body) {
+	if len(header.Extra) == 1 && header.Extra[0] == blockTag {
+		return
+	}
+	if b.block == nil {
+		log.Error("No meer block for state change:%s", header.Hash().String())
+		return
+	}
+	signer := types.LatestSigner(b.chain.Config().Eth.Genesis.Config)
+	for _, mtx := range b.block.Transactions() {
+		if mtx.GetTxType() != qtypes.TxTypeCrossChainVM {
+			continue
+		}
+		vmtx := mtx.(*mmeer.VMTx)
+		if vmtx.ExportData == nil {
+			continue
+		}
+		tx := vmtx.ETx
+
+		from, err := signer.Sender(tx)
+		if err != nil {
+			log.Error(err.Error())
+			return
+		}
+		if vmtx.ExportData.Amount.Value <= 0 {
+			log.Error("crosschain export amout is invalid", "hash", tx.Hash().String())
+		}
+		value := big.NewInt(vmtx.ExportData.Amount.Value)
+		value = value.Mul(value, qcommon.Precision)
+		state.AddBalance(from, uint256.MustFromBig(value), tracing.BalanceChangeTransfer)
+		op, _ := vmtx.ExportData.GetOutPoint()
+		log.Debug("meer tx add balance from utxo by crosschain contract", "txhash", tx.Hash().String(), "utxoTxid", op.Hash.String(), "utxoIdx", op.OutIndex, "amout", vmtx.ExportData.Amount.Value, "addbalance", value.String(), "from", from.String())
+	}
 }
 
 func (b *MeerChain) RegisterAPIs(apis []api.API) {
@@ -358,12 +401,15 @@ func (b *MeerChain) prepareEnvironment(state model.BlockState) (*types.Header, e
 			if len(eb.Transactions()) <= 0 {
 				return nil, getError("transactions is empty")
 			}
+			b.block = eb
 			block, _, _, err = b.buildBlock(cur, eb.Transactions(), eb.Timestamp().Unix())
 			if err != nil {
+				b.block = nil
 				return nil, getError(err.Error())
 			}
 		}
 		st, err := b.chain.Ether().BlockChain().InsertChain(types.Blocks{block})
+		b.block = nil
 		if err != nil {
 			return nil, err
 		}
@@ -449,12 +495,18 @@ func (b *MeerChain) validateTx(tx *types.Transaction, checkState bool) error {
 	return nil
 }
 
-func (b *MeerChain) VerifyTx(tx *mmeer.VMTx) (int64, error) {
+func (b *MeerChain) VerifyTx(tx *mmeer.VMTx, utxoView *utxo.UtxoViewpoint) (int64, error) {
 	if tx.GetTxType() == qtypes.TxTypeCrossChainVM {
 		txe := tx.ETx
 		err := b.validateTx(txe, true)
 		if err != nil {
 			return 0, err
+		}
+		if tx.ExportData != nil {
+			err = b.meerpool.checkCrossChainExportTx(txe, tx.ExportData, utxoView)
+			if err != nil {
+				return 0, err
+			}
 		}
 		cost := txe.Cost()
 		cost = cost.Sub(cost, txe.Value())
@@ -545,14 +597,16 @@ func NewMeerChain(consensus model.Consensus) (*MeerChain, error) {
 		log.Error(err.Error())
 		return nil, err
 	}
-	err = chain.Ether().Miner().SetExtra(nil)
+	err = chain.Ether().Miner().SetExtra([]byte{blockTag})
 	if err != nil {
 		log.Error(err.Error())
 		return nil, err
 	}
-	return &MeerChain{
+	mchain := &MeerChain{
 		chain:     chain,
 		meerpool:  newMeerPool(consensus, chain.Ether()),
 		consensus: consensus,
-	}, nil
+	}
+	chain.Ether().Engine().(*mconsensus.MeerEngine).StateChange = mchain.OnStateChange
+	return mchain, nil
 }
