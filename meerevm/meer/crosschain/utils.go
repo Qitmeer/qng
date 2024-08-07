@@ -103,6 +103,9 @@ func NewCrosschainExportDataByInput(data []byte) (*CrosschainExportData, error) 
 }
 
 func IsCrossChainTx(tx *types.Transaction) bool {
+	if tx == nil {
+		return false
+	}
 	return *tx.To() == common.HexToAddress(CROSSCHAIN_CONTRACT_ADDR)
 }
 

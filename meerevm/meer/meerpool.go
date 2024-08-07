@@ -128,6 +128,9 @@ func (m *MeerPool) handler() {
 				continue
 			}
 			for _, tx := range ev.Txs {
+				if tx == nil {
+					continue
+				}
 				if crosschain.IsCrossChainExportTx(tx) {
 					vmtx, err := meer.NewVMTx(qcommon.ToQNGTx(tx, 0, true).Tx, nil)
 					if err != nil {
