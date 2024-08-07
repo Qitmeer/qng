@@ -106,6 +106,9 @@ func IsCrossChainTx(tx *types.Transaction) bool {
 	if tx == nil {
 		return false
 	}
+	if tx.To() == nil {
+		return false
+	}
 	return *tx.To() == common.HexToAddress(CROSSCHAIN_CONTRACT_ADDR)
 }
 
