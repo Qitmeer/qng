@@ -51,7 +51,7 @@ func (c *Client) MainHeight() (uint64, error) {
 
 func (c *Client) Generate(num uint64) ([]*hash.Hash, error) {
 	var result []*hash.Hash
-	if err := c.Call(&result, "miner_generate", num, pow.PowType(0)); err != nil {
+	if err := c.Call(&result, "miner_generate", num, pow.PowType(8)); err != nil {
 		return result, err
 	}
 	return result, nil
