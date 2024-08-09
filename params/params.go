@@ -239,6 +239,8 @@ type Params struct {
 	LedgerParams ledger.LedgerParams
 
 	CoinbaseConfig CoinbaseConfigs
+
+	CrossChainContractAddr string
 }
 
 type CoinbaseConfig struct {

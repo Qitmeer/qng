@@ -5,16 +5,12 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	mcommon "github.com/Qitmeer/qng/meerevm/common"
+	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"strings"
-)
-
-const (
-	// Make a transfer between utxo and evm
-	CROSSCHAIN_CONTRACT_ADDR = "0x2000000000000000000000000000000000000000"
 )
 
 var (
@@ -103,13 +99,16 @@ func NewCrosschainExportDataByInput(data []byte) (*CrosschainExportData, error) 
 }
 
 func IsCrossChainTx(tx *types.Transaction) bool {
+	if len(params.ActiveNetParams.CrossChainContractAddr) <= 0 {
+		return false
+	}
 	if tx == nil {
 		return false
 	}
 	if tx.To() == nil {
 		return false
 	}
-	return *tx.To() == common.HexToAddress(CROSSCHAIN_CONTRACT_ADDR)
+	return *tx.To() == common.HexToAddress(params.ActiveNetParams.CrossChainContractAddr)
 }
 
 func IsCrossChainExportTx(tx *types.Transaction) bool {
