@@ -163,6 +163,8 @@ type Miner struct {
 	RpcSer *rpc.RpcServer
 	p2pSer model.P2PService
 	stats  MiningStats
+
+	NoDevelopGap bool
 }
 
 func (m *Miner) StatsEmptyGbt() {

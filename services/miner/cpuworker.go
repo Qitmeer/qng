@@ -303,7 +303,7 @@ out:
 		default:
 			// Non-blocking select to fall through
 		}
-		if w.discrete && w.discreteNum <= 0 || !w.hasNewWork.Load() {
+		if w.discrete && w.discreteNum <= 0 || !w.discrete && !w.hasNewWork.Load() {
 			time.Sleep(time.Second)
 			continue
 		}
@@ -313,12 +313,16 @@ out:
 			time.Sleep(time.Second)
 			continue
 		} else if params.ActiveNetParams.Params.IsDevelopDiff() {
-			time.Sleep(params.ActiveNetParams.Params.TargetTimePerBlock)
+			w.miner.updateBlockTemplate(true)
+			if !w.miner.NoDevelopGap {
+				time.Sleep(params.ActiveNetParams.Params.TargetTimePerBlock)
+			}
 		}
 
 		sb := w.solveBlock()
 		if sb != nil {
 			w.hasNewWork.Store(false)
+
 			block := types.NewBlock(sb)
 			startSB := time.Now()
 			info, err := w.miner.submitBlock(block)

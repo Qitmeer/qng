@@ -5,6 +5,7 @@ import (
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/types/pow"
 	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/log"
 	_ "github.com/Qitmeer/qng/meerevm/common"
@@ -136,6 +137,8 @@ func (mn *MockNode) setup() error {
 		_, addr, _, _ := address.NewAddresses(coinbasePKHex)
 		mn.n.Config.SetMiningAddrs(addr)
 	}
+	mn.Node().GetQitmeerFull().GetMiner().NoDevelopGap = true
+	params.ActiveNetParams.PowConfig.DifficultyMode = pow.DIFFICULTY_MODE_DEVELOP
 	return nil
 }
 
@@ -193,6 +196,10 @@ func (mn *MockNode) GetPrivateWalletManagerAPI() *wallet.PrivateWalletManagerAPI
 		mn.privateWalletManagerAPI = wallet.NewPrivateWalletAPI(mn.n.GetQitmeerFull().GetWalletManager())
 	}
 	return mn.privateWalletManagerAPI
+}
+
+func (mn *MockNode) Node() *node.Node {
+	return mn.n
 }
 
 func StartMockNode(overrideCfg func(cfg *config.Config) error) (*MockNode, error) {

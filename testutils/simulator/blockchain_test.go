@@ -26,11 +26,7 @@ func TestMockNode(t *testing.T) {
 }
 
 func TestGenerateBlocks(t *testing.T) {
-	node, err := StartMockNode(func(cfg *config.Config) error {
-		cfg.DebugLevel = "trace"
-		cfg.DebugPrintOrigins = true
-		return nil
-	})
+	node, err := StartMockNode(nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,11 +72,7 @@ func TestMultiNodes(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			node, err := StartMockNode(func(cfg *config.Config) error {
-				cfg.DebugLevel = "trace"
-				cfg.DebugPrintOrigins = true
-				return nil
-			})
+			node, err := StartMockNode(nil)
 			if err != nil {
 				t.Error(err)
 			}
