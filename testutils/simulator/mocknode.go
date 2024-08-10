@@ -18,13 +18,17 @@ import (
 	"github.com/Qitmeer/qng/services/wallet"
 	"github.com/Qitmeer/qng/testutils/simulator/testprivatekey"
 	"github.com/Qitmeer/qng/version"
+	"math/rand"
 	"os"
 	"path"
 	"runtime"
+	"sync"
+	"time"
 )
 
 func DefaultConfig() *config.Config {
-	cfg := common.DefaultConfig(path.Join(os.TempDir(), "qng_test"))
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	cfg := common.DefaultConfig(path.Join(os.TempDir(), fmt.Sprintf("qng_%d_%d", mockNodeGlobalID, r.Uint32())))
 	cfg.DataDir = ""
 	cfg.DevNextGDB = true
 	cfg.NoFileLogging = true
@@ -34,13 +38,15 @@ func DefaultConfig() *config.Config {
 	cfg.NoDiscovery = true
 	cfg.Miner = true
 	cfg.AcctMode = true
+	cfg.EVMEnv = "--nodiscover --v5disc=false"
 	return cfg
 }
 
-var mockNodeGlobalID uint
+var mockNodeGlobalID uint32
+var mockNodeLock sync.RWMutex
 
 type MockNode struct {
-	id          uint
+	id          uint32
 	n           *node.Node
 	pb          *testprivatekey.Builder
 	overrideCfg func(cfg *config.Config) error
@@ -56,7 +62,7 @@ type MockNode struct {
 }
 
 func (mn *MockNode) ID() uint {
-	return mn.id
+	return uint(mn.id)
 }
 
 func (mn *MockNode) Start(cfg *config.Config) error {
@@ -190,7 +196,10 @@ func (mn *MockNode) GetPrivateWalletManagerAPI() *wallet.PrivateWalletManagerAPI
 }
 
 func StartMockNode(overrideCfg func(cfg *config.Config) error) (*MockNode, error) {
-	pb, err := testprivatekey.NewBuilder(uint32(mockNodeGlobalID))
+	mockNodeLock.Lock()
+	defer mockNodeLock.Unlock()
+
+	pb, err := testprivatekey.NewBuilder(mockNodeGlobalID)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +215,6 @@ func StartMockNode(overrideCfg func(cfg *config.Config) error) (*MockNode, error
 	if err != nil {
 		return nil, err
 	}
-
 	mockNodeGlobalID++
 	return mn, nil
 }
