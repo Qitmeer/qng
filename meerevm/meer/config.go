@@ -57,23 +57,32 @@ func MakeConfig(cfg *config.Config) (*eth.Config, error) {
 	nodeConf.Version = params.VersionWithMeta
 	nodeConf.HTTPModules = append(nodeConf.HTTPModules, "eth")
 	nodeConf.WSModules = append(nodeConf.WSModules, "eth")
-	nodeConf.IPCPath = ClientIdentifier + ".ipc"
+	if !cfg.DisableRPC {
+		nodeConf.IPCPath = ClientIdentifier + ".ipc"
+	}
+
 	if len(datadir) > 0 {
 		nodeConf.KeyStoreDir = filepath.Join(datadir, "keystore")
 	}
 
 	var p2pPort int
 	nodeConf.HTTPPort, nodeConf.WSPort, nodeConf.AuthPort, p2pPort = getDefaultPort()
-	nodeConf.P2P.ListenAddr = fmt.Sprintf(":%d", p2pPort)
-	nodeConf.P2P.BootstrapNodes = getBootstrapNodes(p2pPort)
+	if !cfg.DisableListen {
+		nodeConf.P2P.ListenAddr = fmt.Sprintf(":%d", p2pPort)
+		nodeConf.P2P.BootstrapNodes = getBootstrapNodes(p2pPort)
 
-	pk, err := common.PrivateKey(cfg.DataDir, "", 0600)
-	if err != nil {
-		return nil, err
-	}
-	nodeConf.P2P.PrivateKey, err = common.ToECDSAPrivKey(pk)
-	if err != nil {
-		return nil, err
+		pk, err := common.PrivateKey(cfg.DataDir, "", 0600)
+		if err != nil {
+			return nil, err
+		}
+		nodeConf.P2P.PrivateKey, err = common.ToECDSAPrivKey(pk)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		nodeConf.P2P.ListenAddr = ""
+		nodeConf.P2P.MaxPeers = 0
+		nodeConf.P2P.NAT = nil
 	}
 
 	return &eth.Config{
