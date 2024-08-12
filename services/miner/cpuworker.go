@@ -2,6 +2,7 @@ package miner
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -303,7 +304,7 @@ out:
 		default:
 			// Non-blocking select to fall through
 		}
-		if w.discrete && w.discreteNum <= 0 || !w.hasNewWork.Load() {
+		if w.discrete && w.discreteNum <= 0 || !w.discrete && !w.hasNewWork.Load() {
 			time.Sleep(time.Second)
 			continue
 		}
@@ -312,19 +313,28 @@ out:
 			log.Warn(err.Error())
 			time.Sleep(time.Second)
 			continue
-		} else if params.ActiveNetParams.Params.IsDevelopDiff() {
-			time.Sleep(params.ActiveNetParams.Params.TargetTimePerBlock)
+		}
+		if params.ActiveNetParams.Params.IsDevelopDiff() {
+			w.miner.updateBlockTemplate(true)
+			if !w.miner.NoDevelopGap {
+				time.Sleep(params.ActiveNetParams.Params.TargetTimePerBlock)
+			}
 		}
 
 		sb := w.solveBlock()
 		if sb != nil {
 			w.hasNewWork.Store(false)
+
 			block := types.NewBlock(sb)
 			startSB := time.Now()
 			info, err := w.miner.submitBlock(block)
 			if err != nil {
-				log.Error(fmt.Sprintf("Failed to submit new block:%s ,%v", block.Hash().String(), err))
-				w.cleanDiscrete()
+				if !strings.Contains(err.Error(), "expired") {
+					log.Error(fmt.Sprintf("Failed to submit new block:%s ,%v", block.Hash().String(), err))
+					w.cleanDiscrete()
+				} else {
+					log.Warn(fmt.Sprintf("Failed to submit new block:%s ,%v", block.Hash().String(), err))
+				}
 				continue
 			} else {
 				w.miner.StatsSubmit(startSB, block.Block().BlockHash().String(), len(block.Block().Transactions)-1)

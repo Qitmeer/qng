@@ -1,30 +1,35 @@
 package simulator
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/blockchain"
+	"github.com/Qitmeer/qng/core/types/pow"
 	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/log"
 	_ "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/node"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/acct"
-	"github.com/Qitmeer/qng/services/address"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/miner"
 	"github.com/Qitmeer/qng/services/tx"
 	"github.com/Qitmeer/qng/services/wallet"
 	"github.com/Qitmeer/qng/testutils/simulator/testprivatekey"
 	"github.com/Qitmeer/qng/version"
+	"math/rand"
 	"os"
 	"path"
 	"runtime"
+	"sync"
+	"time"
 )
 
 func DefaultConfig() *config.Config {
-	cfg := common.DefaultConfig(path.Join(os.TempDir(), "qng_test"))
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	cfg := common.DefaultConfig(path.Join(os.TempDir(), fmt.Sprintf("qng_%d_%d", mockNodeGlobalID, r.Uint32())))
 	cfg.DataDir = ""
 	cfg.DevNextGDB = true
 	cfg.NoFileLogging = true
@@ -33,14 +38,17 @@ func DefaultConfig() *config.Config {
 	cfg.DisableListen = true
 	cfg.NoDiscovery = true
 	cfg.Miner = true
+	cfg.SubmitNoSynced = true
 	cfg.AcctMode = true
+	cfg.EVMEnv = "--nodiscover --v5disc=false"
 	return cfg
 }
 
-var mockNodeGlobalID uint
+var mockNodeGlobalID uint32
+var mockNodeLock sync.RWMutex
 
 type MockNode struct {
-	id          uint
+	id          uint32
 	n           *node.Node
 	pb          *testprivatekey.Builder
 	overrideCfg func(cfg *config.Config) error
@@ -53,10 +61,12 @@ type MockNode struct {
 	privateTxAPI            *tx.PrivateTxAPI
 	publicAccountManagerAPI *acct.PublicAccountManagerAPI
 	privateWalletManagerAPI *wallet.PrivateWalletManagerAPI
+	publicWalletManagerAPI  *wallet.PublicWalletManagerAPI
+	walletManager           *wallet.WalletManager
 }
 
 func (mn *MockNode) ID() uint {
-	return mn.id
+	return uint(mn.id)
 }
 
 func (mn *MockNode) Start(cfg *config.Config) error {
@@ -115,21 +125,23 @@ func (mn *MockNode) Stop() {
 }
 
 func (mn *MockNode) setup() error {
+	mn.walletManager = mn.n.GetQitmeerFull().GetWalletManager()
 	// init
 	coinbasePKHex := mn.pb.GetHex(testprivatekey.CoinbaseIdx)
-	_, err := mn.GetPrivateWalletManagerAPI().ImportRawKey(coinbasePKHex, testprivatekey.Password)
+	account, err := mn.walletManager.ImportRawKey(coinbasePKHex, testprivatekey.Password)
 	if err != nil {
 		return err
 	}
-	accounts, err := mn.GetPrivateWalletManagerAPI().ListAccount()
+	err = mn.GetPrivateWalletManagerAPI().Unlock(account.EvmAcct.Address.String(), testprivatekey.Password, time.Hour)
 	if err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("%v", accounts))
+	log.Info("Import default key", "addr", account.String())
 	if len(mn.n.Config.MiningAddrs) <= 0 {
-		_, addr, _, _ := address.NewAddresses(coinbasePKHex)
-		mn.n.Config.SetMiningAddrs(addr)
+		mn.n.Config.SetMiningAddrs(account.PKAddress())
 	}
+	mn.Node().GetQitmeerFull().GetMiner().NoDevelopGap = true
+	params.ActiveNetParams.PowConfig.DifficultyMode = pow.DIFFICULTY_MODE_DEVELOP
 	return nil
 }
 
@@ -189,8 +201,45 @@ func (mn *MockNode) GetPrivateWalletManagerAPI() *wallet.PrivateWalletManagerAPI
 	return mn.privateWalletManagerAPI
 }
 
+func (mn *MockNode) GetPublicWalletManagerAPI() *wallet.PublicWalletManagerAPI {
+	if mn.publicWalletManagerAPI == nil {
+		mn.publicWalletManagerAPI = wallet.NewPublicWalletAPI(mn.n.GetQitmeerFull().GetWalletManager())
+	}
+	return mn.publicWalletManagerAPI
+}
+
+func (mn *MockNode) GetWalletManager() *wallet.WalletManager {
+	return mn.walletManager
+}
+
+func (mn *MockNode) Node() *node.Node {
+	return mn.n
+}
+
+func (mn *MockNode) NewAddress() (*wallet.Account, error) {
+	// init
+	pkb, err := mn.pb.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	account, err := mn.walletManager.ImportRawKey(hex.EncodeToString(pkb), testprivatekey.Password)
+	if err != nil {
+		return nil, err
+	}
+	err = mn.GetPrivateWalletManagerAPI().Unlock(account.EvmAcct.Address.String(), testprivatekey.Password, time.Hour)
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
+}
+
 func StartMockNode(overrideCfg func(cfg *config.Config) error) (*MockNode, error) {
-	pb, err := testprivatekey.NewBuilder(uint32(mockNodeGlobalID))
+	mockNodeLock.Lock()
+	defer mockNodeLock.Unlock()
+
+	pb, err := testprivatekey.NewBuilder(0)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +255,6 @@ func StartMockNode(overrideCfg func(cfg *config.Config) error) (*MockNode, error
 	if err != nil {
 		return nil, err
 	}
-
 	mockNodeGlobalID++
 	return mn, nil
 }

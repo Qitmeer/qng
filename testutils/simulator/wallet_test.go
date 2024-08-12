@@ -28,12 +28,12 @@ func TestImportRawKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	accounts, err := node.GetPrivateWalletManagerAPI().ListAccount()
+	accounts, err := node.GetPublicWalletManagerAPI().ListAccount()
 	if err != nil {
 		t.Fatal(err)
 	}
 	accountsM := accounts.([]map[string]interface{})
-	ret := accountsM[1]["address"].(common.Address)
+	ret := accountsM[1]["eAddress"].(common.Address)
 	if ret.Cmp(eaddr) != 0 {
 		t.Fatalf("%s != %s", ret.String(), eaddr.String())
 	}

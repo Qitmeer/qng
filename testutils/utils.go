@@ -5,6 +5,7 @@
 package testutils
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
@@ -245,4 +246,51 @@ func ConvertEthToMeer(amount *big.Int) *big.Int {
 	// wei 1e18  meer 1e8
 	amount = amount.Div(amount, big.NewInt(1e10))
 	return amount
+}
+
+func GenerateBlockWaitForTxs(t *testing.T, h *Harness, txs []string) error {
+	tryMax := 20
+	txsM := map[string]bool{}
+	for _, tx := range txs {
+		txsM[tx] = false
+	}
+	for i := 0; i < tryMax; i++ {
+		ret := GenerateBlock(t, h, 1)
+		if len(ret) != 1 {
+			t.Fatal("No block")
+		}
+		if len(txsM) <= 0 {
+			return nil
+		}
+		sb, err := h.Client.GetSerializedBlock(ret[0])
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, tx := range sb.Transactions() {
+			_, ok := txsM[tx.Hash().String()]
+			if ok {
+				txsM[tx.Hash().String()] = true
+			}
+			if types.IsCrossChainVMTx(tx.Tx) {
+				txHash := "0x" + tx.Tx.TxIn[0].PreviousOut.Hash.String()
+				_, ok := txsM[txHash]
+				if ok {
+					txsM[txHash] = true
+				}
+			}
+		}
+		all := true
+		for _, v := range txsM {
+			if !v {
+				all = false
+			}
+		}
+		if all {
+			return nil
+		}
+		if i >= tryMax-1 {
+			t.Fatal("No block")
+		}
+	}
+	return fmt.Errorf("No block")
 }
