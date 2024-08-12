@@ -142,7 +142,7 @@ func Spend(t *testing.T, h *Harness, amt types.Amount, preOutpoint *types.TxOutP
 }
 
 // Spend amount from the wallet of the test harness and return tx hash
-func SendSelfMockNode(t *testing.T, h *simulator.MockNode, amt types.Amount, preOutpoint *types.TxOutPoint, lockTime *int64) *hash.Hash {
+func SendSelfMockNode(t *testing.T, h *simulator.MockNode, amt types.Amount, lockTime *int64) *hash.Hash {
 	acc  := h.GetWalletManager().GetAccountByIdx(0)
 	if acc == nil{
 		t.Fatalf("failed to get addr")
@@ -166,13 +166,13 @@ func SendSelfMockNode(t *testing.T, h *simulator.MockNode, amt types.Amount, pre
 
 
 // Spend amount from the wallet of the test harness and return tx hash
-func SendExportTxMockNode(t *testing.T, h *simulator.MockNode,txid string, value int64) *hash.Hash {
+func SendExportTxMockNode(t *testing.T, h *simulator.MockNode,txid string,idx uint32, value int64) *hash.Hash {
 	acc  := h.GetWalletManager().GetAccountByIdx(0)
 	if acc == nil{
 		t.Fatalf("failed to get addr")
 		return nil
 	}
-	rawStr,err := h.GetPublicTxAPI().CreateExportRawTransaction(txid,0,acc.PKAddress().String(),value)
+	rawStr,err := h.GetPublicTxAPI().CreateExportRawTransaction(txid,idx,acc.PKAddress().String(),value)
 	if err != nil {
 		t.Fatalf("failed to pay the output: %v", err)
 	}

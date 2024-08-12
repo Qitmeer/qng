@@ -36,10 +36,10 @@ func TestReleaseContract(t *testing.T) {
 
 	lockTime := int64(20)
 	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERA}
-	txid := SendSelfMockNode(t, h, spendAmt, nil, &lockTime)
+	txid := SendSelfMockNode(t, h, spendAmt, &lockTime)
 	GenerateBlockMockNode(t, h, 10)
 	fee := int64(2200)
-	txid = SendExportTxMockNode(t,h,txid.String(), spendAmt.Value-fee)
+	txid = SendExportTxMockNode(t,h,txid.String(),0, spendAmt.Value-fee)
 	if err != nil {
 		t.Fatalf("createExportRawTx failed:%v", err)
 	}
