@@ -1,6 +1,7 @@
 package simulator
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
@@ -12,7 +13,6 @@ import (
 	"github.com/Qitmeer/qng/node"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/acct"
-	"github.com/Qitmeer/qng/services/address"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/Qitmeer/qng/services/miner"
 	"github.com/Qitmeer/qng/services/tx"
@@ -60,6 +60,8 @@ type MockNode struct {
 	privateTxAPI            *tx.PrivateTxAPI
 	publicAccountManagerAPI *acct.PublicAccountManagerAPI
 	privateWalletManagerAPI *wallet.PrivateWalletManagerAPI
+	publicWalletManagerAPI  *wallet.PublicWalletManagerAPI
+	walletManager           *wallet.WalletManager
 }
 
 func (mn *MockNode) ID() uint {
@@ -122,20 +124,20 @@ func (mn *MockNode) Stop() {
 }
 
 func (mn *MockNode) setup() error {
+	mn.walletManager = mn.n.GetQitmeerFull().GetWalletManager()
 	// init
 	coinbasePKHex := mn.pb.GetHex(testprivatekey.CoinbaseIdx)
-	_, err := mn.GetPrivateWalletManagerAPI().ImportRawKey(coinbasePKHex, testprivatekey.Password)
+	account, err := mn.walletManager.ImportRawKey(coinbasePKHex, testprivatekey.Password)
 	if err != nil {
 		return err
 	}
-	accounts, err := mn.GetPrivateWalletManagerAPI().ListAccount()
+	err = mn.GetPrivateWalletManagerAPI().Unlock(account.EvmAcct.Address.String(), testprivatekey.Password, time.Hour)
 	if err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("%v", accounts))
+	log.Info("Import default key", "addr", account.String())
 	if len(mn.n.Config.MiningAddrs) <= 0 {
-		_, addr, _, _ := address.NewAddresses(coinbasePKHex)
-		mn.n.Config.SetMiningAddrs(addr)
+		mn.n.Config.SetMiningAddrs(account.PKAddress())
 	}
 	mn.Node().GetQitmeerFull().GetMiner().NoDevelopGap = true
 	params.ActiveNetParams.PowConfig.DifficultyMode = pow.DIFFICULTY_MODE_DEVELOP
@@ -198,8 +200,38 @@ func (mn *MockNode) GetPrivateWalletManagerAPI() *wallet.PrivateWalletManagerAPI
 	return mn.privateWalletManagerAPI
 }
 
+func (mn *MockNode) GetPublicWalletManagerAPI() *wallet.PublicWalletManagerAPI {
+	if mn.publicWalletManagerAPI == nil {
+		mn.publicWalletManagerAPI = wallet.NewPublicWalletAPI(mn.n.GetQitmeerFull().GetWalletManager())
+	}
+	return mn.publicWalletManagerAPI
+}
+
+func (mn *MockNode) GetWalletManager() *wallet.WalletManager {
+	return mn.walletManager
+}
+
 func (mn *MockNode) Node() *node.Node {
 	return mn.n
+}
+
+func (mn *MockNode) NewAddress() (*wallet.Account, error) {
+	// init
+	pkb, err := mn.pb.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	account, err := mn.walletManager.ImportRawKey(hex.EncodeToString(pkb), testprivatekey.Password)
+	if err != nil {
+		return nil, err
+	}
+	err = mn.GetPrivateWalletManagerAPI().Unlock(account.EvmAcct.Address.String(), testprivatekey.Password, time.Hour)
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
 }
 
 func StartMockNode(overrideCfg func(cfg *config.Config) error) (*MockNode, error) {

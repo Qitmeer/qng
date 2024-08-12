@@ -2,6 +2,8 @@ package simulator
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"strconv"
 	"testing"
@@ -63,4 +65,23 @@ func AssertBlockOrderAndHeight(t *testing.T, node *MockNode, order, total, heigh
 			t.Errorf("test failed, expect %v , but got %v", expect, h)
 		}
 	}
+}
+
+// spend first HD account to new address create by HD
+func Spend(t *testing.T, node *MockNode, preOutpoint *types.TxOutPoint, amt types.Amount, lockTime int64) (*types.Transaction, types.Address) {
+	addr, err := node.NewAddress()
+	if err != nil {
+		t.Fatalf("failed to generate new address for test wallet: %v", err)
+	}
+	t.Logf("test wallet generated new address %v ok", addr.String())
+	feeRate := int64(10)
+
+	inputs := []json.TransactionInput{json.TransactionInput{Txid: preOutpoint.Hash.String(), Vout: preOutpoint.OutIndex}}
+	aa := json.AdreesAmount{}
+	aa[addr.PKHAddress().String()] = json.Amout{CoinId: uint16(amt.Id), Amount: amt.Value - feeRate}
+	tx, err := node.GetWalletManager().SpendUtxo(inputs, aa, &lockTime)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tx, addr.PKHAddress()
 }

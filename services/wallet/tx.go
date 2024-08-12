@@ -1,9 +1,12 @@
 package wallet
 
 import (
+	"bytes"
 	"encoding/hex"
 	ejson "encoding/json"
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/services/tx"
 	"time"
 
 	"github.com/Qitmeer/qng/core/address"
@@ -84,6 +87,10 @@ func (a *WalletManager) getAvailableUtxos(addr string, amount int64) ([]acct.UTX
 	am := uint64(amount)
 	utxos, sum, err := a.am.GetUTXOs(addr, nil, &locked, &am)
 	return utxos, int64(sum), err
+}
+
+func (a *WalletManager) SendTx(fromAddress string, amounts json.AddressAmountV3, targetLockTime, lockTime int64) (string, error) {
+	return a.sendTx(fromAddress, amounts, targetLockTime, lockTime)
 }
 
 func (a *WalletManager) sendTx(fromAddress string, amounts json.AddressAmountV3, targetLockTime, lockTime int64) (string, error) {
@@ -186,4 +193,45 @@ func (a *WalletManager) sendTxWithUtxos(fromAddress string, amount int64, output
 		return "", rpc.RpcDecodeHexError(signedRaw)
 	}
 	return a.tm.ProcessRawTx(serializedTx, false)
+}
+
+func (a *WalletManager) SpendUtxo(inputs []json.TransactionInput, amounts json.AdreesAmount, lockTime *int64) (*types.Transaction, error) {
+	ac := a.GetAccountByIdx(0)
+	pri, ok := a.qks.unlocked[ac.PKHAddress().String()]
+	if !ok {
+		return nil, fmt.Errorf("please unlock %s first", ac.EvmAcct.Address.String())
+	}
+	for _, input := range inputs {
+		txHash, err := hash.NewHashFromStr(input.Txid)
+		if err != nil {
+			return nil, fmt.Errorf("txid error:%s", input.Txid)
+		}
+		prevOut := types.NewOutPoint(txHash, input.Vout)
+		if !a.am.HasUTXO(ac.PKHAddress().String(), prevOut) {
+			return nil, fmt.Errorf("prev outpoint error: %s:%d", prevOut.Hash.String(), prevOut.OutIndex)
+		}
+	}
+	txhex, err := a.tm.CreateRawTransactionV2(inputs, amounts, lockTime)
+	if err != nil {
+		return nil, err
+	}
+	api := tx.NewPrivateTxAPI(a.tm)
+	stxhexStr, err := api.TxSign(hex.EncodeToString(pri.PrivateKey.D.Bytes()), txhex.(string), nil)
+	if err != nil {
+		return nil, err
+	}
+	stxhex := stxhexStr.(string)
+	if len(stxhex)%2 != 0 {
+		stxhex = "0" + stxhex
+	}
+	serializedTx, err := hex.DecodeString(stxhex)
+	if err != nil {
+		return nil, rpc.RpcDecodeHexError(stxhex)
+	}
+	var mtx types.Transaction
+	err = mtx.Deserialize(bytes.NewReader(serializedTx))
+	if err != nil {
+		return nil, err
+	}
+	return &mtx, nil
 }
