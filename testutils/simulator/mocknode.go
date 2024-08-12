@@ -238,7 +238,7 @@ func StartMockNode(overrideCfg func(cfg *config.Config) error) (*MockNode, error
 	mockNodeLock.Lock()
 	defer mockNodeLock.Unlock()
 
-	pb, err := testprivatekey.NewBuilder(mockNodeGlobalID)
+	pb, err := testprivatekey.NewBuilder(0)
 	if err != nil {
 		return nil, err
 	}
