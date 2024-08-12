@@ -38,6 +38,7 @@ func DefaultConfig() *config.Config {
 	cfg.DisableListen = true
 	cfg.NoDiscovery = true
 	cfg.Miner = true
+	cfg.SubmitNoSynced = true
 	cfg.AcctMode = true
 	cfg.EVMEnv = "--nodiscover --v5disc=false"
 	return cfg
