@@ -3,6 +3,13 @@ package testutils
 import (
 	"encoding/hex"
 	"fmt"
+	"math/rand"
+	"os"
+	"path"
+	"runtime"
+	"sync"
+	"time"
+
 	"github.com/Qitmeer/qng/common/system"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/blockchain"
@@ -10,6 +17,7 @@ import (
 	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
 	"github.com/Qitmeer/qng/log"
 	_ "github.com/Qitmeer/qng/meerevm/common"
+	"github.com/Qitmeer/qng/meerevm/meer"
 	"github.com/Qitmeer/qng/node"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/acct"
@@ -19,12 +27,7 @@ import (
 	"github.com/Qitmeer/qng/services/wallet"
 	"github.com/Qitmeer/qng/testutils/testprivatekey"
 	"github.com/Qitmeer/qng/version"
-	"math/rand"
-	"os"
-	"path"
-	"runtime"
-	"sync"
-	"time"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 func DefaultConfig() *config.Config {
@@ -62,6 +65,7 @@ type MockNode struct {
 	publicAccountManagerAPI *acct.PublicAccountManagerAPI
 	privateWalletManagerAPI *wallet.PrivateWalletManagerAPI
 	publicWalletManagerAPI  *wallet.PublicWalletManagerAPI
+	evmClient  *ethclient.Client
 	walletManager           *wallet.WalletManager
 }
 
@@ -201,6 +205,13 @@ func (mn *MockNode) GetPrivateWalletManagerAPI() *wallet.PrivateWalletManagerAPI
 	return mn.privateWalletManagerAPI
 }
 
+func (mn *MockNode) GetEvmClient() *ethclient.Client {
+	if mn.evmClient == nil {
+		mn.evmClient = ethclient.NewClient(mn.n.GetQitmeerFull().GetBlockChain().MeerChain().(*meer.MeerChain).ETHChain().Node().Attach())
+	}
+	return mn.evmClient
+}
+
 func (mn *MockNode) GetPublicWalletManagerAPI() *wallet.PublicWalletManagerAPI {
 	if mn.publicWalletManagerAPI == nil {
 		mn.publicWalletManagerAPI = wallet.NewPublicWalletAPI(mn.n.GetQitmeerFull().GetWalletManager())
@@ -209,7 +220,12 @@ func (mn *MockNode) GetPublicWalletManagerAPI() *wallet.PublicWalletManagerAPI {
 }
 
 func (mn *MockNode) GetWalletManager() *wallet.WalletManager {
+	
 	return mn.walletManager
+}
+
+func (mn *MockNode) GetBuilder() *testprivatekey.Builder {
+	return mn.pb
 }
 
 func (mn *MockNode) Node() *node.Node {

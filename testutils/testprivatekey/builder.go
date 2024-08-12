@@ -7,6 +7,7 @@ package testprivatekey
 import (
 	"encoding/binary"
 	"encoding/hex"
+
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/crypto/bip32"
 	"github.com/Qitmeer/qng/params"
