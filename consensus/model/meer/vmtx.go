@@ -8,7 +8,6 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/common"
-	"github.com/Qitmeer/qng/meerevm/meer/crosschain"
 	"github.com/Qitmeer/qng/params"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 )
@@ -18,7 +17,7 @@ type VMTx struct {
 	Coinbase hash.Hash
 	ETx      *etypes.Transaction
 
-	ExportData *crosschain.CrosschainExportData
+	ExportData *meerchange.CrosschainExportData
 }
 
 func (vt *VMTx) setCoinbaseTx(tx *types.Transaction) error {
@@ -66,8 +65,8 @@ func NewVMTx(tx *types.Transaction, coinbase *types.Transaction) (*VMTx, error) 
 		return nil, fmt.Errorf("rlp decoding failed: %v", err)
 	}
 	vt.ETx = txe
-	if crosschain.IsCrossChainExportTx(txe) {
-		ed, err := crosschain.NewCrosschainExportDataByInput(txe.Data())
+	if meerchange.IsCrossChainExportTx(txe) {
+		ed, err := meerchange.NewCrosschainExportDataByInput(txe.Data())
 		if err != nil {
 			return nil, err
 		}

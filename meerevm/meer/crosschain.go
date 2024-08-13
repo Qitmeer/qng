@@ -8,7 +8,7 @@ import (
 	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/meerevm/meer/crosschain"
+	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
 	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -23,7 +23,7 @@ func (m *MeerPool) checkCrossChainTxs(block *types.Block, receipts types.Receipt
 	}
 	has := false
 	for _, tx := range block.Transactions() {
-		if crosschain.IsCrossChainTx(tx) {
+		if meerchange.IsCrossChainTx(tx) {
 			has = true
 			break
 		}
@@ -32,11 +32,11 @@ func (m *MeerPool) checkCrossChainTxs(block *types.Block, receipts types.Receipt
 		return nil
 	}
 	for i, tx := range block.Transactions() {
-		if crosschain.IsCrossChainTx(tx) {
+		if meerchange.IsCrossChainTx(tx) {
 			for _, lg := range receipts[i].Logs {
 				switch lg.Topics[0].Hex() {
-				case crosschain.LogExportSigHash.Hex():
-					ccExportEvent, err := crosschain.NewCrosschainExportDataByLog(lg.Data)
+				case meerchange.LogExportSigHash.Hex():
+					ccExportEvent, err := meerchange.NewCrosschainExportDataByLog(lg.Data)
 					if err != nil {
 						return err
 					}
@@ -100,7 +100,7 @@ func (m *MeerPool) checkSignature(tx *types.Transaction, entry *utxo.UtxoEntry) 
 	return fmt.Errorf("Signature error")
 }
 
-func (m *MeerPool) checkCrossChainExportTx(tx *types.Transaction, ced *crosschain.CrosschainExportData, utxoView *utxo.UtxoViewpoint) error {
+func (m *MeerPool) checkCrossChainExportTx(tx *types.Transaction, ced *meerchange.CrosschainExportData, utxoView *utxo.UtxoViewpoint) error {
 	op, err := ced.GetOutPoint()
 	if err != nil {
 		return err

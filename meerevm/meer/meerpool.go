@@ -10,7 +10,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
-	"github.com/Qitmeer/qng/meerevm/meer/crosschain"
+	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
 	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
 	"github.com/ethereum/go-ethereum/eth"
@@ -131,7 +131,7 @@ func (m *MeerPool) handler() {
 				if tx == nil {
 					continue
 				}
-				if crosschain.IsCrossChainExportTx(tx) {
+				if meerchange.IsCrossChainExportTx(tx) {
 					vmtx, err := meer.NewVMTx(qcommon.ToQNGTx(tx, 0, true).Tx, nil)
 					if err != nil {
 						log.Error(err.Error())

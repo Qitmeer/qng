@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-contract CrossChain {
+contract MeerChange {
     uint64 private exportCount;
     uint64 private importCount;
 
