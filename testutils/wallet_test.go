@@ -1,9 +1,9 @@
-package simulator
+package testutils
 
 import (
 	"encoding/hex"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/testutils/simulator/testprivatekey"
+	"github.com/Qitmeer/qng/testutils/testprivatekey"
 	"github.com/ethereum/go-ethereum/common"
 	"testing"
 )
@@ -19,7 +19,7 @@ func TestImportRawKey(t *testing.T) {
 	}
 	defer node.Stop()
 
-	pk, err := node.pb.Build()
+	pk, err := node.GetPriKeyBuilder().Build()
 	if err != nil {
 		t.Fatal(err)
 	}
