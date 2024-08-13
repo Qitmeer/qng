@@ -12,17 +12,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v2 
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.21.0
+          go-version: 'stable'
 
       - name: npm
-        run: |
-          sudo apt update
-          sudo apt -y install nodejs
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
       - name: solc
         run: sudo npm install solc@0.8.3 -g
@@ -46,7 +46,7 @@ jobs:
       - name: Build
         run: |
           export GO111MODULE=on
-          go mod tidy -compat=1.21
+          go mod tidy
           make qng
 
       - name: Test
