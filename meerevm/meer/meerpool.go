@@ -131,7 +131,7 @@ func (m *MeerPool) handler() {
 				if tx == nil {
 					continue
 				}
-				if meerchange.IsCrossChainExportTx(tx) {
+				if meerchange.IsMeerChangeExportTx(tx) {
 					vmtx, err := meer.NewVMTx(qcommon.ToQNGTx(tx, 0, true).Tx, nil)
 					if err != nil {
 						log.Error(err.Error())
@@ -207,7 +207,7 @@ func (m *MeerPool) updateTemplate(force bool) error {
 	if block == nil {
 		return nil
 	}
-	err := m.checkCrossChainTxs(block, receipts)
+	err := m.checkMeerChangeTxs(block, receipts)
 	if err != nil {
 		log.Error(err.Error())
 		return err

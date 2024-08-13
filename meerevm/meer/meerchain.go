@@ -503,7 +503,7 @@ func (b *MeerChain) VerifyTx(tx *mmeer.VMTx, utxoView *utxo.UtxoViewpoint) (int6
 			return 0, err
 		}
 		if tx.ExportData != nil {
-			err = b.meerpool.checkCrossChainExportTx(txe, tx.ExportData, utxoView)
+			err = b.meerpool.checkMeerChangeExportTx(txe, tx.ExportData, utxoView)
 			if err != nil {
 				return 0, err
 			}

@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func (m *MeerPool) checkCrossChainTxs(block *types.Block, receipts types.Receipts) error {
+func (m *MeerPool) checkMeerChangeTxs(block *types.Block, receipts types.Receipts) error {
 	txsNum := len(block.Transactions())
 	if txsNum <= 0 {
 		return nil
@@ -23,7 +23,7 @@ func (m *MeerPool) checkCrossChainTxs(block *types.Block, receipts types.Receipt
 	}
 	has := false
 	for _, tx := range block.Transactions() {
-		if meerchange.IsCrossChainTx(tx) {
+		if meerchange.IsMeerChangeTx(tx) {
 			has = true
 			break
 		}
@@ -32,15 +32,15 @@ func (m *MeerPool) checkCrossChainTxs(block *types.Block, receipts types.Receipt
 		return nil
 	}
 	for i, tx := range block.Transactions() {
-		if meerchange.IsCrossChainTx(tx) {
+		if meerchange.IsMeerChangeTx(tx) {
 			for _, lg := range receipts[i].Logs {
 				switch lg.Topics[0].Hex() {
 				case meerchange.LogExportSigHash.Hex():
-					ccExportEvent, err := meerchange.NewCrosschainExportDataByLog(lg.Data)
+					ccExportEvent, err := meerchange.NewMeerchangeExportDataByLog(lg.Data)
 					if err != nil {
 						return err
 					}
-					err = m.checkCrossChainExportTx(tx, ccExportEvent, nil)
+					err = m.checkMeerChangeExportTx(tx, ccExportEvent, nil)
 					if err != nil {
 						m.ethTxPool.RemoveTx(tx.Hash(), true)
 						return err
@@ -100,7 +100,7 @@ func (m *MeerPool) checkSignature(tx *types.Transaction, entry *utxo.UtxoEntry) 
 	return fmt.Errorf("Signature error")
 }
 
-func (m *MeerPool) checkCrossChainExportTx(tx *types.Transaction, ced *meerchange.CrosschainExportData, utxoView *utxo.UtxoViewpoint) error {
+func (m *MeerPool) checkMeerChangeExportTx(tx *types.Transaction, ced *meerchange.MeerchangeExportData, utxoView *utxo.UtxoViewpoint) error {
 	op, err := ced.GetOutPoint()
 	if err != nil {
 		return err

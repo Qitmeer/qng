@@ -10,7 +10,7 @@ func TestCrossChainLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ccExportEvent, err := NewCrosschainExportDataByLog(lgData)
+	ccExportEvent, err := NewMeerchangeExportDataByLog(lgData)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +26,7 @@ func TestCrossChainInput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ccExportEvent, err := NewCrosschainExportDataByInput(inputData)
+	ccExportEvent, err := NewMeerchangeExportDataByInput(inputData)
 	if err != nil {
 		t.Fatal(err)
 	}

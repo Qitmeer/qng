@@ -17,27 +17,27 @@ var (
 	LogExportSigHash = crypto.Keccak256Hash([]byte("Export(bytes32,uint32)"))
 )
 
-type CrosschainExportOptData struct {
+type MeerchangeExportOptData struct {
 	Txid [32]byte
 	Idx  uint32
 }
 
-type CrosschainExportData struct {
-	Opt CrosschainExportOptData
+type MeerchangeExportData struct {
+	Opt MeerchangeExportOptData
 	//
 	OutPoint *qtypes.TxOutPoint
 	Amount   qtypes.Amount
 }
 
-func (e *CrosschainExportData) GetFuncName() string {
+func (e *MeerchangeExportData) GetFuncName() string {
 	return "export"
 }
 
-func (e *CrosschainExportData) GetLogName() string {
+func (e *MeerchangeExportData) GetLogName() string {
 	return "Export"
 }
 
-func (e *CrosschainExportData) GetOutPoint() (*qtypes.TxOutPoint, error) {
+func (e *MeerchangeExportData) GetOutPoint() (*qtypes.TxOutPoint, error) {
 	if e.OutPoint != nil {
 		return e.OutPoint, nil
 	}
@@ -50,13 +50,13 @@ func (e *CrosschainExportData) GetOutPoint() (*qtypes.TxOutPoint, error) {
 	return e.OutPoint, nil
 }
 
-func NewCrosschainExportDataByLog(data []byte) (*CrosschainExportData, error) {
-	contractAbi, err := abi.JSON(strings.NewReader(CrosschainMetaData.ABI))
+func NewMeerchangeExportDataByLog(data []byte) (*MeerchangeExportData, error) {
+	contractAbi, err := abi.JSON(strings.NewReader(MeerchangeMetaData.ABI))
 	if err != nil {
 		return nil, err
 	}
-	ced := &CrosschainExportData{
-		Opt:      CrosschainExportOptData{},
+	ced := &MeerchangeExportData{
+		Opt:      MeerchangeExportOptData{},
 		OutPoint: nil,
 		Amount:   qtypes.Amount{Value: 0, Id: qtypes.MEERA},
 	}
@@ -67,16 +67,16 @@ func NewCrosschainExportDataByLog(data []byte) (*CrosschainExportData, error) {
 	return ced, nil
 }
 
-func NewCrosschainExportDataByInput(data []byte) (*CrosschainExportData, error) {
+func NewMeerchangeExportDataByInput(data []byte) (*MeerchangeExportData, error) {
 	if len(data) <= 4 {
 		return nil, fmt.Errorf("input data format error")
 	}
-	contractAbi, err := abi.JSON(strings.NewReader(CrosschainMetaData.ABI))
+	contractAbi, err := abi.JSON(strings.NewReader(MeerchangeMetaData.ABI))
 	if err != nil {
 		return nil, err
 	}
-	ced := &CrosschainExportData{
-		Opt:      CrosschainExportOptData{},
+	ced := &MeerchangeExportData{
+		Opt:      MeerchangeExportOptData{},
 		OutPoint: nil,
 		Amount:   qtypes.Amount{Value: 0, Id: qtypes.MEERA},
 	}
@@ -98,7 +98,7 @@ func NewCrosschainExportDataByInput(data []byte) (*CrosschainExportData, error) 
 	return ced, nil
 }
 
-func IsCrossChainTx(tx *types.Transaction) bool {
+func IsMeerChangeTx(tx *types.Transaction) bool {
 	if len(params.ActiveNetParams.CrossChainContractAddr) <= 0 {
 		return false
 	}
@@ -111,14 +111,14 @@ func IsCrossChainTx(tx *types.Transaction) bool {
 	return *tx.To() == common.HexToAddress(params.ActiveNetParams.CrossChainContractAddr)
 }
 
-func IsCrossChainExportTx(tx *types.Transaction) bool {
-	if !IsCrossChainTx(tx) {
+func IsMeerChangeExportTx(tx *types.Transaction) bool {
+	if !IsMeerChangeTx(tx) {
 		return false
 	}
 	if len(tx.Data()) <= 4 {
 		return false
 	}
-	contractAbi, err := abi.JSON(strings.NewReader(CrosschainMetaData.ABI))
+	contractAbi, err := abi.JSON(strings.NewReader(MeerchangeMetaData.ABI))
 	if err != nil {
 		return false
 	}
@@ -126,7 +126,7 @@ func IsCrossChainExportTx(tx *types.Transaction) bool {
 	if err != nil {
 		return false
 	}
-	if method.Name != (&CrosschainExportData{}).GetFuncName() {
+	if method.Name != (&MeerchangeExportData{}).GetFuncName() {
 		return false
 	}
 	return true
