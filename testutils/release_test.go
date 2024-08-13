@@ -15,14 +15,13 @@ import (
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/testutils/release"
-	"github.com/Qitmeer/qng/testutils/simulator"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestReleaseContract(t *testing.T) {
-	h, err := simulator.StartMockNode(nil)
+	h, err := StartMockNode(nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -31,20 +30,20 @@ func TestReleaseContract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup harness failed:%v", err)
 	}
-	simulator.GenerateBlock(t,h,20)
-	simulator.AssertBlockOrderAndHeight(t, h, 21, 21, 20)
+	GenerateBlocks(t,h,20)
+	AssertBlockOrderHeightTotal(t, h, 21, 21, 20)
 
 	lockTime := int64(20)
 	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERA}
 	txid := SendSelfMockNode(t, h, spendAmt, &lockTime)
-	simulator.GenerateBlock(t, h, 10)
+	GenerateBlocks(t, h, 10)
 	fee := int64(2200)
 	txid = SendExportTxMockNode(t,h,txid.String(),0, spendAmt.Value-fee)
 	if err != nil {
 		t.Fatalf("createExportRawTx failed:%v", err)
 	}
 	log.Println("send tx", txid.String())
-	simulator.GenerateBlock(t, h, 10)
+	GenerateBlocks(t, h, 10)
 	evmAddr := h.GetWalletManager().GetAccountByIdx(0).EvmAcct.Address
 	ba, err := h.GetEvmClient().BalanceAt(context.Background(),evmAddr, nil)
 	if err != nil {
@@ -58,7 +57,7 @@ func TestReleaseContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	// 0000000000000000000000000000000000000000000000000000000000000000
-	simulator.GenerateBlock(t, h, 1)
+	GenerateBlocks(t, h, 1)
 	maddr := "Mmf93CE9Cvvf3chYYn1okcBFB22u5wH2dyg"
 	addr, _ := address.DecodeAddress(maddr)
 	hash160 := hex.EncodeToString(addr.Hash160()[:])

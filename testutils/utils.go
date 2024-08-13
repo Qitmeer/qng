@@ -15,7 +15,6 @@ import (
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/testutils/simulator"
 )
 
 // GenerateBlock will generate a number of blocks by the input number for
@@ -90,7 +89,7 @@ func Spend(t *testing.T, h *Harness, amt types.Amount, preOutpoint *types.TxOutP
 }
 
 // Spend amount from the wallet of the test harness and return tx hash
-func SendSelfMockNode(t *testing.T, h *simulator.MockNode, amt types.Amount, lockTime *int64) *hash.Hash {
+func SendSelfMockNode(t *testing.T, h *MockNode, amt types.Amount, lockTime *int64) *hash.Hash {
 	acc  := h.GetWalletManager().GetAccountByIdx(0)
 	if acc == nil{
 		t.Fatalf("failed to get addr")
@@ -114,7 +113,7 @@ func SendSelfMockNode(t *testing.T, h *simulator.MockNode, amt types.Amount, loc
 
 
 // Spend amount from the wallet of the test harness and return tx hash
-func SendExportTxMockNode(t *testing.T, h *simulator.MockNode,txid string,idx uint32, value int64) *hash.Hash {
+func SendExportTxMockNode(t *testing.T, h *MockNode,txid string,idx uint32, value int64) *hash.Hash {
 	acc  := h.GetWalletManager().GetAccountByIdx(0)
 	if acc == nil{
 		t.Fatalf("failed to get addr")
