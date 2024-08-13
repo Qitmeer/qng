@@ -7,7 +7,6 @@ package testutils
 import (
 	"fmt"
 	"math/big"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -15,25 +14,9 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/testutils/simulator"
 )
-
-func GenerateBlockMockNode(t *testing.T, h *simulator.MockNode, num uint64) []*hash.Hash {
-	result := make([]*hash.Hash, 0)
-	if blocks, err := h.GetPrivateMinerAPI().Generate(uint32(num), pow.MEERXKECCAKV1); err != nil {
-		t.Errorf("generate block failed : %v", err)
-		return nil
-	} else {
-		for _, s := range blocks {
-			b,_ := hash.NewHashFromStr(s)
-			result = append(result, b)
-			t.Logf("%v: generate block [%v] ok", h.ID(), b)
-		}
-	}
-	return result
-}
 
 // GenerateBlock will generate a number of blocks by the input number for
 // the appointed test harness.
@@ -51,41 +34,6 @@ func GenerateBlock(t *testing.T, h *Harness, num uint64) []*hash.Hash {
 	}
 	return result
 }
-
-func AssertBlockOrderAndHeightMockNode(t *testing.T, h *simulator.MockNode, order, total, height uint64) {
-	// order
-	if c, err := h.GetPublicBlockAPI().GetBlockCount(); err != nil {
-		t.Errorf("test failed : %v", err)
-	} else {
-		expect := order
-		if c.(uint) != uint(expect) {
-			t.Errorf("test failed, expect %v , but got %v", expect, c)
-		}
-	}
-	// total block
-	if tal, err := h.GetPublicBlockAPI().GetBlockTotal(); err != nil {
-		t.Errorf("test failed : %v", err)
-	} else {
-		expect := total
-		if tal.(uint) != uint(expect) {
-			t.Errorf("test failed, expect %v , but got %v", expect, tal)
-		}
-	}
-	// main height
-	if h, err := h.GetPublicBlockAPI().GetMainChainHeight(); err != nil {
-		t.Errorf("test failed : %v", err)
-	} else {
-		expect := height
-		heightInt,err := strconv.Atoi(h.(string))
-		if err != nil{
-			t.Errorf("test failed : %v", err)
-		}
-		if uint(heightInt) != uint(expect) {
-			t.Errorf("test failed, expect %v , but got %v", expect, h)
-		}
-	}
-}
-
 
 // AssertBlockOrderAndHeight will verify the current block order, total block number
 // and current main-chain height of the appointed test harness and assert it ok or
