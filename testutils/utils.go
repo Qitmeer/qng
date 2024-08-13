@@ -6,13 +6,15 @@ package testutils
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/engine/txscript"
 	"math/big"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/engine/txscript"
 )
 
 // GenerateBlock will generate a number of blocks by the input number for
@@ -85,6 +87,62 @@ func Spend(t *testing.T, h *Harness, amt types.Amount, preOutpoint *types.TxOutP
 	}
 	return txId, addr
 }
+
+// Spend amount from the wallet of the test harness and return tx hash
+func SendSelfMockNode(t *testing.T, h *MockNode, amt types.Amount, lockTime *int64) *hash.Hash {
+	acc  := h.GetWalletManager().GetAccountByIdx(0)
+	if acc == nil{
+		t.Fatalf("failed to get addr")
+		return nil
+	}
+	txId,err := h.GetWalletManager().SendTx(acc.PKHAddress().String(),json.AddressAmountV3{
+		acc.PKHAddress().String():json.AmountV3{
+			CoinId: uint16(amt.Id),
+			Amount: amt.Value,
+		},
+	},0,*lockTime)
+	if err != nil {
+		t.Fatalf("failed to pay the output: %v", err)
+	}
+	ret,err := hash.NewHashFromStr(txId)
+	if err != nil {
+		t.Fatalf("failed to get the txid: %v, err:%v", txId,err)
+	}
+	return ret
+}
+
+
+// Spend amount from the wallet of the test harness and return tx hash
+func SendExportTxMockNode(t *testing.T, h *MockNode,txid string,idx uint32, value int64) *hash.Hash {
+	acc  := h.GetWalletManager().GetAccountByIdx(0)
+	if acc == nil{
+		t.Fatalf("failed to get addr")
+		return nil
+	}
+	rawStr,err := h.GetPublicTxAPI().CreateExportRawTransaction(txid,idx,acc.PKAddress().String(),value)
+	if err != nil {
+		t.Fatalf("failed to pay the output: %v", err)
+	}
+	
+	signRaw, err := h.GetPrivateTxAPI().TxSign(h.GetBuilder().GetHex(0), rawStr.(string), nil)
+	if err != nil {
+		t.Fatalf("failed to sign: %v", err)
+		return nil
+	}
+	allHighFee := true
+	tx, err := h.GetPublicTxAPI().SendRawTransaction(signRaw.(string), &allHighFee)
+	if err != nil {
+		t.Fatalf("failed to send raw tx: %v", err)
+		return nil
+	}
+	ret,err := hash.NewHashFromStr(tx.(string))
+	if err != nil {
+		t.Fatalf("failed to decode txid: %v", err)
+		return nil
+	}
+	return ret
+}
+
 
 // Spend amount from the wallet of the test harness and return tx hash
 func SendSelf(t *testing.T, h *Harness, amt types.Amount, preOutpoint *types.TxOutPoint, lockTime *int64) *hash.Hash {
