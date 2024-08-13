@@ -31,14 +31,17 @@ jobs:
         run: sudo apt install git
 
       - name: abigen
-        run: git clone https://github.com/Qitmeer/go-ethereum.git && cd go-ethereum && git checkout v1.10.21-q.1 && cd cmd/abigen && go build && sudo cp abigen /usr/local/bin/ && cd ../../..
+        run: git clone https://github.com/Qitmeer/go-ethereum.git && cd go-ethereum && git checkout v1.14.7-q.0 && cd cmd/abigen && go build && sudo cp abigen /usr/local/bin/ && cd ../../..
 
 
       - name: compileSolidity
         run: solcjs --version && ls && cd testutils/cmds/ && sudo go run compile_solidity.go && cd ../../
 
+      - name: linter-install
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.59.1
+
       - name: linter
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+        run: golangci-lint --version && golangci-lint run -v --timeout=2m --disable-all --enable=govet --tests=false ./...
 
       - name: Build
         run: |
@@ -50,9 +53,3 @@ jobs:
         run: |
           PATH=$PATH:$(pwd)/build/bin
           go test -v ./...
-      
-      - name: Run ci.sh
-        env:
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-        run: ./ci.sh

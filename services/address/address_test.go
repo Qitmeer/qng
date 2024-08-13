@@ -3,7 +3,7 @@ package address
 import (
 	"encoding/hex"
 	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/testutils/simulator/testprivatekey"
+	"github.com/Qitmeer/qng/testutils/testprivatekey"
 	"testing"
 )
 

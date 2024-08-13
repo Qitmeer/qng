@@ -648,6 +648,56 @@ func (a *AccountManager) GetUTXOs(addr string, limit *int, locked *bool, amount 
 	return utxos, totalAmount, nil
 }
 
+func (a *AccountManager) HasUTXO(addr string, outPoint *types.TxOutPoint) bool {
+	err := a.checkAddress(addr)
+	if err != nil {
+		return false
+	}
+	if !a.info.Has(addr) {
+		return false
+	}
+	has := false
+	err = a.db.Update(func(dbTx legacydb.Tx) error {
+		us := DBGetACCTUTXOs(dbTx, addr)
+		if len(us) > 0 {
+			for k, v := range us {
+				ur := UTXOResult{Type: v.TypeStr(), Amount: v.balance, Status: "valid"}
+				a.watchLock.RLock()
+				wb, exist := a.watchers[addr]
+				a.watchLock.RUnlock()
+				if exist {
+					wu := wb.GetByOPS(k)
+					if wu != nil {
+						if wu.IsUnlocked() {
+							ur.Status = "unlocked"
+						} else {
+							continue
+						}
+					}
+				}
+
+				opk, err := hex.DecodeString(k)
+				if err != nil {
+					return err
+				}
+				op, err := parseOutpoint(opk)
+				if err != nil {
+					return err
+				}
+				if op.Hash.IsEqual(&outPoint.Hash) && op.OutIndex == outPoint.OutIndex {
+					has = true
+					return nil
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return false
+	}
+	return has
+}
+
 func (a *AccountManager) AddAddress(addr string) error {
 	err := a.checkAddress(addr)
 	if err != nil {

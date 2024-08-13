@@ -94,3 +94,7 @@ func (b *Builder) GetHex(idx int) string {
 	}
 	return hex.EncodeToString(b.privkeys[uint32(idx)])
 }
+
+func (b *Builder) GetNum() int {
+	return len(b.privkeys)
+}

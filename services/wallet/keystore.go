@@ -2,12 +2,8 @@ package wallet
 
 import (
 	"crypto/ecdsa"
-	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/crypto/ecc"
-	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,24 +29,6 @@ func NewQngKeyStore(ks *keystore.KeyStore) *QngKeyStore {
 		sync.RWMutex{},
 		map[string]*unlocked{},
 	}
-}
-
-func GetQngAddrsFromPrivateKey(privateKeyStr string, param *params.Params) ([]types.Address, error) {
-	data, err := hex.DecodeString(privateKeyStr)
-	if err != nil {
-		return nil, err
-	}
-	_, pubKey := ecc.Secp256k1.PrivKeyFromBytes(data)
-	addrs := make([]types.Address, 0)
-	//pk addr
-	addr, err := address.NewSecpPubKeyAddress(pubKey.SerializeCompressed(), param)
-	if err != nil {
-		return nil, err
-	}
-
-	addrs = append(addrs, addr)
-	addrs = append(addrs, addr.PKHAddress())
-	return addrs, nil
 }
 
 func (ks *QngKeyStore) expire(addr types.Address, u *unlocked, timeout time.Duration) {

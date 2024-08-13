@@ -1,9 +1,9 @@
-package simulator
+package testutils
 
 import (
 	"encoding/hex"
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/testutils/simulator/testprivatekey"
+	"github.com/Qitmeer/qng/testutils/testprivatekey"
 	"github.com/ethereum/go-ethereum/common"
 	"testing"
 )
@@ -19,7 +19,7 @@ func TestImportRawKey(t *testing.T) {
 	}
 	defer node.Stop()
 
-	pk, err := node.pb.Build()
+	pk, err := node.GetPriKeyBuilder().Build()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,12 +28,12 @@ func TestImportRawKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	accounts, err := node.GetPrivateWalletManagerAPI().ListAccount()
+	accounts, err := node.GetPublicWalletManagerAPI().ListAccount()
 	if err != nil {
 		t.Fatal(err)
 	}
 	accountsM := accounts.([]map[string]interface{})
-	ret := accountsM[1]["address"].(common.Address)
+	ret := accountsM[1]["eAddress"].(common.Address)
 	if ret.Cmp(eaddr) != 0 {
 		t.Fatalf("%s != %s", ret.String(), eaddr.String())
 	}
