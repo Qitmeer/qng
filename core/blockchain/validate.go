@@ -202,9 +202,7 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource m
 	// merkle trees above.
 	existingTxHashes := make(map[hash.Hash]struct{})
 
-	allTransactions := append(transactions)
-
-	for _, tx := range allTransactions {
+	for _, tx := range transactions {
 		h := tx.Hash()
 		if _, exists := existingTxHashes[*h]; exists {
 			str := fmt.Sprintf("block contains duplicate "+
@@ -217,7 +215,7 @@ func (b *BlockChain) checkBlockSanity(block *types.SerializedBlock, timeSource m
 	// The number of signature operations must be less than the maximum
 	// allowed per block.
 	totalSigOps := 0
-	for _, tx := range allTransactions {
+	for _, tx := range transactions {
 		// We could potentially overflow the accumulator so check for
 		// overflow.
 		lastSigOps := totalSigOps

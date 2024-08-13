@@ -1,4 +1,4 @@
-package simulator
+package testutils
 
 import (
 	"encoding/hex"
@@ -17,7 +17,7 @@ import (
 	"github.com/Qitmeer/qng/services/miner"
 	"github.com/Qitmeer/qng/services/tx"
 	"github.com/Qitmeer/qng/services/wallet"
-	"github.com/Qitmeer/qng/testutils/simulator/testprivatekey"
+	"github.com/Qitmeer/qng/testutils/testprivatekey"
 	"github.com/Qitmeer/qng/version"
 	"math/rand"
 	"os"
@@ -233,6 +233,10 @@ func (mn *MockNode) NewAddress() (*wallet.Account, error) {
 	}
 
 	return account, nil
+}
+
+func (mn *MockNode) GetPriKeyBuilder() *testprivatekey.Builder {
+	return mn.pb
 }
 
 func StartMockNode(overrideCfg func(cfg *config.Config) error) (*MockNode, error) {

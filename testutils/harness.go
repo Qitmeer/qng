@@ -47,7 +47,7 @@ type Harness struct {
 	// format of `test-harness-<num>-*`
 	instanceDir string
 	// the qitmeer node process
-	Node *node
+	Node *hnode
 	// the rpc client to the qitmeer node in the Harness instance.
 	Client *Client
 	// the rpc client to the qng evm node in the Harness instance.

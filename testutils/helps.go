@@ -1,4 +1,4 @@
-package simulator
+package testutils
 
 import (
 	"github.com/Qitmeer/qng/common/hash"
@@ -9,9 +9,9 @@ import (
 	"testing"
 )
 
-// GenerateBlock will generate a number of blocks by the input number
+// GenerateBlocks will generate a number of blocks by the input number
 // It will return the hashes of the generated blocks or an error
-func GenerateBlock(t *testing.T, node *MockNode, num uint64) []*hash.Hash {
+func GenerateBlocks(t *testing.T, node *MockNode, num uint64) []*hash.Hash {
 	result := make([]*hash.Hash, 0)
 	blocks, err := node.GetPrivateMinerAPI().Generate(uint32(num), pow.MEERXKECCAKV1)
 	if err != nil {
@@ -27,10 +27,10 @@ func GenerateBlock(t *testing.T, node *MockNode, num uint64) []*hash.Hash {
 	return result
 }
 
-// AssertBlockOrderAndHeight will verify the current block order, total block number
+// AssertBlockOrderHeightTotal will verify the current block order, total block number
 // and current main-chain height of the appointed test node and assert it ok or
 // cause the test failed.
-func AssertBlockOrderAndHeight(t *testing.T, node *MockNode, order, total, height uint) {
+func AssertBlockOrderHeightTotal(t *testing.T, node *MockNode, order, total, height uint) {
 	// order
 	c, err := node.GetPublicBlockAPI().GetBlockCount()
 	if err != nil {
@@ -68,7 +68,7 @@ func AssertBlockOrderAndHeight(t *testing.T, node *MockNode, order, total, heigh
 }
 
 // spend first HD account to new address create by HD
-func Spend(t *testing.T, node *MockNode, preOutpoint *types.TxOutPoint, amt types.Amount, lockTime int64) (*types.Transaction, types.Address) {
+func SpendUtxo(t *testing.T, node *MockNode, preOutpoint *types.TxOutPoint, amt types.Amount, lockTime int64) (*types.Transaction, types.Address) {
 	addr, err := node.NewAddress()
 	if err != nil {
 		t.Fatalf("failed to generate new address for test wallet: %v", err)

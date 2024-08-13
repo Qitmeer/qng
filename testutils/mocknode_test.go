@@ -1,4 +1,4 @@
-package simulator
+package testutils
 
 import (
 	"encoding/json"
@@ -32,11 +32,8 @@ func TestGenerateBlocks(t *testing.T) {
 	}
 	defer node.Stop()
 
-	targetBlockNum := uint32(5)
-	ret, err := node.GetPrivateMinerAPI().Generate(targetBlockNum, pow.MEERXKECCAKV1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	targetBlockNum := uint64(5)
+	ret := GenerateBlocks(t, node, targetBlockNum)
 	if len(ret) != int(targetBlockNum) {
 		t.Fatalf("generate block number error: %d != %d ", len(ret), targetBlockNum)
 	}

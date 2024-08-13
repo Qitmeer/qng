@@ -97,7 +97,7 @@ func (n *nodeConfig) args() []string {
 
 // node is the wrapper of a qitmeer node process. which contains all necessary
 // configure information required to manage a qitmeer full node process.
-type node struct {
+type hnode struct {
 	t      *testing.T
 	config *nodeConfig
 	id     string
@@ -106,12 +106,12 @@ type node struct {
 	wg     sync.WaitGroup
 }
 
-func (n *node) Id() string {
+func (n *hnode) Id() string {
 	return n.id
 }
 
 // create an new node instance
-func newNode(t *testing.T, config *nodeConfig) (*node, error) {
+func newNode(t *testing.T, config *nodeConfig) (*hnode, error) {
 	// test if home directory exist
 	if _, err := os.Stat(config.homeDir); os.IsNotExist(err) {
 		return nil, err
@@ -120,7 +120,7 @@ func newNode(t *testing.T, config *nodeConfig) (*node, error) {
 	if err := rpc.GenCertPair(config.certFile, config.keyFile); err != nil {
 		return nil, err
 	}
-	return &node{
+	return &hnode{
 		t:      t,
 		config: config,
 		id:     filepath.Base(config.homeDir),
@@ -128,7 +128,7 @@ func newNode(t *testing.T, config *nodeConfig) (*node, error) {
 	}, nil
 }
 
-func (n *node) redirectOutput(reader io.ReadCloser, waitPid *sync.WaitGroup) error {
+func (n *hnode) redirectOutput(reader io.ReadCloser, waitPid *sync.WaitGroup) error {
 	n.wg.Add(1)
 	go func() {
 		defer n.wg.Done()
@@ -144,7 +144,7 @@ func (n *node) redirectOutput(reader io.ReadCloser, waitPid *sync.WaitGroup) err
 	}()
 	return nil
 }
-func (n *node) storePid(waitPid *sync.WaitGroup) error {
+func (n *hnode) storePid(waitPid *sync.WaitGroup) error {
 	n.pid = n.cmd.Process.Pid
 	defer waitPid.Done()
 	f, err := os.Create(filepath.Join(n.config.homeDir, "qng.pid"))
@@ -161,7 +161,7 @@ func (n *node) storePid(waitPid *sync.WaitGroup) error {
 }
 
 // start up the node instance which works as the wrapped qitmeer process
-func (n *node) start() error {
+func (n *hnode) start() error {
 	var waitpid sync.WaitGroup
 	waitpid.Add(1)
 	// redirect stdout
@@ -187,7 +187,7 @@ func (n *node) start() error {
 	return nil
 }
 
-func (n *node) stop() error {
+func (n *hnode) stop() error {
 	n.t.Logf("stop node from %v", n.config.homeDir)
 	// check if process has not been started
 	if n.pid == 0 {
