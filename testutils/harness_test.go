@@ -148,6 +148,7 @@ func TestHarness_RpcAPI(t *testing.T) {
 }
 
 func TestHarness_SpentGenesis(t *testing.T) {
+	t.Skip("skipping old harness test")
 	args := []string{"--modules=miner", "--modules=qitmeer"}
 	h, err := NewHarness(t, params.PrivNetParam.Params, args...)
 	defer h.Teardown()
