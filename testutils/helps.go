@@ -1,28 +1,15 @@
 package testutils
 
 import (
-	"context"
-	"crypto/ecdsa"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"log"
-	"math/big"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/Qitmeer/qng/testutils/swap/factory"
-	"github.com/Qitmeer/qng/testutils/swap/router"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	etypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // GenerateBlocks will generate a number of blocks by the input number
@@ -168,77 +155,6 @@ func SpendUtxo(t *testing.T, node *MockNode, preOutpoint *types.TxOutPoint, amt 
 	return tx, addr.PKHAddress()
 }
 
-func CreateLegacyTx(node *MockNode, fromPkByte []byte, to *common.Address, nonce uint64, gas uint64, val *big.Int, d []byte) (string, error) {
-	privateKey := crypto.ToECDSAUnsafe(fromPkByte)
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return "", errors.New("private key error")
-	}
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	log.Println("from address", fromAddress.String())
-	var err error
-	if nonce <= 0 {
-		nonce, err = node.GetEvmClient().PendingNonceAt(context.Background(), fromAddress)
-		if err != nil {
-			return "", err
-		}
-	}
-	gasLimit := uint64(GAS_LIMIT) // in units
-	if gas > 0 {
-		gasLimit = gas
-	}
-	gasPrice, err := node.GetEvmClient().SuggestGasPrice(context.Background())
-	if err != nil {
-		return "", err
-	}
-	data := &etypes.LegacyTx{
-		To:       to,
-		Nonce:    nonce,
-		Gas:      gasLimit,
-		GasPrice: gasPrice,
-		Value:    val,
-		Data:     d,
-	}
-	tx := etypes.NewTx(data)
-	signedTx, err := etypes.SignTx(tx, etypes.NewEIP155Signer(CHAIN_ID), privateKey)
-	if err != nil {
-		return "", err
-	}
-	err = node.GetEvmClient().SendTransaction(context.Background(), signedTx)
-	if err != nil {
-		return "", err
-	}
-	return signedTx.Hash().Hex(), nil
-}
-func CreateErc20(node *MockNode) (string, error) {
-	return CreateLegacyTx(node, node.GetBuilder().Get(0), nil, 0, 0, big.NewInt(0), common.FromHex(ERC20Code))
-}
-func AuthTrans(privatekeybyte []byte) (*bind.TransactOpts, error) {
-	privateKey := crypto.ToECDSAUnsafe(privatekeybyte)
-	authCaller, err := bind.NewKeyedTransactorWithChainID(privateKey, CHAIN_ID)
-	if err != nil {
-		return nil, err
-	}
-	authCaller.GasLimit = uint64(GAS_LIMIT)
-	return authCaller, nil
-}
-func CreateWETH(node *MockNode) (string, error) {
-	return CreateLegacyTx(node, node.GetBuilder().Get(0), nil, 0, 0, big.NewInt(0), common.FromHex(WETH))
-}
-
-func CreateFactory(node *MockNode, _feeToSetter common.Address) (string, error) {
-	parsed, _ := abi.JSON(strings.NewReader(factory.TokenMetaData.ABI))
-	// constructor params
-	initP, _ := parsed.Pack("", _feeToSetter)
-	return CreateLegacyTx(node, node.GetBuilder().Get(0), nil, 0, 0, big.NewInt(0), append(common.FromHex(FACTORY), initP...))
-}
-
-func CreateRouter(node *MockNode, factory, weth common.Address) (string, error) {
-	parsed, _ := abi.JSON(strings.NewReader(router.TokenMetaData.ABI))
-	initP, _ := parsed.Pack("", factory, weth)
-	return CreateLegacyTx(node, node.GetBuilder().Get(0), nil, 0, 0, big.NewInt(0), append(common.FromHex(ROUTER), initP...))
-}
 func SendSelfMockNode(t *testing.T, h *MockNode, amt types.Amount, lockTime *int64) *hash.Hash {
 	acc := h.GetWalletManager().GetAccountByIdx(0)
 	if acc == nil {

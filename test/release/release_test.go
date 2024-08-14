@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package testutils
+package release
 
 import (
 	"context"
@@ -14,14 +14,15 @@ import (
 
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/testutils/release"
+	"github.com/Qitmeer/qng/test/testcommon"
+	"github.com/Qitmeer/qng/testutils"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestReleaseContract(t *testing.T) {
-	h, err := StartMockNode(nil)
+	h, err := testutils.StartMockNode(nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -30,34 +31,34 @@ func TestReleaseContract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup harness failed:%v", err)
 	}
-	GenerateBlocks(t,h,20)
-	AssertBlockOrderHeightTotal(t, h, 21, 21, 20)
+	testutils.GenerateBlocks(t, h, 20)
+	testutils.AssertBlockOrderHeightTotal(t, h, 21, 21, 20)
 
 	lockTime := int64(20)
 	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERA}
-	txid := SendSelfMockNode(t, h, spendAmt, &lockTime)
-	GenerateBlocks(t, h, 10)
+	txid := testutils.SendSelfMockNode(t, h, spendAmt, &lockTime)
+	testutils.GenerateBlocks(t, h, 10)
 	fee := int64(2200)
-	txid = SendExportTxMockNode(t,h,txid.String(),0, spendAmt.Value-fee)
+	txid = testutils.SendExportTxMockNode(t, h, txid.String(), 0, spendAmt.Value-fee)
 	if err != nil {
 		t.Fatalf("createExportRawTx failed:%v", err)
 	}
 	log.Println("send tx", txid.String())
-	GenerateBlocks(t, h, 10)
+	testutils.GenerateBlocks(t, h, 10)
 	evmAddr := h.GetWalletManager().GetAccountByIdx(0).EvmAcct.Address
-	ba, err := h.GetEvmClient().BalanceAt(context.Background(),evmAddr, nil)
+	ba, err := h.GetEvmClient().BalanceAt(context.Background(), evmAddr, nil)
 	if err != nil {
 		t.Fatalf("GetBalance failed:%v", err)
 	}
-	assert.Equal(t, ba, new(big.Int).Mul(big.NewInt(1e10),big.NewInt(spendAmt.Value-fee)))
+	assert.Equal(t, ba, new(big.Int).Mul(big.NewInt(1e10), big.NewInt(spendAmt.Value-fee)))
 	contract := common.HexToAddress("0x1000000000000000000000000000000000000000")
 
-	tokenCall, err := release.NewToken(contract, h.GetEvmClient())
+	tokenCall, err := NewToken(contract, h.GetEvmClient())
 	if err != nil {
 		t.Fatal(err)
 	}
 	// 0000000000000000000000000000000000000000000000000000000000000000
-	GenerateBlocks(t, h, 1)
+	testutils.GenerateBlocks(t, h, 1)
 	maddr := "Mmf93CE9Cvvf3chYYn1okcBFB22u5wH2dyg"
 	addr, _ := address.DecodeAddress(maddr)
 	hash160 := hex.EncodeToString(addr.Hash160()[:])
@@ -80,9 +81,9 @@ func TestReleaseContract(t *testing.T) {
 	fmt.Println(b1)
 	assert.Equal(t, b.String(), "100000000000")
 
-	b4, err := h.GetEvmClient().BalanceAt(context.Background(), common.HexToAddress(RELEASE_ADDR), nil)
+	b4, err := h.GetEvmClient().BalanceAt(context.Background(), common.HexToAddress(testcommon.RELEASE_ADDR), nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	assert.Equal(t, b4.String(), RELEASE_AMOUNT)
+	assert.Equal(t, b4.String(), testcommon.RELEASE_AMOUNT)
 }
