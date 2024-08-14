@@ -5,14 +5,12 @@
 package testutils
 
 import (
-	"fmt"
 	"math/big"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
 )
@@ -89,76 +87,6 @@ func Spend(t *testing.T, h *Harness, amt types.Amount, preOutpoint *types.TxOutP
 }
 
 // Spend amount from the wallet of the test harness and return tx hash
-func SendSelfMockNode(t *testing.T, h *MockNode, amt types.Amount, lockTime *int64) *hash.Hash {
-	acc  := h.GetWalletManager().GetAccountByIdx(0)
-	if acc == nil{
-		t.Fatalf("failed to get addr")
-		return nil
-	}
-	txId,err := h.GetWalletManager().SendTx(acc.PKHAddress().String(),json.AddressAmountV3{
-		acc.PKHAddress().String():json.AmountV3{
-			CoinId: uint16(amt.Id),
-			Amount: amt.Value,
-		},
-	},0,*lockTime)
-	if err != nil {
-		t.Fatalf("failed to pay the output: %v", err)
-	}
-	ret,err := hash.NewHashFromStr(txId)
-	if err != nil {
-		t.Fatalf("failed to get the txid: %v, err:%v", txId,err)
-	}
-	return ret
-}
-
-
-// Spend amount from the wallet of the test harness and return tx hash
-func SendExportTxMockNode(t *testing.T, h *MockNode,txid string,idx uint32, value int64) *hash.Hash {
-	acc  := h.GetWalletManager().GetAccountByIdx(0)
-	if acc == nil{
-		t.Fatalf("failed to get addr")
-		return nil
-	}
-	rawStr,err := h.GetPublicTxAPI().CreateExportRawTransaction(txid,idx,acc.PKAddress().String(),value)
-	if err != nil {
-		t.Fatalf("failed to pay the output: %v", err)
-	}
-
-	signRaw, err := h.GetPrivateTxAPI().TxSign(h.GetBuilder().GetHex(0), rawStr.(string), nil)
-	if err != nil {
-		t.Fatalf("failed to sign: %v", err)
-		return nil
-	}
-	allHighFee := true
-	tx, err := h.GetPublicTxAPI().SendRawTransaction(signRaw.(string), &allHighFee)
-	if err != nil {
-		t.Fatalf("failed to send raw tx: %v", err)
-		return nil
-	}
-	ret,err := hash.NewHashFromStr(tx.(string))
-	if err != nil {
-		t.Fatalf("failed to decode txid: %v", err)
-		return nil
-	}
-	return ret
-}
-
-
-// Spend amount from the wallet of the test harness and return tx hash
-func SendSelf(t *testing.T, h *Harness, amt types.Amount, preOutpoint *types.TxOutPoint, lockTime *int64) *hash.Hash {
-	addrScript, err := txscript.PayToAddrScript(h.Wallet.addrs[0])
-	if err != nil {
-		t.Fatalf("failed to generated addr script: %v", err)
-	}
-	output := types.NewTxOutput(amt, addrScript)
-
-	feeRate := types.Amount{Value: 10, Id: amt.Id}
-	txId, err := h.Wallet.PayAndSend([]*types.TxOutput{output}, feeRate, preOutpoint, lockTime)
-	if err != nil {
-		t.Fatalf("failed to pay the output: %v", err)
-	}
-	return txId
-}
 
 // Spend amount from the wallet of the test harness and return tx hash
 func CanNotSpend(t *testing.T, h *Harness, amt types.Amount, preOutpoint *types.TxOutPoint, lockTime *int64) (*hash.Hash, types.Address) {
@@ -304,51 +232,4 @@ func ConvertEthToMeer(amount *big.Int) *big.Int {
 	// wei 1e18  meer 1e8
 	amount = amount.Div(amount, big.NewInt(1e10))
 	return amount
-}
-
-func GenerateBlockWaitForTxs(t *testing.T, h *Harness, txs []string) error {
-	tryMax := 20
-	txsM := map[string]bool{}
-	for _, tx := range txs {
-		txsM[tx] = false
-	}
-	for i := 0; i < tryMax; i++ {
-		ret := GenerateBlock(t, h, 1)
-		if len(ret) != 1 {
-			t.Fatal("No block")
-		}
-		if len(txsM) <= 0 {
-			return nil
-		}
-		sb, err := h.Client.GetSerializedBlock(ret[0])
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, tx := range sb.Transactions() {
-			_, ok := txsM[tx.Hash().String()]
-			if ok {
-				txsM[tx.Hash().String()] = true
-			}
-			if types.IsCrossChainVMTx(tx.Tx) {
-				txHash := "0x" + tx.Tx.TxIn[0].PreviousOut.Hash.String()
-				_, ok := txsM[txHash]
-				if ok {
-					txsM[txHash] = true
-				}
-			}
-		}
-		all := true
-		for _, v := range txsM {
-			if !v {
-				all = false
-			}
-		}
-		if all {
-			return nil
-		}
-		if i >= tryMax-1 {
-			t.Fatal("No block")
-		}
-	}
-	return fmt.Errorf("No block")
 }
