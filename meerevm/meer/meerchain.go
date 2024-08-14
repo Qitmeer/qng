@@ -286,24 +286,53 @@ func (b *MeerChain) OnStateChange(header *types.Header, state *state.StateDB, bo
 			continue
 		}
 		vmtx := mtx.(*mmeer.VMTx)
-		if vmtx.ExportData == nil {
-			continue
-		}
-		tx := vmtx.ETx
+		if vmtx.ExportData != nil {
+			tx := vmtx.ETx
 
-		from, err := signer.Sender(tx)
-		if err != nil {
-			log.Error(err.Error())
-			return
+			from, err := signer.Sender(tx)
+			if err != nil {
+				log.Error(err.Error())
+				return
+			}
+			if vmtx.ExportData.Amount.Value <= 0 {
+				log.Error("meerchange export amout is invalid", "hash", tx.Hash().String())
+			}
+			value := big.NewInt(vmtx.ExportData.Amount.Value)
+			value = value.Mul(value, qcommon.Precision)
+			state.AddBalance(from, uint256.MustFromBig(value), tracing.BalanceChangeTransfer)
+			op, _ := vmtx.ExportData.GetOutPoint()
+			log.Debug("meer tx add balance from utxo", "txhash", tx.Hash().String(), "utxoTxid",
+				op.Hash.String(), "utxoIdx", op.OutIndex, "amout", vmtx.ExportData.Amount.Value, "addbalance", value.String(), "from", from.String())
+		} else if vmtx.Export4337Data != nil {
+			tx := vmtx.ETx
+
+			proxy, err := signer.Sender(tx)
+			if err != nil {
+				log.Error(err.Error())
+				return
+			}
+			master, err := vmtx.Export4337Data.GetMaster()
+			if err != nil {
+				log.Error(err.Error())
+				return
+			}
+			if vmtx.Export4337Data.Amount.Value <= 0 {
+				log.Error("meerchange export4337 amout is invalid", "hash", tx.Hash().String())
+			}
+			value := big.NewInt(vmtx.Export4337Data.Amount.Value)
+			value = value.Mul(value, qcommon.Precision)
+			if value.Uint64() <= vmtx.Export4337Data.Opt.Fee {
+				log.Error("UTXO amount is insufficient", "utxo amout", value.Uint64(), "fee", vmtx.Export4337Data.Opt.Fee, "hash", tx.Hash().String())
+			}
+			mValue := uint256.NewInt(value.Uint64() - vmtx.Export4337Data.Opt.Fee)
+			state.AddBalance(master, mValue, tracing.BalanceChangeTransfer)
+			state.AddBalance(proxy, uint256.NewInt(vmtx.Export4337Data.Opt.Fee), tracing.BalanceChangeTransfer)
+			op, _ := vmtx.Export4337Data.GetOutPoint()
+			log.Debug("meer tx add balance from utxo", "txhash", tx.Hash().String(), "utxoTxid",
+				op.Hash.String(), "utxoIdx", op.OutIndex, "amout", vmtx.Export4337Data.Amount.Value, "add",
+				mValue.Uint64(), "master", master.String(), "proxyFee", vmtx.Export4337Data.Opt.Fee, "proxy", proxy.String())
 		}
-		if vmtx.ExportData.Amount.Value <= 0 {
-			log.Error("crosschain export amout is invalid", "hash", tx.Hash().String())
-		}
-		value := big.NewInt(vmtx.ExportData.Amount.Value)
-		value = value.Mul(value, qcommon.Precision)
-		state.AddBalance(from, uint256.MustFromBig(value), tracing.BalanceChangeTransfer)
-		op, _ := vmtx.ExportData.GetOutPoint()
-		log.Debug("meer tx add balance from utxo by crosschain contract", "txhash", tx.Hash().String(), "utxoTxid", op.Hash.String(), "utxoIdx", op.OutIndex, "amout", vmtx.ExportData.Amount.Value, "addbalance", value.String(), "from", from.String())
+
 	}
 }
 
@@ -508,6 +537,12 @@ func (b *MeerChain) VerifyTx(tx *mmeer.VMTx, utxoView *utxo.UtxoViewpoint) (int6
 				return 0, err
 			}
 		}
+		if tx.Export4337Data != nil {
+			err = b.meerpool.checkMeerChangeExport4337Tx(tx.Export4337Data, utxoView)
+			if err != nil {
+				return 0, err
+			}
+		}
 		cost := txe.Cost()
 		cost = cost.Sub(cost, txe.Value())
 		cost = cost.Div(cost, qcommon.Precision)
@@ -578,6 +613,11 @@ func (b *MeerChain) APIs() []api.API {
 			NameSpace: cmds.DefaultServiceNameSpace,
 			Service:   NewPublicMeerChainAPI(b),
 			Public:    true,
+		},
+		{
+			NameSpace: cmds.DefaultServiceNameSpace,
+			Service:   NewPrivateMeerChainAPI(b),
+			Public:    false,
 		},
 	}
 }

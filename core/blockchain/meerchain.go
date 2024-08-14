@@ -66,13 +66,22 @@ func (b *BlockChain) MeerVerifyTx(tx model.Tx, utxoView *utxo.UtxoViewpoint) (in
 		if err != nil {
 			return 0, err
 		}
-		if vmtx.ExportData == nil {
+
+		var op *types.TxOutPoint
+		if vmtx.ExportData != nil {
+			op, err = vmtx.ExportData.GetOutPoint()
+			if err != nil {
+				return 0, err
+			}
+		} else if vmtx.Export4337Data != nil {
+			op, err = vmtx.Export4337Data.GetOutPoint()
+			if err != nil {
+				return 0, err
+			}
+		} else {
 			return fee, err
 		}
-		op, err := vmtx.ExportData.GetOutPoint()
-		if err != nil {
-			return 0, err
-		}
+
 		utxoEntry := utxoView.LookupEntry(*op)
 		if utxoEntry == nil || utxoEntry.IsSpent() {
 			str := fmt.Sprintf("output %v referenced from "+
@@ -180,12 +189,20 @@ func (b *BlockChain) VerifyMeerTx(tx model.Tx) error {
 }
 
 func (bc *BlockChain) connectVMTransaction(tx *types.Tx, vmtx *mmeer.VMTx, stxos *[]utxo.SpentTxOut, view *utxo.UtxoViewpoint) error {
-	if vmtx.ExportData == nil {
+	var err error
+	var op *types.TxOutPoint
+	if vmtx.ExportData != nil {
+		op, err = vmtx.ExportData.GetOutPoint()
+		if err != nil {
+			return err
+		}
+	} else if vmtx.Export4337Data != nil {
+		op, err = vmtx.Export4337Data.GetOutPoint()
+		if err != nil {
+			return err
+		}
+	} else {
 		return nil
-	}
-	op, err := vmtx.ExportData.GetOutPoint()
-	if err != nil {
-		return err
 	}
 
 	entry := view.Entries()[*op]

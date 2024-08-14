@@ -319,6 +319,12 @@ web3._extend({
 			call: 'qng_getChainInfo',
 			params: 3,
 		}),
+
+		new web3._extend.Method({
+			name: 'calcExport4337Sig',
+			call: 'qng_calcExport4337Sig',
+			params: 4,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

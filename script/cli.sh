@@ -624,6 +624,16 @@ function get_meer_info(){
   get_result "$data"
 }
 
+function calcExport4337Sig(){
+  local txid=$1
+  local idx=$2
+  local fee=$3
+  local privKeyHex=$4
+
+  local data='{"jsonrpc":"2.0","method":"calcExport4337Sig","params":["'$txid'",'$idx','$fee',"'$privKeyHex'"],"id":null}'
+  get_result "$data"
+}
+
 function get_amana_nodeinfo(){
   local data='{"jsonrpc":"2.0","method":"getAmanaNodeInfo","params":[],"id":null}'
   get_result "$data"
@@ -908,6 +918,7 @@ function usage(){
   echo "  chaininfo <count> <start> <end>"
   echo "  dbinfo"
   echo "  config"
+  echo "  calcExport4337Sig"
   echo "block  :"
   echo "  block <order|hash>"
   echo "  blockbyhash <hash>"
@@ -1478,6 +1489,9 @@ elif [ "$1" == "minerinfo" ]; then
 elif [ "$1" == "meerinfo" ]; then
   shift
   get_meer_info $@
+elif [ "$1" == "calcExport4337Sig" ]; then
+  shift
+  calcExport4337Sig $@
 elif [ "$1" == "amanainfo" ]; then
     shift
     get_amana_nodeinfo $@

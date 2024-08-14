@@ -30,8 +30,8 @@ var (
 
 // MeerchangeMetaData contains all meta data concerning the Meerchange contract.
 var MeerchangeMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"txid\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"idx\",\"type\":\"uint32\"}],\"name\":\"Export\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txid\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"idx\",\"type\":\"uint32\"}],\"name\":\"export\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getExport\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getImport\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
-	Bin: "0x608060405234801561001057600080fd5b50610332806100206000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c80634ccccead14610046578063ac55902914610062578063bf2ec2e614610080575b600080fd5b610060600480360381019061005b91906101d8565b61009e565b005b61006a610127565b604051610077919061023b565b60405180910390f35b610088610144565b604051610095919061023b565b60405180910390f35b60008081819054906101000a900467ffffffffffffffff16809291906100c390610285565b91906101000a81548167ffffffffffffffff021916908367ffffffffffffffff160217905550507fa752968fe9a336e1e2de83b6e2f3bc1dd7d05dd3359dd92d9b92993209fffe39828260405161011b9291906102d3565b60405180910390a15050565b60008060089054906101000a900467ffffffffffffffff16905090565b60008060009054906101000a900467ffffffffffffffff16905090565b600080fd5b6000819050919050565b61017981610166565b811461018457600080fd5b50565b60008135905061019681610170565b92915050565b600063ffffffff82169050919050565b6101b58161019c565b81146101c057600080fd5b50565b6000813590506101d2816101ac565b92915050565b600080604083850312156101ef576101ee610161565b5b60006101fd85828601610187565b925050602061020e858286016101c3565b9150509250929050565b600067ffffffffffffffff82169050919050565b61023581610218565b82525050565b6000602082019050610250600083018461022c565b92915050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b600061029082610218565b915067ffffffffffffffff82036102aa576102a9610256565b5b600182019050919050565b6102be81610166565b82525050565b6102cd8161019c565b82525050565b60006040820190506102e860008301856102b5565b6102f560208301846102c4565b939250505056fea2646970667358221220617664030217210f2fb1dc444517d0a6c613c036c0610fafba15c19eeb3d059764736f6c634300080d0033",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"txid\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"idx\",\"type\":\"uint32\"}],\"name\":\"Export\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"txid\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"idx\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"fee\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"sig\",\"type\":\"string\"}],\"name\":\"Export4337\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txid\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"idx\",\"type\":\"uint32\"}],\"name\":\"export\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txid\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"idx\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"fee\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"sig\",\"type\":\"string\"}],\"name\":\"export4337\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getExport\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getImport\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b506105b5806100206000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c80634ccccead146100515780639801767c1461006d578063ac55902914610089578063bf2ec2e6146100a7575b600080fd5b61006b60048036038101906100669190610296565b6100c5565b005b6100876004803603810190610082919061037b565b61014e565b005b6100916101e0565b60405161009e9190610412565b60405180910390f35b6100af6101fd565b6040516100bc9190610412565b60405180910390f35b60008081819054906101000a900467ffffffffffffffff16809291906100ea9061045c565b91906101000a81548167ffffffffffffffff021916908367ffffffffffffffff160217905550507fa752968fe9a336e1e2de83b6e2f3bc1dd7d05dd3359dd92d9b92993209fffe3982826040516101429291906104aa565b60405180910390a15050565b60008081819054906101000a900467ffffffffffffffff16809291906101739061045c565b91906101000a81548167ffffffffffffffff021916908367ffffffffffffffff160217905550507fd0c588a715ffec02e91f35aa0907d659e0f19d01b5eb5a4229e2d43f448edc6385858585856040516101d1959493929190610531565b60405180910390a15050505050565b60008060089054906101000a900467ffffffffffffffff16905090565b60008060009054906101000a900467ffffffffffffffff16905090565b600080fd5b600080fd5b6000819050919050565b61023781610224565b811461024257600080fd5b50565b6000813590506102548161022e565b92915050565b600063ffffffff82169050919050565b6102738161025a565b811461027e57600080fd5b50565b6000813590506102908161026a565b92915050565b600080604083850312156102ad576102ac61021a565b5b60006102bb85828601610245565b92505060206102cc85828601610281565b9150509250929050565b600067ffffffffffffffff82169050919050565b6102f3816102d6565b81146102fe57600080fd5b50565b600081359050610310816102ea565b92915050565b600080fd5b600080fd5b600080fd5b60008083601f84011261033b5761033a610316565b5b8235905067ffffffffffffffff8111156103585761035761031b565b5b60208301915083600182028301111561037457610373610320565b5b9250929050565b6000806000806000608086880312156103975761039661021a565b5b60006103a588828901610245565b95505060206103b688828901610281565b94505060406103c788828901610301565b935050606086013567ffffffffffffffff8111156103e8576103e761021f565b5b6103f488828901610325565b92509250509295509295909350565b61040c816102d6565b82525050565b60006020820190506104276000830184610403565b92915050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b6000610467826102d6565b915067ffffffffffffffff82036104815761048061042d565b5b600182019050919050565b61049581610224565b82525050565b6104a48161025a565b82525050565b60006040820190506104bf600083018561048c565b6104cc602083018461049b565b9392505050565b600082825260208201905092915050565b82818337600083830152505050565b6000601f19601f8301169050919050565b600061051083856104d3565b935061051d8385846104e4565b610526836104f3565b840190509392505050565b6000608082019050610546600083018861048c565b610553602083018761049b565b6105606040830186610403565b8181036060830152610573818486610504565b9050969550505050505056fea26469706673582212209197861206fb8a023d18a77d58d0ee47b50a3ef8b0175a8744e7599dfe5c23a264736f6c634300080d0033",
 }
 
 // MeerchangeABI is the input ABI used to generate the binding from.
@@ -284,6 +284,27 @@ func (_Meerchange *MeerchangeTransactorSession) Export(txid [32]byte, idx uint32
 	return _Meerchange.Contract.Export(&_Meerchange.TransactOpts, txid, idx)
 }
 
+// Export4337 is a paid mutator transaction binding the contract method 0x9801767c.
+//
+// Solidity: function export4337(bytes32 txid, uint32 idx, uint64 fee, string sig) returns()
+func (_Meerchange *MeerchangeTransactor) Export4337(opts *bind.TransactOpts, txid [32]byte, idx uint32, fee uint64, sig string) (*types.Transaction, error) {
+	return _Meerchange.contract.Transact(opts, "export4337", txid, idx, fee, sig)
+}
+
+// Export4337 is a paid mutator transaction binding the contract method 0x9801767c.
+//
+// Solidity: function export4337(bytes32 txid, uint32 idx, uint64 fee, string sig) returns()
+func (_Meerchange *MeerchangeSession) Export4337(txid [32]byte, idx uint32, fee uint64, sig string) (*types.Transaction, error) {
+	return _Meerchange.Contract.Export4337(&_Meerchange.TransactOpts, txid, idx, fee, sig)
+}
+
+// Export4337 is a paid mutator transaction binding the contract method 0x9801767c.
+//
+// Solidity: function export4337(bytes32 txid, uint32 idx, uint64 fee, string sig) returns()
+func (_Meerchange *MeerchangeTransactorSession) Export4337(txid [32]byte, idx uint32, fee uint64, sig string) (*types.Transaction, error) {
+	return _Meerchange.Contract.Export4337(&_Meerchange.TransactOpts, txid, idx, fee, sig)
+}
+
 // MeerchangeExportIterator is returned from FilterExport and is used to iterate over the raw logs and unpacked data for Export events raised by the Meerchange contract.
 type MeerchangeExportIterator struct {
 	Event *MeerchangeExport // Event containing the contract specifics and raw log
@@ -413,6 +434,143 @@ func (_Meerchange *MeerchangeFilterer) WatchExport(opts *bind.WatchOpts, sink ch
 func (_Meerchange *MeerchangeFilterer) ParseExport(log types.Log) (*MeerchangeExport, error) {
 	event := new(MeerchangeExport)
 	if err := _Meerchange.contract.UnpackLog(event, "Export", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// MeerchangeExport4337Iterator is returned from FilterExport4337 and is used to iterate over the raw logs and unpacked data for Export4337 events raised by the Meerchange contract.
+type MeerchangeExport4337Iterator struct {
+	Event *MeerchangeExport4337 // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *MeerchangeExport4337Iterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(MeerchangeExport4337)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(MeerchangeExport4337)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *MeerchangeExport4337Iterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *MeerchangeExport4337Iterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// MeerchangeExport4337 represents a Export4337 event raised by the Meerchange contract.
+type MeerchangeExport4337 struct {
+	Txid [32]byte
+	Idx  uint32
+	Fee  uint64
+	Sig  string
+	Raw  types.Log // Blockchain specific contextual infos
+}
+
+// FilterExport4337 is a free log retrieval operation binding the contract event 0xd0c588a715ffec02e91f35aa0907d659e0f19d01b5eb5a4229e2d43f448edc63.
+//
+// Solidity: event Export4337(bytes32 txid, uint32 idx, uint64 fee, string sig)
+func (_Meerchange *MeerchangeFilterer) FilterExport4337(opts *bind.FilterOpts) (*MeerchangeExport4337Iterator, error) {
+
+	logs, sub, err := _Meerchange.contract.FilterLogs(opts, "Export4337")
+	if err != nil {
+		return nil, err
+	}
+	return &MeerchangeExport4337Iterator{contract: _Meerchange.contract, event: "Export4337", logs: logs, sub: sub}, nil
+}
+
+// WatchExport4337 is a free log subscription operation binding the contract event 0xd0c588a715ffec02e91f35aa0907d659e0f19d01b5eb5a4229e2d43f448edc63.
+//
+// Solidity: event Export4337(bytes32 txid, uint32 idx, uint64 fee, string sig)
+func (_Meerchange *MeerchangeFilterer) WatchExport4337(opts *bind.WatchOpts, sink chan<- *MeerchangeExport4337) (event.Subscription, error) {
+
+	logs, sub, err := _Meerchange.contract.WatchLogs(opts, "Export4337")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(MeerchangeExport4337)
+				if err := _Meerchange.contract.UnpackLog(event, "Export4337", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseExport4337 is a log parse operation binding the contract event 0xd0c588a715ffec02e91f35aa0907d659e0f19d01b5eb5a4229e2d43f448edc63.
+//
+// Solidity: event Export4337(bytes32 txid, uint32 idx, uint64 fee, string sig)
+func (_Meerchange *MeerchangeFilterer) ParseExport4337(log types.Log) (*MeerchangeExport4337, error) {
+	event := new(MeerchangeExport4337)
+	if err := _Meerchange.contract.UnpackLog(event, "Export4337", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

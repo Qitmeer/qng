@@ -240,7 +240,7 @@ type Params struct {
 
 	CoinbaseConfig CoinbaseConfigs
 
-	CrossChainContractAddr string
+	MeerChangeContractAddr string
 }
 
 type CoinbaseConfig struct {

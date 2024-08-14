@@ -18,7 +18,8 @@ type VMTx struct {
 	Coinbase hash.Hash
 	ETx      *etypes.Transaction
 
-	ExportData *meerchange.MeerchangeExportData
+	ExportData     *meerchange.MeerchangeExportData
+	Export4337Data *meerchange.MeerchangeExport4337Data
 }
 
 func (vt *VMTx) setCoinbaseTx(tx *types.Transaction) error {
@@ -72,6 +73,12 @@ func NewVMTx(tx *types.Transaction, coinbase *types.Transaction) (*VMTx, error) 
 			return nil, err
 		}
 		vt.ExportData = ed
+	} else if meerchange.IsMeerChangeExport4337Tx(txe) {
+		ed, err := meerchange.NewMeerchangeExport4337DataByInput(txe.Data())
+		if err != nil {
+			return nil, err
+		}
+		vt.Export4337Data = ed
 	}
 	return vt, nil
 }
