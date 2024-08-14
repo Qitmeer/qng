@@ -24,10 +24,10 @@ const SOLC = "solcjs"
 // go run github.com/Qitmeer/go-etherum/cmd/abigen/main.go
 const ABIGEN = "abigen"
 
-var fileContent = "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run compile_solidity.go \npackage testutils\n\n"
+var fileContent = "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run compile_solidity.go \npackage testcommon\n\n"
 
 func main() {
-	filepath := "../solidity_bin.go"
+	filepath := "../testcommon/solidity_bin.go"
 	f, err := os.Create(filepath)
 	if err != nil {
 		log.Fatal(err)
