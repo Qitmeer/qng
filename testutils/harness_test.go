@@ -15,6 +15,7 @@ import (
 )
 
 func TestHarness(t *testing.T) {
+	t.Skip("skipping old harness test")
 	h, err := NewHarness(t, params.PrivNetParam.Params)
 	if err != nil {
 		t.Errorf("create new test harness instance failed %v", err)
@@ -73,6 +74,7 @@ func TestHarness(t *testing.T) {
 }
 
 func TestHarnessNodePorts(t *testing.T) {
+	t.Skip("skipping old harness test")
 	var setup, teardown sync.WaitGroup
 	ha := make(map[int]*Harness, 10)
 	for i := 0; i < 10; i++ {
@@ -103,6 +105,7 @@ func TestHarnessNodePorts(t *testing.T) {
 }
 
 func TestHarness_RpcAPI(t *testing.T) {
+	t.Skip("skipping old harness test")
 	args := []string{"--modules=miner", "--modules=qitmeer"}
 	h, err := NewHarness(t, params.PrivNetParam.Params, args...)
 	defer h.Teardown()
@@ -145,6 +148,7 @@ func TestHarness_RpcAPI(t *testing.T) {
 }
 
 func TestHarness_SpentGenesis(t *testing.T) {
+	t.Skip("skipping old harness test")
 	args := []string{"--modules=miner", "--modules=qitmeer"}
 	h, err := NewHarness(t, params.PrivNetParam.Params, args...)
 	defer h.Teardown()

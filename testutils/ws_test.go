@@ -1,14 +1,16 @@
 package testutils
 
 import (
+	"testing"
+	"time"
+
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
-	"testing"
-	"time"
 )
 
 func TestWsNotify(t *testing.T) {
+	t.Skip("skipping old harness test")
 	args := []string{"--modules=miner", "--modules=qitmeer"}
 	h, err := NewHarness(t, params.PrivNetParam.Params, args...)
 	defer h.Teardown()

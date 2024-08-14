@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/swap/factory"
 	"github.com/Qitmeer/qng/testutils/swap/pair"
 	"github.com/Qitmeer/qng/testutils/swap/router"
@@ -23,45 +22,46 @@ import (
 )
 
 func TestCallErc20Contract(t *testing.T) {
-	args := []string{"--modules=miner", "--modules=qitmeer",
-		"--modules=test"}
-	h, err := NewHarness(t, params.PrivNetParam.Params, args...)
-	defer h.Teardown()
+	h, err := StartMockNode(nil)
 	if err != nil {
-		t.Errorf("new harness failed: %v", err)
-		h.Teardown()
+		t.Error(err)
 	}
-	err = h.Setup()
+	defer h.Stop()
+
 	if err != nil {
 		t.Fatalf("setup harness failed:%v", err)
 	}
-	GenerateBlock(t, h, 20)
-	AssertBlockOrderAndHeight(t, h, 21, 21, 20)
+	GenerateBlocks(t, h, 20)
+	AssertBlockOrderHeightTotal(t, h, 21, 21, 20)
 
 	lockTime := int64(20)
 	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERA}
-	txid := SendSelf(t, h, spendAmt, nil, &lockTime)
-	GenerateBlock(t, h, 10)
+	txid := SendSelfMockNode(t, h, spendAmt, &lockTime)
+	GenerateBlocks(t, h, 10)
 	fee := int64(2200)
-	txStr, err := h.Wallet.CreateExportRawTx(txid.String(), spendAmt.Value, fee)
-	if err != nil {
+	txH := SendExportTxMockNode(t, h, txid.String(), 0, spendAmt.Value-fee)
+	if txH == nil {
 		t.Fatalf("createExportRawTx failed:%v", err)
 	}
-	log.Println("send tx", txStr)
-	GenerateBlock(t, h, 10)
-	ba, err := h.Wallet.GetBalance(h.Wallet.ethAddrs[0].String())
+	log.Println("send tx", txH.String())
+	GenerateBlocks(t, h, 10)
+	acc := h.GetWalletManager().GetAccountByIdx(0)
+	if err != nil {
+		t.Fatalf("GetAcctInfo failed:%v", err)
+	}
+	ba, err := h.GetEvmClient().BalanceAt(h.n.Context(), acc.EvmAcct.Address, nil)
 	if err != nil {
 		t.Fatalf("GetBalance failed:%v", err)
 	}
-	assert.Equal(t, ba, big.NewInt(spendAmt.Value-fee))
-	txS, err := h.Wallet.CreateErc20()
+	assert.Equal(t, ba, new(big.Int).Mul(big.NewInt(1e10), big.NewInt(spendAmt.Value-fee)))
+	txS, err := CreateErc20(h)
 	if err != nil {
 		t.Fatal(err)
 	}
 	log.Println("create contract tx:", txS)
-	GenerateBlockWaitForTxs(t, h, []string{txS})
+	GenerateBlocksWaitForTxs(t, h, []string{txS})
 	// token addr
-	txD, err := h.Wallet.evmClient.TransactionReceipt(context.Background(), common.HexToHash(txS))
+	txD, err := h.GetEvmClient().TransactionReceipt(context.Background(), common.HexToHash(txS))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,21 +70,21 @@ func TestCallErc20Contract(t *testing.T) {
 	}
 	assert.Equal(t, txD.Status, uint64(0x1))
 	log.Println("new contract address:", txD.ContractAddress)
-	tokenCall, err := token.NewToken(txD.ContractAddress, h.Wallet.evmClient)
+	tokenCall, err := token.NewToken(txD.ContractAddress, h.GetEvmClient())
 	if err != nil {
 		t.Fatal(err)
 	}
-	ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[0])
+	ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, acc.EvmAcct.Address)
 	if err != nil {
 		t.Fatal(err)
 	}
 	allAmount := int64(30000000)
 	assert.Equal(t, ba, big.NewInt(allAmount).Mul(big.NewInt(allAmount), big.NewInt(1e18)))
-	authCaller, err := h.Wallet.AuthTrans(h.Wallet.privkeys[0])
+	authCaller, err := AuthTrans(h.GetBuilder().Get(0))
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = h.Wallet.NewAddress()
+	_, err = h.NewAddress()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,25 +92,25 @@ func TestCallErc20Contract(t *testing.T) {
 	toMeerAmount := big.NewInt(1e18).Mul(big.NewInt(1e18), big.NewInt(2))
 	txs := []string{}
 	for i := 0; i < 2; i++ {
-		_, _ = h.Wallet.NewAddress()
-		to := h.Wallet.ethAddrs[uint32(i+1)]
+		h.NewAddress()
+		to := h.GetWalletManager().GetAccountByIdx((i + 1)).EvmAcct.Address
 		// send 2 meer
-		txid, err := h.Wallet.CreateLegacyTx(h.Wallet.privkeys[0], &to, 0, 21000, toMeerAmount, nil)
+		txid, err := CreateLegacyTx(h, h.GetBuilder().Get(0), &to, 0, 21000, toMeerAmount, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		txs = append(txs, txid)
 		log.Println(i, "transfer meer:", txid)
 		// send 2 token
-		tx, err := tokenCall.Transfer(authCaller, h.Wallet.ethAddrs[uint32(i+1)], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+		tx, err := tokenCall.Transfer(authCaller, to, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 		if err != nil {
 			t.Fatal(err)
 		}
 		txs = append(txs, tx.Hash().String())
 		log.Println(i, "transfer tx:", tx.Hash().String())
 	}
-	GenerateBlockWaitForTxs(t, h, txs)
-	ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[0])
+	GenerateBlocksWaitForTxs(t, h, txs)
+	ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, acc.EvmAcct.Address)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,52 +118,54 @@ func TestCallErc20Contract(t *testing.T) {
 	assert.Equal(t, ba, big.NewInt(allAmount).Mul(big.NewInt(allAmount), big.NewInt(1e18)))
 	txs = []string{}
 	for i := 1; i < 3; i++ {
-		meerBa, err := h.EVMClient.BalanceAt(context.Background(), h.Wallet.ethAddrs[uint32(i)], nil)
+		target := h.GetWalletManager().GetAccountByIdx(i).EvmAcct.Address
+		meerBa, err := h.GetEvmClient().BalanceAt(context.Background(), target, nil)
 		if err != nil {
 			log.Fatal(err)
 		}
 		assert.Equal(t, meerBa, toMeerAmount)
-		ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[uint32(i)])
+		ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, target)
 		if err != nil {
 			t.Fatal(err)
 		}
-		log.Println(i, "address", h.Wallet.ethAddrs[uint32(i)].String(), "balance", ba)
+		log.Println(i, "address", target.String(), "balance", ba)
 		assert.Equal(t, ba, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
-		_, _ = h.Wallet.NewAddress()
-		authCaller, err := h.Wallet.AuthTrans(h.Wallet.privkeys[uint32(i)])
+		h.NewAddress()
+		authCaller, err := AuthTrans(h.GetBuilder().Get(i))
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx, err := tokenCall.Transfer(authCaller, h.Wallet.ethAddrs[uint32(i+2)], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+		tx, err := tokenCall.Transfer(authCaller, h.GetWalletManager().GetAccountByIdx(i+2).EvmAcct.Address, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 		if err != nil {
 			t.Fatal(err)
 		}
 		log.Println(i, "transfer tx:", tx.Hash().String())
 		txs = append(txs, tx.Hash().String())
 	}
-	GenerateBlockWaitForTxs(t, h, txs)
+	GenerateBlocksWaitForTxs(t, h, txs)
 	for i := 3; i < 5; i++ {
-		ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[uint32(i)])
+		target := h.GetWalletManager().GetAccountByIdx(i).EvmAcct.Address
+		ba, err = tokenCall.BalanceOf(&bind.CallOpts{}, target)
 		if err != nil {
 			t.Fatal(err)
 		}
-		log.Println(i, "address", h.Wallet.ethAddrs[uint32(i)].String(), "balance", ba)
+		log.Println(i, "address", target.String(), "balance", ba)
 		assert.Equal(t, ba, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 	}
-	GenerateBlock(t, h, 1)
+	GenerateBlocks(t, h, 1)
 	// check transferFrom
 
 	// not approve
-	authCaller1, err := h.Wallet.AuthTrans(h.Wallet.privkeys[1])
+	authCaller1, err := AuthTrans(h.GetBuilder().Get(1))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tx1, err := tokenCall.TransferFrom(authCaller1, h.Wallet.ethAddrs[0], h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+	tx1, err := tokenCall.TransferFrom(authCaller1, acc.EvmAcct.Address, h.GetWalletManager().GetAccountByIdx(1).EvmAcct.Address, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 	if err == nil {
-		GenerateBlockWaitForTxs(t, h, []string{tx1.Hash().String()})
+		GenerateBlocksWaitForTxs(t, h, []string{tx1.Hash().String()})
 		// check the transaction is ok or not
-		txD2, err := h.Wallet.evmClient.TransactionReceipt(context.Background(), tx1.Hash())
+		txD2, err := h.GetEvmClient().TransactionReceipt(context.Background(), tx1.Hash())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -173,82 +175,80 @@ func TestCallErc20Contract(t *testing.T) {
 	}
 	log.Println(err)
 	//  approve
-	_, err = tokenCall.Approve(authCaller, h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+	_, err = tokenCall.Approve(authCaller, h.GetWalletManager().GetAccountByIdx(1).EvmAcct.Address, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 	if err != nil {
 		t.Fatal("approve error", err)
 	}
-	GenerateBlock(t, h, 1)
-	_, err = tokenCall.TransferFrom(authCaller1, h.Wallet.ethAddrs[0], h.Wallet.ethAddrs[1], big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+	GenerateBlocks(t, h, 1)
+	_, err = tokenCall.TransferFrom(authCaller1, acc.EvmAcct.Address, h.GetWalletManager().GetAccountByIdx(1).EvmAcct.Address, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 	if err != nil {
 		t.Fatal("TransferFrom error", err)
 	}
-	GenerateBlock(t, h, 1)
+	GenerateBlocks(t, h, 1)
 }
 
 func TestSwap(t *testing.T) {
-	args := []string{"--modules=miner", "--modules=qitmeer",
-		"--modules=test"}
-	h, err := NewHarness(t, params.PrivNetParam.Params, args...)
-	defer h.Teardown()
+	h, err := StartMockNode(nil)
 	if err != nil {
-		t.Errorf("new harness failed: %v", err)
-		h.Teardown()
+		t.Error(err)
 	}
-	err = h.Setup()
+	defer h.Stop()
+
 	if err != nil {
 		t.Fatalf("setup harness failed:%v", err)
 	}
-	GenerateBlock(t, h, 20)
-	AssertBlockOrderAndHeight(t, h, 21, 21, 20)
+	GenerateBlocks(t, h, 20)
+	AssertBlockOrderHeightTotal(t, h, 21, 21, 20)
 
 	lockTime := int64(20)
 	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERA}
-	txid := SendSelf(t, h, spendAmt, nil, &lockTime)
-	GenerateBlock(t, h, 10)
+	txid := SendSelfMockNode(t, h, spendAmt, &lockTime)
+	GenerateBlocks(t, h, 10)
 	fee := int64(2200)
-	txStr, err := h.Wallet.CreateExportRawTx(txid.String(), spendAmt.Value, fee)
+	txH := SendExportTxMockNode(t, h, txid.String(), 0, spendAmt.Value-fee)
 	if err != nil {
 		t.Fatalf("createExportRawTx failed:%v", err)
 	}
-	log.Println("send tx", txStr)
-	GenerateBlock(t, h, 2)
-	ba, err := h.Wallet.GetBalance(h.Wallet.ethAddrs[0].String())
+	log.Println("send tx", txH.String())
+	GenerateBlocks(t, h, 2)
+	acc := h.GetWalletManager().GetAccountByIdx(0)
+	ba, err := h.GetEvmClient().BalanceAt(context.Background(), acc.EvmAcct.Address, nil)
 	if err != nil {
 		t.Fatalf("GetBalance failed:%v", err)
 	}
-	assert.Equal(t, ba, big.NewInt(spendAmt.Value-fee))
-	txS, err := h.Wallet.CreateErc20()
+	assert.Equal(t, ba, new(big.Int).Mul(big.NewInt(1e10), big.NewInt(spendAmt.Value-fee)))
+	txS, err := CreateErc20(h)
 	if err != nil {
 		t.Fatal(err)
 	}
 	log.Println("create token contract tx:", txS)
-	txWETH, err := h.Wallet.CreateWETH()
+	txWETH, err := CreateWETH(h)
 	if err != nil {
 		t.Fatal(err)
 	}
 	log.Println("create weth contract tx:", txWETH)
-	txFACTORY, err := h.Wallet.CreateFactory(h.Wallet.ethAddrs[0])
+	txFACTORY, err := CreateFactory(h, acc.EvmAcct.Address)
 	if err != nil {
 		t.Fatal(err)
 	}
 	log.Println("create FACTORY contract tx:", txFACTORY)
-	GenerateBlockWaitForTxs(t, h, []string{txS, txWETH, txFACTORY})
+	GenerateBlocksWaitForTxs(t, h, []string{txS, txWETH, txFACTORY})
 	// token addr
-	txD, err := h.Wallet.evmClient.TransactionReceipt(context.Background(), common.HexToHash(txS))
+	txD, err := h.GetEvmClient().TransactionReceipt(context.Background(), common.HexToHash(txS))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if txD == nil {
 		t.Fatal("create contract failed")
 	}
-	txWETHD, err := h.Wallet.evmClient.TransactionReceipt(context.Background(), common.HexToHash(txWETH))
+	txWETHD, err := h.GetEvmClient().TransactionReceipt(context.Background(), common.HexToHash(txWETH))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if txWETHD == nil {
 		t.Fatal("create weth failed")
 	}
-	txFACTORYD, err := h.Wallet.evmClient.TransactionReceipt(context.Background(), common.HexToHash(txFACTORY))
+	txFACTORYD, err := h.GetEvmClient().TransactionReceipt(context.Background(), common.HexToHash(txFACTORY))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,13 +261,13 @@ func TestSwap(t *testing.T) {
 	log.Println("new token address:", txD.ContractAddress)
 	log.Println("new weth address:", txWETHD.ContractAddress)
 	log.Println("new factory address:", txFACTORYD.ContractAddress)
-	txROUTER, err := h.Wallet.CreateRouter(txFACTORYD.ContractAddress, txWETHD.ContractAddress)
+	txROUTER, err := CreateRouter(h, txFACTORYD.ContractAddress, txWETHD.ContractAddress)
 	if err != nil {
 		t.Fatal(err)
 	}
 	log.Println("create ROUTER contract tx:", txROUTER)
-	GenerateBlockWaitForTxs(t, h, []string{txROUTER})
-	txROUTERD, err := h.Wallet.evmClient.TransactionReceipt(context.Background(), common.HexToHash(txROUTER))
+	GenerateBlocksWaitForTxs(t, h, []string{txROUTER})
+	txROUTERD, err := h.GetEvmClient().TransactionReceipt(context.Background(), common.HexToHash(txROUTER))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,19 +276,19 @@ func TestSwap(t *testing.T) {
 	}
 	assert.Equal(t, txROUTERD.Status, uint64(0x1))
 	log.Println("new router address:", txROUTERD.ContractAddress)
-	tokenCall, err := token.NewToken(txD.ContractAddress, h.Wallet.evmClient)
+	tokenCall, err := token.NewToken(txD.ContractAddress, h.GetEvmClient())
 	if err != nil {
 		t.Fatal(err)
 	}
-	factoryCall, err := factory.NewToken(txFACTORYD.ContractAddress, h.Wallet.evmClient)
+	factoryCall, err := factory.NewToken(txFACTORYD.ContractAddress, h.GetEvmClient())
 	if err != nil {
 		t.Fatal(err)
 	}
-	routerCall, err := router.NewToken(txROUTERD.ContractAddress, h.Wallet.evmClient)
+	routerCall, err := router.NewToken(txROUTERD.ContractAddress, h.GetEvmClient())
 	if err != nil {
 		t.Fatal(err)
 	}
-	authCaller, err := h.Wallet.AuthTrans(h.Wallet.privkeys[0])
+	authCaller, err := AuthTrans(h.GetBuilder().Get(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,28 +296,28 @@ func TestSwap(t *testing.T) {
 	if err != nil {
 		t.Fatal("Approve error", err)
 	}
-	GenerateBlockWaitForTxs(t, h, []string{tx.Hash().String()})
+	GenerateBlocksWaitForTxs(t, h, []string{tx.Hash().String()})
 	amount := new(big.Int).SetUint64(1e18)
 	amount = amount.Mul(amount, big.NewInt(1000))
 	deadline := time.Now().Add(15 * time.Minute).Unix()
 	authCaller.Value = amount
 	// add liquidity
-	tx, err = routerCall.AddLiquidityETH(authCaller, txD.ContractAddress, amount, big.NewInt(0), big.NewInt(0), h.Wallet.ethAddrs[0], big.NewInt(deadline))
+	tx, err = routerCall.AddLiquidityETH(authCaller, txD.ContractAddress, amount, big.NewInt(0), big.NewInt(0), acc.EvmAcct.Address, big.NewInt(deadline))
 	if err != nil {
 		t.Fatal("AddLiquidityETH error", err)
 	}
-	GenerateBlockWaitForTxs(t, h, []string{tx.Hash().String()})
+	GenerateBlocksWaitForTxs(t, h, []string{tx.Hash().String()})
 	// swap for a token
-	_, _ = h.Wallet.NewAddress()
-	to := h.Wallet.ethAddrs[1]
+	h.NewAddress()
+	to := h.GetWalletManager().GetAccountByIdx(1).EvmAcct.Address
 	// send 10 meer
-	txh, err := h.Wallet.CreateLegacyTx(h.Wallet.privkeys[0], &to, 0, 21000, new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10)), nil)
+	txh, err := CreateLegacyTx(h, h.GetBuilder().Get(0), &to, 0, 21000, new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	GenerateBlockWaitForTxs(t, h, []string{txh})
+	GenerateBlocksWaitForTxs(t, h, []string{txh})
 	// swap for a token  1 => 1 * 0.9975
-	authCaller1, err := h.Wallet.AuthTrans(h.Wallet.privkeys[1])
+	authCaller1, err := AuthTrans(h.GetBuilder().Get(1))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -336,8 +336,8 @@ func TestSwap(t *testing.T) {
 	if err != nil {
 		t.Fatal("SwapExactETHForTokens error", err)
 	}
-	GenerateBlockWaitForTxs(t, h, []string{txSwap.Hash().String()})
-	txSwapD, err := h.Wallet.evmClient.TransactionReceipt(context.Background(), txSwap.Hash())
+	GenerateBlocksWaitForTxs(t, h, []string{txSwap.Hash().String()})
+	txSwapD, err := h.GetEvmClient().TransactionReceipt(context.Background(), txSwap.Hash())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -345,7 +345,7 @@ func TestSwap(t *testing.T) {
 		t.Fatal("SwapExactETHForTokens Tx failed")
 	}
 	if txSwapD.Status != uint64(0x1) {
-		txSwapD1, isPending, err := h.Wallet.evmClient.TransactionByHash(context.Background(), txSwap.Hash())
+		txSwapD1, isPending, err := h.GetEvmClient().TransactionByHash(context.Background(), txSwap.Hash())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -363,15 +363,15 @@ func TestSwap(t *testing.T) {
 	if err != nil {
 		t.Fatal("GetPair Call error", err)
 	}
-	pairCall, err := pair.NewToken(p, h.Wallet.evmClient)
+	pairCall, err := pair.NewToken(p, h.GetEvmClient())
 	if err != nil {
 		t.Fatal(err)
 	}
-	lpBalance, err := pairCall.BalanceOf(&bind.CallOpts{}, h.Wallet.ethAddrs[0])
+	lpBalance, err := pairCall.BalanceOf(&bind.CallOpts{}, acc.EvmAcct.Address)
 	if err != nil {
 		t.Fatal(err)
 	}
-	authCaller, err = h.Wallet.AuthTrans(h.Wallet.privkeys[0])
+	authCaller, err = AuthTrans(h.GetBuilder().Get(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -379,14 +379,14 @@ func TestSwap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	GenerateBlock(t, h, 1)
+	GenerateBlocks(t, h, 1)
 	deadline = time.Now().Add(15 * time.Minute).Unix()
-	txRemove, err := routerCall.RemoveLiquidityETH(authCaller, txD.ContractAddress, lpBalance, big.NewInt(0), big.NewInt(0), h.Wallet.ethAddrs[0], big.NewInt(deadline))
+	txRemove, err := routerCall.RemoveLiquidityETH(authCaller, txD.ContractAddress, lpBalance, big.NewInt(0), big.NewInt(0), acc.EvmAcct.Address, big.NewInt(deadline))
 	if err != nil {
 		t.Fatal("RemoveLiquidityETH error", err)
 	}
-	GenerateBlockWaitForTxs(t, h, []string{txRemove.Hash().String()})
-	txRemoveD, err := h.Wallet.evmClient.TransactionReceipt(context.Background(), txRemove.Hash())
+	GenerateBlocksWaitForTxs(t, h, []string{txRemove.Hash().String()})
+	txRemoveD, err := h.GetEvmClient().TransactionReceipt(context.Background(), txRemove.Hash())
 	if err != nil {
 		t.Fatal(err)
 	}
