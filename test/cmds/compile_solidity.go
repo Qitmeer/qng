@@ -62,7 +62,7 @@ const ERC20Code ="%s"
 }
 
 func compileRelease() {
-	if execCompileSolidity("../release/mapping.sol") {
+	if execCompileSolidity("../consensus/release/mapping.sol") {
 		// ___{dir}_{filename}_sol_{contractname}.bin
 		b, err := ioutil.ReadFile("./build/___release_mapping_sol_MeerMapping.bin")
 		if err != nil {
@@ -72,7 +72,7 @@ func compileRelease() {
 const RELEASECode ="%s"
 `, string(b))
 		// generate abi.go
-		execABIGO("./build/___release_mapping_sol_MeerMapping.abi", "release", "../release/release.go")
+		execABIGO("./build/___release_mapping_sol_MeerMapping.abi", "release", "../consensus/release/release.go")
 	}
 }
 
