@@ -14,7 +14,6 @@ import (
 
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/test/testcommon"
 	"github.com/Qitmeer/qng/testutils"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -81,9 +80,9 @@ func TestReleaseContract(t *testing.T) {
 	fmt.Println(b1)
 	assert.Equal(t, b.String(), "100000000000")
 
-	b4, err := h.GetEvmClient().BalanceAt(context.Background(), common.HexToAddress(testcommon.RELEASE_ADDR), nil)
+	b4, err := h.GetEvmClient().BalanceAt(context.Background(), common.HexToAddress(RELEASE_ADDR), nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	assert.Equal(t, b4.String(), testcommon.RELEASE_AMOUNT)
+	assert.Equal(t, b4.String(), RELEASE_AMOUNT)
 }
