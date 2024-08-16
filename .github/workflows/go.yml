@@ -31,7 +31,7 @@ jobs:
         run: git clone https://github.com/Qitmeer/go-ethereum.git && cd go-ethereum && git checkout v1.14.8-q.0 && cd cmd/abigen && go build && sudo cp abigen /usr/local/bin/ && cd ../../..
 
       - name: compileSolidity
-        run: solcjs --version && ls && cd test/cmds/ && sudo go run compile_solidity.go && cd ../../
+        run: solcjs --version && ls && cd testutils/cmds/ && go run compile_solidity.go && cd ../../
 
       - name: linter-install
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.60.1
