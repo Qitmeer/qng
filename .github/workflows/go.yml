@@ -13,13 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "stable"
-
-      - name: install abigen
-        run: go install github.com/ethereum/go-ethereum/cmd/abigen@latest 
 
       - name: npm
         uses: actions/setup-node@v4
@@ -30,10 +28,10 @@ jobs:
         run: sudo npm install solc@0.8.3 -g
 
       - name: abigen
-        run: git clone https://github.com/Qitmeer/go-ethereum.git && cd go-ethereum && git checkout v1.14.8-q.0 && cd cmd/abigen && go build && sudo cp abigen /usr/local/bin/ && cd ../../..
+        run: go install github.com/ethereum/go-ethereum/cmd/abigen@latest
 
       - name: compileSolidity
-        run: solcjs --version && ls && cd testutils/cmds/ && go run compile_solidity.go && cd ../../
+        run: solcjs --version && ls && cd test/cmds/ && go run compile_solidity.go && cd ../../
 
       - name: linter-install
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.60.1
