@@ -12,25 +12,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "stable"
 
+      - name: Checkout main
+      - uses: actions/checkout@v4
+
+      - name: Checkout abigen
       - uses: actions/checkout@v4
         with:
-          repository: 'ethereum/solidity'
-
-      - name: Download soljson.js artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: soljson.js
-
-      - name: Run solc-js
-        run: |
-          "${PWD}/soljson.js --version"
+          repository: 'Qitmeer/go-ethereum'
+          fetch-depth: 0
+          path: go-ethereum
+        run: cd go-ethereum && git checkout v1.14.8-q.0 && cd cmd/abigen && go build && sudo cp abigen /usr/local/bin/ && cd ../../..
 
       - name: npm
         uses: actions/setup-node@v4
@@ -51,6 +47,7 @@ jobs:
 
       - name: linter
         run: golangci-lint --version && golangci-lint run -v --timeout=2m --disable-all --enable=govet --tests=false ./...
+
 
       - name: Build
         run: |
