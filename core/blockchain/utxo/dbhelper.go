@@ -36,8 +36,8 @@ func dbFetchUtxoEntry(db model.DataBase, outpoint types.TxOutPoint) (*UtxoEntry,
 	// A non-nil zero-length entry means there is an entry in the database
 	// for a spent transaction output which should never be the case.
 	if len(serializedUtxo) == 0 {
-		return nil, fmt.Errorf(fmt.Sprintf("database contains entry "+
-			"for spent tx output %v", outpoint))
+		return nil, fmt.Errorf("database contains entry "+
+			"for spent tx output %v", outpoint)
 	}
 
 	// Deserialize the utxo entry and return it.

@@ -57,7 +57,7 @@ func (c *AddressApi) APIs() []api.API {
 func (api *PublicAddressAPI) CheckAddress(address string, network string) (interface{}, error) {
 	_, ver, err := base58.QitmeerCheckDecode(address)
 	if err != nil {
-		return false, rpc.RpcInvalidError("Invalid address :" + err.Error())
+		return false, rpc.RpcInvalidError("Invalid address :%s", err.Error())
 	}
 	var p *params.Params
 	switch network {

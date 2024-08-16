@@ -612,23 +612,23 @@ func (m *Miner) submitBlock(block *types.SerializedBlock) (interface{}, error) {
 		// so log that error as an internal error.
 		rErr, ok := err.(blockchain.RuleError)
 		if !ok {
-			return nil, fmt.Errorf(fmt.Sprintf("Unexpected error while processing block submitted miner: %v (%s)", err, m.worker.GetType()))
+			return nil, fmt.Errorf("Unexpected error while processing block submitted miner: %v (%s)", err, m.worker.GetType())
 		}
 		// Occasionally errors are given out for timing errors with
 		// ReduceMinDifficulty and high block works that is above
 		// the target. Feed these to debug.
 		if params.ActiveNetParams.Params.ReduceMinDifficulty &&
 			rErr.ErrorCode == blockchain.ErrHighHash {
-			return nil, fmt.Errorf(fmt.Sprintf("Block submitted via miner rejected "+
+			return nil, fmt.Errorf("Block submitted via miner rejected "+
 				"because of ReduceMinDifficulty time sync failure: %v (%s)",
-				err, m.worker.GetType()))
+				err, m.worker.GetType())
 		}
 		// Other rule errors should be reported.
-		return nil, fmt.Errorf(fmt.Sprintf("Block submitted via %s rejected: %v ", m.worker.GetType(), err))
+		return nil, fmt.Errorf("Block submitted via %s rejected: %v ", m.worker.GetType(), err)
 	}
 	if IsOrphan {
-		return nil, fmt.Errorf(fmt.Sprintf("Block submitted via %s is an orphan building "+
-			"on parent %v", m.worker.GetType(), block.Block().Header.ParentRoot))
+		return nil, fmt.Errorf("Block submitted via %s is an orphan building "+
+			"on parent %v", m.worker.GetType(), block.Block().Header.ParentRoot)
 	} else {
 		m.txpool.PruneExpiredTx()
 	}
