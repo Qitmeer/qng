@@ -19,6 +19,19 @@ jobs:
         with:
           go-version: "stable"
 
+      - uses: actions/checkout@v4
+        with:
+          repository: 'ethereum/solidity'
+
+      - name: Download soljson.js artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: soljson.js
+
+      - name: Run solc-js
+        run: |
+          "${PWD}/soljson.js --version"
+
       - name: npm
         uses: actions/setup-node@v4
         with:
