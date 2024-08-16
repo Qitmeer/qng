@@ -373,7 +373,7 @@ func (tm *TxManager) CreateRawTransactionV2(inputs []json.TransactionInput,
 
 		err := types.CheckCoinID(types.CoinID(amount.CoinId))
 		if err != nil {
-			return nil, rpc.RpcInvalidError(err.Error())
+			return nil, rpc.RpcInvalidError("%s", err.Error())
 		}
 		// Decode the provided address.
 		addr, err := address.DecodeAddress(encodedAddr)

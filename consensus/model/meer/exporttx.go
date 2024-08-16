@@ -35,7 +35,7 @@ func NewExportTx(tx *types.Transaction) (*ExportTx, error) {
 	if len(pksAddrs) > 0 {
 		secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
 		if !ok {
-			return nil, fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s in tx(%s)", pksAddrs[0].String(), tx.TxHash()))
+			return nil, fmt.Errorf("Not SecpPubKeyAddress:%s in tx(%s)", pksAddrs[0].String(), tx.TxHash())
 		}
 		etx.To = secpPksAddr.PubKey().SerializeUncompressed()
 		etx.Value = uint64(tx.TxOut[0].Amount.Value)

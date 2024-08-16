@@ -116,7 +116,7 @@ func (e *Error) AddError(err error) {
 }
 
 func (e *Error) ToError() error {
-	return fmt.Errorf(e.String())
+	return fmt.Errorf("%s", e.String())
 }
 
 func NewError(code ErrorCode, e error) *Error {
@@ -124,7 +124,7 @@ func NewError(code ErrorCode, e error) *Error {
 }
 
 func NewErrorStr(code ErrorCode, e string) *Error {
-	return &Error{code, fmt.Errorf(e)}
+	return &Error{code, fmt.Errorf("%s", e)}
 }
 
 func NewSuccess() *Error {

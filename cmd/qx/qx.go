@@ -90,7 +90,7 @@ addr & tx & sign :
 }
 
 func cmdUsage(cmd *flag.FlagSet, usage string) {
-	fmt.Fprintf(os.Stderr, usage)
+	fmt.Fprintf(os.Stderr, "%s", usage)
 	cmd.PrintDefaults()
 }
 

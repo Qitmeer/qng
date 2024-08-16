@@ -354,7 +354,7 @@ func (api *PublicTxAPI) GetRawTransactions(addre string, vinext *bool, count *ui
 	params := api.txManager.consensus.Params()
 	addr, err := address.DecodeAddress(addre)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid address or key: " + err.Error())
+		return nil, fmt.Errorf("%s", "Invalid address or key: "+err.Error())
 	}
 	numRequested := uint(100)
 	if count != nil {

@@ -304,7 +304,7 @@ func exportBlockChain(consensus model.Consensus, outputPath string, end string, 
 				log.Trace(fmt.Sprintf("Skip block: Can't find block (%d)!", i))
 				continue
 			} else {
-				return fmt.Errorf(fmt.Sprintf("Can't find block (%d)!", i))
+				return fmt.Errorf("Can't find block (%d)!", i)
 			}
 		}
 		bhs = append(bhs, blockHash)
@@ -538,7 +538,7 @@ func upgradeBlockChain(cfg *config.Config, cdb model.DataBase, interrupt <-chan 
 			}
 
 			if blockHash == nil {
-				return fmt.Errorf(fmt.Sprintf("Can't find block (%d)!", i))
+				return fmt.Errorf("Can't find block (%d)!", i)
 			}
 
 			block, err := cdb.GetBlock(blockHash)
@@ -630,7 +630,7 @@ func upgradeBlockChain(cfg *config.Config, cdb model.DataBase, interrupt <-chan 
 			}
 
 			if blockHash == nil {
-				return fmt.Errorf(fmt.Sprintf("Can't find block (%d)!", i))
+				return fmt.Errorf("Can't find block (%d)!", i)
 			}
 
 			block, err := bc.FetchBlockByHash(blockHash)
