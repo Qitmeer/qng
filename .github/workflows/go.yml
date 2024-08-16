@@ -17,18 +17,11 @@ jobs:
         with:
           go-version: "stable"
 
-      - name: Checkout main
+      - name: checkout
         uses: actions/checkout@v4
 
-      - name: Checkout Qitmeer/go-ethereum
-        uses: actions/checkout@v4
-        with:
-          repository: 'Qitmeer/go-ethereum'
-          fetch-depth: 0
-          path: go-ethereum
-
-      - name: Build abigen
-        run: cd go-ethereum && git checkout v1.14.8-q.0 && cd cmd/abigen && go build && sudo cp abigen /usr/local/bin/ && cd ../../..
+      - name: install abigen
+        run: go install github.com/ethereum/go-ethereum/cmd/abigen@latest 
 
       - name: npm
         uses: actions/setup-node@v4
@@ -49,7 +42,6 @@ jobs:
 
       - name: linter
         run: golangci-lint --version && golangci-lint run -v --timeout=2m --disable-all --enable=govet --tests=false ./...
-
 
       - name: Build
         run: |
