@@ -2,9 +2,9 @@ name: GoTest
 
 on:
   push:
-    branches: [ main,dev/2.0 ]
+    branches: [main, dev/2.0]
   pull_request:
-    branches: [ main,dev/2.0 ]
+    branches: [main, dev/2.0]
 
   workflow_dispatch:
 
@@ -17,31 +17,27 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 'stable'
+          go-version: "stable"
+
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60.1
+          skip-cache: true
+          args: --timeout=2m --disable-all --enable=govet --tests=false ./...
 
       - name: npm
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: solc
         run: sudo npm install solc@0.8.3 -g
 
-      - name: git
-        run: sudo apt install git
-
       - name: abigen
-        run: git clone https://github.com/Qitmeer/go-ethereum.git && cd go-ethereum && git checkout v1.14.8-q.0 && cd cmd/abigen && go build && sudo cp abigen /usr/local/bin/ && cd ../../..
-
+        run: go install github.com/ethereum/go-ethereum/cmd/abigen@latest
 
       - name: compileSolidity
-        run: solcjs --version && ls && cd testutils/cmds/ && sudo go run compile_solidity.go && cd ../../
-
-      - name: linter-install
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.60.1
-
-      - name: linter
-        run: golangci-lint --version && golangci-lint run -v --timeout=2m --disable-all --enable=govet --tests=false ./...
+        run: solcjs --version && ls && cd test/cmds/ && go run compile_solidity.go && cd ../../
 
       - name: Build
         run: |

@@ -1,6 +1,6 @@
 module github.com/Qitmeer/qng
 
-go 1.22.3
+go 1.23
 
 require (
 	github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a
@@ -93,7 +93,6 @@ require (
 	github.com/ethereum/c-kzg-4844 v1.0.0 // indirect
 	github.com/ethereum/go-verkle v0.1.1-0.20240306133620-7d920df305f0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/fjl/memsize v0.0.2 // indirect
 	github.com/flynn/noise v1.1.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
