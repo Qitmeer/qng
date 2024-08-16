@@ -1,8 +1,13 @@
 package testutils
 
 import (
+	"context"
+	"crypto/ecdsa"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"log"
+	"math/big"
 	"strconv"
 	"testing"
 
@@ -10,6 +15,9 @@ import (
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/ethereum/go-ethereum/common"
+	etype "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // GenerateBlocks will generate a number of blocks by the input number
@@ -206,4 +214,46 @@ func SendExportTxMockNode(t *testing.T, h *MockNode, txid string, idx uint32, va
 		return nil
 	}
 	return ret
+}
+func CreateLegacyTx(node *MockNode, fromPkByte []byte, to *common.Address, nonce uint64, gas uint64, val *big.Int, d []byte, gasLimit uint64, chainId *big.Int) (string, error) {
+	privateKey := crypto.ToECDSAUnsafe(fromPkByte)
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return "", errors.New("private key error")
+	}
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+	log.Println("from address", fromAddress.String())
+	var err error
+	if nonce <= 0 {
+		nonce, err = node.GetEvmClient().PendingNonceAt(context.Background(), fromAddress)
+		if err != nil {
+			return "", err
+		}
+	}
+	if gas > 0 {
+		gasLimit = gas
+	}
+	gasPrice, err := node.GetEvmClient().SuggestGasPrice(context.Background())
+	if err != nil {
+		return "", err
+	}
+	data := &etype.LegacyTx{
+		To:       to,
+		Nonce:    nonce,
+		Gas:      gasLimit,
+		GasPrice: gasPrice,
+		Value:    val,
+		Data:     d,
+	}
+	tx := etype.NewTx(data)
+	signedTx, err := etype.SignTx(tx, etype.NewEIP155Signer(chainId), privateKey)
+	if err != nil {
+		return "", err
+	}
+	err = node.GetEvmClient().SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		return "", err
+	}
+	return signedTx.Hash().Hex(), nil
 }

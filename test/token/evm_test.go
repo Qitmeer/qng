@@ -92,7 +92,7 @@ func TestCallErc20Contract(t *testing.T) {
 		h.NewAddress()
 		to := h.GetWalletManager().GetAccountByIdx((i + 1)).EvmAcct.Address
 		// send 2 meer
-		txid, err := testcommon.CreateLegacyTx(h, h.GetBuilder().Get(0), &to, 0, 21000, toMeerAmount, nil)
+		txid, err := testutils.CreateLegacyTx(h, h.GetBuilder().Get(0), &to, 0, 21000, toMeerAmount, nil, testcommon.GAS_LIMIT, testcommon.CHAIN_ID)
 		if err != nil {
 			t.Fatal(err)
 		}

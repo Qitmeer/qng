@@ -8,6 +8,7 @@ import (
 	"context"
 	"log"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/Qitmeer/qng/test/testcommon"
 	"github.com/Qitmeer/qng/test/token"
 	"github.com/Qitmeer/qng/testutils"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
@@ -58,12 +60,12 @@ func TestSwap(t *testing.T) {
 		t.Fatal(err)
 	}
 	log.Println("create token contract tx:", txS)
-	txWETH, err := testcommon.CreateWETH(h)
+	txWETH, err := CreateWETH(h)
 	if err != nil {
 		t.Fatal(err)
 	}
 	log.Println("create weth contract tx:", txWETH)
-	txFACTORY, err := testcommon.CreateFactory(h, acc.EvmAcct.Address)
+	txFACTORY, err := CreateFactory(h, acc.EvmAcct.Address)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +99,7 @@ func TestSwap(t *testing.T) {
 	log.Println("new token address:", txD.ContractAddress)
 	log.Println("new weth address:", txWETHD.ContractAddress)
 	log.Println("new factory address:", txFACTORYD.ContractAddress)
-	txROUTER, err := testcommon.CreateRouter(h, txFACTORYD.ContractAddress, txWETHD.ContractAddress)
+	txROUTER, err := CreateRouter(h, txFACTORYD.ContractAddress, txWETHD.ContractAddress)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +149,7 @@ func TestSwap(t *testing.T) {
 	h.NewAddress()
 	to := h.GetWalletManager().GetAccountByIdx(1).EvmAcct.Address
 	// send 10 meer
-	txh, err := testcommon.CreateLegacyTx(h, h.GetBuilder().Get(0), &to, 0, 21000, new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10)), nil)
+	txh, err := testutils.CreateLegacyTx(h, h.GetBuilder().Get(0), &to, 0, 21000, new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10)), nil, testcommon.GAS_LIMIT, testcommon.CHAIN_ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,4 +229,20 @@ func TestSwap(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, txRemoveD.Status, uint64(0x1))
+}
+func CreateWETH(node *testutils.MockNode) (string, error) {
+	return testutils.CreateLegacyTx(node, node.GetBuilder().Get(0), nil, 0, 0, big.NewInt(0), common.FromHex(testcommon.WETH), testcommon.GAS_LIMIT, testcommon.CHAIN_ID)
+}
+
+func CreateFactory(node *testutils.MockNode, _feeToSetter common.Address) (string, error) {
+	parsed, _ := abi.JSON(strings.NewReader(factory.TokenMetaData.ABI))
+	// constructor params
+	initP, _ := parsed.Pack("", _feeToSetter)
+	return testutils.CreateLegacyTx(node, node.GetBuilder().Get(0), nil, 0, 0, big.NewInt(0), append(common.FromHex(testcommon.FACTORY), initP...), testcommon.GAS_LIMIT, testcommon.CHAIN_ID)
+}
+
+func CreateRouter(node *testutils.MockNode, factory, weth common.Address) (string, error) {
+	parsed, _ := abi.JSON(strings.NewReader(router.TokenMetaData.ABI))
+	initP, _ := parsed.Pack("", factory, weth)
+	return testutils.CreateLegacyTx(node, node.GetBuilder().Get(0), nil, 0, 0, big.NewInt(0), append(common.FromHex(testcommon.ROUTER), initP...), testcommon.GAS_LIMIT, testcommon.CHAIN_ID)
 }
