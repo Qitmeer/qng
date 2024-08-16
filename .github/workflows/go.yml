@@ -22,7 +22,7 @@ jobs:
       - name: npm
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: solc
         run: sudo npm install solc@0.8.26 -g
