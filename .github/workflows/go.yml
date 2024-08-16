@@ -12,13 +12,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "stable"
-
-      - name: checkout
-        uses: actions/checkout@v4
 
       - name: install abigen
         run: go install github.com/ethereum/go-ethereum/cmd/abigen@latest 
