@@ -51,7 +51,7 @@ func TestCallErc20Contract(t *testing.T) {
 		t.Fatalf("GetBalance failed:%v", err)
 	}
 	assert.Equal(t, ba, new(big.Int).Mul(big.NewInt(1e10), big.NewInt(spendAmt.Value-fee)))
-	txS, err := testcommon.CreateErc20(h)
+	txS, err := testutils.DeployContract(h, 0, common.FromHex(testcommon.ERC20Code))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestCallErc20Contract(t *testing.T) {
 	}
 	allAmount := int64(30000000)
 	assert.Equal(t, ba, big.NewInt(allAmount).Mul(big.NewInt(allAmount), big.NewInt(1e18)))
-	authCaller, err := testcommon.AuthTrans(h.GetBuilder().Get(0))
+	authCaller, err := testutils.AuthTrans(h.GetBuilder().Get(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestCallErc20Contract(t *testing.T) {
 		h.NewAddress()
 		to := h.GetWalletManager().GetAccountByIdx((i + 1)).EvmAcct.Address
 		// send 2 meer
-		txid, err := testutils.CreateLegacyTx(h, h.GetBuilder().Get(0), &to, 0, 21000, toMeerAmount, nil, testcommon.GAS_LIMIT, testcommon.CHAIN_ID)
+		txid, err := testutils.MeerTransfer(h, 0, to, toMeerAmount)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -128,7 +128,7 @@ func TestCallErc20Contract(t *testing.T) {
 		log.Println(i, "address", target.String(), "balance", ba)
 		assert.Equal(t, ba, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 		h.NewAddress()
-		authCaller, err := testcommon.AuthTrans(h.GetBuilder().Get(i))
+		authCaller, err := testutils.AuthTrans(h.GetBuilder().Get(i))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -153,7 +153,7 @@ func TestCallErc20Contract(t *testing.T) {
 	// check transferFrom
 
 	// not approve
-	authCaller1, err := testcommon.AuthTrans(h.GetBuilder().Get(1))
+	authCaller1, err := testutils.AuthTrans(h.GetBuilder().Get(1))
 	if err != nil {
 		t.Fatal(err)
 	}

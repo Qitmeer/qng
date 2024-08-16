@@ -15,9 +15,19 @@ import (
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
+	"github.com/Qitmeer/qng/meerevm/params"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	etype "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+)
+
+var (
+	MAX_UINT256 = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 255), common.Big1)
+)
+
+const (
+	GAS_LIMIT = 8000000
 )
 
 // GenerateBlocks will generate a number of blocks by the input number
@@ -215,7 +225,7 @@ func SendExportTxMockNode(t *testing.T, h *MockNode, txid string, idx uint32, va
 	}
 	return ret
 }
-func CreateLegacyTx(node *MockNode, fromPkByte []byte, to *common.Address, nonce uint64, gas uint64, val *big.Int, d []byte, gasLimit uint64, chainId *big.Int) (string, error) {
+func createLegacyTx(node *MockNode, fromPkByte []byte, to *common.Address, nonce uint64, gas uint64, val *big.Int, d []byte) (string, error) {
 	privateKey := crypto.ToECDSAUnsafe(fromPkByte)
 	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
@@ -231,8 +241,8 @@ func CreateLegacyTx(node *MockNode, fromPkByte []byte, to *common.Address, nonce
 			return "", err
 		}
 	}
-	if gas > 0 {
-		gasLimit = gas
+	if gas <= 0 {
+		gas = GAS_LIMIT
 	}
 	gasPrice, err := node.GetEvmClient().SuggestGasPrice(context.Background())
 	if err != nil {
@@ -241,13 +251,13 @@ func CreateLegacyTx(node *MockNode, fromPkByte []byte, to *common.Address, nonce
 	data := &etype.LegacyTx{
 		To:       to,
 		Nonce:    nonce,
-		Gas:      gasLimit,
+		Gas:      gas,
 		GasPrice: gasPrice,
 		Value:    val,
 		Data:     d,
 	}
 	tx := etype.NewTx(data)
-	signedTx, err := etype.SignTx(tx, etype.NewEIP155Signer(chainId), privateKey)
+	signedTx, err := etype.SignTx(tx, etype.NewEIP155Signer(params.QngPrivnetChainConfig.ChainID), privateKey)
 	if err != nil {
 		return "", err
 	}
@@ -256,4 +266,21 @@ func CreateLegacyTx(node *MockNode, fromPkByte []byte, to *common.Address, nonce
 		return "", err
 	}
 	return signedTx.Hash().Hex(), nil
+}
+
+func DeployContract(node *MockNode, fromAccountIdx int, contractCode []byte) (string, error) {
+	return createLegacyTx(node, node.GetBuilder().Get(fromAccountIdx), nil, 0, 0, big.NewInt(0), contractCode)
+}
+
+func MeerTransfer(node *MockNode, fromAccountIdx int, to common.Address, val *big.Int) (string, error) {
+	return createLegacyTx(node, node.GetBuilder().Get(fromAccountIdx), &to, 0, 21000, val, nil)
+}
+func AuthTrans(privatekeybyte []byte) (*bind.TransactOpts, error) {
+	privateKey := crypto.ToECDSAUnsafe(privatekeybyte)
+	authCaller, err := bind.NewKeyedTransactorWithChainID(privateKey, params.QngPrivnetChainConfig.ChainID)
+	if err != nil {
+		return nil, err
+	}
+	authCaller.GasLimit = GAS_LIMIT
+	return authCaller, nil
 }
