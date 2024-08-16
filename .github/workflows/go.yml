@@ -19,6 +19,12 @@ jobs:
         with:
           go-version: "stable"
 
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60.1
+          skip-cache: true
+          args: --timeout=2m --disable-all --enable=govet --tests=false ./...
+
       - name: npm
         uses: actions/setup-node@v4
         with:
@@ -32,12 +38,6 @@ jobs:
 
       - name: compileSolidity
         run: solcjs --version && ls && cd test/cmds/ && go run compile_solidity.go && cd ../../
-
-      - name: linter-install
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.60.1
-
-      - name: linter
-        run: golangci-lint --version && golangci-lint run -v --timeout=2m --disable-all --enable=govet --tests=false ./...
 
       - name: Build
         run: |
