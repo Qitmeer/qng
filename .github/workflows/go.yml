@@ -18,10 +18,10 @@ jobs:
           go-version: "stable"
 
       - name: Checkout main
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Checkout abigen
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
         with:
           repository: 'Qitmeer/go-ethereum'
           fetch-depth: 0
