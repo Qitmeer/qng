@@ -100,7 +100,7 @@ func (node *Node) processBlockDAG(srcnode *SrcNode) error {
 	for ; i < mainTip.GetID(); i++ {
 		ib := srcnode.bc.BlockDAG().GetBlockById(i)
 		if ib == nil {
-			return fmt.Errorf(fmt.Sprintf("Can't find block id (%d)!", i))
+			return fmt.Errorf("Can't find block id (%d)!", i)
 		}
 
 		block, err := srcnode.bc.FetchBlockByHash(ib.GetHash())

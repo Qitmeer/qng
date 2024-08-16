@@ -259,7 +259,7 @@ func LoadConfig() (*GlobalConfig, []string, error) {
 	}
 
 	if deviceCfg.Version {
-		fmt.Printf(GetVersion())
+		fmt.Printf("%s", GetVersion())
 		os.Exit(0)
 	}
 

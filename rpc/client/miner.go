@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	j "github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
@@ -94,7 +95,7 @@ func (r FutureGetRemoteGBTCmdResult) Receive() (*types.BlockHeader, error) {
 	serialized, err := hex.DecodeString(strings.ReplaceAll(string(res), `"`, ""))
 	if err != nil {
 		fmt.Println(err.Error(), len(string(res)), string(res))
-		return nil, fmt.Errorf(err.Error())
+		return nil, errors.New(err.Error())
 	}
 	var header types.BlockHeader
 	err = header.Deserialize(bytes.NewReader(serialized))

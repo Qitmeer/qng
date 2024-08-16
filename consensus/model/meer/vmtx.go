@@ -30,7 +30,7 @@ func (vt *VMTx) setCoinbaseTx(tx *types.Transaction) error {
 	if len(pksAddrs) > 0 {
 		secpPksAddr, ok := pksAddrs[0].(*address.SecpPubKeyAddress)
 		if !ok {
-			return fmt.Errorf(fmt.Sprintf("Not SecpPubKeyAddress:%s", pksAddrs[0].String()))
+			return fmt.Errorf("Not SecpPubKeyAddress:%s", pksAddrs[0].String())
 		}
 		vt.To = secpPksAddr.PubKey().SerializeUncompressed()
 		vt.Coinbase = tx.TxHash()

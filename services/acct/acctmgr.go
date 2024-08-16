@@ -704,13 +704,13 @@ func (a *AccountManager) AddAddress(addr string) error {
 		return err
 	}
 	if a.info.Has(addr) {
-		return fmt.Errorf(fmt.Sprintf("Already exists:%s", addr))
+		return fmt.Errorf("Already exists:%s", addr)
 	}
 	a.watchLock.RLock()
 	_, exist := a.watchers[addr]
 	a.watchLock.RUnlock()
 	if exist {
-		return fmt.Errorf(fmt.Sprintf("Already exists watcher:%s", addr))
+		return fmt.Errorf("Already exists watcher:%s", addr)
 	}
 	a.info.Add(addr)
 	err = a.db.Update(func(dbTx legacydb.Tx) error {
@@ -728,7 +728,7 @@ func (a *AccountManager) DelAddress(addr string) error {
 		return err
 	}
 	if !a.info.Has(addr) {
-		return fmt.Errorf(fmt.Sprintf("Account does not exist:%s", addr))
+		return fmt.Errorf("Account does not exist:%s", addr)
 	}
 	a.DelWatcher(addr, nil)
 	a.info.Del(addr)

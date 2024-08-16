@@ -34,7 +34,7 @@ func CalcMerkleRoot(txns []*types.Transaction) *hash.Hash {
 //
 // The above stored as a linear array is as follows:
 //
-// 	[h1 h2 h3 h4 h12 h34 root]
+//	[h1 h2 h3 h4 h12 h34 root]
 //
 // As the above shows, the merkle root is always the last element in the array.
 //
@@ -158,7 +158,7 @@ func nextPowerOfTwo(n int) int {
 //
 // The above stored as a linear array is as follows:
 //
-// 	[h1 h2 h3 h4 h12 h34 root]
+//	[h1 h2 h3 h4 h12 h34 root]
 //
 // As the above shows, the merkle root is always the last element in the array.
 //
@@ -215,9 +215,7 @@ func BuildParentsMerkleTreeStore(parents []*hash.Hash) []*hash.Hash {
 
 func ValidateWitnessCommitment(blk *types.SerializedBlock) error {
 	if len(blk.Transactions()) == 0 {
-		str := "cannot validate witness commitment of block without " +
-			"transactions"
-		return fmt.Errorf(str)
+		return fmt.Errorf("cannot validate witness commitment of block without transactions")
 	}
 
 	coinbaseTx := blk.Transactions()[0]
@@ -238,10 +236,9 @@ func ValidateWitnessCommitment(blk *types.SerializedBlock) error {
 	computedCommitment := hash.DoubleHashH(witnessPreimage[:])
 
 	if !computedCommitment.IsEqual(&witnessCommitment) {
-		str := fmt.Sprintf("witness commitment does not match: "+
+		return fmt.Errorf("witness commitment does not match: "+
 			"computed %s, coinbase includes %s", computedCommitment,
 			witnessCommitment)
-		return fmt.Errorf(str)
 	}
 	return nil
 }

@@ -5,6 +5,7 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -109,14 +110,14 @@ func (e *Error) Add(err string) {
 
 func (e *Error) AddError(err error) {
 	if e.Error == nil {
-		e.Error = fmt.Errorf("%s", err.Error())
+		e.Error = errors.New(err.Error())
 		return
 	}
 	e.Error = fmt.Errorf("%s, %s", e.Error.Error(), err.Error())
 }
 
 func (e *Error) ToError() error {
-	return fmt.Errorf(e.String())
+	return errors.New(e.String())
 }
 
 func NewError(code ErrorCode, e error) *Error {
@@ -124,7 +125,7 @@ func NewError(code ErrorCode, e error) *Error {
 }
 
 func NewErrorStr(code ErrorCode, e string) *Error {
-	return &Error{code, fmt.Errorf(e)}
+	return &Error{code, errors.New(e)}
 }
 
 func NewSuccess() *Error {

@@ -31,14 +31,14 @@ jobs:
         run: sudo apt install git
 
       - name: abigen
-        run: git clone https://github.com/Qitmeer/go-ethereum.git && cd go-ethereum && git checkout v1.14.7-q.0 && cd cmd/abigen && go build && sudo cp abigen /usr/local/bin/ && cd ../../..
+        run: git clone https://github.com/Qitmeer/go-ethereum.git && cd go-ethereum && git checkout v1.14.8-q.0 && cd cmd/abigen && go build && sudo cp abigen /usr/local/bin/ && cd ../../..
 
 
       - name: compileSolidity
         run: solcjs --version && ls && cd testutils/cmds/ && sudo go run compile_solidity.go && cd ../../
 
       - name: linter-install
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.59.1
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.60.1
 
       - name: linter
         run: golangci-lint --version && golangci-lint run -v --timeout=2m --disable-all --enable=govet --tests=false ./...
