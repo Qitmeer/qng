@@ -24,10 +24,10 @@ const SOLC = "solcjs"
 // go run github.com/Qitmeer/go-etherum/cmd/abigen/main.go
 const ABIGEN = "abigen"
 
-var fileContent = "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run compile_solidity.go \npackage testutils\n\n"
+var fileContent = "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run compile_solidity.go \npackage testcommon\n\n"
 
 func main() {
-	filepath := "../solidity_bin.go"
+	filepath := "../testcommon/solidity_bin.go"
 	f, err := os.Create(filepath)
 	if err != nil {
 		log.Fatal(err)
@@ -62,9 +62,9 @@ const ERC20Code ="%s"
 }
 
 func compileRelease() {
-	if execCompileSolidity("../release/mapping.sol") {
+	if execCompileSolidity("../../consensus/release/mapping.sol") {
 		// ___{dir}_{filename}_sol_{contractname}.bin
-		b, err := ioutil.ReadFile("./build/___release_mapping_sol_MeerMapping.bin")
+		b, err := ioutil.ReadFile("./build/______consensus_release_mapping_sol_MeerMapping.bin")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -72,7 +72,7 @@ func compileRelease() {
 const RELEASECode ="%s"
 `, string(b))
 		// generate abi.go
-		execABIGO("./build/___release_mapping_sol_MeerMapping.abi", "release", "../release/release.go")
+		execABIGO("./build/___release_mapping_sol_MeerMapping.abi", "release", "../../consensus/release/release.go")
 	}
 }
 
