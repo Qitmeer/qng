@@ -338,7 +338,7 @@ func (tm *TxManager) ProcessRawTx(serializedTx []byte, highFees bool) (string, e
 }
 
 func (tm *TxManager) CreateRawTransactionV2(inputs []json.TransactionInput,
-	amounts json.AdreesAmount, lockTime *int64) (interface{}, error) {
+	amounts json.AddressAmount, lockTime *int64) (interface{}, error) {
 
 	// Validate the locktime, if given.
 	if lockTime != nil &&

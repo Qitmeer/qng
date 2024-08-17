@@ -164,7 +164,7 @@ func SpendUtxo(t *testing.T, node *MockNode, preOutpoint *types.TxOutPoint, amt 
 	feeRate := int64(10)
 
 	inputs := []json.TransactionInput{json.TransactionInput{Txid: preOutpoint.Hash.String(), Vout: preOutpoint.OutIndex}}
-	aa := json.AdreesAmount{}
+	aa := json.AddressAmount{}
 	aa[addr.PKHAddress().String()] = json.Amout{CoinId: uint16(amt.Id), Amount: amt.Value - feeRate}
 	tx, err := node.GetWalletManager().SpendUtxo(inputs, aa, &lockTime)
 	if err != nil {

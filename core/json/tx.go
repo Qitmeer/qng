@@ -222,6 +222,6 @@ type AmountV3 struct {
 	TargetLockTime int64  `json:"targetLockTime"`
 }
 
-type AdreesAmount map[string]Amout
+type AddressAmount map[string]Amout
 
 type AddressAmountV3 map[string]AmountV3
