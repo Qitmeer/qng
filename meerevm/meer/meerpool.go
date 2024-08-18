@@ -7,6 +7,7 @@ package meer
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
@@ -127,24 +128,8 @@ func (m *MeerPool) handler() {
 				}
 				continue
 			}
-			for _, tx := range ev.Txs {
-				if tx == nil {
-					continue
-				}
-				if meerchange.IsMeerChangeExportTx(tx) {
-					vmtx, err := meer.NewVMTx(qcommon.ToQNGTx(tx, 0, true).Tx, nil)
-					if err != nil {
-						log.Error(err.Error())
-						m.ethTxPool.RemoveTx(tx.Hash(), true)
-						continue
-					}
-					err = m.consensus.BlockChain().VerifyMeerTx(vmtx)
-					if err != nil {
-						log.Error(err.Error())
-						m.ethTxPool.RemoveTx(tx.Hash(), true)
-						continue
-					}
-				}
+			if !m.prepareMeerChangeTxs(ev.Txs) {
+				continue
 			}
 
 			m.qTxPool.TriggerDirty()
@@ -166,6 +151,33 @@ func (m *MeerPool) handler() {
 			m.handleStallSample()
 		}
 	}
+}
+
+func (m *MeerPool) prepareMeerChangeTxs(txs []*types.Transaction) bool {
+	if !forks.IsMeerChangeForkHeight(int64(m.consensus.BlockChain().GetMainChainTip().GetHeight())) {
+		return false
+	}
+	for _, tx := range txs {
+		if tx == nil {
+			continue
+		}
+		if meerchange.IsMeerChangeExportTx(tx) ||
+			meerchange.IsMeerChangeExport4337Tx(tx) {
+			vmtx, err := meer.NewVMTx(qcommon.ToQNGTx(tx, 0, true).Tx, nil)
+			if err != nil {
+				log.Error(err.Error())
+				m.ethTxPool.RemoveTx(tx.Hash(), true)
+				continue
+			}
+			err = m.consensus.BlockChain().VerifyMeerTx(vmtx)
+			if err != nil {
+				log.Error(err.Error())
+				m.ethTxPool.RemoveTx(tx.Hash(), true)
+				continue
+			}
+		}
+	}
+	return true
 }
 
 func (m *MeerPool) handleStallSample() {
