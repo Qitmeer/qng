@@ -536,7 +536,7 @@ func ReadChainMetadata(db ethdb.KeyValueStore) [][]string {
 }
 
 func isErrNotFound(err error) bool {
-	return err == pebble.ErrNotFound || err == ldb.ErrNotFound
+	return err == pebble.ErrNotFound || err == ldb.ErrNotFound || strings.Contains(err.Error(), "not found")
 }
 
 func isErrWithoutNotFound(err error) bool {
