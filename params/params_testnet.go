@@ -119,8 +119,9 @@ var TestNetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	SLIP0044CoinType:     813,
-	LegacyCoinType:       223,
-	OrganizationPkScript: hexMustDecode("76a91429209320e66d96839785dd07e643a7f1592edc5a88ac"),
-	TokenAdminPkScript:   hexMustDecode("00000000c96d6d76a914b8834294977b26a44094fe2216f8a7d59af1130888ac"),
+	SLIP0044CoinType:       813,
+	LegacyCoinType:         223,
+	OrganizationPkScript:   hexMustDecode("76a91429209320e66d96839785dd07e643a7f1592edc5a88ac"),
+	TokenAdminPkScript:     hexMustDecode("00000000c96d6d76a914b8834294977b26a44094fe2216f8a7d59af1130888ac"),
+	MeerChangeContractAddr: "0x422f6F90B35D91D7D4F03aC791c6C07b1c14af1f",
 }
