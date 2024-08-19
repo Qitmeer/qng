@@ -286,7 +286,6 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 
 	txManager := qm.GetTxManager()
 	// prepare peerServer
-	qm.GetPeerServer().SetBlockChain(qm.GetBlockChain())
 	qm.GetPeerServer().SetTimeSource(qm.node.consensus.MedianTimeSource())
 	qm.GetPeerServer().SetTxMemPool(txManager.MemPool().(*mempool.TxPool))
 	qm.GetPeerServer().SetNotify(qm.nfManager)

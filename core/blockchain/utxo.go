@@ -182,6 +182,17 @@ func (b *BlockChain) FetchUtxoEntry(outpoint types.TxOutPoint) (*utxo.UtxoEntry,
 	return entry, nil
 }
 
+func (b *BlockChain) GetUtxo(outpoint types.TxOutPoint) (interface{}, error) {
+	entry, err := utxo.DBFetchUtxoEntry(b.DB(), outpoint)
+	if err != nil {
+		return nil, err
+	}
+	if b.IsInvalidOut(entry) {
+		entry = nil
+	}
+	return entry, nil
+}
+
 func (b *BlockChain) dbPutUtxoView(view *utxo.UtxoViewpoint) error {
 	for op, en := range view.Entries() {
 		outpoint := op

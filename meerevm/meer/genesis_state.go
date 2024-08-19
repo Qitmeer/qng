@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	cmath "github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -18,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/triedb"
 	"github.com/holiman/uint256"
 	"math/big"
 )
@@ -26,20 +28,23 @@ var (
 	SysContractDeployerAddress = common.Address{}
 )
 
-type Alloc map[common.Address]core.GenesisAccount
+type Alloc map[common.Address]types.Account
 
 func (g Alloc) OnRoot(common.Hash) {}
 
 func (g Alloc) OnAccount(addr *common.Address, dumpAccount state.DumpAccount) {
-	balance, _ := new(big.Int).SetString(dumpAccount.Balance, 10)
+	if addr == nil {
+		return
+	}
+	balance, _ := new(big.Int).SetString(dumpAccount.Balance, 0)
 	var storage map[common.Hash]common.Hash
 	if dumpAccount.Storage != nil {
-		storage = make(map[common.Hash]common.Hash)
+		storage = make(map[common.Hash]common.Hash, len(dumpAccount.Storage))
 		for k, v := range dumpAccount.Storage {
 			storage[k] = common.HexToHash(v)
 		}
 	}
-	genesisAccount := core.GenesisAccount{
+	genesisAccount := types.Account{
 		Code:    dumpAccount.Code,
 		Storage: storage,
 		Balance: balance,
@@ -54,11 +59,6 @@ type GenTransaction struct {
 }
 
 func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
-	if genesis.Config.IsLondon(big.NewInt(int64(0))) {
-		if genesis.BaseFee == nil {
-			return nil, fmt.Errorf("EIP-1559 config but missing 'currentBaseFee' in env section")
-		}
-	}
 
 	chainConfig := genesis.Config
 	getHash := func(num uint64) common.Hash {
@@ -72,7 +72,7 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 		gasUsed     = uint64(0)
 		receipts    = make(types.Receipts, 0)
 		txIndex     = 0
-		signer      = types.MakeSigner(chainConfig, new(big.Int).SetUint64(0), 0)
+		//signer      = types.MakeSigner(chainConfig, new(big.Int).SetUint64(0), 0)
 	)
 
 	gaspool.AddGas(genesis.GasLimit)
@@ -85,10 +85,7 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 		Difficulty:  genesis.Difficulty,
 		GasLimit:    genesis.GasLimit,
 		GetHash:     getHash,
-	}
-	// If currentBaseFee is defined, add it to the vmContext.
-	if genesis.BaseFee != nil {
-		vmContext.BaseFee = new(big.Int).Set(genesis.BaseFee)
+		BaseFee:     big.NewInt(0),
 	}
 	// If DAO is supported/enabled, we need to handle it here. In geth 'proper', it's
 	// done in StateProcessor.Process(block, ...), right before transactions are applied.
@@ -101,7 +98,7 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 		Tracer: nil,
 	}
 	for i, tx := range txs {
-		msg, err := core.TransactionToMessage(tx.Transaction, signer, genesis.BaseFee)
+		msg, err := TransactionToMessage(tx.Transaction, SysContractDeployerAddress, genesis.BaseFee)
 		if err != nil {
 			log.Warn("rejected tx", "index", i, "hash", tx.Hash(), "error", err)
 			return nil, err
@@ -161,19 +158,24 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 	}
 	statedb.IntermediateRoot(chainConfig.IsEIP158(vmContext.BlockNumber))
 	// Commit block
-	_, err := statedb.Commit(vmContext.BlockNumber.Uint64(), chainConfig.IsEIP158(vmContext.BlockNumber))
+	root, err := statedb.Commit(vmContext.BlockNumber.Uint64(), chainConfig.IsEIP158(vmContext.BlockNumber))
 	if err != nil {
 		return nil, fmt.Errorf("could not commit state: %v", err)
 	}
-
+	// Re-create statedb instance with new root upon the updated database
+	// for accessing latest states.
+	statedb, err = state.New(root, statedb.Database(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not reopen state: %v", err)
+	}
 	collector := make(Alloc)
 	statedb.DumpToCollector(collector, nil)
 	return collector, nil
 }
 
 func MakePreState(db ethdb.Database, accounts core.GenesisAlloc) *state.StateDB {
-	sdb := state.NewDatabase(db)
-	statedb, _ := state.New(common.Hash{}, sdb, nil)
+	sdb := state.NewDatabaseWithConfig(db, &triedb.Config{Preimages: true})
+	statedb, _ := state.New(types.EmptyRootHash, sdb, nil)
 	for addr, a := range accounts {
 		statedb.SetCode(addr, a.Code)
 		statedb.SetNonce(addr, a.Nonce)
@@ -274,4 +276,28 @@ func NewTransactorWithChainID(addr common.Address, chainID *big.Int) (*bind.Tran
 		From:    addr,
 		Context: context.Background(),
 	}, nil
+}
+
+// TransactionToMessage converts a transaction into a Message.
+func TransactionToMessage(tx *types.Transaction, from common.Address, baseFee *big.Int) (*core.Message, error) {
+	msg := &core.Message{
+		Nonce:             tx.Nonce(),
+		GasLimit:          tx.Gas(),
+		GasPrice:          new(big.Int).Set(tx.GasPrice()),
+		GasFeeCap:         new(big.Int).Set(tx.GasFeeCap()),
+		GasTipCap:         new(big.Int).Set(tx.GasTipCap()),
+		To:                tx.To(),
+		Value:             tx.Value(),
+		Data:              tx.Data(),
+		AccessList:        tx.AccessList(),
+		SkipAccountChecks: false,
+		BlobHashes:        tx.BlobHashes(),
+		BlobGasFeeCap:     tx.BlobGasFeeCap(),
+	}
+	// If baseFee provided, set gasPrice to effectiveGasPrice.
+	if baseFee != nil {
+		msg.GasPrice = cmath.BigMin(msg.GasPrice.Add(msg.GasTipCap, baseFee), msg.GasFeeCap)
+	}
+	msg.From = from
+	return msg, nil
 }

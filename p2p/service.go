@@ -431,10 +431,6 @@ func (s *Service) GetGenesisHash() *hash.Hash {
 	return s.blockChain.BlockDAG().GetGenesisHash()
 }
 
-func (s *Service) SetBlockChain(blockChain *blockchain.BlockChain) {
-	s.blockChain = blockChain
-}
-
 func (s *Service) BlockChain() *blockchain.BlockChain {
 	return s.blockChain
 }
@@ -698,6 +694,7 @@ func NewService(cfg *config.Config, consensus model.Consensus, param *params.Par
 		isPreGenesis:  true,
 		events:        consensus.Events(),
 		consensus:     consensus,
+		blockChain:    consensus.BlockChain().(*blockchain.BlockChain),
 	}
 	s.InitContext()
 

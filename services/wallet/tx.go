@@ -195,7 +195,7 @@ func (a *WalletManager) sendTxWithUtxos(fromAddress string, amount int64, output
 	return a.tm.ProcessRawTx(serializedTx, false)
 }
 
-func (a *WalletManager) SpendUtxo(inputs []json.TransactionInput, amounts json.AdreesAmount, lockTime *int64) (*types.Transaction, error) {
+func (a *WalletManager) SpendUtxo(inputs []json.TransactionInput, amounts json.AddressAmount, lockTime *int64) (*types.Transaction, error) {
 	ac := a.GetAccountByIdx(0)
 	pri, ok := a.qks.unlocked[ac.PKHAddress().String()]
 	if !ok {

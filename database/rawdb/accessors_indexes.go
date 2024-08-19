@@ -6,13 +6,12 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"math"
-	"strings"
 )
 
 func ReadTxLookupEntry(db ethdb.Reader, hash *hash.Hash) *uint64 {
 	data, err := db.Get(txLookupKey(hash))
 	if len(data) == 0 {
-		if isErrWithoutNotFound(err) && len(err.Error()) > 0 && !strings.Contains(err.Error(), "not found") {
+		if isErrWithoutNotFound(err) {
 			log.Error("tx lookup entry", "err", err.Error())
 		}
 		return nil

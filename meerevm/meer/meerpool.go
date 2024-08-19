@@ -7,8 +7,11 @@ package meer
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
+	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
 	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
 	"github.com/ethereum/go-ethereum/eth"
@@ -29,6 +32,7 @@ import (
 const (
 	txChanSize        = 4096
 	chainHeadChanSize = 10
+	blockTag          = byte(1)
 )
 
 type resetTemplateMsg struct {
@@ -68,8 +72,7 @@ type MeerPool struct {
 	syncing atomic.Bool // The indicator whether the node is still syncing.
 	dirty   atomic.Bool
 
-	payload *miner.Payload
-	p2pSer  model.P2PService
+	p2pSer model.P2PService
 }
 
 func (m *MeerPool) Start() {
@@ -121,10 +124,14 @@ func (m *MeerPool) handler() {
 			}
 			if !m.qTxPool.IsSupportVMTx() {
 				for _, tx := range ev.Txs {
-					m.ethTxPool.RemoveTx(tx.Hash(), false)
+					m.ethTxPool.RemoveTx(tx.Hash(), true)
 				}
 				continue
 			}
+			if !m.prepareMeerChangeTxs(ev.Txs) {
+				continue
+			}
+
 			m.qTxPool.TriggerDirty()
 			m.p2pSer.Notify().AnnounceNewTransactions(nil, ev.Txs, nil)
 			m.dirty.Store(true)
@@ -146,6 +153,33 @@ func (m *MeerPool) handler() {
 	}
 }
 
+func (m *MeerPool) prepareMeerChangeTxs(txs []*types.Transaction) bool {
+	if !forks.IsMeerChangeForkHeight(int64(m.consensus.BlockChain().GetMainChainTip().GetHeight())) {
+		return false
+	}
+	for _, tx := range txs {
+		if tx == nil {
+			continue
+		}
+		if meerchange.IsMeerChangeExportTx(tx) ||
+			meerchange.IsMeerChangeExport4337Tx(tx) {
+			vmtx, err := meer.NewVMTx(qcommon.ToQNGTx(tx, 0, true).Tx, nil)
+			if err != nil {
+				log.Error(err.Error())
+				m.ethTxPool.RemoveTx(tx.Hash(), true)
+				continue
+			}
+			err = m.consensus.BlockChain().VerifyMeerTx(vmtx)
+			if err != nil {
+				log.Error(err.Error())
+				m.ethTxPool.RemoveTx(tx.Hash(), true)
+				continue
+			}
+		}
+	}
+	return true
+}
+
 func (m *MeerPool) handleStallSample() {
 	if m.syncing.Load() {
 		return
@@ -156,21 +190,43 @@ func (m *MeerPool) handleStallSample() {
 	if !m.dirty.Load() {
 		return
 	}
-	block := m.payload.ResolveFullBlock()
-	if time.Since(time.Unix(int64(block.Time()), 0)) <= params.ActiveNetParams.TargetTimePerBlock {
-		return
+	m.snapshotMu.Lock()
+	block := m.snapshotBlock
+	m.snapshotMu.Unlock()
+	if block != nil {
+		if time.Since(time.Unix(int64(block.Time()), 0)) <= params.ActiveNetParams.TargetTimePerBlock {
+			return
+		}
 	}
+
 	go m.ResetTemplate()
 }
 
-func (m *MeerPool) updateSnapshot() error {
-	if m.payload == nil {
+func (m *MeerPool) updateTemplate(force bool) error {
+	if m.syncing.Load() {
 		return nil
 	}
+	parentHash := m.eth.BlockChain().CurrentBlock().Hash()
+	m.snapshotMu.Lock()
+	if m.snapshotBlock != nil && !force {
+		if parentHash == m.snapshotBlock.ParentHash() {
+			return nil
+		}
+	}
+	m.snapshotMu.Unlock()
+
+	block, receipts, _ := m.eth.Miner().Pending()
+	if block == nil {
+		return nil
+	}
+	err := m.checkMeerChangeTxs(block, receipts)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+
 	m.snapshotMu.Lock()
 	defer m.snapshotMu.Unlock()
-
-	block := m.payload.ResolveFullBlock()
 
 	m.snapshotBlock = block
 	m.snapshotQTxsM = map[string]*snapshotTx{}
@@ -185,38 +241,9 @@ func (m *MeerPool) updateSnapshot() error {
 		}
 	}
 	//
-	log.Debug("update meerpool snapshot", "size", txsNum)
-	return nil
-}
-
-func (m *MeerPool) updateTemplate(force bool) error {
-	if m.syncing.Load() {
-		return nil
-	}
-	parentHash := m.eth.BlockChain().CurrentBlock().Hash()
-	if m.payload != nil && !force {
-		if parentHash == m.payload.ResolveEmpty().ExecutionPayload.ParentHash {
-			return nil
-		}
-	}
-	log.Debug("meerpool update block template")
-
-	args := &miner.BuildPayloadArgs{
-		Parent:       parentHash,
-		Timestamp:    uint64(time.Now().Unix() + 1),
-		FeeRecipient: common.Address{},
-		Random:       common.Hash{},
-		Withdrawals:  nil,
-		BeaconRoot:   nil,
-	}
-	payload, err := m.eth.Miner().BuildPayload(args)
-	if err != nil {
-		log.Error(err.Error())
-		return err
-	}
-	m.payload = payload
+	log.Debug("meerpool update block template", "txs", txsNum)
 	m.dirty.Store(false)
-	return m.updateSnapshot()
+	return nil
 }
 
 func (m *MeerPool) GetTxs() ([]*qtypes.Tx, []*hash.Hash, error) {

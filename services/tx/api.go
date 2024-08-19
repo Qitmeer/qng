@@ -55,12 +55,12 @@ func NewPublicTxAPI(tm *TxManager) *PublicTxAPI {
 }
 
 func (api *PublicTxAPI) CreateRawTransactionV2(inputs []json.TransactionInput,
-	amounts json.AdreesAmount, lockTime *int64) (interface{}, error) {
+	amounts json.AddressAmount, lockTime *int64) (interface{}, error) {
 	return api.txManager.CreateRawTransactionV2(inputs, amounts, lockTime)
 }
 
 func (api *PublicTxAPI) CreateRawTransaction(inputs []json.TransactionInput, amounts json.Amounts, lockTime *int64) (interface{}, error) {
-	aa := json.AdreesAmount{}
+	aa := json.AddressAmount{}
 	if len(amounts) > 0 {
 		for k, v := range amounts {
 			aa[k] = json.Amout{CoinId: uint16(types.MEERA), Amount: int64(v)}
@@ -1153,7 +1153,7 @@ func (api *PublicTxAPI) CreateExportRawTransaction(txid string, vout uint32, pkA
 		return nil, fmt.Errorf("Amount is empty")
 	}
 
-	aa := json.AdreesAmount{}
+	aa := json.AddressAmount{}
 	aa[pkAddress] = json.Amout{CoinId: uint16(types.MEERB), Amount: amount}
 	inputs := []json.TransactionInput{
 		json.TransactionInput{Txid: txid, Vout: vout},
@@ -1181,7 +1181,7 @@ func (api *PublicTxAPI) CreateExportRawTransactionV2(inputs []json.TransactionIn
 		return nil, fmt.Errorf("%s is not public key address", ePKAddress)
 	}
 
-	aa := json.AdreesAmount{}
+	aa := json.AddressAmount{}
 	aa[ePKAddress] = json.Amout{CoinId: uint16(types.MEERB), Amount: eAmount}
 	if len(outputs) > 0 {
 		for k, v := range outputs {

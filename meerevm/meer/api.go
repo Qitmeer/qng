@@ -1,5 +1,11 @@
 package meer
 
+import (
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+)
+
 type PublicMeerChainAPI struct {
 	mc *MeerChain
 }
@@ -35,4 +41,20 @@ type MeerChainInfo struct {
 	IPC       string `json:"ipc,omitempty"`
 	HTTP      string `json:"http,omitempty"`
 	WS        string `json:"ws,omitempty"`
+}
+
+type PrivateMeerChainAPI struct {
+	mc *MeerChain
+}
+
+func NewPrivateMeerChainAPI(mc *MeerChain) *PrivateMeerChainAPI {
+	return &PrivateMeerChainAPI{mc}
+}
+
+func (api *PrivateMeerChainAPI) CalcExport4337Sig(txid hash.Hash, idx uint32, fee uint64, privKeyHex string) (interface{}, error) {
+	sig, err := meerchange.CalcExport4337Sig(meerchange.CalcExport4337Hash(&txid, idx, fee), privKeyHex)
+	if err != nil {
+		return nil, err
+	}
+	return hexutil.Encode(sig), nil
 }
