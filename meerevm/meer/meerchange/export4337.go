@@ -8,6 +8,7 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	mcommon "github.com/Qitmeer/qng/meerevm/common"
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -30,7 +31,7 @@ func CalcExport4337Hash(txid *hash.Hash, idx uint32, fee uint64) common.Hash {
 	binary.BigEndian.PutUint64(sfee[:], fee)
 	data = append(data, sfee[:]...)
 
-	return crypto.Keccak256Hash(data)
+	return common.BytesToHash(accounts.TextHash(data))
 }
 
 func CalcExport4337Sig(hash common.Hash, privKeyHex string) ([]byte, error) {
