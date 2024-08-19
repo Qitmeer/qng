@@ -9,7 +9,7 @@ import (
 	"github.com/Qitmeer/qng/crypto/bip39"
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/crypto/seed"
-	"github.com/Qitmeer/qng/wallet"
+	"github.com/Qitmeer/qng/services/wallet/hd"
 	"strconv"
 )
 
@@ -95,15 +95,18 @@ const bip32_ByteSize = 78 + 4
 
 // The Serialization format of BIP32 Key
 // https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#serialization-format
-//  4 bytes: version bytes
-//           mainnet: 0x0488B21E public, 0x0488ADE4 private; testnet: 0x043587CF public, 0x04358394 private
-//  1 byte : depth: 0x00 for master nodes, 0x01 for level-1 derived keys, ....
-//  4 bytes: the fingerprint of the parent's key (0x00000000 if master key)
-//  4 bytes: child number. This is ser32(i) for i in xi = xpar/i, with xi the key being serialized. (0x00000000 if master key)
-//           index ≥ 0x80000000 to hardened keys
+//
+//	4 bytes: version bytes
+//	         mainnet: 0x0488B21E public, 0x0488ADE4 private; testnet: 0x043587CF public, 0x04358394 private
+//	1 byte : depth: 0x00 for master nodes, 0x01 for level-1 derived keys, ....
+//	4 bytes: the fingerprint of the parent's key (0x00000000 if master key)
+//	4 bytes: child number. This is ser32(i) for i in xi = xpar/i, with xi the key being serialized. (0x00000000 if master key)
+//	         index ≥ 0x80000000 to hardened keys
+//
 // 32 bytes: the chain code
 // 33 bytes: the public key or private key data (serP(K) for public keys, 0x00 || ser256(k) for private keys)
-//  4 bytes: checksum
+//
+//	4 bytes: checksum
 func HdDecode(keyStr string) {
 	data := base58.Decode([]byte(keyStr))
 	if len(data) != bip32_ByteSize {
@@ -147,7 +150,7 @@ func HdDecode(keyStr string) {
 
 }
 
-func HdDerive(hard bool, index uint32, path wallet.DerivationPath, version bip32.Bip32Version, key string) {
+func HdDerive(hard bool, index uint32, path hd.DerivationPath, version bip32.Bip32Version, key string) {
 	data := base58.Decode([]byte(key))
 	if len(data) != bip32_ByteSize {
 		ErrExit(fmt.Errorf("invalid bip32 key size (%d), the size hould be %d", len(data), bip32_ByteSize))

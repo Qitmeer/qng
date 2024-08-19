@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package wallet
+package hd
 
 import (
 	"errors"
@@ -54,7 +54,7 @@ var EthLedgerBaseDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 6
 // The BIP-32 spec https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
 // defines derivation paths to be of the form:
 //
-//   m / purpose' / coin_type' / account' / change / address_index
+//	m / purpose' / coin_type' / account' / change / address_index
 //
 // The BIP-44 spec https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki
 // defines that the `purpose` be 44' (or 0x8000002C) for crypto currencies, and

@@ -6,6 +6,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/Qitmeer/qng/services/wallet/hd"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/qx"
 	ver "github.com/Qitmeer/qng/version"
-	"github.com/Qitmeer/qng/wallet"
 )
 
 const (
@@ -330,7 +330,7 @@ func main() {
 	}
 	hdDeriveCmd.UintVar(&hdIndex, "i", 0, "The HD `index`")
 	hdDeriveCmd.BoolVar(&hdHarden, "d", false, "create a hardened key")
-	derivePath = qx.DerivePathFlag{Path: wallet.DerivationPath{}}
+	derivePath = qx.DerivePathFlag{Path: hd.DerivationPath{}}
 	hdDeriveCmd.Var(&derivePath, "p", "hd derive `path`. ex: m/44'/0'/0'/0")
 	hdDeriveCmd.Var(&hdVer, "v", "The HD(BIP32) `version` [mainnet|testnet|privnet|bip32]")
 

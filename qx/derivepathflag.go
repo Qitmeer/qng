@@ -3,14 +3,16 @@
 // license that can be found in the LICENSE file.
 package qx
 
-import "github.com/Qitmeer/qng/wallet"
+import (
+	"github.com/Qitmeer/qng/services/wallet/hd"
+)
 
 type DerivePathFlag struct {
-	Path wallet.DerivationPath
+	Path hd.DerivationPath
 }
 
 func (d *DerivePathFlag) Set(s string) error {
-	path, err := wallet.ParseDerivationPath(s)
+	path, err := hd.ParseDerivationPath(s)
 	if err != nil {
 		return err
 	}
