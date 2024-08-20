@@ -1,9 +1,9 @@
 package meer
 
 import (
+	"encoding/hex"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 type PublicMeerChainAPI struct {
@@ -56,5 +56,5 @@ func (api *PrivateMeerChainAPI) CalcExport4337Sig(txid hash.Hash, idx uint32, fe
 	if err != nil {
 		return nil, err
 	}
-	return hexutil.Encode(sig), nil
+	return hex.EncodeToString(sig), nil
 }

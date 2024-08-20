@@ -9,12 +9,10 @@ import (
 	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/engine/txscript"
-	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
 	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"math/big"
 )
 
 func (m *MeerPool) checkMeerChangeTxs(block *types.Block, receipts types.Receipts) error {
@@ -177,10 +175,8 @@ func (m *MeerPool) checkMeerChangeExport4337Tx(ced *meerchange.MeerchangeExport4
 	if err != nil {
 		return err
 	}
-	eAmount := big.NewInt(entry.Amount().Value)
-	eAmount.Mul(eAmount, qcommon.Precision)
-	if eAmount.Uint64() <= ced.Opt.Fee {
-		return fmt.Errorf("UTXO amount(%d) is insufficient, the actual fee is %d", eAmount.Uint64(), ced.Opt.Fee)
+	if uint64(entry.Amount().Value) <= ced.Opt.Fee {
+		return fmt.Errorf("UTXO amount(%d) is insufficient, the actual fee is %d", entry.Amount().Value, ced.Opt.Fee)
 	}
 	ced.Amount = entry.Amount()
 	if utxoView != nil && ok {

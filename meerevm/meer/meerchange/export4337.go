@@ -45,7 +45,7 @@ func CalcExport4337Sig(hash common.Hash, privKeyHex string) ([]byte, error) {
 type MeerchangeExport4337OptData struct {
 	Txid [32]byte
 	Idx  uint32
-	Fee  uint64
+	Fee  uint64 // Atoms per meer
 	Sig  string
 }
 
