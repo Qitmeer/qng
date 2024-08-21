@@ -318,19 +318,24 @@ func (b *MeerChain) OnStateChange(header *types.Header, state *state.StateDB, bo
 			}
 			if vmtx.Export4337Data.Amount.Value <= 0 {
 				log.Error("meerchange export4337 amout is invalid", "hash", tx.Hash().String())
+				return
 			}
-			value := big.NewInt(vmtx.Export4337Data.Amount.Value)
+			if uint64(vmtx.Export4337Data.Amount.Value) <= vmtx.Export4337Data.Opt.Fee {
+				log.Error("UTXO amount is insufficient", "utxo amout", vmtx.Export4337Data.Amount.Value, "fee", vmtx.Export4337Data.Opt.Fee, "hash", tx.Hash().String())
+				return
+			}
+			value := big.NewInt(vmtx.Export4337Data.Amount.Value - int64(vmtx.Export4337Data.Opt.Fee))
 			value = value.Mul(value, qcommon.Precision)
-			if value.Uint64() <= vmtx.Export4337Data.Opt.Fee {
-				log.Error("UTXO amount is insufficient", "utxo amout", value.Uint64(), "fee", vmtx.Export4337Data.Opt.Fee, "hash", tx.Hash().String())
-			}
-			mValue := uint256.NewInt(value.Uint64() - vmtx.Export4337Data.Opt.Fee)
-			state.AddBalance(master, mValue, tracing.BalanceChangeTransfer)
-			state.AddBalance(proxy, uint256.NewInt(vmtx.Export4337Data.Opt.Fee), tracing.BalanceChangeTransfer)
+
+			fee := big.NewInt(int64(vmtx.Export4337Data.Opt.Fee))
+			fee = fee.Mul(fee, qcommon.Precision)
+
+			state.AddBalance(master, uint256.MustFromBig(value), tracing.BalanceChangeTransfer)
+			state.AddBalance(proxy, uint256.MustFromBig(fee), tracing.BalanceChangeTransfer)
 			op, _ := vmtx.Export4337Data.GetOutPoint()
 			log.Debug("meer tx add balance from utxo", "txhash", tx.Hash().String(), "utxoTxid",
 				op.Hash.String(), "utxoIdx", op.OutIndex, "amout", vmtx.Export4337Data.Amount.Value, "add",
-				mValue.Uint64(), "master", master.String(), "proxyFee", vmtx.Export4337Data.Opt.Fee, "proxy", proxy.String())
+				value.String(), "master", master.String(), "proxyFee", fee.String(), "proxy", proxy.String())
 		}
 
 	}
