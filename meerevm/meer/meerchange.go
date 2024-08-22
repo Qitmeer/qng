@@ -9,6 +9,7 @@ import (
 	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
 	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -57,6 +58,11 @@ func (m *MeerPool) checkMeerChangeTxs(block *types.Block, receipts types.Receipt
 						m.ethTxPool.RemoveTx(tx.Hash(), true)
 						return err
 					}
+				case meerchange.LogImportSigHash.Hex():
+					amount := tx.Value().Div(tx.Value(), common.Precision)
+					if amount.Uint64() <= 0 {
+						return fmt.Errorf("import amount empty:%s", tx.Value().String())
+					}
 				default:
 					log.Warn("Not Supported", "addr", lg.Address.String(), "tx", lg.TxHash.String(), "topic", lg.Topics[0].Hex())
 				}
@@ -78,6 +84,9 @@ func (m *MeerPool) checkSignature(tx *types.Transaction, entry *utxo.UtxoEntry) 
 
 	signer := types.NewPKSigner(m.eth.BlockChain().Config().ChainID)
 	pkb, err := signer.GetPublicKey(tx)
+	if err != nil {
+		return err
+	}
 	pubKey, err := ecc.Secp256k1.ParsePubKey(pkb)
 	if err != nil {
 		return err

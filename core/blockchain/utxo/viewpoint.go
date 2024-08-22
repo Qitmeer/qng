@@ -124,6 +124,18 @@ func (view *UtxoViewpoint) AddTokenTxOut(outpoint types.TxOutPoint, pkscript []b
 	entry.packedFlags = tfModified
 }
 
+func (view *UtxoViewpoint) AddMeerChangeImportTxOut(outpoint types.TxOutPoint, output *types.TxOutput) {
+	entry := view.LookupEntry(outpoint)
+	if entry == nil {
+		entry = new(UtxoEntry)
+		view.entries[outpoint] = entry
+	}
+
+	entry.amount = output.Amount
+	entry.pkScript = output.PkScript
+	entry.packedFlags = tfModified
+}
+
 // Viewpoints returns the hash of the viewpoint block in the chain the view currently
 // respresents.
 func (view *UtxoViewpoint) Viewpoints() []*hash.Hash {

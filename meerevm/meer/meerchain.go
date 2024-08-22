@@ -277,7 +277,7 @@ func (b *MeerChain) OnStateChange(header *types.Header, state *state.StateDB, bo
 		return
 	}
 	if b.block == nil {
-		log.Error("No meer block for state change:%s", header.Hash().String())
+		log.Error("No meer block for state change", "hash", header.Hash().String())
 		return
 	}
 	signer := types.LatestSigner(b.chain.Config().Eth.Genesis.Config)
