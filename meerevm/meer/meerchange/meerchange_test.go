@@ -6,7 +6,9 @@ import (
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/testprivatekey"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/crypto"
+	"strings"
 	"testing"
 )
 
@@ -98,4 +100,35 @@ func TestMeerChangeExport4337Input(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log("outpoint", "txid", op.Hash.String(), "idx", op.OutIndex, "fee", ccExportEvent.Opt.Fee, "sig", ccExportEvent.Opt.Sig)
+}
+
+func TestMeerChangeImportLog(t *testing.T) {
+	topicHex := "0xb9ba2e23b17fbc3f0029c3a6600ef2dd4484bea87a99c7aab54caf84dedcf96b"
+
+	if topicHex != LogImportSigHash.String() {
+		t.Fatalf("import log error:%s expect:%s", topicHex, LogImportSigHash.String())
+	}
+}
+
+func TestMeerChangeImportInput(t *testing.T) {
+	data, err := hex.DecodeString("a8770e69")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) < 4 {
+		t.Fatalf("input data format error")
+	}
+	contractAbi, err := abi.JSON(strings.NewReader(MeerchangeMetaData.ABI))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	method, err := contractAbi.MethodById(data[:4])
+	if err != nil {
+		t.Fatal(err)
+	}
+	funcName := (&MeerchangeImportData{}).GetFuncName()
+	if method.Name != funcName {
+		t.Fatalf("Inconsistent methods and parameters:%s, expect:%s", method.Name, funcName)
+	}
 }

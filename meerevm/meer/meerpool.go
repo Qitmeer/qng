@@ -161,8 +161,7 @@ func (m *MeerPool) prepareMeerChangeTxs(txs []*types.Transaction) bool {
 		if tx == nil {
 			continue
 		}
-		if meerchange.IsMeerChangeExportTx(tx) ||
-			meerchange.IsMeerChangeExport4337Tx(tx) {
+		if meerchange.IsMeerChangeTx(tx) {
 			vmtx, err := meer.NewVMTx(qcommon.ToQNGTx(tx, 0, true).Tx, nil)
 			if err != nil {
 				log.Error(err.Error())
