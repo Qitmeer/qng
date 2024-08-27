@@ -133,8 +133,35 @@ func (b *MeerChain) ConnectBlock(block *mmeer.Block) (uint64, error) {
 	mbh := qcommon.ToEVMHash(block.ID())
 	//
 	log.Debug(fmt.Sprintf("MeerEVM Block:number=%d hash=%s txs=%d  => blockHash(%s) txs=%d", mblock.Number().Uint64(), mblock.Hash().String(), len(mblock.Transactions()), mbh.String(), len(block.Transactions())))
+	return mblock.NumberU64(), b.finalized(mblock)
+}
 
-	return mblock.NumberU64(), nil
+func (b *MeerChain) finalized(block *types.Block) error {
+	number := block.Number().Uint64()
+	var finalizedNumber uint64
+	epochLength := uint64(params.ActiveNetParams.CoinbaseMaturity)
+	var cnumber uint64
+	if number <= epochLength {
+		cnumber = 0
+	} else {
+		cnumber = number - epochLength
+	}
+	if cnumber <= 0 {
+		finalizedNumber = 0
+	} else {
+		if cnumber%epochLength == 0 {
+			finalizedNumber = cnumber
+		} else {
+			finalizedNumber = (cnumber - 1) / epochLength * epochLength
+		}
+	}
+
+	h := b.chain.Ether().BlockChain().GetHeaderByNumber(finalizedNumber)
+	if h == nil {
+		return nil
+	}
+	b.chain.Ether().BlockChain().SetFinalized(h)
+	return nil
 }
 
 func (b *MeerChain) buildBlock(parent *types.Header, qtxs []model.Tx, timestamp int64) (*types.Block, types.Receipts, *state.StateDB, error) {

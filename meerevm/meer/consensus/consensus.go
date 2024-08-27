@@ -7,24 +7,28 @@ package consensus
 import (
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qng/consensus/forks"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/holiman/uint256"
 	"golang.org/x/crypto/sha3"
 	"math/big"
-	"runtime"
 )
 
 var (
 	errUnclesUnsupported = errors.New("uncles unsupported")
+	errOlderBlockTime    = errors.New("timestamp older than parent")
 )
 
 func (me *MeerEngine) Author(header *types.Header) (common.Address, error) {
@@ -52,70 +56,31 @@ func (me *MeerEngine) VerifyHeaders(chain consensus.ChainHeaderReader, headers [
 		}
 		return abort, results
 	}
+	abort := make(chan struct{})
+	results := make(chan error, len(headers))
 
-	// Spawn as many workers as allowed threads
-	workers := runtime.GOMAXPROCS(0)
-	if len(headers) < workers {
-		workers = len(headers)
-	}
-
-	// Create a task channel and spawn the verifiers
-	var (
-		inputs = make(chan int)
-		done   = make(chan int, workers)
-		errors = make([]error, len(headers))
-		abort  = make(chan struct{})
-	)
-	for i := 0; i < workers; i++ {
-		go func() {
-			for index := range inputs {
-				errors[index] = me.verifyHeaderWorker(chain, headers, index)
-				done <- index
-			}
-		}()
-	}
-
-	errorsOut := make(chan error, len(headers))
 	go func() {
-		defer close(inputs)
-		var (
-			in, out = 0, 0
-			checked = make([]bool, len(headers))
-			inputs  = inputs
-		)
-		for {
+		for i, header := range headers {
+			var parent *types.Header
+			if i == 0 {
+				parent = chain.GetHeader(headers[0].ParentHash, headers[0].Number.Uint64()-1)
+			} else if headers[i-1].Hash() == headers[i].ParentHash {
+				parent = headers[i-1]
+			}
+			var err error
+			if parent == nil {
+				err = consensus.ErrUnknownAncestor
+			} else {
+				err = me.verifyHeader(chain, header, parent)
+			}
 			select {
-			case inputs <- in:
-				if in++; in == len(headers) {
-					// Reached end of headers. Stop sending to workers.
-					inputs = nil
-				}
-			case index := <-done:
-				for checked[index] = true; checked[out]; out++ {
-					errorsOut <- errors[out]
-					if out == len(headers)-1 {
-						return
-					}
-				}
 			case <-abort:
 				return
+			case results <- err:
 			}
 		}
 	}()
-	return abort, errorsOut
-}
-
-func (me *MeerEngine) verifyHeaderWorker(chain consensus.ChainHeaderReader, headers []*types.Header, index int) error {
-	var parent *types.Header
-	if index == 0 {
-		parent = chain.GetHeader(headers[0].ParentHash, headers[0].Number.Uint64()-1)
-	} else if headers[index-1].Hash() == headers[index].ParentHash {
-		parent = headers[index-1]
-	}
-	if parent == nil {
-		return consensus.ErrUnknownAncestor
-	}
-	return me.verifyHeader(chain, headers[index], parent)
+	return abort, results
 }
 
 func (me *MeerEngine) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
@@ -126,21 +91,32 @@ func (me *MeerEngine) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 }
 
 func (me *MeerEngine) verifyHeader(chain consensus.ChainHeaderReader, header, parent *types.Header) error {
+	if header.Time <= parent.Time {
+		return errOlderBlockTime
+	}
 	// Verify that the gas limit is <= 2^63-1
-	cap := uint64(0x7fffffffffffffff)
-	if header.GasLimit > cap {
-		return fmt.Errorf("invalid gasLimit: have %v, max %v", header.GasLimit, cap)
+	if header.GasLimit > params.MaxGasLimit {
+		return fmt.Errorf("invalid gasLimit: have %v, max %v", header.GasLimit, params.MaxGasLimit)
 	}
 	// Verify that the gasUsed is <= gasLimit
 	if header.GasUsed > header.GasLimit {
 		return fmt.Errorf("invalid gasUsed: have %d, gasLimit %d", header.GasUsed, header.GasLimit)
 	}
+
 	// Verify the block's gas usage and (if applicable) verify the base fee.
 	if !chain.Config().IsLondon(header.Number) {
 		// Verify BaseFee not present before EIP-1559 fork.
 		if header.BaseFee != nil {
 			return fmt.Errorf("invalid baseFee before fork: have %d, expected 'nil'", header.BaseFee)
 		}
+		if !forks.NeedFixedGasLimit(parent.Number.Int64(), chain.Config().ChainID.Int64()) {
+			if err := misc.VerifyGaslimit(parent.GasLimit, header.GasLimit); err != nil {
+				return err
+			}
+		}
+	} else if err := eip1559.VerifyEIP1559Header(chain.Config(), parent, header); err != nil {
+		// Verify the header's EIP-1559 attributes.
+		return err
 	}
 	// Verify that the block number is parent's +1
 	if diff := new(big.Int).Sub(header.Number, parent.Number); diff.Cmp(big.NewInt(1)) != 0 {
@@ -149,6 +125,34 @@ func (me *MeerEngine) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 	// If all checks passed, validate any special fields for hard forks
 	if err := misc.VerifyDAOHeaderExtraData(chain.Config(), header); err != nil {
 		return err
+	}
+
+	// Verify existence / non-existence of withdrawalsHash.
+	shanghai := chain.Config().IsShanghai(header.Number, header.Time)
+	if shanghai && header.WithdrawalsHash == nil {
+		return errors.New("missing withdrawalsHash")
+	}
+	if !shanghai && header.WithdrawalsHash != nil {
+		return fmt.Errorf("invalid withdrawalsHash: have %x, expected nil", header.WithdrawalsHash)
+	}
+	// Verify the existence / non-existence of cancun-specific header fields
+	cancun := chain.Config().IsCancun(header.Number, header.Time)
+	if !cancun {
+		switch {
+		case header.ExcessBlobGas != nil:
+			return fmt.Errorf("invalid excessBlobGas: have %d, expected nil", header.ExcessBlobGas)
+		case header.BlobGasUsed != nil:
+			return fmt.Errorf("invalid blobGasUsed: have %d, expected nil", header.BlobGasUsed)
+		case header.ParentBeaconRoot != nil:
+			return fmt.Errorf("invalid parentBeaconRoot, have %#x, expected nil", header.ParentBeaconRoot)
+		}
+	} else {
+		if header.ParentBeaconRoot == nil {
+			return errors.New("header is missing beaconRoot")
+		}
+		if err := eip4844.VerifyEIP4844Header(parent, header); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -167,13 +171,27 @@ func (me *MeerEngine) Finalize(chain consensus.ChainHeaderReader, header *types.
 	if me.StateChange != nil {
 		me.StateChange(header, state, body)
 	}
-	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 }
 
 func (me *MeerEngine) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, body *types.Body, receipts []*types.Receipt) (*types.Block, error) {
+	shanghai := chain.Config().IsShanghai(header.Number, header.Time)
+	if shanghai {
+		// All blocks after Shanghai must include a withdrawals root.
+		if body.Withdrawals == nil {
+			body.Withdrawals = make([]*types.Withdrawal, 0)
+		}
+	} else {
+		if len(body.Withdrawals) > 0 {
+			return nil, errors.New("withdrawals set before Shanghai activation")
+		}
+	}
+	// Finalize and assemble the block.
 	me.Finalize(chain, header, state, body)
 
-	// Header seems complete, assemble into a block and return
+	// Assign the final state root to header.
+	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+
+	// Assemble and return the final block.
 	return types.NewBlock(header, body, receipts, trie.NewStackTrie(nil)), nil
 }
 
