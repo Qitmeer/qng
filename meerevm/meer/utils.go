@@ -6,6 +6,7 @@ import (
 	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -35,6 +36,20 @@ func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB
 			parentGasLimit := parent.GasLimit() * cfg.Genesis.Config.ElasticityMultiplier()
 			header.GasLimit = core.CalcGasLimit(parentGasLimit, parentGasLimit)
 		}
+	}
+	if cfg.Genesis.Config.IsCancun(header.Number, header.Time) {
+		var (
+			parentExcessBlobGas uint64
+			parentBlobGasUsed   uint64
+		)
+		if parent.ExcessBlobGas() != nil {
+			parentExcessBlobGas = *parent.ExcessBlobGas()
+			parentBlobGasUsed = *parent.BlobGasUsed()
+		}
+		excessBlobGas := eip4844.CalcExcessBlobGas(parentExcessBlobGas, parentBlobGasUsed)
+		header.ExcessBlobGas = &excessBlobGas
+		header.BlobGasUsed = new(uint64)
+		header.ParentBeaconRoot = new(common.Hash)
 	}
 	return header
 }
