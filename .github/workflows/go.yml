@@ -31,7 +31,7 @@ jobs:
           node-version: 20
 
       - name: solc
-        run: sudo npm install solc@0.8.3 -g
+        run: sudo npm install solc@0.8.26 -g
 
       - name: abigen
         run: go install github.com/ethereum/go-ethereum/cmd/abigen@latest
