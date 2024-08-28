@@ -40,7 +40,7 @@ func main() {
 	compileWETH()
 	compileSwapFactory()
 	compileSwapRouter()
-	compileRelease()
+	// compileRelease()  require solc 0.8.3
 	// generate file
 	f.WriteString(fileContent)
 	fmt.Println("Successfully updated:", filepath)
