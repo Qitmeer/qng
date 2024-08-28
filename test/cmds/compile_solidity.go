@@ -17,12 +17,9 @@ import (
 	"strings"
 )
 
-// wget https://github.com/ethereum/solidity/releases/download/v0.8.26/solc-static-linux
-// solc--version
-// solc, the solidity compiler commandline interface
-// Version: 0.8.26+commit.8a97fa7a.Linux.g++
+// npm install solc@0.8.26 -g
 
-const SOLC = "solc"
+const SOLC = "solcjs"
 
 // go install github.com/ethereum/go-ethereum/cmd/abigen@latest
 const ABIGEN = "abigen"

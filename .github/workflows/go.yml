@@ -31,13 +31,13 @@ jobs:
           node-version: 20
 
       - name: solc
-        run: sudo wget https://github.com/ethereum/solidity/releases/download/v0.8.26/solc-static-linux -O /usr/local/bin/solc && sudo chmod +x /usr/local/bin/solc
+        run: sudo npm install solc@0.8.26 -g
 
       - name: abigen
         run: go install github.com/ethereum/go-ethereum/cmd/abigen@latest
 
       - name: compileSolidity
-        run: solc --version && ls && cd test/cmds/ && go run compile_solidity.go && cd ../../
+        run: solcjs --version && ls && cd test/cmds/ && go run compile_solidity.go && cd ../../
 
       - name: Build
         run: |
