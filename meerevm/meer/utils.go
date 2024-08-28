@@ -15,7 +15,7 @@ import (
 	"math/big"
 )
 
-func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB, timestamp int64, gaslimit uint64) *types.Header {
+func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB, timestamp int64, gaslimit uint64, difficulty *big.Int) *types.Header {
 	ptt := int64(parent.Time())
 	if timestamp <= ptt {
 		timestamp = ptt + 1
@@ -25,7 +25,7 @@ func makeHeader(cfg *ethconfig.Config, parent *types.Block, state *state.StateDB
 		Root:       state.IntermediateRoot(cfg.Genesis.Config.IsEIP158(parent.Number())),
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
-		Difficulty: common.Big1,
+		Difficulty: difficulty,
 		GasLimit:   gaslimit,
 		Number:     new(big.Int).Add(parent.Number(), common.Big1),
 		Time:       uint64(timestamp),
