@@ -8,13 +8,13 @@ import (
 
 const (
 	// TODO:Future decision on whether to start
-	// Support MeerChange system contract at height
-	MeerChangeForkHeight = math.MaxInt64
+	// Support MeerChange system contract at evm height
+	MeerChangeForkEvmHeight = math.MaxInt64
 )
 
-func IsMeerChangeForkHeight(mainHeight int64) bool {
+func IsMeerChangeForkHeight(height int64) bool {
 	if params.ActiveNetParams.Net != protocol.MainNet {
 		return true
 	}
-	return mainHeight >= MeerChangeForkHeight
+	return height >= MeerChangeForkEvmHeight
 }

@@ -154,7 +154,7 @@ func (m *MeerPool) handler() {
 }
 
 func (m *MeerPool) prepareMeerChangeTxs(txs []*types.Transaction) bool {
-	if !forks.IsMeerChangeForkHeight(int64(m.consensus.BlockChain().GetMainChainTip().GetHeight())) {
+	if !forks.IsMeerChangeForkHeight(m.eth.BlockChain().CurrentBlock().Number.Int64()) {
 		return false
 	}
 	for _, tx := range txs {

@@ -183,7 +183,7 @@ func (b *MeerChain) buildBlock(parent *types.Header, qtxs []model.Tx, timestamp 
 		gaslimit = 0x10000000000000
 	}
 
-	header := makeHeader(&b.chain.Config().Eth, parentBlock, statedb, timestamp, gaslimit)
+	header := makeHeader(&b.chain.Config().Eth, parentBlock, statedb, timestamp, gaslimit, forks.GetCancunForkDifficulty(parent.Number.Int64()))
 
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(statedb)

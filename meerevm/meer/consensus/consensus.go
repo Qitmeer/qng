@@ -158,11 +158,15 @@ func (me *MeerEngine) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 }
 
 func (me *MeerEngine) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
-	return big.NewInt(1)
+	return forks.GetCancunForkDifficulty(parent.Number.Int64())
 }
 
 func (me *MeerEngine) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
-	header.Difficulty = big.NewInt(1)
+	number := header.Number.Int64()
+	if number > 0 {
+		number--
+	}
+	header.Difficulty = forks.GetCancunForkDifficulty(number)
 	return nil
 }
 
