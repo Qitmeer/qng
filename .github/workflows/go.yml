@@ -37,7 +37,7 @@ jobs:
         run: go install github.com/ethereum/go-ethereum/cmd/abigen@latest
 
       - name: compileSolidity
-        run: solcjs --version && ls && cd test/cmds/ && go run compile_solidity.go && cd ../../
+        run: solc --version && ls && cd test/cmds/ && go run compile_solidity.go && cd ../../
 
       - name: Build
         run: |
