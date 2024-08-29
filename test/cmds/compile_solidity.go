@@ -13,15 +13,15 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
-// npm install solcjs
-// solcjs--version
-// 0.8.3+commit.8d00100c.Emscripten.clang
+// npm install solc@0.8.26 -g
 
 const SOLC = "solcjs"
 
-// go run github.com/Qitmeer/go-etherum/cmd/abigen/main.go
+// go install github.com/ethereum/go-ethereum/cmd/abigen@latest
 const ABIGEN = "abigen"
 
 var fileContent = "// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2022 The qitmeer developers \n// This file is auto generate by : go run compile_solidity.go \npackage testcommon\n\n"
@@ -38,18 +38,35 @@ func main() {
 	compileWETH()
 	compileSwapFactory()
 	compileSwapRouter()
-	compileRelease()
 	// generate file
 	f.WriteString(fileContent)
 	fmt.Println("Successfully updated:", filepath)
 }
 
+func getPrefix(filePath string) string {
+	if SOLC == "solc" {
+		return ""
+	}
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		log.Fatalln(err)
+		return ""
+	}
+	dir := filepath.Dir(absPath)
+	absFile := dir + "/" + filepath.Base(absPath)
+	absFile = strings.ReplaceAll(absFile, "/", "_")
+	absFile = strings.ReplaceAll(absFile, ".", "_")
+	return absFile + "_"
+}
 func compileToken() {
-	if execCompileSolidity("../token/meererc20.sol") {
+	fileName := "../token/meererc20.sol"
+	if execCompileSolidity(fileName) {
 		execCMD("ls")
 		execCMD("ls", "./build")
+		prefix := fmt.Sprintf("./build/%sMEER20USDT", getPrefix(fileName))
 		// ___{dir}_{filename}_sol_{contractname}.bin
-		b, err := ioutil.ReadFile("./build/___token_meererc20_sol_MEER20USDT.bin")
+
+		b, err := ioutil.ReadFile(prefix + ".bin")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -57,28 +74,14 @@ func compileToken() {
 const ERC20Code ="%s"
 `, string(b))
 		// generate abi.go
-		execABIGO("./build/___token_meererc20_sol_MEER20USDT.abi", "token", "../token/meererc20.go")
+		execABIGO(prefix+".abi", "token", "../token/meererc20.go")
 	}
 }
-
-func compileRelease() {
-	if execCompileSolidity("../../consensus/release/mapping.sol") {
-		// ___{dir}_{filename}_sol_{contractname}.bin
-		b, err := ioutil.ReadFile("./build/______consensus_release_mapping_sol_MeerMapping.bin")
-		if err != nil {
-			log.Fatal(err)
-		}
-		fileContent += fmt.Sprintf(`
-const RELEASECode ="%s"
-`, string(b))
-		// generate abi.go
-		execABIGO("./build/___release_mapping_sol_MeerMapping.abi", "release", "../../consensus/release/release.go")
-	}
-}
-
 func compileWETH() {
-	if execCompileSolidity("../swap/weth.sol") {
-		b, err := ioutil.ReadFile("./build/___swap_weth_sol_MockWETH.bin")
+	fileName := "../swap/weth.sol"
+	if execCompileSolidity(fileName) {
+		prefix := fmt.Sprintf("./build/%sMockWETH", getPrefix(fileName))
+		b, err := ioutil.ReadFile(prefix + ".bin")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -86,13 +89,15 @@ func compileWETH() {
 const WETH ="%s"
 `, string(b))
 		// generate abi.go
-		execABIGO("./build/___swap_weth_sol_MockWETH.abi", "weth", "../swap/weth/weth.go")
+		execABIGO(prefix+".abi", "weth", "../swap/weth/weth.go")
 	}
 }
 
 func compileSwapFactory() {
-	if execCompileSolidity("../swap/factory.sol") {
-		b, err := ioutil.ReadFile("./build/___swap_factory_sol_MockUniswapV2FactoryUniswapV2Pair.bin")
+	fileName := "../swap/factory.sol"
+	if execCompileSolidity(fileName) {
+		prefix := fmt.Sprintf("./build/%sMockUniswapV2FactoryUniswapV2Pair", getPrefix(fileName))
+		b, err := ioutil.ReadFile(prefix + ".bin")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -100,8 +105,9 @@ func compileSwapFactory() {
 const PAIR ="%s"
 `, string(b))
 		// generate abi.go
-		execABIGO("./build/___swap_factory_sol_MockUniswapV2FactoryUniswapV2Pair.abi", "pair", "../swap/pair/pair.go")
-		b, err = ioutil.ReadFile("./build/___swap_factory_sol_MockUniswapV2Factory.bin")
+		execABIGO(prefix+".abi", "pair", "../swap/pair/pair.go")
+		prefix = fmt.Sprintf("./build/%sMockUniswapV2Factory", getPrefix(fileName))
+		b, err = ioutil.ReadFile(prefix + ".bin")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -109,13 +115,15 @@ const PAIR ="%s"
 const FACTORY ="%s"
 `, string(b))
 		// generate abi.go
-		execABIGO("./build/___swap_factory_sol_MockUniswapV2Factory.abi", "factory", "../swap/factory/factory.go")
+		execABIGO(prefix+".abi", "factory", "../swap/factory/factory.go")
 	}
 }
 
 func compileSwapRouter() {
-	if execCompileSolidity("../swap/router.sol") {
-		b, err := ioutil.ReadFile("./build/___swap_router_sol_MockUniswapV2Router02.bin")
+	fileName := "../swap/router.sol"
+	if execCompileSolidity(fileName) {
+		prefix := fmt.Sprintf("./build/%sMockUniswapV2Router02", getPrefix(fileName))
+		b, err := ioutil.ReadFile(prefix + ".bin")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -123,12 +131,13 @@ func compileSwapRouter() {
 const ROUTER ="%s"
 `, string(b))
 		// generate abi.go
-		execABIGO("./build/___swap_router_sol_MockUniswapV2Router02.abi", "router", "../swap/router/router.go")
+		execABIGO(prefix+".abi", "router", "../swap/router/router.go")
 	}
 }
 
 func execCompileSolidity(filename string) bool {
-	return execCMD(SOLC, "--optimize", "--bin", "--abi", filename, "-o", "build")
+	execCMD("rm", "-rf", "build")
+	return execCMD(SOLC, "--optimize", "--optimize-runs", "200", "--bin", "--abi", filename, "-o", "build")
 }
 
 func execABIGO(filename, packagename, outfilepath string) bool {
