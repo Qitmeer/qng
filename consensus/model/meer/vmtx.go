@@ -80,6 +80,12 @@ func NewVMTx(tx *types.Transaction, coinbase *types.Transaction) (*VMTx, error) 
 			return nil, err
 		}
 		vt.Export4337Data = ed
+	} else if meerchange.IsEntrypointExport4337Tx(txe) {
+		ed, err := meerchange.NewEntrypointExport4337DataByInput(txe.Data())
+		if err != nil {
+			return nil, err
+		}
+		vt.Export4337Data = ed
 	} else if meerchange.IsMeerChangeImportTx(txe) {
 		ed, err := meerchange.NewMeerchangeImportData(tx, txe)
 		if err != nil {
