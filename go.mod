@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dchest/blake256 v1.1.0
 	github.com/deckarep/golang-set v1.8.0
-	github.com/dgraph-io/ristretto v0.1.1
+	github.com/dgraph-io/ristretto v0.0.2
 	github.com/ethereum/go-ethereum v1.14.8
 	github.com/ferranbt/fastssz v0.1.2
 	github.com/go-stack/stack v1.8.1
@@ -31,7 +31,7 @@ require (
 	github.com/libp2p/go-libp2p v0.33.2
 	github.com/libp2p/go-libp2p-kad-dht v0.25.1
 	github.com/libp2p/go-libp2p-pubsub v0.10.0
-	github.com/magiconair/properties v1.8.7
+	github.com/magiconair/properties v1.8.5
 	github.com/mattn/go-colorable v0.1.13
 	github.com/minio/highwayhash v1.0.0
 	github.com/multiformats/go-multiaddr v0.12.3
@@ -56,11 +56,6 @@ require (
 	golang.org/x/tools v0.20.0
 	gonum.org/v1/gonum v0.13.0
 	gopkg.in/yaml.v2 v2.4.0
-)
-
-require (
-	github.com/dustin/go-humanize v1.0.0 // indirect
-	github.com/golang/glog v1.1.0 // indirect
 )
 
 require (
@@ -161,7 +156,7 @@ require (
 	github.com/mikioh/tcpopt v0.0.0-20190314235656-172688c1accc // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/mitchellh/pointerstructure v1.2.0 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
@@ -196,7 +191,6 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/stackup-wallet/stackup-bundler v0.6.47
 	github.com/status-im/keycard-go v0.2.0 // indirect
 	github.com/supranational/blst v0.3.11 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect

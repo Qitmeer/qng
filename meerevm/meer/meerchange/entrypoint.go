@@ -2,12 +2,12 @@ package meerchange
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/meerevm/meer/entrypoint"
 	"github.com/Qitmeer/qng/meerevm/meer/simpleaccount"
 	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/stackup-wallet/stackup-bundler/pkg/entrypoint"
 	"math/big"
 	"strings"
 )
