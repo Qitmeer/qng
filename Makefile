@@ -73,7 +73,7 @@ qng: qng-build
 	@echo "  $(shell $(GOBIN)/qng --version))"
 	@echo "Run \"$(GOBIN)/qng\" to launch."
 
-qng-build: generate-entrypoint-pkg
+qng-build: generate-contracts-pkg
     ifeq ($(ZMQ),TRUE)
 		@echo "Enalbe ZMQ"
 		@go build -o $(GOBIN)/qng$(OUTPUT_SUFFIX) $(GOFLAGS_DEV) -tags=zmq "github.com/Qitmeer/qng/cmd/qng"
@@ -87,8 +87,10 @@ qx:
 	@go build -o $(GOBIN)/qx $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qx"
 relay:
 	@go build -o $(GOBIN)/relaynode $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/relaynode"
-generate-entrypoint-pkg:
-	abigen --abi=./meerevm/meer/entrypoint/entrypoint.json --pkg=entrypoint --out=./meerevm/meer/entrypoint/entrypoint.go
+generate-contracts-pkg:
+	@abigen --abi=./meerevm/meer/entrypoint/entrypoint.json --pkg=entrypoint --out=./meerevm/meer/entrypoint/entrypoint.go
+	@abigen --abi=./meerevm/meer/simpleaccount/simpleaccount.json --pkg=simpleaccount --out=./meerevm/meer/simpleaccount/simpleaccount.go
+
 checkversion: qng-build
 #	@echo version $(VERSION)
 
