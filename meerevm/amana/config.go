@@ -105,7 +105,10 @@ func Genesis(genesisFile string) (*core.Genesis, error) {
 		if err := json.NewDecoder(file).Decode(genesis); err != nil {
 			return nil, fmt.Errorf("invalid genesis file: %v", err)
 		}
-		err = params.AddMeerChainConfig(&params.MeerChainConfig{ChainID: genesis.Config.ChainID, Name: file.Name(), Type: params.Amana})
+		fileName := filepath.Base(genesisFile)
+		extension := filepath.Ext(genesisFile)
+		fileName = fileName[:len(fileName)-len(extension)]
+		err = params.AddMeerChainConfig(&params.MeerChainConfig{ChainID: genesis.Config.ChainID, Name: fileName, Type: params.Amana})
 		if err != nil {
 			return nil, err
 		}
