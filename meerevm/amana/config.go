@@ -1,6 +1,7 @@
 package amana
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/protocol"
@@ -17,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
+	"os"
 	"path/filepath"
 )
 
@@ -24,8 +26,12 @@ var (
 	ClientIdentifier = mconsensus.Identifier
 )
 
-func MakeConfig(datadir string) (*eth.Config, error) {
-	genesis := Genesis()
+func MakeConfig(cfg *config.Config) (*eth.Config, error) {
+	datadir := cfg.DataDir
+	genesis, err := Genesis(cfg.AmanaGenesis)
+	if err != nil {
+		return nil, err
+	}
 
 	econfig := ethconfig.Defaults
 
@@ -62,7 +68,7 @@ func MakeConfig(datadir string) (*eth.Config, error) {
 }
 
 func MakeParams(cfg *config.Config) (*eth.Config, []string, error) {
-	ecfg, err := MakeConfig(cfg.DataDir)
+	ecfg, err := MakeConfig(cfg)
 	if err != nil {
 		return ecfg, nil, err
 	}
@@ -87,18 +93,25 @@ func createConsensusEngine(config *params.ChainConfig, db ethdb.Database) (conse
 	return mconsensus.New(config.Clique, db), nil
 }
 
-func Genesis() *core.Genesis {
-	switch qparams.ActiveNetParams.Net {
-	case protocol.MainNet:
-		return AmanaGenesis()
-	case protocol.TestNet:
-		return AmanaTestnetGenesis()
-	case protocol.MixNet:
-		return AmanaMixnetGenesis()
-	case protocol.PrivNet:
-		return AmanaPrivnetGenesis()
+func Genesis(genesisFile string) (*core.Genesis, error) {
+	if len(genesisFile) > 0 {
+		file, err := os.Open(genesisFile)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to read genesis file: %v", err)
+		}
+		defer file.Close()
+
+		genesis := new(core.Genesis)
+		if err := json.NewDecoder(file).Decode(genesis); err != nil {
+			return nil, fmt.Errorf("invalid genesis file: %v", err)
+		}
+		err = params.AddMeerChainConfig(&params.MeerChainConfig{ChainID: genesis.Config.ChainID, Name: file.Name(), Type: params.Amana})
+		if err != nil {
+			return nil, err
+		}
+		return genesis, nil
 	}
-	return nil
+	return AmanaGenesis(), nil
 }
 
 func getBootstrapNodes(port int) []*enode.Node {

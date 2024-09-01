@@ -186,3 +186,9 @@ or
 ```
 ~ ./qng --testnet blockchain upgrade --aidmode
 ```
+
+#### How to configure a custom amana blockchain
+
+```
+~ ./qng --amana --amanagen="./custom_amana.json"
+```
