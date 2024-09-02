@@ -120,8 +120,9 @@ type Config struct {
 	DAGCacheSize       uint64 `long:"dagcachesize" description:"DAG block cache size"`
 	BlockDataCacheSize uint64 `long:"bdcachesize" description:"Block data cache size"`
 
-	Amana    bool   `long:"amana" description:"Enable Amana"`
-	AmanaEnv string `long:"amanaenv" description:"Amana environment"`
+	Amana        bool   `long:"amana" description:"Enable Amana"`
+	AmanaEnv     string `long:"amanaenv" description:"Amana environment"`
+	AmanaGenesis string `long:"amanagen" description:"Amana custom genesis file"`
 
 	Metrics          bool `long:"metrics" description:"Enable metrics collection and reporting"`
 	MetricsExpensive bool `long:"metrics.expensive" description:"Enable expensive metrics collection and reporting"`

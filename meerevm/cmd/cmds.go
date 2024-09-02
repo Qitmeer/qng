@@ -62,7 +62,7 @@ func makeConfig(cfg *config.Config) (*eth.Config, error) {
 	var ecfg *eth.Config
 	var err error
 	if cfg.Amana {
-		ecfg, err = amana.MakeConfig(cfg.DataDir)
+		ecfg, err = amana.MakeConfig(cfg)
 		if err != nil {
 			log.Error(err.Error())
 			return nil, nil
