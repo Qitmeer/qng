@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/cmd/relaynode/config"
 	"github.com/Qitmeer/qng/meerevm/amana"
+	"github.com/Qitmeer/qng/services/common"
 	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
@@ -26,7 +27,9 @@ func amanaCmd() *cli.Command {
 		},
 		Action: func(ctx *cli.Context) error {
 			cfg := config.Conf
-			ecfg, err := amana.MakeConfig(".")
+			qcfg := common.DefaultConfig("")
+			qcfg.DataDir = "."
+			ecfg, err := amana.MakeConfig(qcfg)
 			if err != nil {
 				return err
 			}
@@ -54,7 +57,9 @@ func amanaNodesCmd() *cli.Command {
 		},
 		Action: func(ctx *cli.Context) error {
 			cfg := config.Conf
-			ecfg, err := amana.MakeConfig(".")
+			qcfg := common.DefaultConfig("")
+			qcfg.DataDir = "."
+			ecfg, err := amana.MakeConfig(qcfg)
 			if err != nil {
 				return err
 			}
