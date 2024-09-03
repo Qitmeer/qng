@@ -241,7 +241,7 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *u
 			if err != nil {
 				return err
 			}
-			utxoView.AddTokenTxOut(tx.Tx.TxIn[0].PreviousOut, pks)
+			utxoView.AddTxOutForCrossChain(tx.Tx.TxIn[0].PreviousOut, pks)
 			vtsTx, err := itx.GetTransactionForEngine()
 			if err != nil {
 				return err
@@ -280,9 +280,9 @@ func (b *BlockChain) checkBlockScripts(block *types.SerializedBlock, utxoView *u
 				if !ok {
 					return fmt.Errorf("It doesn't exist: Coin id (%d)\n", tx.Tx.TxOut[0].Amount.Id)
 				}
-				utxoView.AddTokenTxOut(tx.Tx.TxIn[0].PreviousOut, tt.Owners)
+				utxoView.AddTxOutForToken(tx.Tx.TxIn[0].PreviousOut, tt.Owners)
 			} else {
-				utxoView.AddTokenTxOut(tx.Tx.TxIn[0].PreviousOut, nil)
+				utxoView.AddTxOutForToken(tx.Tx.TxIn[0].PreviousOut, nil)
 			}
 		}
 	}
