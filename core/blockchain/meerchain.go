@@ -202,7 +202,7 @@ func (bc *BlockChain) connectVMTransaction(tx *types.Tx, vmtx *mmeer.VMTx, stxos
 			return err
 		}
 	} else if vmtx.ImportData != nil {
-		view.AddMeerChangeImportTxOut(*vmtx.ImportData.OutPoint, vmtx.ImportData.Output)
+		view.AddTxOutForMeerChange(*vmtx.ImportData.OutPoint, vmtx.ImportData.Output)
 	} else {
 		return nil
 	}
