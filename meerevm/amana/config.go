@@ -114,6 +114,13 @@ func Genesis(genesisFile string) (*core.Genesis, error) {
 		}
 		return genesis, nil
 	}
+
+	// TODO:Purely for compatibility with the testnet network, it can be completely removed if recreated genesis in the future
+	if qparams.ActiveNetParams.Net == protocol.TestNet {
+		return AmanaTestnetGenesis(), nil
+	}
+	// --------------------deprecated----------------------------
+
 	return AmanaGenesis(), nil
 }
 
