@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/meerevm/bridge"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"io"
 	"math/big"
 	"math/rand"
@@ -285,25 +286,7 @@ func (c *Amana) verifyHeader(chain econsensus.ChainHeaderReader, header *types.H
 	if header.GasLimit > params.MaxGasLimit {
 		return fmt.Errorf("invalid gasLimit: have %v, max %v", header.GasLimit, params.MaxGasLimit)
 	}
-	if chain.Config().IsShanghai(header.Number, header.Time) {
-		return errors.New("clique does not support shanghai fork")
-	}
-	// Verify the non-existence of withdrawalsHash.
-	if header.WithdrawalsHash != nil {
-		return fmt.Errorf("invalid withdrawalsHash: have %x, expected nil", header.WithdrawalsHash)
-	}
-	if chain.Config().IsCancun(header.Number, header.Time) {
-		return errors.New("clique does not support cancun fork")
-	}
-	// Verify the non-existence of cancun-specific header fields
-	switch {
-	case header.ExcessBlobGas != nil:
-		return fmt.Errorf("invalid excessBlobGas: have %d, expected nil", header.ExcessBlobGas)
-	case header.BlobGasUsed != nil:
-		return fmt.Errorf("invalid blobGasUsed: have %d, expected nil", header.BlobGasUsed)
-	case header.ParentBeaconRoot != nil:
-		return fmt.Errorf("invalid parentBeaconRoot, have %#x, expected nil", header.ParentBeaconRoot)
-	}
+
 	// All basic checks passed, verify cascading fields
 	return c.verifyCascadingFields(chain, header, parents)
 }
@@ -347,6 +330,35 @@ func (c *Amana) verifyCascadingFields(chain econsensus.ChainHeaderReader, header
 		// Verify the header's EIP-1559 attributes.
 		return err
 	}
+
+	// Verify existence / non-existence of withdrawalsHash.
+	shanghai := chain.Config().IsShanghai(header.Number, header.Time)
+	if shanghai && header.WithdrawalsHash == nil {
+		return errors.New("missing withdrawalsHash")
+	}
+	if !shanghai && header.WithdrawalsHash != nil {
+		return fmt.Errorf("invalid withdrawalsHash: have %x, expected nil", header.WithdrawalsHash)
+	}
+	// Verify the existence / non-existence of cancun-specific header fields
+	cancun := chain.Config().IsCancun(header.Number, header.Time)
+	if !cancun {
+		switch {
+		case header.ExcessBlobGas != nil:
+			return fmt.Errorf("invalid excessBlobGas: have %d, expected nil", header.ExcessBlobGas)
+		case header.BlobGasUsed != nil:
+			return fmt.Errorf("invalid blobGasUsed: have %d, expected nil", header.BlobGasUsed)
+		case header.ParentBeaconRoot != nil:
+			return fmt.Errorf("invalid parentBeaconRoot, have %#x, expected nil", header.ParentBeaconRoot)
+		}
+	} else {
+		if header.ParentBeaconRoot == nil {
+			return errors.New("header is missing beaconRoot")
+		}
+		if err := eip4844.VerifyEIP4844Header(parent, header); err != nil {
+			return err
+		}
+	}
+
 	// Retrieve the snapshot needed to verify this header and cache it
 	snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
 	if err != nil {
@@ -573,10 +585,17 @@ func (c *Amana) Finalize(chain econsensus.ChainHeaderReader, header *types.Heade
 // FinalizeAndAssemble implements consensus.Engine, ensuring no uncles are set,
 // nor block rewards given, and returns the final block.
 func (c *Amana) FinalizeAndAssemble(chain econsensus.ChainHeaderReader, header *types.Header, state *state.StateDB, body *types.Body, receipts []*types.Receipt) (*types.Block, error) {
-	if len(body.Withdrawals) > 0 {
-		return nil, errors.New("Amana does not support withdrawals")
+	shanghai := chain.Config().IsShanghai(header.Number, header.Time)
+	if shanghai {
+		// All blocks after Shanghai must include a withdrawals root.
+		if body.Withdrawals == nil {
+			body.Withdrawals = make([]*types.Withdrawal, 0)
+		}
+	} else {
+		if len(body.Withdrawals) > 0 {
+			return nil, errors.New("withdrawals set before Shanghai activation")
+		}
 	}
-
 	// Finalize block
 	c.Finalize(chain, header, state, body)
 
@@ -749,9 +768,6 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 	}
 	if header.BaseFee != nil {
 		enc = append(enc, header.BaseFee)
-	}
-	if header.WithdrawalsHash != nil {
-		panic("unexpected withdrawal hash value in Amana")
 	}
 	if err := rlp.Encode(w, enc); err != nil {
 		panic("can't encode: " + err.Error())
