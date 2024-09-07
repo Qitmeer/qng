@@ -104,6 +104,8 @@ var (
 		LondonBlock:         big.NewInt(0),
 		ArrowGlacierBlock:   big.NewInt(0),
 		GrayGlacierBlock:    big.NewInt(0),
+		ShanghaiTime:        newUint64(0),
+		CancunTime:          newUint64(0),
 		Clique: &eparams.CliqueConfig{
 			Period: 3,
 			Epoch:  100,
