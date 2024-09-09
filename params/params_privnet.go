@@ -12,6 +12,7 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
+	ecommon "github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
 )
@@ -162,4 +163,6 @@ var PrivNetParams = Params{
 	TokenAdminPkScript: hexMustDecode("00000000c96d6d76a914785bfbf4ecad8b72f2582be83616c5d364a3244288ac"),
 
 	CoinbaseMaturity: 16,
+
+	DeterministicDeploymentProxyAddr: ecommon.HexToAddress("0x2000000000000000000000000000000000000000"),
 }

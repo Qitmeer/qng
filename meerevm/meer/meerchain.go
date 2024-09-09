@@ -16,6 +16,7 @@ import (
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
 	mconsensus "github.com/Qitmeer/qng/meerevm/meer/consensus"
+	"github.com/Qitmeer/qng/meerevm/proxy"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
@@ -46,7 +47,8 @@ type MeerChain struct {
 	meerpool  *MeerPool
 	consensus model.Consensus
 
-	block *mmeer.Block
+	block   *mmeer.Block
+	ddProxy *proxy.DeterministicDeploymentProxy
 }
 
 func (b *MeerChain) Start() error {
@@ -85,6 +87,8 @@ func (b *MeerChain) Start() error {
 	}
 
 	b.meerpool.Start()
+
+	b.ddProxy = proxy.NewDeterministicDeploymentProxy(b.Context(), client)
 	return nil
 }
 
@@ -637,6 +641,10 @@ func (b *MeerChain) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
 		return 0
 	}
 	return blockNumber
+}
+
+func (b *MeerChain) DeterministicDeploymentProxy() *proxy.DeterministicDeploymentProxy {
+	return b.ddProxy
 }
 
 func (b *MeerChain) APIs() []api.API {

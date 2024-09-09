@@ -3,6 +3,7 @@ package testutils
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/meerevm/proxy"
 	"math/rand"
 	"os"
 	"path"
@@ -65,7 +66,7 @@ type MockNode struct {
 	publicAccountManagerAPI *acct.PublicAccountManagerAPI
 	privateWalletManagerAPI *wallet.PrivateWalletManagerAPI
 	publicWalletManagerAPI  *wallet.PublicWalletManagerAPI
-	evmClient  *ethclient.Client
+	evmClient               *ethclient.Client
 	walletManager           *wallet.WalletManager
 }
 
@@ -220,12 +221,16 @@ func (mn *MockNode) GetPublicWalletManagerAPI() *wallet.PublicWalletManagerAPI {
 }
 
 func (mn *MockNode) GetWalletManager() *wallet.WalletManager {
-	
+
 	return mn.walletManager
 }
 
 func (mn *MockNode) GetBuilder() *testprivatekey.Builder {
 	return mn.pb
+}
+
+func (mn *MockNode) DeterministicDeploymentProxy() *proxy.DeterministicDeploymentProxy {
+	return mn.n.GetQitmeerFull().GetBlockChain().MeerChain().(*meer.MeerChain).DeterministicDeploymentProxy()
 }
 
 func (mn *MockNode) Node() *node.Node {
