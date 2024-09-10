@@ -325,6 +325,24 @@ web3._extend({
 			call: 'qng_calcExport4337Sig',
 			params: 4,
 		}),
+
+		new web3._extend.Method({
+			name: 'getContractAddress',
+			call: 'qng_getContractAddress',
+			params: 3,
+		}),
+
+		new web3._extend.Method({
+			name: 'deployContract',
+			call: 'qng_deployContract',
+			params: 5,
+		}),
+
+		new web3._extend.Method({
+			name: 'getContractDeployData',
+			call: 'qng_getContractDeployData',
+			params: 2,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
