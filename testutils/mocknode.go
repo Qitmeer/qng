@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/meerevm/proxy"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"math/rand"
 	"os"
 	"path"
@@ -141,6 +142,28 @@ func (mn *MockNode) setup() error {
 	if err != nil {
 		return err
 	}
+
+	//
+	ethchain := mn.n.GetQitmeerFull().GetBlockChain().MeerChain().(*meer.MeerChain).ETHChain()
+	backends := ethchain.Backend().AccountManager().Backends(keystore.KeyStoreType)
+	if len(backends) == 0 {
+		return fmt.Errorf("Failed to unlock accounts, keystore is not available")
+	}
+	ks := backends[0].(*keystore.KeyStore)
+	/*pk, err := crypto.ToECDSA(mn.pb.Get(testprivatekey.CoinbaseIdx))
+	if err != nil {
+		return err
+	}
+	acc, err := ks.ImportECDSA(pk, testprivatekey.Password)
+	if err != nil {
+		return err
+	}*/
+	err = ks.Unlock(*account.EvmAcct, testprivatekey.Password)
+	if err != nil {
+		return err
+	}
+	//
+
 	log.Info("Import default key", "addr", account.String())
 	if len(mn.n.Config.MiningAddrs) <= 0 {
 		mn.n.Config.SetMiningAddrs(account.PKAddress())

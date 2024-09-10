@@ -32,11 +32,11 @@ func (ddp DeterministicDeploymentProxy) GetContractAddress(owner common.Address,
 	return common.BytesToAddress(addrBytes), nil
 }
 
-func (ddp DeterministicDeploymentProxy) DeployContract(owner common.Address, bytecode []byte, version int64, value *big.Int, gas uint64) (common.Address, error) {
+func (ddp DeterministicDeploymentProxy) DeployContract(owner common.Address, bytecode []byte, version int64, value *big.Int, gas uint64) (common.Hash, error) {
 	arg := map[string]interface{}{
 		"from":  owner,
 		"to":    ddp.GetAddress(),
-		"input": ddp.GetContractDeployData(bytecode, version),
+		"input": hexutil.Bytes(ddp.GetContractDeployData(bytecode, version)),
 	}
 	if gas != 0 {
 		arg["gas"] = hexutil.Uint64(gas)
@@ -47,9 +47,9 @@ func (ddp DeterministicDeploymentProxy) DeployContract(owner common.Address, byt
 	var addrBytes hexutil.Bytes
 	err := ddp.rpc.Client().CallContext(ddp.ctx, &addrBytes, "eth_sendTransaction", arg)
 	if err != nil {
-		return common.Address{}, err
+		return common.Hash{}, err
 	}
-	return common.BytesToAddress(addrBytes), nil
+	return common.BytesToHash(addrBytes), nil
 }
 
 func (ddp DeterministicDeploymentProxy) GetContractDeployData(bytecode []byte, version int64) []byte {
