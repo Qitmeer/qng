@@ -87,8 +87,6 @@ func (b *MeerChain) Start() error {
 	}
 
 	b.meerpool.Start()
-
-	b.ddProxy = proxy.NewDeterministicDeploymentProxy(b.Context(), client)
 	return nil
 }
 
@@ -648,7 +646,7 @@ func (b *MeerChain) DeterministicDeploymentProxy() *proxy.DeterministicDeploymen
 }
 
 func (b *MeerChain) APIs() []api.API {
-	return []api.API{
+	return append([]api.API{
 		{
 			NameSpace: cmds.DefaultServiceNameSpace,
 			Service:   NewPublicMeerChainAPI(b),
@@ -659,7 +657,7 @@ func (b *MeerChain) APIs() []api.API {
 			Service:   NewPrivateMeerChainAPI(b),
 			Public:    false,
 		},
-	}
+	}, b.ddProxy.APIs()...)
 }
 
 func NewMeerChain(consensus model.Consensus) (*MeerChain, error) {
@@ -682,11 +680,15 @@ func NewMeerChain(consensus model.Consensus) (*MeerChain, error) {
 		log.Error(err.Error())
 		return nil, err
 	}
+
 	mchain := &MeerChain{
 		chain:     chain,
 		meerpool:  newMeerPool(consensus, chain.Ether()),
 		consensus: consensus,
 	}
+	mchain.InitContext()
+	mchain.ddProxy = proxy.NewDeterministicDeploymentProxy(mchain.Context(), ethclient.NewClient(chain.Node().Attach()))
+
 	chain.Ether().Engine().(*mconsensus.MeerEngine).StateChange = mchain.OnStateChange
 	return mchain, nil
 }

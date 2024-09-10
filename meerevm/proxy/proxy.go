@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -20,6 +21,9 @@ func (ddp DeterministicDeploymentProxy) GetAddress() *common.Address {
 }
 
 func (ddp DeterministicDeploymentProxy) GetContractAddress(owner common.Address, bytecode []byte, version int64) (common.Address, error) {
+	if ddp.GetAddress().Cmp(common.Address{}) == 0 {
+		return common.Address{}, errors.New("No support DeterministicDeploymentProxy")
+	}
 	msg := ethereum.CallMsg{
 		From: owner,
 		To:   ddp.GetAddress(),
@@ -33,6 +37,9 @@ func (ddp DeterministicDeploymentProxy) GetContractAddress(owner common.Address,
 }
 
 func (ddp DeterministicDeploymentProxy) DeployContract(owner common.Address, bytecode []byte, version int64, value *big.Int, gas uint64) (common.Hash, error) {
+	if ddp.GetAddress().Cmp(common.Address{}) == 0 {
+		return common.Hash{}, errors.New("No support DeterministicDeploymentProxy")
+	}
 	arg := map[string]interface{}{
 		"from":  owner,
 		"to":    ddp.GetAddress(),
@@ -44,12 +51,12 @@ func (ddp DeterministicDeploymentProxy) DeployContract(owner common.Address, byt
 	if value != nil {
 		arg["value"] = (*hexutil.Big)(value)
 	}
-	var addrBytes hexutil.Bytes
-	err := ddp.rpc.Client().CallContext(ddp.ctx, &addrBytes, "eth_sendTransaction", arg)
+	var hashBytes hexutil.Bytes
+	err := ddp.rpc.Client().CallContext(ddp.ctx, &hashBytes, "eth_sendTransaction", arg)
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return common.BytesToHash(addrBytes), nil
+	return common.BytesToHash(hashBytes), nil
 }
 
 func (ddp DeterministicDeploymentProxy) GetContractDeployData(bytecode []byte, version int64) []byte {
