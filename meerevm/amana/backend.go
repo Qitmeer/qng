@@ -112,11 +112,16 @@ func (c *backend) sealBlock(withdrawals []*types.Withdrawal, timestamp uint64) e
 	feeRecipient := c.feeRecipient
 	c.feeRecipientLock.Unlock()
 
-	if header := c.eth.BlockChain().CurrentBlock(); c.curForkchoiceState.HeadBlockHash != header.Hash() {
+	header := c.eth.BlockChain().CurrentBlock()
+	if c.curForkchoiceState.HeadBlockHash != header.Hash() {
 		finalizedHash := c.finalizedBlockHash(header.Number.Uint64())
 		c.setCurrentState(header.Hash(), *finalizedHash)
 	}
 
+	var beaconRoot *common.Hash
+	if c.eth.BlockChain().Config().IsCancun(header.Number, header.Time) {
+		beaconRoot = new(common.Hash)
+	}
 	var random [32]byte
 	rand.Read(random[:])
 	fcResponse, err := c.engineAPI.ForkchoiceUpdatedQng(c.curForkchoiceState, &engine.PayloadAttributes{
@@ -124,20 +129,22 @@ func (c *backend) sealBlock(withdrawals []*types.Withdrawal, timestamp uint64) e
 		SuggestedFeeRecipient: feeRecipient,
 		Withdrawals:           nil,
 		Random:                random,
-		BeaconRoot:            nil,
+		BeaconRoot:            beaconRoot,
 	})
 	if err != nil {
 		return err
 	}
 	if fcResponse == engine.STATUS_SYNCING {
 		return errors.New("chain rewind prevented invocation of payload creation")
+	} else if fcResponse.PayloadStatus.Status != engine.VALID {
+		return errors.New("ForkchoiceUpdated amana error")
 	}
 	envelope, err := c.engineAPI.GetPayloadQng(*fcResponse.PayloadID, true)
 	if err != nil {
 		return err
 	}
 	payload := envelope.ExecutionPayload
-	block, err := engine.ExecutableDataToBlockQng(*payload, nil, nil)
+	block, err := engine.ExecutableDataToBlockQng(*payload, nil, beaconRoot)
 	if err != nil {
 		return err
 	}
@@ -178,20 +185,29 @@ func (c *backend) sealBlock(withdrawals []*types.Withdrawal, timestamp uint64) e
 		}
 	}
 	// Mark the payload as canon
-	if _, err = c.engineAPI.NewPayloadQng(*payload, nil, nil); err != nil {
+	psv1, err := c.engineAPI.NewPayloadQng(*payload, nil, beaconRoot)
+	if err != nil {
 		return err
+	}
+	if psv1.Status == engine.INVALID {
+		return fmt.Errorf("NewPayloadQng: %s, %s", *psv1.ValidationError, psv1.LatestValidHash.String())
 	}
 	c.setCurrentState(payload.BlockHash, finalizedHash)
 
 	// Mark the block containing the payload as canonical
-	if _, err = c.engineAPI.ForkchoiceUpdatedQng(c.curForkchoiceState, nil); err != nil {
+	fcr, err := c.engineAPI.ForkchoiceUpdatedQng(c.curForkchoiceState, nil)
+	if err != nil {
 		return err
 	}
+	if fcr.PayloadStatus.Status == engine.INVALID {
+		return fmt.Errorf("ForkchoiceUpdatedQng: %s, %s", *fcr.PayloadStatus.ValidationError, fcr.PayloadStatus.LatestValidHash.String())
+	}
+
 	c.lastBlockTime = payload.Timestamp
 
 	// Broadcast the block and announce chain insertion event
 	fb := c.eth.BlockChain().GetBlockByHash(c.eth.BlockChain().CurrentBlock().Hash())
-	if fb != nil {
+	if fb != nil && fb.NumberU64() > 0 {
 		c.eth.EventMux().Post(core.NewMinedBlockEvent{Block: fb})
 	}
 	return nil

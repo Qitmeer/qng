@@ -556,6 +556,11 @@ var (
 			Usage:       "Enable Amana",
 			Destination: &cfg.Amana,
 		},
+		&cli.StringFlag{
+			Name:        "amanagen",
+			Usage:       "Custom Amana genesis",
+			Destination: &cfg.AmanaGenesis,
+		},
 		&cli.BoolFlag{
 			Name:        "consistency",
 			Usage:       "Detect data consistency through P2P",

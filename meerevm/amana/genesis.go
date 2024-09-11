@@ -11,6 +11,10 @@ import (
 	"math/big"
 )
 
+var (
+	GenesisHash = qcommon.HexToHash("0xdab7be3230b48e452a4965a3ddb941cfc79bce23200a9a25f6ec7278ca447017")
+)
+
 func AmanaGenesis() *core.Genesis {
 	return &core.Genesis{
 		Config:     mparams.AmanaChainConfig,

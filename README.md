@@ -192,3 +192,8 @@ or
 ```
 ~ ./qng --amana --amanagen="./custom_amana.json"
 ```
+#### How to be compatible with below 2.0.1 versions of testnet amana blockchain ?
+
+```
+~ ./build/bin/qng --amana --amanagen="./meerevm/amana/testnet_2.0.1.json"
+```

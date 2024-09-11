@@ -16,6 +16,7 @@ import (
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
 	mconsensus "github.com/Qitmeer/qng/meerevm/meer/consensus"
+	"github.com/Qitmeer/qng/meerevm/proxy"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/api"
@@ -46,7 +47,8 @@ type MeerChain struct {
 	meerpool  *MeerPool
 	consensus model.Consensus
 
-	block *mmeer.Block
+	block   *mmeer.Block
+	ddProxy *proxy.DeterministicDeploymentProxy
 }
 
 func (b *MeerChain) Start() error {
@@ -639,8 +641,12 @@ func (b *MeerChain) GetBlockIDByTxHash(txhash *hash.Hash) uint64 {
 	return blockNumber
 }
 
+func (b *MeerChain) DeterministicDeploymentProxy() *proxy.DeterministicDeploymentProxy {
+	return b.ddProxy
+}
+
 func (b *MeerChain) APIs() []api.API {
-	return []api.API{
+	return append([]api.API{
 		{
 			NameSpace: cmds.DefaultServiceNameSpace,
 			Service:   NewPublicMeerChainAPI(b),
@@ -651,7 +657,7 @@ func (b *MeerChain) APIs() []api.API {
 			Service:   NewPrivateMeerChainAPI(b),
 			Public:    false,
 		},
-	}
+	}, b.ddProxy.APIs()...)
 }
 
 func NewMeerChain(consensus model.Consensus) (*MeerChain, error) {
@@ -674,11 +680,15 @@ func NewMeerChain(consensus model.Consensus) (*MeerChain, error) {
 		log.Error(err.Error())
 		return nil, err
 	}
+
 	mchain := &MeerChain{
 		chain:     chain,
 		meerpool:  newMeerPool(consensus, chain.Ether()),
 		consensus: consensus,
 	}
+	mchain.InitContext()
+	mchain.ddProxy = proxy.NewDeterministicDeploymentProxy(mchain.Context(), ethclient.NewClient(chain.Node().Attach()))
+
 	chain.Ether().Engine().(*mconsensus.MeerEngine).StateChange = mchain.OnStateChange
 	return mchain, nil
 }

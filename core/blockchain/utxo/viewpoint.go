@@ -58,7 +58,7 @@ func (view *UtxoViewpoint) AddTxOut(tx *types.Tx, txOutIdx uint32, blockHash *ha
 	// is allowed so long as the previous transaction is fully spent.
 	prevOut := types.TxOutPoint{Hash: *tx.Hash(), OutIndex: txOutIdx}
 	txOut := tx.Tx.TxOut[txOutIdx]
-	view.addTxOut(prevOut, txOut, tx.Tx.IsCoinBase(), blockHash)
+	view.addTxOutForSpendable(prevOut, txOut, tx.Tx.IsCoinBase(), blockHash)
 }
 
 // AddTxOuts adds all outputs in the passed transaction which are not provably
@@ -80,16 +80,11 @@ func (view *UtxoViewpoint) AddTxOuts(tx *types.Tx, blockHash *hash.Hash) {
 		// same hash.  This is allowed so long as the previous
 		// transaction is fully spent.
 		prevOut.OutIndex = uint32(txOutIdx)
-		view.addTxOut(prevOut, txOut, isCoinBase, blockHash)
+		view.addTxOutForSpendable(prevOut, txOut, isCoinBase, blockHash)
 	}
 }
 
 func (view *UtxoViewpoint) addTxOut(outpoint types.TxOutPoint, txOut *types.TxOutput, isCoinBase bool, blockHash *hash.Hash) {
-	// Don't add provably unspendable outputs.
-	if txscript.IsUnspendable(txOut.PkScript) {
-		return
-	}
-
 	// Update existing entries.  All fields are updated because it's
 	// possible (although extremely unlikely) that the existing entry is
 	// being replaced by a different transaction with the same hash.  This
@@ -102,38 +97,36 @@ func (view *UtxoViewpoint) addTxOut(outpoint types.TxOutPoint, txOut *types.TxOu
 
 	entry.amount = txOut.Amount
 	entry.pkScript = txOut.PkScript
-	entry.blockHash = *blockHash
+	if blockHash != nil {
+		entry.blockHash = *blockHash
+	}
 	entry.packedFlags = tfModified
 	if isCoinBase {
 		entry.packedFlags |= tfCoinBase
 	}
 }
 
-func (view *UtxoViewpoint) AddTokenTxOut(outpoint types.TxOutPoint, pkscript []byte) {
-	entry := view.LookupEntry(outpoint)
-	if entry == nil {
-		entry = new(UtxoEntry)
-		view.entries[outpoint] = entry
+func (view *UtxoViewpoint) addTxOutForSpendable(outpoint types.TxOutPoint, txOut *types.TxOutput, isCoinBase bool, blockHash *hash.Hash) {
+	// Don't add provably unspendable outputs.
+	if txscript.IsUnspendable(txOut.PkScript) {
+		return
 	}
+	view.addTxOut(outpoint, txOut, isCoinBase, blockHash)
+}
+
+func (view *UtxoViewpoint) AddTxOutForToken(outpoint types.TxOutPoint, pkscript []byte) {
 	if len(pkscript) <= 0 {
 		pkscript = params.ActiveNetParams.Params.TokenAdminPkScript
 	}
-	txOut := &types.TxOutput{PkScript: pkscript}
-	entry.amount = txOut.Amount
-	entry.pkScript = txOut.PkScript
-	entry.packedFlags = tfModified
+	view.addTxOut(outpoint, &types.TxOutput{PkScript: pkscript}, false, nil)
 }
 
-func (view *UtxoViewpoint) AddMeerChangeImportTxOut(outpoint types.TxOutPoint, output *types.TxOutput) {
-	entry := view.LookupEntry(outpoint)
-	if entry == nil {
-		entry = new(UtxoEntry)
-		view.entries[outpoint] = entry
-	}
+func (view *UtxoViewpoint) AddTxOutForCrossChain(outpoint types.TxOutPoint, pkscript []byte) {
+	view.addTxOut(outpoint, &types.TxOutput{PkScript: pkscript}, false, nil)
+}
 
-	entry.amount = output.Amount
-	entry.pkScript = output.PkScript
-	entry.packedFlags = tfModified
+func (view *UtxoViewpoint) AddTxOutForMeerChange(outpoint types.TxOutPoint, output *types.TxOutput) {
+	view.addTxOut(outpoint, output, false, nil)
 }
 
 // Viewpoints returns the hash of the viewpoint block in the chain the view currently

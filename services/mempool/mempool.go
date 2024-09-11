@@ -431,14 +431,14 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			if err != nil {
 				return nil, nil, err
 			}
-			utxoView.AddTokenTxOut(tx.Tx.TxIn[0].PreviousOut, pkscript)
+			utxoView.AddTxOutForToken(tx.Tx.TxIn[0].PreviousOut, pkscript)
 
 			err = mp.cfg.BC.CheckTokenTransactionInputs(tx, utxoView)
 			if err != nil {
 				return nil, nil, err
 			}
 		} else {
-			utxoView.AddTokenTxOut(tx.Tx.TxIn[0].PreviousOut, nil)
+			utxoView.AddTxOutForToken(tx.Tx.TxIn[0].PreviousOut, nil)
 		}
 
 		err = blockchain.ValidateTransactionScripts(tx, utxoView, flags,
@@ -469,7 +469,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *types.Tx, isNew, rateLimit, allowHi
 			return nil, nil, err
 		}
 		utxoView := utxo.NewUtxoViewpoint()
-		utxoView.AddTokenTxOut(tx.Tx.TxIn[0].PreviousOut, pks)
+		utxoView.AddTxOutForCrossChain(tx.Tx.TxIn[0].PreviousOut, pks)
 		vtsTx, err := itx.GetTransactionForEngine()
 		if err != nil {
 			return nil, nil, err
