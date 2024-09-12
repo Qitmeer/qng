@@ -5,7 +5,6 @@
 package test
 
 import (
-	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils"
@@ -18,11 +17,7 @@ import (
 // Source: https://github.com/Arachnid/deterministic-deployment-proxy/blob/master/scripts/test.sh
 func TestDeterministicDeploymentProxy(t *testing.T) {
 	//node, err := testutils.StartMockNode(nil)
-	node, err := testutils.StartMockNode(func(cfg *config.Config) error {
-		cfg.DebugLevel = "trace"
-		cfg.DebugPrintOrigins = true
-		return nil
-	})
+	node, err := testutils.StartMockNode(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,5 +73,36 @@ func TestDeterministicDeploymentProxy(t *testing.T) {
 	expect := "0x000000000000000000000000000000000000000000000000000000000000002a"
 	if hexutil.Encode(addrBytes) != expect {
 		t.Fatalf("Current:%s, but expect:%s", hexutil.Encode(addrBytes), expect)
+	}
+}
+
+func TestDeterministicDeploymentProxyOwner(t *testing.T) {
+	node, err := testutils.StartMockNode(nil)
+	if err != nil {
+		t.Error(err)
+	}
+	defer node.Stop()
+
+	acc1, err := node.NewAddress()
+	if err != nil {
+		t.Fatal(err)
+	}
+	acc0 := node.GetWalletManager().GetAccountByIdx(0)
+	if err != nil {
+		t.Fatalf("GetAcctInfo failed:%v", err)
+	}
+	// deploy our contract
+	// contract: pragma solidity 0.5.8; contract Apple {function banana() external pure returns (uint8) {return 42;}}
+	BYTECODE := common.FromHex("6080604052348015600f57600080fd5b5060848061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063c3cafc6f14602d575b600080fd5b6033604f565b604051808260ff1660ff16815260200191505060405180910390f35b6000602a90509056fea165627a7a72305820ab7651cb86b8c1487590004c2444f26ae30077a6b96c6bc62dda37f1328539250029")
+	addr0, err := node.DeterministicDeploymentProxy().GetContractAddress(acc0.EvmAcct.Address, BYTECODE, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr1, err := node.DeterministicDeploymentProxy().GetContractAddress(acc1.EvmAcct.Address, BYTECODE, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if addr0.Cmp(addr1) != 0 {
+		t.Fatalf("Current:%s, but expect:%s", addr0.String(), addr1.String())
 	}
 }
