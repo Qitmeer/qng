@@ -73,7 +73,7 @@ qng: qng-build
 	@echo "  $(shell $(GOBIN)/qng --version))"
 	@echo "Run \"$(GOBIN)/qng\" to launch."
 
-qng-build: generate-contracts-pkg
+qng-build:
     ifeq ($(ZMQ),TRUE)
 		@echo "Enalbe ZMQ"
 		@go build -o $(GOBIN)/qng$(OUTPUT_SUFFIX) $(GOFLAGS_DEV) -tags=zmq "github.com/Qitmeer/qng/cmd/qng"
