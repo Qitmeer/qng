@@ -1,0 +1,3 @@
+[submodule "meerevm/contracts/meerchange"]
+	path = meerevm/contracts/meerchange
+	url = https://github.com/lochjin/meerchange.git

@@ -87,7 +87,19 @@ qx:
 	@go build -o $(GOBIN)/qx $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qx"
 relay:
 	@go build -o $(GOBIN)/relaynode $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/relaynode"
+
 generate-contracts-pkg:
+	@if [ ! -d $(GOBIN) ]; then \
+		echo "Directory $(GOBIN) does not exist. Creating it now..."; \
+		mkdir -p $(GOBIN); \
+	fi
+	@if [ ! -e "$(GOBIN)/MeerChange.abi" ]; then \
+        touch $(GOBIN)/MeerChange.abi; \
+        jq -r '.abi' ./meerevm/contracts/meerchange/contracts/artifacts/MeerChange.json > $(GOBIN)/MeerChange.abi; \
+        touch $(GOBIN)/MeerChange.bin; \
+        jq -r '.bytecode' ./meerevm/contracts/meerchange/contracts/artifacts/MeerChange.json > $(GOBIN)/MeerChange.bin; \
+    fi
+	@abigen --abi=$(GOBIN)/MeerChange.abi --bin=$(GOBIN)/MeerChange.bin --pkg=meerchange --out=./meerevm/meer/meerchange/meerchange.go
 	@abigen --abi=./meerevm/meer/entrypoint/entrypoint.json --pkg=entrypoint --out=./meerevm/meer/entrypoint/entrypoint.go
 	@abigen --abi=./meerevm/meer/simpleaccount/simpleaccount.json --pkg=simpleaccount --out=./meerevm/meer/simpleaccount/simpleaccount.go
 
