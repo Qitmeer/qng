@@ -39,9 +39,6 @@ jobs:
       - name: jq
         run: sudo apt-get install jq
 
-      - name: submodule
-        run: git submodule update --init --recursive
-
       - name: compileSolidity
         run: solcjs --version && ls && cd test/cmds/ && go run compile_solidity.go && cd ../../
 

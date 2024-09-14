@@ -3,7 +3,7 @@ package meerchange
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/meerevm/meer/entrypoint"
-	"github.com/Qitmeer/qng/meerevm/meer/simpleaccount"
+	"github.com/Qitmeer/qng/meerevm/meer/qngaccount"
 	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -99,7 +99,7 @@ func parseExecuteData(data []byte) (*ExecuteData, error) {
 	if len(data) <= funcSigHashLen {
 		return nil, fmt.Errorf("export 4337 data error")
 	}
-	contractAbi, err := abi.JSON(strings.NewReader(simpleaccount.SimpleaccountMetaData.ABI))
+	contractAbi, err := abi.JSON(strings.NewReader(qngaccount.QngaccountMetaData.ABI))
 	if err != nil {
 		return nil, err
 	}
