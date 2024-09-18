@@ -1,6 +1,6 @@
-[submodule "meerevm/contracts/meerchange"]
-	path = meerevm/contracts/meerchange
-	url = https://github.com/lochjin/meerchange.git
 [submodule "meerevm/contracts/eip4337-account-abstraction"]
 	path = meerevm/contracts/eip4337-account-abstraction
 	url = https://github.com/Qitmeer/eip4337-account-abstraction.git
+[submodule "meerevm/contracts/meerchange"]
+	path = meerevm/contracts/meerchange
+	url = https://github.com/Qitmeer/meerchange.git
