@@ -62,7 +62,7 @@ func NewMeerchangeImportData(qtx *qtypes.Transaction, tx *types.Transaction) (*M
 }
 
 func IsMeerChangeImportTx(tx *types.Transaction) bool {
-	if !IsMeerChangeTx(tx) {
+	if !IsDirectMeerChangeTx(tx) {
 		return false
 	}
 	if len(tx.Data()) < 4 {

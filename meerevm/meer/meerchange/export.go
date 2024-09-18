@@ -66,7 +66,7 @@ func NewMeerchangeExportDataByLog(data []byte) (*MeerchangeExportData, error) {
 }
 
 func NewMeerchangeExportDataByInput(data []byte) (*MeerchangeExportData, error) {
-	if len(data) <= 4 {
+	if len(data) <= funcSigHashLen {
 		return nil, fmt.Errorf("input data format error")
 	}
 	contractAbi, err := abi.JSON(strings.NewReader(MeerchangeMetaData.ABI))
@@ -78,14 +78,14 @@ func NewMeerchangeExportDataByInput(data []byte) (*MeerchangeExportData, error) 
 		OutPoint: nil,
 		Amount:   qtypes.Amount{Value: 0, Id: qtypes.MEERA},
 	}
-	method, err := contractAbi.MethodById(data[:4])
+	method, err := contractAbi.MethodById(data[:funcSigHashLen])
 	if err != nil {
 		return nil, err
 	}
 	if method.Name != ced.GetFuncName() {
 		return nil, fmt.Errorf("Inconsistent methods and parameters:%s, expect:%s", method.Name, ced.GetFuncName())
 	}
-	unpacked, err := method.Inputs.Unpack(data[4:])
+	unpacked, err := method.Inputs.Unpack(data[funcSigHashLen:])
 	if err != nil {
 		return nil, err
 	}
@@ -97,17 +97,17 @@ func NewMeerchangeExportDataByInput(data []byte) (*MeerchangeExportData, error) 
 }
 
 func IsMeerChangeExportTx(tx *types.Transaction) bool {
-	if !IsMeerChangeTx(tx) {
+	if !IsDirectMeerChangeTx(tx) {
 		return false
 	}
-	if len(tx.Data()) <= 4 {
+	if len(tx.Data()) <= funcSigHashLen {
 		return false
 	}
 	contractAbi, err := abi.JSON(strings.NewReader(MeerchangeMetaData.ABI))
 	if err != nil {
 		return false
 	}
-	method, err := contractAbi.MethodById(tx.Data()[:4])
+	method, err := contractAbi.MethodById(tx.Data()[:funcSigHashLen])
 	if err != nil {
 		return false
 	}

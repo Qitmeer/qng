@@ -88,6 +88,26 @@ qx:
 relay:
 	@go build -o $(GOBIN)/relaynode $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/relaynode"
 
+generate-contracts-pkg:
+	@git submodule update --init --recursive
+	@if [ ! -d $(GOBIN) ]; then \
+		echo "Directory $(GOBIN) does not exist. Creating it now..."; \
+		mkdir -p $(GOBIN); \
+	fi
+	@if [ ! -e "$(GOBIN)/MeerChange.abi" ]; then \
+        touch $(GOBIN)/MeerChange.abi; \
+        jq -r '.abi' ./meerevm/contracts/meerchange/contracts/artifacts/MeerChange.json > $(GOBIN)/MeerChange.abi; \
+        touch $(GOBIN)/MeerChange.bin; \
+        jq -r '.bytecode' ./meerevm/contracts/meerchange/contracts/artifacts/MeerChange.json > $(GOBIN)/MeerChange.bin; \
+        touch $(GOBIN)/EntryPoint.abi; \
+        jq -r '.abi' ./meerevm/contracts/eip4337-account-abstraction/contracts/artifacts/EntryPoint.json > $(GOBIN)/EntryPoint.abi; \
+        touch $(GOBIN)/QngAccount.abi; \
+        jq -r '.abi' ./meerevm/contracts/eip4337-account-abstraction/contracts/artifacts/QngAccount.json > $(GOBIN)/QngAccount.abi; \
+    fi
+	@abigen --abi=$(GOBIN)/MeerChange.abi --bin=$(GOBIN)/MeerChange.bin --pkg=meerchange --out=./meerevm/meer/meerchange/meerchange.go
+	@abigen --abi=$(GOBIN)/EntryPoint.abi --pkg=entrypoint --out=./meerevm/meer/entrypoint/entrypoint.go
+	@abigen --abi=$(GOBIN)/QngAccount.abi --pkg=qngaccount --out=./meerevm/meer/qngaccount/qngaccount.go
+
 checkversion: qng-build
 #	@echo version $(VERSION)
 

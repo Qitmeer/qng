@@ -8,6 +8,7 @@ The next generation of the Qitmeer network implementation with the plug-able VMs
 ```bash
 ~ git clone https://github.com/Qitmeer/qng.git
 ~ cd qng
+~ git submodule update --init --recursive
 ~ make
 ```
 
