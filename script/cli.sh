@@ -624,13 +624,13 @@ function get_meer_info(){
   get_result "$data"
 }
 
-function calcExport4337Sig(){
+function calcExportSig(){
   local txid=$1
   local idx=$2
   local fee=$3
   local privKeyHex=$4
 
-  local data='{"jsonrpc":"2.0","method":"calcExport4337Sig","params":["'$txid'",'$idx','$fee',"'$privKeyHex'"],"id":null}'
+  local data='{"jsonrpc":"2.0","method":"calcExportSig","params":["'$txid'",'$idx','$fee',"'$privKeyHex'"],"id":null}'
   get_result "$data"
 }
 
@@ -918,7 +918,7 @@ function usage(){
   echo "  chaininfo <count> <start> <end>"
   echo "  dbinfo"
   echo "  config"
-  echo "  calcExport4337Sig"
+  echo "  calcExportSig"
   echo "block  :"
   echo "  block <order|hash>"
   echo "  blockbyhash <hash>"
@@ -1489,9 +1489,9 @@ elif [ "$1" == "minerinfo" ]; then
 elif [ "$1" == "meerinfo" ]; then
   shift
   get_meer_info $@
-elif [ "$1" == "calcExport4337Sig" ]; then
+elif [ "$1" == "calcExportSig" ]; then
   shift
-  calcExport4337Sig $@
+  calcExportSig $@
 elif [ "$1" == "amanainfo" ]; then
     shift
     get_amana_nodeinfo $@

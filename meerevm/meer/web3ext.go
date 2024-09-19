@@ -321,8 +321,8 @@ web3._extend({
 		}),
 
 		new web3._extend.Method({
-			name: 'calcExport4337Sig',
-			call: 'qng_calcExport4337Sig',
+			name: 'calcExportSig',
+			call: 'qng_calcExportSig',
 			params: 4,
 		}),
 

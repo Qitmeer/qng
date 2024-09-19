@@ -73,11 +73,6 @@ func (b *BlockChain) MeerVerifyTx(tx model.Tx, utxoView *utxo.UtxoViewpoint) (in
 			if err != nil {
 				return 0, err
 			}
-		} else if vmtx.Export4337Data != nil {
-			op, err = vmtx.Export4337Data.GetOutPoint()
-			if err != nil {
-				return 0, err
-			}
 		} else {
 			return fee, err
 		}
@@ -193,11 +188,6 @@ func (bc *BlockChain) connectVMTransaction(tx *types.Tx, vmtx *mmeer.VMTx, stxos
 	var op *types.TxOutPoint
 	if vmtx.ExportData != nil {
 		op, err = vmtx.ExportData.GetOutPoint()
-		if err != nil {
-			return err
-		}
-	} else if vmtx.Export4337Data != nil {
-		op, err = vmtx.Export4337Data.GetOutPoint()
 		if err != nil {
 			return err
 		}

@@ -48,16 +48,6 @@ func (m *MeerPool) checkMeerChangeTxs(block *types.Block, receipts types.Receipt
 						m.ethTxPool.RemoveTx(tx.Hash(), true)
 						return err
 					}
-				case meerchange.LogExport4337SigHash.Hex():
-					ccExportEvent, err := meerchange.NewMeerchangeExport4337DataByLog(lg.Data)
-					if err != nil {
-						return err
-					}
-					err = m.checkMeerChangeExport4337Tx(ccExportEvent, nil)
-					if err != nil {
-						m.ethTxPool.RemoveTx(tx.Hash(), true)
-						return err
-					}
 				case meerchange.LogImportSigHash.Hex():
 					amount := tx.Value().Div(tx.Value(), common.Precision)
 					if amount.Uint64() <= 0 {
@@ -75,50 +65,6 @@ func (m *MeerPool) checkMeerChangeTxs(block *types.Block, receipts types.Receipt
 func (m *MeerPool) HasUtxo(txid *hash.Hash, idx uint32) bool {
 	ue, err := m.consensus.BlockChain().GetUtxo(*qtypes.NewOutPoint(txid, idx))
 	return err == nil && ue != nil
-}
-
-func (m *MeerPool) checkSignature(tx *types.Transaction, entry *utxo.UtxoEntry) error {
-	if len(entry.PkScript()) <= 0 {
-		return fmt.Errorf("PkScript is empty")
-	}
-
-	signer := types.NewPKSigner(m.eth.BlockChain().Config().ChainID)
-	pkb, err := signer.GetPublicKey(tx)
-	if err != nil {
-		return err
-	}
-	pubKey, err := ecc.Secp256k1.ParsePubKey(pkb)
-	if err != nil {
-		return err
-	}
-	addrUn, err := address.NewSecpPubKeyAddress(pubKey.SerializeUncompressed(), params.ActiveNetParams.Params)
-	if err != nil {
-		return err
-	}
-
-	addr, err := address.NewSecpPubKeyAddress(pubKey.SerializeCompressed(), params.ActiveNetParams.Params)
-	if err != nil {
-		return err
-	}
-
-	scriptClass, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(entry.PkScript(), params.ActiveNetParams.Params)
-	if err != nil {
-		return err
-	}
-	if len(pksAddrs) != 1 {
-		return fmt.Errorf("PKScript num no support:%d", len(pksAddrs))
-	}
-
-	switch scriptClass {
-	case txscript.PubKeyHashTy, txscript.PubkeyHashAltTy, txscript.PubKeyTy, txscript.PubkeyAltTy:
-		if pksAddrs[0].Encode() == addr.PKHAddress().String() ||
-			pksAddrs[0].Encode() == addrUn.PKHAddress().String() {
-			return nil
-		}
-	default:
-		return fmt.Errorf("Signature error about no support %s", scriptClass.String())
-	}
-	return fmt.Errorf("Signature error")
 }
 
 func (m *MeerPool) checkMeerChangeExportTx(tx *types.Transaction, ced *meerchange.MeerchangeExportData, utxoView *utxo.UtxoViewpoint) error {
@@ -145,69 +91,15 @@ func (m *MeerPool) checkMeerChangeExportTx(tx *types.Transaction, ced *meerchang
 		}
 	}
 
-	err = m.checkSignature(tx, entry)
-	if err != nil {
-		return err
-	}
-	ced.Amount = entry.Amount()
-	if utxoView != nil && ok {
-		utxoView.AddEntry(*op, entry)
-	}
-	return nil
-}
-
-func (m *MeerPool) checkMeerChangeExport4337Tx(ced *meerchange.MeerchangeExport4337Data, utxoView *utxo.UtxoViewpoint) error {
-	op, err := ced.GetOutPoint()
-	if err != nil {
-		return err
-	}
-	var entry *utxo.UtxoEntry
-	if utxoView != nil {
-		entry = utxoView.LookupEntry(*op)
-	}
-	ok := false
-	if entry == nil {
-		ue, err := m.consensus.BlockChain().GetUtxo(*op)
-		if err != nil {
-			return err
-		}
-		if ue == nil {
-			return fmt.Errorf("No utxo %s:%d", op.Hash.String(), op.OutIndex)
-		}
-		entry, ok = ue.(*utxo.UtxoEntry)
-		if !ok || entry == nil {
-			return fmt.Errorf("No utxo entry %s:%d", op.Hash.String(), op.OutIndex)
-		}
-	}
-
-	err = m.checkSignature4337(ced, entry)
+	sigPKB, err := m.checkSignature(ced, entry)
 	if err != nil {
 		return err
 	}
 	if uint64(entry.Amount().Value) <= ced.Opt.Fee {
 		return fmt.Errorf("UTXO amount(%d) is insufficient, the actual fee is %d", entry.Amount().Value, ced.Opt.Fee)
 	}
-	ced.Amount = entry.Amount()
-	if utxoView != nil && ok {
-		utxoView.AddEntry(*op, entry)
-	}
-	return nil
-}
-
-func (m *MeerPool) checkSignature4337(ced *meerchange.MeerchangeExport4337Data, entry *utxo.UtxoEntry) error {
-	if len(entry.PkScript()) <= 0 {
-		return fmt.Errorf("PkScript is empty")
-	}
-	op, err := ced.GetOutPoint()
-	if err != nil {
-		return err
-	}
-	eHash := meerchange.CalcExport4337Hash(&op.Hash, op.OutIndex, ced.Opt.Fee)
-	sig, err := hex.DecodeString(ced.Opt.Sig)
-	if err != nil {
-		return err
-	}
-	pkb, err := crypto.Ecrecover(eHash.Bytes(), sig)
+	signer := types.NewPKSigner(m.eth.BlockChain().Config().ChainID)
+	pkb, err := signer.GetPublicKey(tx)
 	if err != nil {
 		return err
 	}
@@ -215,32 +107,65 @@ func (m *MeerPool) checkSignature4337(ced *meerchange.MeerchangeExport4337Data, 
 	if err != nil {
 		return err
 	}
+	if hex.EncodeToString(sigPKB) == hex.EncodeToString(pubKey.SerializeUncompressed()) {
+		if ced.Opt.Fee != 0 {
+			return fmt.Errorf("When there is no proxy, fee must be 0.(cur:%d)", ced.Opt.Fee)
+		}
+	}
+	ced.Amount = entry.Amount()
+	if utxoView != nil && ok {
+		utxoView.AddEntry(*op, entry)
+	}
+	return nil
+}
+
+func (m *MeerPool) checkSignature(ced *meerchange.MeerchangeExportData, entry *utxo.UtxoEntry) ([]byte, error) {
+	if len(entry.PkScript()) <= 0 {
+		return nil, fmt.Errorf("PkScript is empty")
+	}
+	op, err := ced.GetOutPoint()
+	if err != nil {
+		return nil, err
+	}
+	eHash := meerchange.CalcExportHash(&op.Hash, op.OutIndex, ced.Opt.Fee)
+	sig, err := hex.DecodeString(ced.Opt.Sig)
+	if err != nil {
+		return nil, err
+	}
+	pkb, err := crypto.Ecrecover(eHash.Bytes(), sig)
+	if err != nil {
+		return nil, err
+	}
+	pubKey, err := ecc.Secp256k1.ParsePubKey(pkb)
+	if err != nil {
+		return nil, err
+	}
 	addrUn, err := address.NewSecpPubKeyAddress(pubKey.SerializeUncompressed(), params.ActiveNetParams.Params)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	addr, err := address.NewSecpPubKeyAddress(pubKey.SerializeCompressed(), params.ActiveNetParams.Params)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	scriptClass, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(entry.PkScript(), params.ActiveNetParams.Params)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(pksAddrs) != 1 {
-		return fmt.Errorf("PKScript num no support:%d", len(pksAddrs))
+		return nil, fmt.Errorf("PKScript num no support:%d", len(pksAddrs))
 	}
 
 	switch scriptClass {
 	case txscript.PubKeyHashTy, txscript.PubkeyHashAltTy, txscript.PubKeyTy, txscript.PubkeyAltTy:
 		if pksAddrs[0].Encode() == addr.PKHAddress().String() ||
 			pksAddrs[0].Encode() == addrUn.PKHAddress().String() {
-			return nil
+			return pubKey.SerializeUncompressed(), nil
 		}
 	default:
-		return fmt.Errorf("Signature error about no support %s", scriptClass.String())
+		return nil, fmt.Errorf("Signature error about no support %s", scriptClass.String())
 	}
-	return fmt.Errorf("Signature error")
+	return nil, fmt.Errorf("Signature error")
 }
