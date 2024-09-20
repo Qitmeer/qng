@@ -51,8 +51,8 @@ func NewPrivateMeerChainAPI(mc *MeerChain) *PrivateMeerChainAPI {
 	return &PrivateMeerChainAPI{mc}
 }
 
-func (api *PrivateMeerChainAPI) CalcExport4337Sig(txid hash.Hash, idx uint32, fee uint64, privKeyHex string) (interface{}, error) {
-	sig, err := meerchange.CalcExport4337Sig(meerchange.CalcExport4337Hash(&txid, idx, fee), privKeyHex)
+func (api *PrivateMeerChainAPI) CalcExportSig(txid hash.Hash, idx uint32, fee uint64, privKeyHex string) (interface{}, error) {
+	sig, err := meerchange.CalcExportSig(meerchange.CalcExportHash(&txid, idx, fee), privKeyHex)
 	if err != nil {
 		return nil, err
 	}

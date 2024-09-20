@@ -318,52 +318,38 @@ func (b *MeerChain) OnStateChange(header *types.Header, state *state.StateDB, bo
 		if vmtx.ExportData != nil {
 			tx := vmtx.ETx
 
-			from, err := signer.Sender(tx)
+			proxy, err := signer.Sender(tx)
+			if err != nil {
+				log.Error(err.Error())
+				return
+			}
+			master, err := vmtx.ExportData.GetMaster()
 			if err != nil {
 				log.Error(err.Error())
 				return
 			}
 			if vmtx.ExportData.Amount.Value <= 0 {
 				log.Error("meerchange export amout is invalid", "hash", tx.Hash().String())
-			}
-			value := big.NewInt(vmtx.ExportData.Amount.Value)
-			value = value.Mul(value, qcommon.Precision)
-			state.AddBalance(from, uint256.MustFromBig(value), tracing.BalanceChangeTransfer)
-			op, _ := vmtx.ExportData.GetOutPoint()
-			log.Debug("meer tx add balance from utxo", "txhash", tx.Hash().String(), "utxoTxid",
-				op.Hash.String(), "utxoIdx", op.OutIndex, "amout", vmtx.ExportData.Amount.Value, "addbalance", value.String(), "from", from.String())
-		} else if vmtx.Export4337Data != nil {
-			tx := vmtx.ETx
-
-			proxy, err := signer.Sender(tx)
-			if err != nil {
-				log.Error(err.Error())
 				return
 			}
-			master, err := vmtx.Export4337Data.GetMaster()
-			if err != nil {
-				log.Error(err.Error())
+			if uint64(vmtx.ExportData.Amount.Value) <= vmtx.ExportData.Opt.Fee {
+				log.Error("UTXO amount is insufficient", "utxo amout", vmtx.ExportData.Amount.Value, "fee", vmtx.ExportData.Opt.Fee, "hash", tx.Hash().String())
 				return
 			}
-			if vmtx.Export4337Data.Amount.Value <= 0 {
-				log.Error("meerchange export4337 amout is invalid", "hash", tx.Hash().String())
-				return
-			}
-			if uint64(vmtx.Export4337Data.Amount.Value) <= vmtx.Export4337Data.Opt.Fee {
-				log.Error("UTXO amount is insufficient", "utxo amout", vmtx.Export4337Data.Amount.Value, "fee", vmtx.Export4337Data.Opt.Fee, "hash", tx.Hash().String())
-				return
-			}
-			value := big.NewInt(vmtx.Export4337Data.Amount.Value - int64(vmtx.Export4337Data.Opt.Fee))
+			value := big.NewInt(vmtx.ExportData.Amount.Value - int64(vmtx.ExportData.Opt.Fee))
 			value = value.Mul(value, qcommon.Precision)
 
-			fee := big.NewInt(int64(vmtx.Export4337Data.Opt.Fee))
+			fee := big.NewInt(int64(vmtx.ExportData.Opt.Fee))
 			fee = fee.Mul(fee, qcommon.Precision)
 
 			state.AddBalance(master, uint256.MustFromBig(value), tracing.BalanceChangeTransfer)
-			state.AddBalance(proxy, uint256.MustFromBig(fee), tracing.BalanceChangeTransfer)
-			op, _ := vmtx.Export4337Data.GetOutPoint()
+			if vmtx.ExportData.Opt.Fee != 0 {
+				state.AddBalance(proxy, uint256.MustFromBig(fee), tracing.BalanceChangeTransfer)
+			}
+
+			op, _ := vmtx.ExportData.GetOutPoint()
 			log.Debug("meer tx add balance from utxo", "txhash", tx.Hash().String(), "utxoTxid",
-				op.Hash.String(), "utxoIdx", op.OutIndex, "amout", vmtx.Export4337Data.Amount.Value, "add",
+				op.Hash.String(), "utxoIdx", op.OutIndex, "amout", vmtx.ExportData.Amount.Value, "add",
 				value.String(), "master", master.String(), "proxyFee", fee.String(), "proxy", proxy.String())
 		}
 
@@ -567,12 +553,6 @@ func (b *MeerChain) VerifyTx(tx *mmeer.VMTx, utxoView *utxo.UtxoViewpoint) (int6
 		}
 		if tx.ExportData != nil {
 			err = b.meerpool.checkMeerChangeExportTx(txe, tx.ExportData, utxoView)
-			if err != nil {
-				return 0, err
-			}
-		}
-		if tx.Export4337Data != nil {
-			err = b.meerpool.checkMeerChangeExport4337Tx(tx.Export4337Data, utxoView)
 			if err != nil {
 				return 0, err
 			}

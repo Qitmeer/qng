@@ -24,11 +24,11 @@ func IsDirectMeerChangeTx(tx *types.Transaction) bool {
 	return *tx.To() == common.HexToAddress(params.ActiveNetParams.MeerChangeContractAddr)
 }
 
-func IsExport4337Tx(tx *types.Transaction) bool {
-	if IsMeerChangeExport4337Tx(tx) {
+func IsExportTx(tx *types.Transaction) bool {
+	if IsMeerChangeExportTx(tx) {
 		return true
 	}
-	return IsEntrypointExport4337Tx(tx)
+	return IsEntrypointExportTx(tx)
 }
 
 func IsMeerChangeTx(tx *types.Transaction) bool {

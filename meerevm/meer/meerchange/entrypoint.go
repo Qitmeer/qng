@@ -46,7 +46,7 @@ func IsEntrypointMeerChangeTx(tx *types.Transaction) bool {
 	return false
 }
 
-func IsEntrypointExport4337Tx(tx *types.Transaction) bool {
+func IsEntrypointExportTx(tx *types.Transaction) bool {
 	// TODO: In the future, we should be able to obtain deterministic 4337 address
 	data, err := parseHandleOpsData(tx.Data())
 	if err != nil {
@@ -60,7 +60,7 @@ func IsEntrypointExport4337Tx(tx *types.Transaction) bool {
 		if ex.Dest != common.HexToAddress(params.ActiveNetParams.MeerChangeContractAddr) {
 			continue
 		}
-		if isMeerChangeExport4337TxByData(ex.Func) {
+		if isMeerChangeExportTxByData(ex.Func) {
 			return true
 		}
 	}
@@ -123,7 +123,7 @@ func parseExecuteData(data []byte) (*ExecuteData, error) {
 	return &eData, nil
 }
 
-func NewEntrypointExport4337DataByInput(txdata []byte) (*MeerchangeExport4337Data, error) {
+func NewEntrypointExportDataByInput(txdata []byte) (*MeerchangeExportData, error) {
 	data, err := parseHandleOpsData(txdata)
 	if err != nil {
 		return nil, err
@@ -136,7 +136,7 @@ func NewEntrypointExport4337DataByInput(txdata []byte) (*MeerchangeExport4337Dat
 			continue
 		}
 		edata = ex.Func
-		if isMeerChangeExport4337TxByData(edata) {
+		if isMeerChangeExportTxByData(edata) {
 			if has {
 				return nil, fmt.Errorf("Cannot support multiple MeerChange call in one transaction")
 			}
@@ -144,7 +144,7 @@ func NewEntrypointExport4337DataByInput(txdata []byte) (*MeerchangeExport4337Dat
 		}
 	}
 	if len(edata) <= 0 {
-		return nil, fmt.Errorf("No Export4337Data")
+		return nil, fmt.Errorf("No ExportData")
 	}
-	return NewMeerchangeExport4337DataByInput(edata)
+	return NewMeerchangeExportDataByInput(edata)
 }
