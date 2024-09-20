@@ -108,7 +108,7 @@ func GenerateBlocksWaitForTxs(t *testing.T, h *MockNode, txs []string) error {
 			return nil
 		}
 		if i >= tryMax-1 {
-			t.Fatal("No block")
+			return fmt.Errorf("No block")
 		}
 	}
 	return fmt.Errorf("No block")
