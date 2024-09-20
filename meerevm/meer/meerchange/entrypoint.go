@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/meerevm/meer/entrypoint"
 	"github.com/Qitmeer/qng/meerevm/meer/qngaccount"
-	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -29,6 +28,9 @@ type ExecuteData struct {
 }
 
 func IsEntrypointMeerChangeTx(tx *types.Transaction) bool {
+	if ContractAddr == (common.Address{}) {
+		return false
+	}
 	// TODO: In the future, we should be able to obtain deterministic 4337 address
 	data, err := parseHandleOpsData(tx.Data())
 	if err != nil {
@@ -39,7 +41,7 @@ func IsEntrypointMeerChangeTx(tx *types.Transaction) bool {
 		if err != nil || ex == nil {
 			continue
 		}
-		if ex.Dest == common.HexToAddress(params.ActiveNetParams.MeerChangeContractAddr) {
+		if ex.Dest == ContractAddr {
 			return true
 		}
 	}
@@ -47,6 +49,9 @@ func IsEntrypointMeerChangeTx(tx *types.Transaction) bool {
 }
 
 func IsEntrypointExportTx(tx *types.Transaction) bool {
+	if ContractAddr == (common.Address{}) {
+		return false
+	}
 	// TODO: In the future, we should be able to obtain deterministic 4337 address
 	data, err := parseHandleOpsData(tx.Data())
 	if err != nil {
@@ -57,7 +62,7 @@ func IsEntrypointExportTx(tx *types.Transaction) bool {
 		if err != nil || ex == nil {
 			continue
 		}
-		if ex.Dest != common.HexToAddress(params.ActiveNetParams.MeerChangeContractAddr) {
+		if ex.Dest != ContractAddr {
 			continue
 		}
 		if isMeerChangeExportTxByData(ex.Func) {

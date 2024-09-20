@@ -129,6 +129,9 @@ func (m *MeerPool) handler() {
 				continue
 			}
 			if !m.prepareMeerChangeTxs(ev.Txs) {
+				for _, tx := range ev.Txs {
+					m.ethTxPool.RemoveTx(tx.Hash(), true)
+				}
 				continue
 			}
 
