@@ -33,6 +33,10 @@ func (api *PublicMeerChainAPI) GetMeerChainInfo() (interface{}, error) {
 	return mi, nil
 }
 
+func (api *PublicMeerChainAPI) GetMeerChangeContractAddr() (interface{}, error) {
+	return meerchange.ContractAddr.String(), nil
+}
+
 type MeerChainInfo struct {
 	MeerVer   string `json:"meerver"`
 	EvmVer    string `json:"evmver"`

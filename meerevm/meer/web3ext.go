@@ -490,6 +490,11 @@ web3._extend({
 			name: 'getConfig',
 			getter: 'qng_getConfig'
 		}),
+
+		new web3._extend.Property({
+			name: 'getMeerChangeContractAddr',
+			getter: 'qng_getMeerChangeContractAddr'
+		}),
 	]
 });
 `

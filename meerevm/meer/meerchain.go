@@ -16,6 +16,7 @@ import (
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
 	mconsensus "github.com/Qitmeer/qng/meerevm/meer/consensus"
+	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
 	"github.com/Qitmeer/qng/meerevm/proxy"
 	"github.com/Qitmeer/qng/node/service"
 	"github.com/Qitmeer/qng/params"
@@ -625,6 +626,12 @@ func (b *MeerChain) DeterministicDeploymentProxy() *proxy.DeterministicDeploymen
 	return b.ddProxy
 }
 
+func (b *MeerChain) initMeerChange() error {
+	var err error
+	meerchange.ContractAddr, err = b.ddProxy.GetContractAddress(common.Address{}, common.FromHex(meerchange.MeerchangeMetaData.Bin), 0)
+	return err
+}
+
 func (b *MeerChain) APIs() []api.API {
 	return append([]api.API{
 		{
@@ -668,7 +675,10 @@ func NewMeerChain(consensus model.Consensus) (*MeerChain, error) {
 	}
 	mchain.InitContext()
 	mchain.ddProxy = proxy.NewDeterministicDeploymentProxy(mchain.Context(), ethclient.NewClient(chain.Node().Attach()))
-
 	chain.Ether().Engine().(*mconsensus.MeerEngine).StateChange = mchain.OnStateChange
+	err = mchain.initMeerChange()
+	if err != nil {
+		log.Warn(err.Error())
+	}
 	return mchain, nil
 }
