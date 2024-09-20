@@ -241,8 +241,6 @@ type Params struct {
 
 	CoinbaseConfig CoinbaseConfigs
 
-	MeerChangeContractAddr string
-
 	DeterministicDeploymentProxyAddr common.Address
 }
 

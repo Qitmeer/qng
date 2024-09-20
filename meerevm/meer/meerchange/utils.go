@@ -11,8 +11,12 @@ import (
 
 const funcSigHashLen = 4
 
+var (
+	ContractAddr common.Address
+)
+
 func IsDirectMeerChangeTx(tx *types.Transaction) bool {
-	if len(params.ActiveNetParams.MeerChangeContractAddr) <= 0 {
+	if ContractAddr == (common.Address{}) {
 		return false
 	}
 	if tx == nil {
@@ -21,7 +25,7 @@ func IsDirectMeerChangeTx(tx *types.Transaction) bool {
 	if tx.To() == nil {
 		return false
 	}
-	return *tx.To() == common.HexToAddress(params.ActiveNetParams.MeerChangeContractAddr)
+	return *tx.To() == ContractAddr
 }
 
 func IsExportTx(tx *types.Transaction) bool {
