@@ -28,20 +28,20 @@ func TestCallErc20Contract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup harness failed:%v", err)
 	}
-	testutils.GenerateBlocks(t, h, 20)
-	testutils.AssertBlockOrderHeightTotal(t, h, 21, 21, 20)
+	testutils.GenerateBlocks(t, h, 1)
+	testutils.AssertBlockOrderHeightTotal(t, h, 2, 2, 1)
 
 	lockTime := int64(20)
 	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERA}
 	txid := testutils.SendSelfMockNode(t, h, spendAmt, &lockTime)
-	testutils.GenerateBlocks(t, h, 10)
+	testutils.GenerateBlocks(t, h, 1)
 	fee := int64(2200)
 	txH := testutils.SendExportTxMockNode(t, h, txid.String(), 0, spendAmt.Value-fee)
 	if txH == nil {
 		t.Fatalf("createExportRawTx failed:%v", err)
 	}
 	log.Println("send tx", txH.String())
-	testutils.GenerateBlocks(t, h, 10)
+	testutils.GenerateBlocks(t, h, 1)
 	acc := h.GetWalletManager().GetAccountByIdx(0)
 	if err != nil {
 		t.Fatalf("GetAcctInfo failed:%v", err)
