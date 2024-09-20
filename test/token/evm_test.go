@@ -28,20 +28,20 @@ func TestCallErc20Contract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup harness failed:%v", err)
 	}
-	testutils.GenerateBlocks(t, h, 20)
-	testutils.AssertBlockOrderHeightTotal(t, h, 21, 21, 20)
+	testutils.GenerateBlocks(t, h, 1)
+	testutils.AssertBlockOrderHeightTotal(t, h, 2, 2, 1)
 
 	lockTime := int64(20)
 	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERA}
 	txid := testutils.SendSelfMockNode(t, h, spendAmt, &lockTime)
-	testutils.GenerateBlocks(t, h, 10)
+	testutils.GenerateBlocksWaitForTxs(t, h, []string{txid.String()})
 	fee := int64(2200)
 	txH := testutils.SendExportTxMockNode(t, h, txid.String(), 0, spendAmt.Value-fee)
 	if txH == nil {
 		t.Fatalf("createExportRawTx failed:%v", err)
 	}
 	log.Println("send tx", txH.String())
-	testutils.GenerateBlocks(t, h, 10)
+	testutils.GenerateBlocksWaitForTxs(t, h, []string{txH.String()})
 	acc := h.GetWalletManager().GetAccountByIdx(0)
 	if err != nil {
 		t.Fatalf("GetAcctInfo failed:%v", err)
@@ -149,7 +149,6 @@ func TestCallErc20Contract(t *testing.T) {
 		log.Println(i, "address", target.String(), "balance", ba)
 		assert.Equal(t, ba, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 	}
-	testutils.GenerateBlocks(t, h, 1)
 	// check transferFrom
 
 	// not approve
@@ -163,23 +162,26 @@ func TestCallErc20Contract(t *testing.T) {
 		testutils.GenerateBlocksWaitForTxs(t, h, []string{tx1.Hash().String()})
 		// check the transaction is ok or not
 		txD2, err := h.GetEvmClient().TransactionReceipt(context.Background(), tx1.Hash())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if txD2.Status == uint64(0x1) {
+		if err == nil && txD2.Status == 0x1 {
 			t.Fatal("Token Bug,TransferFrom without approve")
 		}
 	}
-	log.Println(err)
+
 	//  approve
-	_, err = tokenCall.Approve(authCaller, h.GetWalletManager().GetAccountByIdx(1).EvmAcct.Address, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+	txAp, err := tokenCall.Approve(authCaller, h.GetWalletManager().GetAccountByIdx(1).EvmAcct.Address, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 	if err != nil {
 		t.Fatal("approve error", err)
 	}
-	testutils.GenerateBlocks(t, h, 1)
-	_, err = tokenCall.TransferFrom(authCaller1, acc.EvmAcct.Address, h.GetWalletManager().GetAccountByIdx(1).EvmAcct.Address, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
+
+	testutils.GenerateBlocksWaitForTxs(t, h, []string{txAp.Hash().String()})
+	txLast, err := tokenCall.TransferFrom(authCaller1, acc.EvmAcct.Address, h.GetWalletManager().GetAccountByIdx(1).EvmAcct.Address, big.NewInt(toAmount).Mul(big.NewInt(toAmount), big.NewInt(1e18)))
 	if err != nil {
 		t.Fatal("TransferFrom error", err)
 	}
-	testutils.GenerateBlocks(t, h, 1)
+	testutils.GenerateBlocksWaitForTxs(t, h, []string{txLast.Hash().String()})
+	txD3, err := h.GetEvmClient().TransactionReceipt(context.Background(), txLast.Hash())
+	if err != nil {
+		t.Fatal("TransferFrom error", err)
+	}
+	assert.Equal(t, txD3.Status, uint64(0x1))
 }

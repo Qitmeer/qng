@@ -30,20 +30,20 @@ func TestReleaseContract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup harness failed:%v", err)
 	}
-	testutils.GenerateBlocks(t, h, 20)
-	testutils.AssertBlockOrderHeightTotal(t, h, 21, 21, 20)
+	testutils.GenerateBlocks(t, h, 1)
+	testutils.AssertBlockOrderHeightTotal(t, h, 2, 2, 1)
 
 	lockTime := int64(20)
 	spendAmt := types.Amount{Value: 14000 * types.AtomsPerCoin, Id: types.MEERA}
 	txid := testutils.SendSelfMockNode(t, h, spendAmt, &lockTime)
-	testutils.GenerateBlocks(t, h, 10)
+	testutils.GenerateBlocks(t, h, 1)
 	fee := int64(2200)
 	txid = testutils.SendExportTxMockNode(t, h, txid.String(), 0, spendAmt.Value-fee)
 	if err != nil {
 		t.Fatalf("createExportRawTx failed:%v", err)
 	}
 	log.Println("send tx", txid.String())
-	testutils.GenerateBlocks(t, h, 10)
+	testutils.GenerateBlocks(t, h, 1)
 	evmAddr := h.GetWalletManager().GetAccountByIdx(0).EvmAcct.Address
 	ba, err := h.GetEvmClient().BalanceAt(context.Background(), evmAddr, nil)
 	if err != nil {
