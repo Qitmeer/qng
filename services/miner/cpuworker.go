@@ -341,17 +341,21 @@ out:
 			}
 			log.Info(fmt.Sprintf("%v", info), "cost", time.Since(start).String(), "txs", len(block.Transactions()))
 
+			w.Lock()
 			if w.discrete && w.discreteNum > 0 {
+				w.discreteNum--
 				if w.discreteBlock != nil {
 					w.discreteBlock <- block.Hash()
 				}
-				w.discreteNum--
 				if w.discreteNum <= 0 {
 					w.cleanDiscrete()
 				}
 			}
+			w.Unlock()
 		} else {
+			w.Lock()
 			w.cleanDiscrete()
+			w.Unlock()
 		}
 	}
 
