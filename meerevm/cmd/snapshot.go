@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/node"
+	"math"
 	"os"
 	"strconv"
 	"time"
@@ -61,9 +62,7 @@ WARNING: it's only supported in hash mode(--state.scheme=hash)".
 				Usage:     "Recalculate state hash based on the snapshot for verification",
 				ArgsUsage: "<root>",
 				Action:    verifyState,
-				Flags: qcommon.Merge([]cli.Flag{
-					utils.StateSchemeFlag,
-				}, utils.NetworkFlags, utils.DatabaseFlags),
+				Flags:     qcommon.Merge(utils.NetworkFlags, utils.DatabaseFlags),
 				Description: `
 geth snapshot verify-state <state-root>
 will traverse the whole accounts and storages set based on the specified
@@ -98,9 +97,7 @@ information about the specified address.
 				Usage:     "Traverse the state with given root hash and perform quick verification",
 				ArgsUsage: "<root>",
 				Action:    traverseState,
-				Flags: qcommon.Merge([]cli.Flag{
-					utils.StateSchemeFlag,
-				}, utils.NetworkFlags, utils.DatabaseFlags),
+				Flags:     qcommon.Merge(utils.NetworkFlags, utils.DatabaseFlags),
 				Description: `
 geth snapshot traverse-state <state-root>
 will traverse the whole state from the given state root and will abort if any
@@ -145,6 +142,17 @@ as the backend data source, making this command a lot faster.
 
 The argument is interpreted as block number or hash. If none is provided, the latest
 block is used.
+`,
+			},
+			{
+				Name:      "stats",
+				Usage:     "Show all snapshot info",
+				ArgsUsage: "<root>",
+				Action:    stats,
+				Flags:     qcommon.Merge(utils.NetworkFlags, utils.DatabaseFlags),
+				Description: `
+geth snapshot stats <state-root>
+will traverse the whole shnapshots 
 `,
 			},
 		},
@@ -683,4 +691,73 @@ func parseDumpConfig(ctx *cli.Context, stack *node.Node) (*state.DumpConfig, eth
 func hashish(x string) bool {
 	_, err := strconv.Atoi(x)
 	return err != nil
+}
+
+func stats(ctx *cli.Context) error {
+	stack, _ := makeConfigNode(ctx, config.Cfg)
+	defer stack.Close()
+
+	chaindb := utils.MakeChainDatabase(ctx, stack, true)
+	defer chaindb.Close()
+	header := rawdb.ReadHeadHeader(chaindb)
+	if header == nil {
+		log.Error("Failed to load head")
+		return errors.New("no head")
+	}
+	triedb := utils.MakeTrieDatabase(ctx, chaindb, false, true, false)
+	defer triedb.Close()
+
+	snapConfig := snapshot.Config{
+		CacheSize:  256,
+		Recovery:   false,
+		NoBuild:    true,
+		AsyncBuild: false,
+	}
+	snaptree, err := snapshot.New(snapConfig, chaindb, triedb, header.Root)
+	if err != nil {
+		log.Error("Failed to open snapshot tree", "err", err)
+		return err
+	}
+	if ctx.NArg() > 1 {
+		log.Error("Too many arguments given")
+		return errors.New("too many arguments")
+	}
+	var root = header.Root
+	if ctx.NArg() == 1 {
+		root, err = parseRoot(ctx.Args().First())
+		if err != nil {
+			log.Error("Failed to resolve state root", "err", err)
+			return err
+		}
+	}
+	snaps := snaptree.Snapshots(root, math.MaxInt, false)
+	log.Info("Snapshots info", "blockRoot", header.Root, "total", len(snaps))
+	head := header
+	getHead := func(snap snapshot.Snapshot) *types.Header {
+		timeout := time.After(time.Minute)
+		for head != nil {
+			select {
+			case <-timeout:
+				return nil
+			default:
+			}
+			if snap.Root() == head.Root {
+				return head
+			}
+			if head.Number.Uint64() <= 0 {
+				return nil
+			}
+			head = rawdb.ReadHeader(chaindb, head.ParentHash, head.Number.Uint64()-1)
+		}
+		return nil
+	}
+	for i, snap := range snaps {
+		shead := getHead(snap)
+		if shead != nil {
+			log.Info("snapshot", "index", i, "root", snap.Root().String(), "blockHash", shead.Hash().String(), "number", shead.Number.String())
+		} else {
+			log.Info("snapshot", "index", i, "root", snap.Root().String())
+		}
+	}
+	return nil
 }
