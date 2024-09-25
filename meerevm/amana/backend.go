@@ -5,6 +5,10 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"math/big"
+	"sync"
+	"time"
+
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
@@ -15,9 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/catalyst"
 	"github.com/ethereum/go-ethereum/params"
-	"math/big"
-	"sync"
-	"time"
 )
 
 const epochLength = 32
@@ -139,6 +140,12 @@ func (c *backend) sealBlock(withdrawals []*types.Withdrawal, timestamp uint64) e
 	} else if fcResponse.PayloadStatus.Status != engine.VALID {
 		return errors.New("ForkchoiceUpdated amana error")
 	}
+
+	// If the payload ID is nil, provide warning
+	if fcResponse.PayloadID == nil {
+		return errors.New("PayloadID is nil")
+	}
+
 	envelope, err := c.engineAPI.GetPayloadQng(*fcResponse.PayloadID, true)
 	if err != nil {
 		return err
