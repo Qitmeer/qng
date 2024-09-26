@@ -164,7 +164,7 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 	}
 	// Re-create statedb instance with new root upon the updated database
 	// for accessing latest states.
-	statedb, err = state.New(root, statedb.Database(), nil)
+	statedb, err = state.New(root, statedb.Database())
 	if err != nil {
 		return nil, fmt.Errorf("could not reopen state: %v", err)
 	}
@@ -173,9 +173,10 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 	return collector, nil
 }
 
-func MakePreState(db ethdb.Database, accounts core.GenesisAlloc) *state.StateDB {
-	sdb := state.NewDatabaseWithConfig(db, &triedb.Config{Preimages: true})
-	statedb, _ := state.New(types.EmptyRootHash, sdb, nil)
+func MakePreState(db ethdb.Database, accounts types.GenesisAlloc) *state.StateDB {
+	tdb := triedb.NewDatabase(db, &triedb.Config{Preimages: true})
+	sdb := state.NewDatabase(tdb, nil)
+	statedb, _ := state.New(types.EmptyRootHash, sdb)
 	for addr, a := range accounts {
 		statedb.SetCode(addr, a.Code)
 		statedb.SetNonce(addr, a.Nonce)
@@ -186,7 +187,7 @@ func MakePreState(db ethdb.Database, accounts core.GenesisAlloc) *state.StateDB 
 	}
 	// Commit and re-open to start with a clean state.
 	root, _ := statedb.Commit(0, false)
-	statedb, _ = state.New(root, sdb, nil)
+	statedb, _ = state.New(root, sdb)
 	return statedb
 }
 
@@ -281,18 +282,19 @@ func NewTransactorWithChainID(addr common.Address, chainID *big.Int) (*bind.Tran
 // TransactionToMessage converts a transaction into a Message.
 func TransactionToMessage(tx *types.Transaction, from common.Address, baseFee *big.Int) (*core.Message, error) {
 	msg := &core.Message{
-		Nonce:             tx.Nonce(),
-		GasLimit:          tx.Gas(),
-		GasPrice:          new(big.Int).Set(tx.GasPrice()),
-		GasFeeCap:         new(big.Int).Set(tx.GasFeeCap()),
-		GasTipCap:         new(big.Int).Set(tx.GasTipCap()),
-		To:                tx.To(),
-		Value:             tx.Value(),
-		Data:              tx.Data(),
-		AccessList:        tx.AccessList(),
-		SkipAccountChecks: false,
-		BlobHashes:        tx.BlobHashes(),
-		BlobGasFeeCap:     tx.BlobGasFeeCap(),
+		Nonce:            tx.Nonce(),
+		GasLimit:         tx.Gas(),
+		GasPrice:         new(big.Int).Set(tx.GasPrice()),
+		GasFeeCap:        new(big.Int).Set(tx.GasFeeCap()),
+		GasTipCap:        new(big.Int).Set(tx.GasTipCap()),
+		To:               tx.To(),
+		Value:            tx.Value(),
+		Data:             tx.Data(),
+		AccessList:       tx.AccessList(),
+		SkipNonceChecks:  false,
+		SkipFromEOACheck: false,
+		BlobHashes:       tx.BlobHashes(),
+		BlobGasFeeCap:    tx.BlobGasFeeCap(),
 	}
 	// If baseFee provided, set gasPrice to effectiveGasPrice.
 	if baseFee != nil {
