@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/event"
@@ -176,6 +177,9 @@ func (wm *WalletManager) AddAccount(act *accounts.Account, addrs []types.Address
 }
 
 func (wm *WalletManager) ImportRawKey(privkey string, password string) (*Account, error) {
+	if len(password) <= 0 {
+		return nil, errors.New("Password can not be empty")
+	}
 	key, err := crypto.HexToECDSA(privkey)
 	if err != nil {
 		return nil, err
