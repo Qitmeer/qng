@@ -5,6 +5,7 @@
 package eth
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/external"
@@ -14,14 +15,21 @@ import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
+	"github.com/ethereum/go-ethereum/eth/ethconfig"
+	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
+	"math/big"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -543,4 +551,104 @@ func MakeNakedNode(config *Config, args []string) (*node.Node, *cli.Context, err
 	}
 
 	return n, context, nil
+}
+
+// MakeChain creates a chain manager from set command line flags.
+func MakeChain(ctx *cli.Context, stack *node.Node, readonly bool, cfg *Config) (*core.BlockChain, ethdb.Database, error) {
+	if !cfg.Eth.SyncMode.IsValid() {
+		return nil, nil, fmt.Errorf("invalid sync mode %d", cfg.Eth.SyncMode)
+	}
+	if cfg.Eth.Miner.GasPrice == nil || cfg.Eth.Miner.GasPrice.Sign() <= 0 {
+		log.Warn("Sanitizing invalid miner gas price", "provided", cfg.Eth.Miner.GasPrice, "updated", ethconfig.Defaults.Miner.GasPrice)
+		cfg.Eth.Miner.GasPrice = new(big.Int).Set(ethconfig.Defaults.Miner.GasPrice)
+	}
+	if cfg.Eth.NoPruning && cfg.Eth.TrieDirtyCache > 0 {
+		if cfg.Eth.SnapshotCache > 0 {
+			cfg.Eth.TrieCleanCache += cfg.Eth.TrieDirtyCache * 3 / 5
+			cfg.Eth.SnapshotCache += cfg.Eth.TrieDirtyCache * 2 / 5
+		} else {
+			cfg.Eth.TrieCleanCache += cfg.Eth.TrieDirtyCache
+		}
+		cfg.Eth.TrieDirtyCache = 0
+	}
+	log.Info("Allocated trie memory caches", "clean", common.StorageSize(cfg.Eth.TrieCleanCache)*1024*1024, "dirty", common.StorageSize(cfg.Eth.TrieDirtyCache)*1024*1024)
+	// Assemble the Ethereum object
+	chainDb, err := stack.OpenDatabaseWithFreezer("chaindata", cfg.Eth.DatabaseCache, cfg.Eth.DatabaseHandles, cfg.Eth.DatabaseFreezer, "eth/db/chaindata/", false)
+	if err != nil {
+		return nil, nil, err
+	}
+	scheme, err := rawdb.ParseStateScheme(cfg.Eth.StateScheme, chainDb)
+	if err != nil {
+		return nil, nil, err
+	}
+	gspec := cfg.Eth.Genesis
+	chainConfig, err := core.LoadChainConfig(chainDb, gspec)
+	if err != nil {
+		return nil, nil, err
+	}
+	if cfg.Eth.ConsensusEngine == nil {
+		cfg.Eth.ConsensusEngine = ethconfig.CreateDefaultConsensusEngine
+	}
+	engine, err := cfg.Eth.ConsensusEngine(chainConfig, chainDb)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		vmcfg = vm.Config{
+			EnablePreimageRecording: cfg.Eth.EnablePreimageRecording,
+			EnableWitnessCollection: cfg.Eth.EnableWitnessCollection,
+		}
+		cacheConfig = &core.CacheConfig{
+			TrieCleanLimit:      cfg.Eth.TrieCleanCache,
+			TrieCleanNoPrefetch: cfg.Eth.NoPrefetch,
+			TrieDirtyLimit:      cfg.Eth.TrieDirtyCache,
+			TrieDirtyDisabled:   cfg.Eth.NoPruning,
+			TrieTimeLimit:       cfg.Eth.TrieTimeout,
+			SnapshotLimit:       cfg.Eth.SnapshotCache,
+			Preimages:           cfg.Eth.Preimages,
+			StateHistory:        cfg.Eth.StateHistory,
+			StateScheme:         scheme,
+		}
+	)
+
+	if cacheConfig.TrieDirtyDisabled && !cacheConfig.Preimages {
+		cacheConfig.Preimages = true
+		log.Info("Enabling recording of key preimages since archive mode is used")
+	}
+	if !ctx.Bool(utils.SnapshotFlag.Name) {
+		cacheConfig.SnapshotLimit = 0 // Disabled
+	}
+	// If we're in readonly, do not bother generating snapshot data.
+	if readonly {
+		cacheConfig.SnapshotNoBuild = true
+	}
+
+	if ctx.IsSet(utils.CacheFlag.Name) || ctx.IsSet(utils.CacheTrieFlag.Name) {
+		cacheConfig.TrieCleanLimit = ctx.Int(utils.CacheFlag.Name) * ctx.Int(utils.CacheTrieFlag.Name) / 100
+	}
+	if ctx.IsSet(utils.CacheFlag.Name) || ctx.IsSet(utils.CacheGCFlag.Name) {
+		cacheConfig.TrieDirtyLimit = ctx.Int(utils.CacheFlag.Name) * ctx.Int(utils.CacheGCFlag.Name) / 100
+	}
+
+	if ctx.IsSet(utils.VMTraceFlag.Name) {
+		if name := ctx.String(utils.VMTraceFlag.Name); name != "" {
+			var config json.RawMessage
+			if ctx.IsSet(utils.VMTraceJsonConfigFlag.Name) {
+				config = json.RawMessage(ctx.String(utils.VMTraceJsonConfigFlag.Name))
+			}
+			t, err := tracers.LiveDirectory.New(name, config)
+			if err != nil {
+				return nil, nil, fmt.Errorf("Failed to create tracer %q: %v", name, err)
+			}
+			vmcfg.Tracer = t
+		}
+	}
+	// Disable transaction indexing/unindexing by default.
+	chain, err := core.NewBlockChain(chainDb, cacheConfig, gspec, nil, engine, vmcfg, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return chain, chainDb, nil
 }
