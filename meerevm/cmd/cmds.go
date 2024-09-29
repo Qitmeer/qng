@@ -27,6 +27,7 @@ var (
 		utils.ShowDeprecated,
 		// See snapshot.go
 		snapshotCommand,
+		setHeadCommand,
 	}
 )
 
