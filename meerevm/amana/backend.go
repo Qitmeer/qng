@@ -138,6 +138,8 @@ func (c *backend) sealBlock(withdrawals []*types.Withdrawal, timestamp uint64) e
 		return errors.New("chain rewind prevented invocation of payload creation")
 	} else if fcResponse.PayloadStatus.Status != engine.VALID {
 		return errors.New("ForkchoiceUpdated amana error")
+	} else if fcResponse.PayloadID == nil {
+		return errors.New("Forkchoice requested update fail")
 	}
 	envelope, err := c.engineAPI.GetPayloadQng(*fcResponse.PayloadID, true)
 	if err != nil {
