@@ -26,3 +26,15 @@ type AcctDebugInfo struct {
 	Watcher     uint32 `json:"watcher"`
 	UtxoWatcher uint32 `json:"utxowatcher"`
 }
+
+func isAllMode(addrs []string) bool {
+	if len(addrs) <= 0 {
+		return false
+	}
+	for _, addr := range addrs {
+		if addr == "*" {
+			return true
+		}
+	}
+	return false
+}

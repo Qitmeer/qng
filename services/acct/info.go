@@ -7,13 +7,14 @@ import (
 )
 
 const (
-	CurrentAcctInfoVersion = 2
+	CurrentAcctInfoVersion = 3
 )
 
 type AcctInfo struct {
 	version     uint32
 	updateDAGID uint32
 	total       uint32
+	all         bool
 	addrs       []string
 }
 
@@ -27,6 +28,10 @@ func (ai *AcctInfo) Encode(w io.Writer) error {
 		return err
 	}
 	err = s.WriteElements(w, ai.total)
+	if err != nil {
+		return err
+	}
+	err = s.WriteElements(w, ai.all)
 	if err != nil {
 		return err
 	}
@@ -64,6 +69,10 @@ func (ai *AcctInfo) Decode(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	err = s.ReadElements(r, &ai.all)
+	if err != nil {
+		return err
+	}
 	addrTotal := uint32(0)
 	err = s.ReadElements(r, &addrTotal)
 	if err != nil {
@@ -88,7 +97,7 @@ func (ai *AcctInfo) Decode(r io.Reader) error {
 }
 
 func (ai *AcctInfo) String() string {
-	return fmt.Sprintf("version=%d dagid=%d addrtotal=%d/%d", ai.version, ai.updateDAGID, ai.total, ai.GetAddrTotal())
+	return fmt.Sprintf("version=%d dagid=%d addrtotal=%d/%d allmode=%v", ai.version, ai.updateDAGID, ai.total, ai.GetAddrTotal(), ai.all)
 }
 
 func (ai *AcctInfo) IsCurrentVersion() bool {
