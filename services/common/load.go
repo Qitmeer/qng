@@ -6,6 +6,13 @@ package common
 
 import (
 	"fmt"
+	"net"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"strings"
+
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/util"
 	"github.com/Qitmeer/qng/config"
@@ -16,12 +23,6 @@ import (
 	gp "github.com/howeyc/gopass"
 	"github.com/jessevdk/go-flags"
 	"github.com/urfave/cli/v2"
-	"net"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strconv"
-	"strings"
 )
 
 // loadConfig initializes and parses the config using a config file and command
@@ -38,7 +39,7 @@ func LoadConfig(ctx *cli.Context, parsefile bool) (*config.Config, error) {
 	cfg.Whitelist = Whitelist.Value()
 	cfg.Blacklist = Blacklist.Value()
 	cfg.GBTNotify = GBTNotify.Value()
-
+	cfg.AcctAddrs = AcctAddresses.Value()
 	// Show the version and exit if the version flag was specified.
 	appName := filepath.Base(os.Args[0])
 	appName = strings.TrimSuffix(appName, filepath.Ext(appName))
