@@ -534,6 +534,11 @@ var (
 			Usage:       "Enable support account system mode",
 			Destination: &cfg.AcctMode,
 		},
+		&cli.StringSliceFlag{
+			Name:        "acctaddr",
+			Usage:       "Track changes in address balance (Track all account addresses: --acctaddr=*)",
+			Destination: cli.NewStringSlice(cfg.AcctAddrs...),
+		},
 		&cli.Uint64Flag{
 			Name:        "dagcachesize",
 			Usage:       "DAG block cache size",
