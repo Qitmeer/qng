@@ -76,8 +76,8 @@ var (
 	Whitelist         cli.StringSlice
 	Blacklist         cli.StringSlice
 	GBTNotify         cli.StringSlice
-
-	Flags = []cli.Flag{
+	AcctAddresses     cli.StringSlice
+	Flags             = []cli.Flag{
 		&cli.StringFlag{
 			Name:        "appdata",
 			Aliases:     []string{"A"},
@@ -533,6 +533,11 @@ var (
 			Name:        "acctmode",
 			Usage:       "Enable support account system mode",
 			Destination: &cfg.AcctMode,
+		},
+		&cli.StringSliceFlag{
+			Name:        "acctaddr",
+			Usage:       "Track changes in address balance (Track all account addresses: --acctaddr=*)",
+			Destination: &AcctAddresses,
 		},
 		&cli.Uint64Flag{
 			Name:        "dagcachesize",
