@@ -139,13 +139,17 @@ func DBPutACCTBalance(dbTx legacydb.Tx, address string, ab *AcctBalance) error {
 	return bucket.Put([]byte(address), buff.Bytes())
 }
 
-func DBDelACCTBalance(dbTx legacydb.Tx, address string) error {
+func DBDelACCTBalance(dbTx legacydb.Tx, address string) (bool, error) {
 	meta := dbTx.Metadata()
 	bucket := meta.Bucket(BalanceBucketName)
 	if bucket == nil {
-		return nil
+		return false, nil
 	}
-	return bucket.Delete([]byte(address))
+	addrBS := []byte(address)
+	if bucket.Get(addrBS) == nil {
+		return false, nil
+	}
+	return true, bucket.Delete([]byte(address))
 }
 
 // utxo

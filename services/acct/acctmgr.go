@@ -325,6 +325,7 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *utxo.UtxoE
 				return DBPutACCTInfo(tx, a.info)
 			})
 			if err != nil {
+				a.info.total--
 				return err
 			}
 		} else {
@@ -822,20 +823,22 @@ func (a *AccountManager) GetChain() *blockchain.BlockChain {
 }
 
 func (a *AccountManager) cleanBalanceDB(dbTx legacydb.Tx, addr string) error {
-	er := DBDelACCTBalance(dbTx, addr)
+	del, er := DBDelACCTBalance(dbTx, addr)
 	if er != nil {
 		return er
+	}
+	if del {
+		if a.info.total > 0 {
+			a.info.total--
+			er = DBPutACCTInfo(dbTx, a.info)
+			if er != nil {
+				return er
+			}
+		}
 	}
 	er = DBDelACCTUTXOs(dbTx, addr)
 	if er != nil {
 		return er
-	}
-	if a.info.total > 0 {
-		a.info.total--
-		er = DBPutACCTInfo(dbTx, a.info)
-		if er != nil {
-			return er
-		}
 	}
 	return nil
 }
