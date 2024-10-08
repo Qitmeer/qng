@@ -3,6 +3,7 @@ package acct
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/consensus/model"
 	"sync"
@@ -77,6 +78,7 @@ func (a *AccountManager) initDB(first bool) error {
 	curDAGID := uint32(a.chain.BlockDAG().GetBlockTotal())
 	rebuilddb := false
 	rebuildidx := false
+	trackAddrs := false
 	err = a.db.Update(func(dbTx legacydb.Tx) error {
 		info, err := DBGetACCTInfo(dbTx)
 		if err != nil {
@@ -84,6 +86,13 @@ func (a *AccountManager) initDB(first bool) error {
 		}
 		if info == nil {
 			a.info.updateDAGID = curDAGID
+			a.info.all = isAllMode(a.cfg.AcctAddrs)
+			if !a.info.all {
+				err = a.trackCfgAddresses(true)
+				if err != nil {
+					return err
+				}
+			}
 			err := DBPutACCTInfo(dbTx, a.info)
 			if err != nil {
 				return err
@@ -105,6 +114,17 @@ func (a *AccountManager) initDB(first bool) error {
 				} else {
 					return fmt.Errorf("update dag id is inconformity:%d != %d", curDAGID, a.info.updateDAGID)
 				}
+			} else if len(a.cfg.AcctAddrs) > 0 {
+				if a.info.all && !isAllMode(a.cfg.AcctAddrs) {
+					return errors.New("Already in Mode ALL, canceling it will damage the DB")
+				} else if !a.info.all && isAllMode(a.cfg.AcctAddrs) {
+					a.info.all = true
+					rebuilddb = true
+					log.Info("Attempting to convert to ALL mode requires resetting the database")
+					return nil
+				} else if !a.info.all && !isAllMode(a.cfg.AcctAddrs) {
+					trackAddrs = true
+				}
 			}
 			return a.initWatchers(dbTx)
 		}
@@ -117,16 +137,23 @@ func (a *AccountManager) initDB(first bool) error {
 		info := NewAcctInfo()
 		if a.info != nil {
 			info.addrs = a.info.addrs
+			info.all = a.info.all
 		}
 		a.info = info
 		a.cleanDB()
 		return a.initDB(false)
 	} else if rebuildidx {
-		if a.info.IsEmpty() {
+		if a.info.IsEmpty() && !a.isAllMode() {
 			log.Info("There is no account address for the moment. You can add it later through (RPC:addBalance)")
 			return nil
 		}
+
 		err = a.rebuild(nil)
+		if err != nil {
+			return err
+		}
+	} else if trackAddrs {
+		err = a.trackCfgAddresses(false)
 		if err != nil {
 			return err
 		}
@@ -237,6 +264,9 @@ func (a *AccountManager) checkUtxoEntry(entry *utxo.UtxoEntry, tracks []string) 
 	addrStr := addrs[0].String()
 
 	isHas := func(addr string) bool {
+		if a.isAllMode() {
+			return true
+		}
 		if len(tracks) <= 0 {
 			return false
 		}
@@ -353,6 +383,11 @@ func (a *AccountManager) apply(add bool, op *types.TxOutPoint, entry *utxo.UtxoE
 			}
 		}
 		log.Trace(fmt.Sprintf("Add balance: %s (%s)", addrStr, au.String()))
+		if a.isAllMode() {
+			if !a.info.Has(addrStr) {
+				a.info.Add(addrStr)
+			}
+		}
 		return a.db.Update(func(tx legacydb.Tx) error {
 			return DBPutACCTUTXO(tx, addrStr, op, au)
 		})
@@ -428,6 +463,45 @@ func (a *AccountManager) DelWatcher(addr string, op *types.TxOutPoint) {
 		delete(a.watchers, addr)
 		a.watchLock.Unlock()
 	}
+}
+
+func (a *AccountManager) trackCfgAddresses(setinfo bool) error {
+	addrs := a.cfg.AcctAddrs
+	if len(addrs) <= 0 {
+		return nil
+	}
+	ret := []string{}
+	for _, addr := range addrs {
+		err := a.checkAddress(addr)
+		if err != nil {
+			return err
+		}
+		if a.info.Has(addr) {
+			log.Warn("Already exists", "addr", addr)
+			continue
+		}
+		a.watchLock.RLock()
+		_, exist := a.watchers[addr]
+		a.watchLock.RUnlock()
+		if exist {
+			return fmt.Errorf("Already exists watcher:%s", addr)
+		}
+		a.info.Add(addr)
+		if setinfo {
+			continue
+		}
+		err = a.db.Update(func(dbTx legacydb.Tx) error {
+			return a.cleanBalanceDB(dbTx, addr)
+		})
+		if err != nil {
+			return err
+		}
+		ret = append(ret, addr)
+	}
+	if len(ret) <= 0 {
+		return nil
+	}
+	return a.rebuild(ret)
 }
 
 func (a *AccountManager) initWatchers(dbTx legacydb.Tx) error {
@@ -699,6 +773,9 @@ func (a *AccountManager) HasUTXO(addr string, outPoint *types.TxOutPoint) bool {
 }
 
 func (a *AccountManager) AddAddress(addr string) error {
+	if a.isAllMode() {
+		return fmt.Errorf("Already exists:%s (Because of all mode)", addr)
+	}
 	err := a.checkAddress(addr)
 	if err != nil {
 		return err
@@ -723,6 +800,9 @@ func (a *AccountManager) AddAddress(addr string) error {
 }
 
 func (a *AccountManager) DelAddress(addr string) error {
+	if a.isAllMode() {
+		return fmt.Errorf("Prohibit deletion operation:%s (Because of all mode)", addr)
+	}
 	err := a.checkAddress(addr)
 	if err != nil {
 		return err
@@ -794,6 +874,10 @@ func (a *AccountManager) getUtxoWatcherSize() int {
 		size += w.GetWatchersSize()
 	}
 	return size
+}
+
+func (a *AccountManager) isAllMode() bool {
+	return a.info.all
 }
 
 func New(chain *blockchain.BlockChain, cfg *config.Config, _events *event.Feed) (*AccountManager, error) {
