@@ -5,6 +5,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qng/core/blockchain/utxo"
+	qcommon "github.com/Qitmeer/qng/meerevm/common"
+	ecommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"strconv"
 	"strings"
 	"time"
@@ -1192,4 +1196,42 @@ func (api *PublicTxAPI) CreateExportRawTransactionV2(inputs []json.TransactionIn
 		}
 	}
 	return api.txManager.CreateRawTransactionV2(inputs, aa, lockTime)
+}
+
+func (api *PublicTxAPI) CheckUTXO(txid hash.Hash, idx uint32, sig string) (interface{}, error) {
+	op := types.NewOutPoint(&txid, idx)
+	ue, err := api.txManager.GetChain().GetUtxo(*op)
+	if err != nil {
+		return nil, err
+	}
+	if ue == nil {
+		return nil, fmt.Errorf("No utxo %s:%d", op.Hash.String(), op.OutIndex)
+	}
+	entry, ok := ue.(*utxo.UtxoEntry)
+	if !ok || entry == nil {
+		return nil, fmt.Errorf("No utxo entry %s:%d", op.Hash.String(), op.OutIndex)
+	}
+	if len(entry.PkScript()) <= 0 {
+		return nil, fmt.Errorf("PkScript is empty")
+	}
+
+	eHash := CalcUTXOHash(&op.Hash, op.OutIndex)
+	bsig := ecommon.FromHex(sig)
+	pkb, err := crypto.Ecrecover(eHash.Bytes(), bsig)
+	if err != nil {
+		return nil, err
+	}
+	pubKey, err := ecc.Secp256k1.ParsePubKey(pkb)
+	if err != nil {
+		return nil, err
+	}
+	return qcommon.CheckUTXOPubkey(pubKey, entry)
+}
+
+func (api *PrivateTxAPI) CalcUTXOSig(txid hash.Hash, idx uint32, privKeyHex string) (interface{}, error) {
+	sig, err := CalcUTXOSig(CalcUTXOHash(&txid, idx), privKeyHex)
+	if err != nil {
+		return nil, err
+	}
+	return hex.EncodeToString(sig), nil
 }

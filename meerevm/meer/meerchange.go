@@ -4,14 +4,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/ecc"
-	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
-	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -140,32 +137,5 @@ func (m *MeerPool) checkSignature(ced *meerchange.MeerchangeExportData, entry *u
 	if err != nil {
 		return nil, err
 	}
-	addrUn, err := address.NewSecpPubKeyAddress(pubKey.SerializeUncompressed(), params.ActiveNetParams.Params)
-	if err != nil {
-		return nil, err
-	}
-
-	addr, err := address.NewSecpPubKeyAddress(pubKey.SerializeCompressed(), params.ActiveNetParams.Params)
-	if err != nil {
-		return nil, err
-	}
-
-	scriptClass, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(entry.PkScript(), params.ActiveNetParams.Params)
-	if err != nil {
-		return nil, err
-	}
-	if len(pksAddrs) != 1 {
-		return nil, fmt.Errorf("PKScript num no support:%d", len(pksAddrs))
-	}
-
-	switch scriptClass {
-	case txscript.PubKeyHashTy, txscript.PubkeyHashAltTy, txscript.PubKeyTy, txscript.PubkeyAltTy:
-		if pksAddrs[0].Encode() == addr.PKHAddress().String() ||
-			pksAddrs[0].Encode() == addrUn.PKHAddress().String() {
-			return pubKey.SerializeUncompressed(), nil
-		}
-	default:
-		return nil, fmt.Errorf("Signature error about no support %s", scriptClass.String())
-	}
-	return nil, fmt.Errorf("Signature error")
+	return common.CheckUTXOPubkey(pubKey, entry)
 }
