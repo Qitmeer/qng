@@ -634,6 +634,24 @@ function calcExportSig(){
   get_result "$data"
 }
 
+function calcUTXOSig(){
+  local txid=$1
+  local idx=$2
+  local privKeyHex=$3
+
+  local data='{"jsonrpc":"2.0","method":"calcUTXOSig","params":["'$txid'",'$idx',"'$privKeyHex'"],"id":null}'
+  get_result "$data"
+}
+
+function checkUTXO(){
+  local txid=$1
+  local idx=$2
+  local sig=$3
+
+  local data='{"jsonrpc":"2.0","method":"checkUTXO","params":["'$txid'",'$idx',"'$sig'"],"id":null}'
+  get_result "$data"
+}
+
 function get_amana_nodeinfo(){
   local data='{"jsonrpc":"2.0","method":"getAmanaNodeInfo","params":[],"id":null}'
   get_result "$data"
@@ -919,6 +937,8 @@ function usage(){
   echo "  dbinfo"
   echo "  config"
   echo "  calcExportSig"
+  echo "  calcUTXOSig"
+  echo "  checkUTXO"
   echo "block  :"
   echo "  block <order|hash>"
   echo "  blockbyhash <hash>"
@@ -1492,6 +1512,12 @@ elif [ "$1" == "meerinfo" ]; then
 elif [ "$1" == "calcExportSig" ]; then
   shift
   calcExportSig $@
+elif [ "$1" == "calcUTXOSig" ]; then
+  shift
+  calcUTXOSig $@
+elif [ "$1" == "checkUTXO" ]; then
+  shift
+  checkUTXO $@
 elif [ "$1" == "amanainfo" ]; then
     shift
     get_amana_nodeinfo $@
