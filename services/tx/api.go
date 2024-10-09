@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/core/blockchain/utxo"
+	qcommon "github.com/Qitmeer/qng/meerevm/common"
 	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"strconv"
@@ -1224,34 +1225,7 @@ func (api *PublicTxAPI) CheckUTXO(txid hash.Hash, idx uint32, sig string) (inter
 	if err != nil {
 		return nil, err
 	}
-	addrUn, err := address.NewSecpPubKeyAddress(pubKey.SerializeUncompressed(), params.ActiveNetParams.Params)
-	if err != nil {
-		return nil, err
-	}
-
-	addr, err := address.NewSecpPubKeyAddress(pubKey.SerializeCompressed(), params.ActiveNetParams.Params)
-	if err != nil {
-		return nil, err
-	}
-
-	scriptClass, pksAddrs, _, err := txscript.ExtractPkScriptAddrs(entry.PkScript(), params.ActiveNetParams.Params)
-	if err != nil {
-		return nil, err
-	}
-	if len(pksAddrs) != 1 {
-		return nil, fmt.Errorf("PKScript num no support:%d", len(pksAddrs))
-	}
-
-	switch scriptClass {
-	case txscript.PubKeyHashTy, txscript.PubkeyHashAltTy, txscript.PubKeyTy, txscript.PubkeyAltTy:
-		if pksAddrs[0].Encode() == addr.PKHAddress().String() ||
-			pksAddrs[0].Encode() == addrUn.PKHAddress().String() {
-			return pubKey.SerializeUncompressed(), nil
-		}
-	default:
-		return nil, fmt.Errorf("Signature error about no support %s", scriptClass.String())
-	}
-	return nil, fmt.Errorf("Signature error")
+	return qcommon.CheckUTXOPubkey(pubKey, entry)
 }
 
 func (api *PrivateTxAPI) CalcUTXOSig(txid hash.Hash, idx uint32, privKeyHex string) (interface{}, error) {
