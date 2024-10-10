@@ -3,6 +3,7 @@
 package proxy
 
 import (
+	"encoding/hex"
 	"github.com/Qitmeer/qng/rpc/api"
 	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"github.com/ethereum/go-ethereum/common"
@@ -57,4 +58,32 @@ func (api *PublicDeterministicDeploymentProxyAPI) GetContractDeployData(bytecode
 	bytecode := common.FromHex(bytecodeHex)
 	ret := api.proxy.GetContractDeployData(bytecode, version)
 	return common.Bytes2Hex(ret), nil
+}
+
+type proxyInfo struct {
+	Name string `json:"name"`
+	Addr string `json:"address"`
+	Code string `json:"code"`
+}
+
+func (api *PublicDeterministicDeploymentProxyAPI) ProxyInfo() (interface{}, error) {
+	pi := proxyInfo{
+		Name: "Deterministic Deployment Proxy",
+		Addr: api.proxy.GetAddress().String(),
+	}
+	ret, bc := api.proxy.CheckDeploy()
+	if ret {
+		pi.Code = hex.EncodeToString(bc)
+	} else {
+		pi.Code = "Not yet deployed"
+	}
+	return pi, nil
+}
+
+func (api *PublicDeterministicDeploymentProxyAPI) DeployProxy(owner string) (interface{}, error) {
+	err := api.proxy.Deploy(common.HexToAddress(owner))
+	if err != nil {
+		return nil, err
+	}
+	return api.proxy.GetAddress().String(), nil
 }

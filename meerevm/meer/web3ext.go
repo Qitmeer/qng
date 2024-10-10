@@ -354,6 +354,11 @@ web3._extend({
 			call: 'qng_calcUTXOSig',
 			params: 3,
 		}),
+		new web3._extend.Method({
+			name: 'deployProxy',
+			call: 'qng_deployProxy',
+			params: 1,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -505,6 +510,11 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'getMeerChangeContractAddr',
 			getter: 'qng_getMeerChangeContractAddr'
+		}),
+
+		new web3._extend.Property({
+			name: 'proxyInfo',
+			getter: 'qng_proxyInfo'
 		}),
 	]
 });

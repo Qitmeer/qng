@@ -8,7 +8,6 @@ package params
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/ethereum/go-ethereum/common"
 	"strings"
 	"time"
 
@@ -240,8 +239,6 @@ type Params struct {
 	LedgerParams ledger.LedgerParams
 
 	CoinbaseConfig CoinbaseConfigs
-
-	DeterministicDeploymentProxyAddr common.Address
 }
 
 type CoinbaseConfig struct {
