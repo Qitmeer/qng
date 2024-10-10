@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/log"
 	qparams "github.com/Qitmeer/qng/params"
@@ -36,9 +35,11 @@ func (ddp DeterministicDeploymentProxy) GetAddress() *common.Address {
 }
 
 func (ddp DeterministicDeploymentProxy) GetContractAddress(owner common.Address, bytecode []byte, version int64) (common.Address, error) {
-	if ddp.GetAddress().Cmp(common.Address{}) == 0 {
-		return common.Address{}, errors.New("No support DeterministicDeploymentProxy")
+	ret, _ := ddp.CheckDeploy()
+	if !ret {
+		return common.Address{}, fmt.Errorf("Please deploy proxy first")
 	}
+
 	msg := ethereum.CallMsg{
 		From: owner,
 		To:   ddp.GetAddress(),
@@ -52,8 +53,11 @@ func (ddp DeterministicDeploymentProxy) GetContractAddress(owner common.Address,
 }
 
 func (ddp DeterministicDeploymentProxy) DeployContract(owner common.Address, bytecode []byte, version int64, value *big.Int, gas uint64) (common.Hash, error) {
-	if ddp.GetAddress().Cmp(common.Address{}) == 0 {
-		return common.Hash{}, errors.New("No support DeterministicDeploymentProxy")
+	if !ddp.IsDeployed() {
+		err := ddp.Deploy(owner)
+		if err != nil {
+			return common.Hash{}, err
+		}
 	}
 	arg := map[string]interface{}{
 		"from":  owner,
@@ -139,7 +143,7 @@ func (ddp DeterministicDeploymentProxy) Deploy(owner common.Address) error {
 }
 
 func (ddp DeterministicDeploymentProxy) waitTx(txh common.Hash) error {
-	ctx, cancel := context.WithTimeout(ddp.ctx, qparams.ActiveNetParams.TargetTimePerBlock*300)
+	ctx, cancel := context.WithTimeout(ddp.ctx, qparams.ActiveNetParams.TargetTimePerBlock*3)
 	defer cancel()
 	for {
 		select {
@@ -158,7 +162,7 @@ func (ddp DeterministicDeploymentProxy) waitTx(txh common.Hash) error {
 			log.Info("Deterministic deployment proxy finished", "tx", txh.String())
 			return nil
 		case <-ctx.Done():
-			return fmt.Errorf("Proxy Confirmation tx failed:%s", txh.String())
+			return fmt.Errorf("Proxy Confirmation tx failed(timeout):%s", txh.String())
 		}
 	}
 }
