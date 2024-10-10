@@ -205,7 +205,7 @@ func makeFullNode(ctx *cli.Context, cfg *Config) (*node.Node, *eth.EthAPIBackend
 		}
 		utils.RegisterFullSyncTester(stack, ethe, common.BytesToHash(hex))
 	}
-	return stack, backend.(*eth.EthAPIBackend), ethe
+	return stack, backend, ethe
 }
 
 func makeConfigNode(ctx *cli.Context, cfg *Config) *node.Node {
@@ -597,7 +597,6 @@ func MakeChain(ctx *cli.Context, stack *node.Node, readonly bool, cfg *Config) (
 	var (
 		vmcfg = vm.Config{
 			EnablePreimageRecording: cfg.Eth.EnablePreimageRecording,
-			EnableWitnessCollection: cfg.Eth.EnableWitnessCollection,
 		}
 		cacheConfig = &core.CacheConfig{
 			TrieCleanLimit:      cfg.Eth.TrieCleanCache,
