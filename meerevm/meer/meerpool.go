@@ -7,7 +7,6 @@ package meer
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/consensus/model/meer"
 	"github.com/Qitmeer/qng/core/blockchain/opreturn"
@@ -129,9 +128,6 @@ func (m *MeerPool) handler() {
 				continue
 			}
 			if !m.prepareMeerChangeTxs(ev.Txs) {
-				for _, tx := range ev.Txs {
-					m.ethTxPool.RemoveTx(tx.Hash(), true)
-				}
 				continue
 			}
 
@@ -157,29 +153,31 @@ func (m *MeerPool) handler() {
 }
 
 func (m *MeerPool) prepareMeerChangeTxs(txs []*types.Transaction) bool {
-	if !forks.IsMeerChangeForkHeight(m.eth.BlockChain().CurrentBlock().Number.Int64()) {
-		return false
-	}
+	remove := 0
+	all := 0
 	for _, tx := range txs {
 		if tx == nil {
 			continue
 		}
+		all++
 		if meerchange.IsMeerChangeTx(tx) {
 			vmtx, err := meer.NewVMTx(qcommon.ToQNGTx(tx, 0, true).Tx, nil)
 			if err != nil {
 				log.Error(err.Error())
 				m.ethTxPool.RemoveTx(tx.Hash(), true)
+				remove++
 				continue
 			}
 			err = m.consensus.BlockChain().VerifyMeerTx(vmtx)
 			if err != nil {
 				log.Error(err.Error())
 				m.ethTxPool.RemoveTx(tx.Hash(), true)
+				remove++
 				continue
 			}
 		}
 	}
-	return true
+	return remove != all
 }
 
 func (m *MeerPool) handleStallSample() {

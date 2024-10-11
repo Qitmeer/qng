@@ -11,8 +11,11 @@ import (
 
 const funcSigHashLen = 4
 
+const Version = 0
+
 var (
 	ContractAddr common.Address
+	Bytecode     []byte
 )
 
 func IsDirectMeerChangeTx(tx *types.Transaction) bool {

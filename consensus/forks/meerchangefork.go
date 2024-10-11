@@ -18,3 +18,10 @@ func IsMeerChangeForkHeight(height int64) bool {
 	}
 	return height >= MeerChangeForkEvmHeight
 }
+
+func GetMeerChangeForkHeight() uint64 {
+	if params.ActiveNetParams.Net != protocol.MainNet {
+		return 0
+	}
+	return MeerChangeForkEvmHeight
+}

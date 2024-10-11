@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"github.com/Qitmeer/qng/log"
 	"github.com/ethereum/go-ethereum"
@@ -33,14 +34,14 @@ func (ddp DeterministicDeploymentProxy) GetAddress() *common.Address {
 	return &addr
 }
 
-func (ddp DeterministicDeploymentProxy) GetContractAddress(owner common.Address, bytecode []byte, version int64) (common.Address, error) {
+func (ddp DeterministicDeploymentProxy) GetContractAddress(bytecode []byte, version int64) (common.Address, error) {
 	ret, _ := ddp.CheckDeploy()
 	if !ret {
 		return common.Address{}, fmt.Errorf("Please deploy proxy first")
 	}
 
 	msg := ethereum.CallMsg{
-		From: owner,
+		From: common.Address{},
 		To:   ddp.GetAddress(),
 		Data: ddp.GetContractDeployData(bytecode, version),
 	}
@@ -85,6 +86,9 @@ func (ddp DeterministicDeploymentProxy) GetContractDeployData(bytecode []byte, v
 }
 
 func (ddp DeterministicDeploymentProxy) GetCode() ([]byte, error) {
+	if len(ddp.bytecode) > 0 {
+		return ddp.bytecode, nil
+	}
 	bytecode, err := ddp.rpc.CodeAt(ddp.ctx, *ddp.GetAddress(), nil)
 	if err != nil {
 		return nil, err
@@ -129,7 +133,7 @@ func (ddp DeterministicDeploymentProxy) Deploy(owner common.Address) error {
 	txHash := common.BytesToHash(hashBytes)
 	log.Info("Send fee to deterministic deployment proxy deployer", "tx", txHash.String())
 
-	err = ddp.waitTx(txHash)
+	err = ddp.WaitTx(txHash)
 	if err != nil {
 		return err
 	}
@@ -138,10 +142,10 @@ func (ddp DeterministicDeploymentProxy) Deploy(owner common.Address) error {
 	if err != nil {
 		return err
 	}
-	return ddp.waitTx(common.BytesToHash(hashBytes))
+	return ddp.WaitTx(common.BytesToHash(hashBytes))
 }
 
-func (ddp DeterministicDeploymentProxy) waitTx(txh common.Hash) error {
+func (ddp DeterministicDeploymentProxy) WaitTx(txh common.Hash) error {
 	ctx, cancel := context.WithTimeout(ddp.ctx, time.Second*30)
 	defer cancel()
 	for {
@@ -164,6 +168,20 @@ func (ddp DeterministicDeploymentProxy) waitTx(txh common.Hash) error {
 			return fmt.Errorf("Proxy Confirmation tx failed(timeout):%s", txh.String())
 		}
 	}
+}
+
+func (ddp DeterministicDeploymentProxy) Info() *Info {
+	pi := &Info{
+		Name: "Deterministic Deployment Proxy",
+		Addr: ddp.GetAddress().String(),
+	}
+	ret, bc := ddp.CheckDeploy()
+	if ret {
+		pi.Code = hex.EncodeToString(bc)
+	} else {
+		pi.Code = "Not yet deployed"
+	}
+	return pi
 }
 
 func NewDeterministicDeploymentProxy(ctx context.Context, rpc *ethclient.Client) *DeterministicDeploymentProxy {

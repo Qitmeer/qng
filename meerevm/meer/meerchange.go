@@ -9,6 +9,7 @@ import (
 	"github.com/Qitmeer/qng/crypto/ecc"
 	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
+	qcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -138,4 +139,36 @@ func (m *MeerPool) checkSignature(ced *meerchange.MeerchangeExportData, entry *u
 		return nil, err
 	}
 	return common.CheckUTXOPubkey(pubKey, entry)
+}
+
+func (mc *MeerChain) GetMeerChangeCode() ([]byte, error) {
+	if meerchange.ContractAddr == (qcommon.Address{}) {
+		return nil, nil
+	}
+	if len(meerchange.Bytecode) > 0 {
+		return meerchange.Bytecode, nil
+	}
+	bytecode, err := mc.client.CodeAt(mc.Context(), meerchange.ContractAddr, nil)
+	if err != nil {
+		return nil, err
+	}
+	meerchange.Bytecode = bytecode
+	return bytecode, nil
+}
+
+func (mc *MeerChain) CheckMeerChangeDeploy() (bool, []byte) {
+	bytecode, err := mc.GetMeerChangeCode()
+	if err != nil {
+		log.Warn(err.Error())
+		return false, nil
+	}
+	if len(bytecode) <= 0 {
+		return false, nil
+	}
+	return true, bytecode
+}
+
+func (mc *MeerChain) IsMeerChangeDeployed() bool {
+	ret, _ := mc.CheckMeerChangeDeploy()
+	return ret
 }

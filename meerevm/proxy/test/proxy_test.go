@@ -35,7 +35,7 @@ func TestDeterministicDeploymentProxy(t *testing.T) {
 	// deploy our contract
 	// contract: pragma solidity 0.5.8; contract Apple {function banana() external pure returns (uint8) {return 42;}}
 	BYTECODE := common.FromHex("6080604052348015600f57600080fd5b5060848061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063c3cafc6f14602d575b600080fd5b6033604f565b604051808260ff1660ff16815260200191505060405180910390f35b6000602a90509056fea165627a7a72305820ab7651cb86b8c1487590004c2444f26ae30077a6b96c6bc62dda37f1328539250029")
-	MY_CONTRACT_ADDRESS, err := node.DeterministicDeploymentProxy().GetContractAddress(MY_ADDRESS, BYTECODE, 0)
+	MY_CONTRACT_ADDRESS, err := node.DeterministicDeploymentProxy().GetContractAddress(BYTECODE, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,11 +72,6 @@ func TestDeterministicDeploymentProxyOwner(t *testing.T) {
 	testutils.ShowMeTheMoneyForMeer(t, node, 0)
 	acc0 := node.GetWalletManager().GetAccountByIdx(0)
 
-	acc1, err := node.NewAddress()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	err = node.DeterministicDeploymentProxy().Deploy(acc0.EvmAcct.Address)
 	if err != nil {
 		t.Fatal(err)
@@ -84,15 +79,8 @@ func TestDeterministicDeploymentProxyOwner(t *testing.T) {
 	// deploy our contract
 	// contract: pragma solidity 0.5.8; contract Apple {function banana() external pure returns (uint8) {return 42;}}
 	BYTECODE := common.FromHex("6080604052348015600f57600080fd5b5060848061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063c3cafc6f14602d575b600080fd5b6033604f565b604051808260ff1660ff16815260200191505060405180910390f35b6000602a90509056fea165627a7a72305820ab7651cb86b8c1487590004c2444f26ae30077a6b96c6bc62dda37f1328539250029")
-	addr0, err := node.DeterministicDeploymentProxy().GetContractAddress(acc0.EvmAcct.Address, BYTECODE, 0)
+	_, err = node.DeterministicDeploymentProxy().GetContractAddress(BYTECODE, 0)
 	if err != nil {
 		t.Fatal(err)
-	}
-	addr1, err := node.DeterministicDeploymentProxy().GetContractAddress(acc1.EvmAcct.Address, BYTECODE, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if addr0.Cmp(addr1) != 0 {
-		t.Fatalf("Current:%s, but expect:%s", addr0.String(), addr1.String())
 	}
 }

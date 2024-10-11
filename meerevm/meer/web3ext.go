@@ -329,7 +329,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getContractAddress',
 			call: 'qng_getContractAddress',
-			params: 3,
+			params: 2,
 		}),
 
 		new web3._extend.Method({
@@ -357,6 +357,11 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'deployProxy',
 			call: 'qng_deployProxy',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'deployMeerChange',
+			call: 'qng_deployMeerChange',
 			params: 1,
 		}),
 	],
@@ -508,8 +513,8 @@ web3._extend({
 		}),
 
 		new web3._extend.Property({
-			name: 'getMeerChangeContractAddr',
-			getter: 'qng_getMeerChangeContractAddr'
+			name: 'getMeerChangeAddr',
+			getter: 'qng_getMeerChangeAddr'
 		}),
 
 		new web3._extend.Property({

@@ -5,6 +5,7 @@
 package test
 
 import (
+	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
 	"github.com/Qitmeer/qng/testutils"
 	"github.com/ethereum/go-ethereum/common"
@@ -12,24 +13,28 @@ import (
 )
 
 func TestGetMeerChangeAddress(t *testing.T) {
-	node, err := testutils.StartMockNode(nil)
+	node, err := testutils.StartMockNode(func(cfg *config.Config) error {
+		cfg.GenerateOnTx = true
+		return nil
+	})
 	if err != nil {
 		t.Error(err)
 	}
 	defer node.Stop()
 
-	if err != nil {
-		t.Fatalf("setup harness failed:%v", err)
-	}
+	testutils.ShowMeTheMoneyForMeer(t, node, 0)
+
 	acc := node.GetWalletManager().GetAccountByIdx(0)
-	if err != nil {
-		t.Fatalf("GetAcctInfo failed:%v", err)
-	}
-	addr, err := node.DeterministicDeploymentProxy().GetContractAddress(acc.EvmAcct.Address, common.FromHex(meerchange.MeerchangeMetaData.Bin), 0)
+	err = node.DeterministicDeploymentProxy().Deploy(acc.EvmAcct.Address)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectAddr := "0xe681D4399cDDfA35752536fD04a6D559FB877CDf"
+
+	addr, err := node.DeterministicDeploymentProxy().GetContractAddress(common.FromHex(meerchange.MeerchangeMetaData.Bin), meerchange.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectAddr := "0x7a9a241E8AD3D9804d4545a86DeDb93b397C9899"
 	if addr.String() != expectAddr {
 		t.Fatalf("Current:%s, but expect:%s", addr.String(), expectAddr)
 	}
