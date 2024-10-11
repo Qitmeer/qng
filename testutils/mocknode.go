@@ -3,6 +3,7 @@ package testutils
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/meerevm/proxy"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"math/rand"
@@ -32,7 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func DefaultConfig() *config.Config {
+func DefaultConfig(pb *testprivatekey.Builder) (*config.Config, error) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	cfg := common.DefaultConfig(path.Join(os.TempDir(), fmt.Sprintf("qng_%d_%d", mockNodeGlobalID, r.Uint32())))
 	cfg.DataDir = ""
@@ -46,7 +47,15 @@ func DefaultConfig() *config.Config {
 	cfg.SubmitNoSynced = true
 	cfg.AcctMode = true
 	cfg.EVMEnv = "--nodiscover --v5disc=false"
-	return cfg
+
+	params.ActiveNetParams = &params.PrivNetParam
+	coinbasePKHex := pb.GetHex(testprivatekey.CoinbaseIdx)
+	addrs, err := wallet.GetQngAddrsFromPrivateKey(coinbasePKHex)
+	if err != nil {
+		return nil, err
+	}
+	cfg.SetMiningAddrs(addrs[0])
+	return cfg, nil
 }
 
 var mockNodeGlobalID uint32
@@ -165,9 +174,7 @@ func (mn *MockNode) setup() error {
 	//
 
 	log.Info("Import default key", "addr", account.String())
-	if len(mn.n.Config.MiningAddrs) <= 0 {
-		mn.n.Config.SetMiningAddrs(account.PKAddress())
-	}
+
 	mn.Node().GetQitmeerFull().GetMiner().NoDevelopGap = true
 	params.ActiveNetParams.PowConfig.DifficultyMode = pow.DIFFICULTY_MODE_DEVELOP
 	return nil
@@ -283,6 +290,10 @@ func (mn *MockNode) GetPriKeyBuilder() *testprivatekey.Builder {
 	return mn.pb
 }
 
+func (mn *MockNode) HasTx(id *hash.Hash) bool {
+	return mn.n.GetQitmeerFull().GetBlockChain().HasTx(id)
+}
+
 func StartMockNode(overrideCfg func(cfg *config.Config) error) (*MockNode, error) {
 	mockNodeLock.Lock()
 	defer mockNodeLock.Unlock()
@@ -292,7 +303,10 @@ func StartMockNode(overrideCfg func(cfg *config.Config) error) (*MockNode, error
 		return nil, err
 	}
 	mn := &MockNode{id: mockNodeGlobalID, pb: pb}
-	cfg := DefaultConfig()
+	cfg, err := DefaultConfig(pb)
+	if err != nil {
+		return nil, err
+	}
 	if overrideCfg != nil {
 		err := overrideCfg(cfg)
 		if err != nil {

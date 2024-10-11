@@ -349,7 +349,7 @@ func SetupConfig(cfg *config.Config) error {
 	}
 	// Ensure there is at least one mining address when the generate or miner flag is
 	// set.
-	if len(cfg.MiningAddrs) == 0 {
+	if len(cfg.GetMinningAddrs()) == 0 {
 		if (cfg.Generate || cfg.GenerateOnTx) && !cfg.Cleanup {
 			return fmt.Errorf("SetupConfig: the generate flag is set, but there are no mining addresses specified")
 		}

@@ -5,21 +5,22 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
-	"fmt"
-	"log"
-	"math/big"
-	"strconv"
-	"testing"
-
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/meerevm/params"
+	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	etype "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"log"
+	"math/big"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
 )
 
 var (
@@ -67,7 +68,7 @@ func GetSerializedBlock(node *MockNode, h *hash.Hash) (*types.SerializedBlock, e
 	return block, nil
 }
 
-func GenerateBlocksWaitForTxs(t *testing.T, h *MockNode, txs []string) error {
+func GenerateBlocksWaitForTxs(t *testing.T, h *MockNode, txs []string) {
 	tryMax := 20
 	txsM := map[string]bool{}
 	for _, tx := range txs {
@@ -79,7 +80,7 @@ func GenerateBlocksWaitForTxs(t *testing.T, h *MockNode, txs []string) error {
 			t.Fatal("No block")
 		}
 		if len(txsM) <= 0 {
-			return nil
+			return
 		}
 		sb, err := GetSerializedBlock(h, ret[0])
 		if err != nil {
@@ -105,13 +106,66 @@ func GenerateBlocksWaitForTxs(t *testing.T, h *MockNode, txs []string) error {
 			}
 		}
 		if all {
-			return nil
+			return
 		}
 		if i >= tryMax-1 {
-			return fmt.Errorf("No block")
+			t.Fatalf("No block:%v", txs)
+			return
 		}
 	}
-	return fmt.Errorf("No block")
+	t.Fatalf("No block:%v", txs)
+}
+
+// Usually automatic packaging transactions require cooperation with 'config.GenerateOnTx' to work together
+func WaitForTxs(t *testing.T, mn *MockNode, txs []string) {
+	txsM := map[string]bool{}
+	for _, tx := range txs {
+		txsM[tx] = false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), qparams.ActiveNetParams.TargetTimePerBlock*3)
+	defer cancel()
+	for {
+		select {
+		case <-time.After(time.Second):
+			for _, txhex := range txs {
+				if strings.HasPrefix(txhex, "0x") {
+					txh := common.HexToHash(txhex)
+					tx, isPending, err := mn.GetEvmClient().TransactionByHash(ctx, txh)
+					if err != nil {
+						t.Fatal(err)
+						return
+					}
+					if isPending {
+						continue
+					}
+					if tx == nil {
+						t.Fatalf("Wait tx failed:%s", txh.String())
+						return
+					}
+				} else {
+					txh := hash.MustHexToDecodedHash(txhex)
+					if !mn.HasTx(&txh) {
+						continue
+					}
+				}
+				txsM[txhex] = true
+			}
+
+			all := true
+			for _, v := range txsM {
+				if !v {
+					all = false
+				}
+			}
+			if all {
+				t.Log("Wait tx finished", "tx", txs)
+				return
+			}
+		case <-ctx.Done():
+			t.Fatalf("Wait tx failed(timeout):%v", txs)
+			return
+		}
+	}
 }
 
 // AssertBlockOrderHeightTotal will verify the current block order, total block number
