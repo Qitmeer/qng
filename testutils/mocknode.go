@@ -46,7 +46,7 @@ func DefaultConfig(pb *testprivatekey.Builder) (*config.Config, error) {
 	cfg.Miner = true
 	cfg.SubmitNoSynced = true
 	cfg.AcctMode = true
-	cfg.EVMEnv = "--nodiscover --v5disc=false"
+	cfg.EVMEnv = "--nodiscover --v5disc=false --rpc.allow-unprotected-txs"
 
 	params.ActiveNetParams = &params.PrivNetParam
 	coinbasePKHex := pb.GetHex(testprivatekey.CoinbaseIdx)
