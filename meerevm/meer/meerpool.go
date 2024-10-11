@@ -217,7 +217,7 @@ func (m *MeerPool) updateTemplate(force bool) error {
 	}
 	m.snapshotMu.Unlock()
 
-	block, receipts, _ := m.eth.Miner().Pending()
+	block, receipts, _ := m.eth.Miner().ForcePending()
 	if block == nil {
 		return nil
 	}
