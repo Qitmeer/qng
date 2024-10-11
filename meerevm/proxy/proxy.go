@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/Qitmeer/qng/log"
-	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -143,7 +142,7 @@ func (ddp DeterministicDeploymentProxy) Deploy(owner common.Address) error {
 }
 
 func (ddp DeterministicDeploymentProxy) waitTx(txh common.Hash) error {
-	ctx, cancel := context.WithTimeout(ddp.ctx, qparams.ActiveNetParams.TargetTimePerBlock*3)
+	ctx, cancel := context.WithTimeout(ddp.ctx, time.Second*30)
 	defer cancel()
 	for {
 		select {

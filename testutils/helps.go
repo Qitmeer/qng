@@ -69,6 +69,10 @@ func GetSerializedBlock(node *MockNode, h *hash.Hash) (*types.SerializedBlock, e
 }
 
 func GenerateBlocksWaitForTxs(t *testing.T, h *MockNode, txs []string) {
+	if h.Node().Config.GenerateOnTx {
+		WaitForTxs(t, h, txs)
+		return
+	}
 	tryMax := 20
 	txsM := map[string]bool{}
 	for _, tx := range txs {
@@ -122,7 +126,7 @@ func WaitForTxs(t *testing.T, mn *MockNode, txs []string) {
 	for _, tx := range txs {
 		txsM[tx] = false
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), qparams.ActiveNetParams.TargetTimePerBlock*3)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 	for {
 		select {
@@ -337,4 +341,29 @@ func AuthTrans(privatekeybyte []byte) (*bind.TransactOpts, error) {
 	}
 	authCaller.GasLimit = GAS_LIMIT
 	return authCaller, nil
+}
+
+func ShowMeTheMoneyForMeer(t *testing.T, mn *MockNode, accountIdx int) {
+	acc := mn.GetWalletManager().GetAccountByIdx(accountIdx)
+	if acc == nil {
+		t.Fatalf("Get account failed:%v", accountIdx)
+	}
+	// If we were to create a new genesis, we should make corresponding changes based on the situation
+	coinbaseTxID := qparams.ActiveNetParams.GenesisBlock.Transactions()[1].Hash()
+	txH := SendExportTxMockNode(t, mn, coinbaseTxID.String(), 61, 100*types.AtomsPerCoin)
+	if txH == nil {
+		t.Fatal("SendExportTxMockNode failed")
+	}
+	t.Logf("send export tx:%s", txH.String())
+
+	GenerateBlocksWaitForTxs(t, mn, []string{txH.String()})
+
+	ba, err := mn.GetEvmClient().BalanceAt(mn.Node().Context(), acc.EvmAcct.Address, nil)
+	if err != nil {
+		t.Fatalf("GetBalance failed:%v", err)
+	}
+	if ba.Uint64() <= 0 {
+		t.Fatalf("%s balance is empty", acc.EvmAcct.Address.String())
+	}
+	t.Logf("%s balance = %s", acc.EvmAcct.Address.String(), ba.String())
 }

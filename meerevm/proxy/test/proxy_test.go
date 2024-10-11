@@ -6,8 +6,6 @@ package test
 
 import (
 	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -19,8 +17,6 @@ import (
 func TestDeterministicDeploymentProxy(t *testing.T) {
 	node, err := testutils.StartMockNode(func(cfg *config.Config) error {
 		cfg.GenerateOnTx = true
-		cfg.DebugLevel = "trace"
-		cfg.DebugPrintOrigins = true
 		return nil
 	})
 	if err != nil {
@@ -28,31 +24,9 @@ func TestDeterministicDeploymentProxy(t *testing.T) {
 	}
 	defer node.Stop()
 
-	if err != nil {
-		t.Fatalf("setup harness failed:%v", err)
-	}
+	testutils.ShowMeTheMoneyForMeer(t, node, 0)
+
 	acc := node.GetWalletManager().GetAccountByIdx(0)
-	if err != nil {
-		t.Fatalf("GetAcctInfo failed:%v", err)
-	}
-	coinbaseTxID := params.ActiveNetParams.GenesisBlock.Transactions()[1].Hash()
-	txH := testutils.SendExportTxMockNode(t, node, coinbaseTxID.String(), 61, 100*types.AtomsPerCoin)
-	if txH == nil {
-		t.Fatalf("createExportRawTx failed:%v", err)
-	}
-	t.Logf("send export tx:%s", txH.String())
-
-	testutils.WaitForTxs(t, node, []string{txH.String()})
-
-	ba, err := node.GetEvmClient().BalanceAt(node.Node().Context(), acc.EvmAcct.Address, nil)
-	if err != nil {
-		t.Fatalf("GetBalance failed:%v", err)
-	}
-	if ba.Uint64() <= 0 {
-		t.Fatalf("%s balance is empty", acc.EvmAcct.Address.String())
-	}
-	t.Logf("%s balance = %s", acc.EvmAcct.Address.String(), ba.String())
-
 	MY_ADDRESS := acc.EvmAcct.Address
 	err = node.DeterministicDeploymentProxy().Deploy(MY_ADDRESS)
 	if err != nil {
@@ -69,7 +43,7 @@ func TestDeterministicDeploymentProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	testutils.WaitForTxs(t, node, []string{txHash.String()})
+	testutils.GenerateBlocksWaitForTxs(t, node, []string{txHash.String()})
 	t.Logf("Deply contract: txHash=%s contractAddress=%s", txHash.String(), MY_CONTRACT_ADDRESS.String())
 
 	// call our contract (NOTE: MY_CONTRACT_ADDRESS is the same no matter what chain we deploy to!)
@@ -95,14 +69,14 @@ func TestDeterministicDeploymentProxyOwner(t *testing.T) {
 	}
 	defer node.Stop()
 
+	testutils.ShowMeTheMoneyForMeer(t, node, 0)
+	acc0 := node.GetWalletManager().GetAccountByIdx(0)
+
 	acc1, err := node.NewAddress()
 	if err != nil {
 		t.Fatal(err)
 	}
-	acc0 := node.GetWalletManager().GetAccountByIdx(0)
-	if err != nil {
-		t.Fatalf("GetAcctInfo failed:%v", err)
-	}
+
 	err = node.DeterministicDeploymentProxy().Deploy(acc0.EvmAcct.Address)
 	if err != nil {
 		t.Fatal(err)
