@@ -341,13 +341,16 @@ func SetupConfig(cfg *config.Config) error {
 		cfg.SetMiningAddrs(addr)
 	}
 
-	if cfg.Generate {
+	if cfg.Generate && cfg.GenerateOnTx {
+		return fmt.Errorf("--generate and --generateontx cannot be turned on at the same time")
+	}
+	if cfg.Generate || cfg.GenerateOnTx {
 		cfg.Miner = true
 	}
 	// Ensure there is at least one mining address when the generate or miner flag is
 	// set.
 	if len(cfg.MiningAddrs) == 0 {
-		if cfg.Generate && !cfg.Cleanup {
+		if (cfg.Generate || cfg.GenerateOnTx) && !cfg.Cleanup {
 			return fmt.Errorf("SetupConfig: the generate flag is set, but there are no mining addresses specified")
 		}
 	}

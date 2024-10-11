@@ -328,6 +328,11 @@ var (
 			Usage:       "Generate (mine) coins using the CPU",
 			Destination: &cfg.Generate,
 		},
+		&cli.BoolFlag{
+			Name:        "generateontx",
+			Usage:       "Generate (mine) coins using the CPU when there is a new transaction",
+			Destination: &cfg.GenerateOnTx,
+		},
 		&cli.StringSliceFlag{
 			Name:        "miningaddr",
 			Usage:       "Add the specified payment address to the list of addresses to use for generated blocks -- At least one address is required if the generate option is set",

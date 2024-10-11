@@ -340,6 +340,9 @@ out:
 					m.worker = nil
 					continue
 				}
+				if m.cfg.GenerateOnTx {
+					continue
+				}
 				m.worker.Update()
 
 			case *CPUMiningGenerateMsg:
@@ -388,6 +391,9 @@ out:
 				worker.Update()
 
 			case *BlockChainChangeMsg:
+				if m.cfg.GenerateOnTx {
+					continue
+				}
 				if m.updateBlockTemplate(false) == nil {
 					if m.worker != nil {
 						m.worker.Update()
@@ -557,7 +563,7 @@ func (m *Miner) subscribe() {
 						m.handleNotifyMsg(value)
 					case int:
 						if value == event.Initialized {
-							if m.cfg.Generate {
+							if m.cfg.Generate || m.cfg.GenerateOnTx {
 								m.StartCPUMining()
 							}
 						}
