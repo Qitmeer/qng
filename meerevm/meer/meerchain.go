@@ -63,6 +63,10 @@ func (b *MeerChain) Start() error {
 	if err != nil {
 		return err
 	}
+	err = b.checkMeerChange()
+	if err != nil {
+		return err
+	}
 	//
 	rpcClient := b.chain.Node().Attach()
 	b.client = ethclient.NewClient(rpcClient)
@@ -694,5 +698,5 @@ func NewMeerChain(consensus model.Consensus) (*MeerChain, error) {
 	mchain.InitContext()
 	mchain.ddProxy = proxy.NewDeterministicDeploymentProxy(mchain.Context(), ethclient.NewClient(chain.Node().Attach()))
 	chain.Ether().Engine().(*mconsensus.MeerEngine).StateChange = mchain.OnStateChange
-	return mchain, mchain.checkMeerChange()
+	return mchain, nil
 }
