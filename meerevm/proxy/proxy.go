@@ -116,7 +116,7 @@ func (ddp DeterministicDeploymentProxy) IsDeployed() bool {
 
 func (ddp DeterministicDeploymentProxy) Deploy(owner common.Address) error {
 	if ddp.IsDeployed() {
-		log.Info("It has already been deployed, so ignore this operation")
+		log.Info("Proxy has already been deployed, so ignore this operation")
 		return nil
 	}
 	arg := map[string]interface{}{

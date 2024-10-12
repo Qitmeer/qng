@@ -78,7 +78,7 @@ func (api *PublicMeerChainAPI) GetMeerChangeAddr() (interface{}, error) {
 
 func (api *PublicMeerChainAPI) DeployMeerChange(owner common.Address) (interface{}, error) {
 	if api.mc.IsMeerChangeDeployed() {
-		log.Info("It has already been deployed, so ignore this operation")
+		log.Info("MeerChange has already been deployed, so ignore this operation")
 		return nil, nil
 	}
 	txHash, err := api.mc.DeterministicDeploymentProxy().DeployContract(owner, common.FromHex(meerchange.MeerchangeMetaData.Bin), meerchange.Version, nil, 0)
