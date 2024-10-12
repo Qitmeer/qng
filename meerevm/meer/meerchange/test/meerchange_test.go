@@ -91,7 +91,10 @@ func TestMeerChangeExport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	testutils.GenerateBlocksWaitForTxs(t, node, []string{txh.(string)})
+	if txhs, ok := txh.(string); ok {
+		testutils.GenerateBlocksWaitForTxs(t, node, []string{txhs})
+	}
+
 	// some outpoints
 	ops := "288dede439a4e14df002a2a7af36cdb8ea451500d6a4f4f5d821002b28123a59:0,288dede439a4e14df002a2a7af36cdb8ea451500d6a4f4f5d821002b28123a59:135"
 	fee := uint64(0)
