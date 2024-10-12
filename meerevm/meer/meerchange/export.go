@@ -70,8 +70,13 @@ func (e *MeerchangeExportData) GetOutPoints() ([]*qtypes.TxOutPoint, error) {
 	if len(opsArr) <= 0 {
 		return nil, fmt.Errorf("No outpoint in meerchang export")
 	}
+	opsM := map[string]bool{}
 	e.OutPoints = []*qtypes.TxOutPoint{}
 	for _, opiStr := range opsArr {
+		_, ok := opsM[opiStr]
+		if ok {
+			return nil, fmt.Errorf("Duplicate utxo:%s", opiStr)
+		}
 		opiArr := strings.Split(opiStr, ":")
 		if len(opiArr) != 2 {
 			return nil, fmt.Errorf("MeerChange export parmas error:%v", e.Opt.Ops)
@@ -86,6 +91,7 @@ func (e *MeerchangeExportData) GetOutPoints() ([]*qtypes.TxOutPoint, error) {
 		}
 		op := qtypes.NewOutPoint(txid, uint32(idx))
 		e.OutPoints = append(e.OutPoints, op)
+		opsM[opiStr] = true
 	}
 	return e.OutPoints, nil
 }

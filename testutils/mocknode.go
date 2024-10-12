@@ -79,6 +79,7 @@ type MockNode struct {
 	evmClient               *ethclient.Client
 	walletManager           *wallet.WalletManager
 	publicMeerChainAPI      *meer.PublicMeerChainAPI
+	privateMeerChainAPI     *meer.PrivateMeerChainAPI
 }
 
 func (mn *MockNode) ID() uint {
@@ -300,6 +301,13 @@ func (mn *MockNode) GetPublicMeerChainAPI() *meer.PublicMeerChainAPI {
 		mn.publicMeerChainAPI = meer.NewPublicMeerChainAPI(mn.n.GetQitmeerFull().GetBlockChain().MeerChain().(*meer.MeerChain))
 	}
 	return mn.publicMeerChainAPI
+}
+
+func (mn *MockNode) GetPrivateMeerChainAPI() *meer.PrivateMeerChainAPI {
+	if mn.privateMeerChainAPI == nil {
+		mn.privateMeerChainAPI = meer.NewPrivateMeerChainAPI(mn.n.GetQitmeerFull().GetBlockChain().MeerChain().(*meer.MeerChain))
+	}
+	return mn.privateMeerChainAPI
 }
 
 func StartMockNode(overrideCfg func(cfg *config.Config) error) (*MockNode, error) {
