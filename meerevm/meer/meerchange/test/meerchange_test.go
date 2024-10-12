@@ -60,10 +60,11 @@ func TestDeployMeerChange(t *testing.T) {
 
 	acc := node.GetWalletManager().GetAccountByIdx(0)
 
-	_, err = node.GetPublicMeerChainAPI().DeployMeerChange(acc.EvmAcct.Address)
+	txh, err := node.GetPublicMeerChainAPI().DeployMeerChange(acc.EvmAcct.Address)
 	if err != nil {
 		t.Fatal(err)
 	}
+	testutils.GenerateBlocksWaitForTxs(t, node, []string{txh.(string)})
 	addr, err := node.GetPublicMeerChainAPI().GetMeerChangeAddr()
 	if err != nil {
 		t.Fatal(err)
