@@ -163,13 +163,10 @@ func (m *MeerPool) checkSignature(ced *meerchange.MeerchangeExportData, entrys [
 }
 
 func (mc *MeerChain) GetMeerChangeCode() ([]byte, error) {
-	if meerchange.ContractAddr == (qcommon.Address{}) {
-		return nil, nil
-	}
 	if len(meerchange.Bytecode) > 0 {
 		return meerchange.Bytecode, nil
 	}
-	bytecode, err := mc.client.CodeAt(mc.Context(), meerchange.ContractAddr, nil)
+	bytecode, err := mc.client.CodeAt(mc.Context(), qcommon.HexToAddress(meerchange.CONTRACTADDRESS), nil)
 	if err != nil {
 		return nil, err
 	}

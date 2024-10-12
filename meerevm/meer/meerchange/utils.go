@@ -9,12 +9,14 @@ import (
 	"math/big"
 )
 
-const funcSigHashLen = 4
-
-const Version = 0
+const (
+	funcSigHashLen  = 4
+	Version         = 0
+	CONTRACTADDRESS = "0x7D698C4E800dBc1E9B7e915BefeDdB59Aa9E8BB6"
+)
 
 var (
-	ContractAddr common.Address
+	ContractAddr common.Address // runtime address expect equal to CONTRACTADDRESS
 	Bytecode     []byte
 )
 
@@ -57,4 +59,8 @@ func GetChainID() *big.Int {
 		return eparams.QngPrivnetChainConfig.ChainID
 	}
 	return nil
+}
+
+func EnableContractAddr() {
+	ContractAddr = common.HexToAddress(CONTRACTADDRESS)
 }

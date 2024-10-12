@@ -40,9 +40,8 @@ func TestGetMeerChangeAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectAddr := "0x7a9a241E8AD3D9804d4545a86DeDb93b397C9899"
-	if addr.String() != expectAddr {
-		t.Fatalf("Current:%s, but expect:%s", addr.String(), expectAddr)
+	if addr.String() != meerchange.CONTRACTADDRESS {
+		t.Fatalf("Current:%s, but expect:%s", addr.String(), meerchange.CONTRACTADDRESS)
 	}
 }
 

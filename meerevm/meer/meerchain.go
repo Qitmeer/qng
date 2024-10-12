@@ -63,13 +63,14 @@ func (b *MeerChain) Start() error {
 	if err != nil {
 		return err
 	}
+	//
+	rpcClient := b.chain.Node().Attach()
+	b.client = ethclient.NewClient(rpcClient)
+
 	err = b.checkMeerChange()
 	if err != nil {
 		return err
 	}
-	//
-	rpcClient := b.chain.Node().Attach()
-	b.client = ethclient.NewClient(rpcClient)
 
 	blockNum, err := b.client.BlockNumber(b.Context())
 	if err != nil {
@@ -645,12 +646,11 @@ func (b *MeerChain) checkMeerChange() error {
 	if meerchange.ContractAddr != (common.Address{}) {
 		return nil
 	}
-	contractAddr, err := b.ddProxy.GetContractAddress(common.FromHex(meerchange.MeerchangeMetaData.Bin), meerchange.Version)
-	if err != nil {
-		log.Warn(err.Error())
+	if !b.IsMeerChangeDeployed() {
+		log.Warn("Please deploy contract MeerChange as soon as possible")
 		return nil
 	}
-	meerchange.ContractAddr = contractAddr
+	meerchange.EnableContractAddr()
 	return nil
 }
 
