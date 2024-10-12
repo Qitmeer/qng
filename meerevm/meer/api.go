@@ -3,7 +3,6 @@ package meer
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
 	"github.com/ethereum/go-ethereum/common"
@@ -97,8 +96,8 @@ func NewPrivateMeerChainAPI(mc *MeerChain) *PrivateMeerChainAPI {
 	return &PrivateMeerChainAPI{mc}
 }
 
-func (api *PrivateMeerChainAPI) CalcExportSig(txid hash.Hash, idx uint32, fee uint64, privKeyHex string) (interface{}, error) {
-	sig, err := meerchange.CalcExportSig(meerchange.CalcExportHash(&txid, idx, fee), privKeyHex)
+func (api *PrivateMeerChainAPI) CalcExportSig(ops string, fee uint64, privKeyHex string) (interface{}, error) {
+	sig, err := meerchange.CalcExportSig(meerchange.CalcExportHash(ops, fee), privKeyHex)
 	if err != nil {
 		return nil, err
 	}

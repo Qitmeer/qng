@@ -66,35 +66,46 @@ func (m *MeerPool) HasUtxo(txid *hash.Hash, idx uint32) bool {
 }
 
 func (m *MeerPool) checkMeerChangeExportTx(tx *types.Transaction, ced *meerchange.MeerchangeExportData, utxoView *utxo.UtxoViewpoint) error {
-	op, err := ced.GetOutPoint()
+	ops, err := ced.GetOutPoints()
 	if err != nil {
 		return err
 	}
-	var entry *utxo.UtxoEntry
-	if utxoView != nil {
-		entry = utxoView.LookupEntry(*op)
+	if len(ops) <= 0 {
+		return fmt.Errorf("No outpoint")
 	}
-	ok := false
-	if entry == nil {
-		ue, err := m.consensus.BlockChain().GetUtxo(*op)
-		if err != nil {
-			return err
+	entrys := []*utxo.UtxoEntry{}
+	addops := []qtypes.TxOutPoint{}
+	adds := []*utxo.UtxoEntry{}
+	for _, op := range ops {
+		var entry *utxo.UtxoEntry
+		if utxoView != nil {
+			entry = utxoView.LookupEntry(*op)
 		}
-		if ue == nil {
-			return fmt.Errorf("No utxo %s:%d", op.Hash.String(), op.OutIndex)
+		ok := false
+		if entry == nil {
+			ue, err := m.consensus.BlockChain().GetUtxo(*op)
+			if err != nil {
+				return err
+			}
+			if ue == nil {
+				return fmt.Errorf("No utxo %s:%d", op.Hash.String(), op.OutIndex)
+			}
+			entry, ok = ue.(*utxo.UtxoEntry)
+			if !ok || entry == nil {
+				return fmt.Errorf("No utxo entry %s:%d", op.Hash.String(), op.OutIndex)
+			}
+			adds = append(adds, entry)
+			addops = append(addops, *op)
 		}
-		entry, ok = ue.(*utxo.UtxoEntry)
-		if !ok || entry == nil {
-			return fmt.Errorf("No utxo entry %s:%d", op.Hash.String(), op.OutIndex)
-		}
+		entrys = append(entrys, entry)
+	}
+	if len(ops) != len(entrys) {
+		return fmt.Errorf("Outpoint error:%d != %d", len(ops), len(entrys))
 	}
 
-	sigPKB, err := m.checkSignature(ced, entry)
+	sigPKB, err := m.checkSignature(ced, entrys)
 	if err != nil {
 		return err
-	}
-	if uint64(entry.Amount().Value) <= ced.Opt.Fee {
-		return fmt.Errorf("UTXO amount(%d) is insufficient, the actual fee is %d", entry.Amount().Value, ced.Opt.Fee)
 	}
 	signer := types.NewPKSigner(m.eth.BlockChain().Config().ChainID)
 	pkb, err := signer.GetPublicKey(tx)
@@ -110,22 +121,16 @@ func (m *MeerPool) checkMeerChangeExportTx(tx *types.Transaction, ced *meerchang
 			return fmt.Errorf("When there is no proxy, fee must be 0.(cur:%d)", ced.Opt.Fee)
 		}
 	}
-	ced.Amount = entry.Amount()
-	if utxoView != nil && ok {
-		utxoView.AddEntry(*op, entry)
+	if utxoView != nil && len(adds) > 0 {
+		for i, entry := range adds {
+			utxoView.AddEntry(addops[i], entry)
+		}
 	}
 	return nil
 }
 
-func (m *MeerPool) checkSignature(ced *meerchange.MeerchangeExportData, entry *utxo.UtxoEntry) ([]byte, error) {
-	if len(entry.PkScript()) <= 0 {
-		return nil, fmt.Errorf("PkScript is empty")
-	}
-	op, err := ced.GetOutPoint()
-	if err != nil {
-		return nil, err
-	}
-	eHash := meerchange.CalcExportHash(&op.Hash, op.OutIndex, ced.Opt.Fee)
+func (m *MeerPool) checkSignature(ced *meerchange.MeerchangeExportData, entrys []*utxo.UtxoEntry) ([]byte, error) {
+	eHash := meerchange.CalcExportHash(ced.Opt.Ops, ced.Opt.Fee)
 	sig, err := hex.DecodeString(ced.Opt.Sig)
 	if err != nil {
 		return nil, err
@@ -138,7 +143,23 @@ func (m *MeerPool) checkSignature(ced *meerchange.MeerchangeExportData, entry *u
 	if err != nil {
 		return nil, err
 	}
-	return common.CheckUTXOPubkey(pubKey, entry)
+
+	amount := int64(0)
+	for _, entry := range entrys {
+		if len(entry.PkScript()) <= 0 {
+			return nil, fmt.Errorf("PkScript is empty")
+		}
+		_, err := common.CheckUTXOPubkey(pubKey, entry)
+		if err != nil {
+			return nil, err
+		}
+		amount += entry.Amount().Value
+	}
+	if amount <= int64(ced.Opt.Fee) {
+		return nil, fmt.Errorf("UTXO amount(%d) is insufficient, the actual fee is %d", amount, ced.Opt.Fee)
+	}
+	ced.Amount = qtypes.Amount{Value: amount, Id: qtypes.MEERA}
+	return pubKey.SerializeUncompressed(), nil
 }
 
 func (mc *MeerChain) GetMeerChangeCode() ([]byte, error) {

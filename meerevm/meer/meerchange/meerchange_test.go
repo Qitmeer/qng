@@ -3,6 +3,7 @@ package meerchange
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/testutils/testprivatekey"
@@ -20,7 +21,7 @@ func TestMeerChangeExport(t *testing.T) {
 	}
 	privateKeyHex := hex.EncodeToString(pb.Get(0))
 	txid := hash.MustHexToDecodedHash("0")
-	dataHash := CalcExportHash(&txid, 0, 123)
+	dataHash := CalcExportHash(fmt.Sprintf("%s:0", txid.String()), 123)
 	sig, err := CalcExportSig(dataHash, privateKeyHex)
 	if err != nil {
 		t.Fatal(err)
@@ -47,11 +48,14 @@ func TestMeerChangeExportLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	op, err := ccExportEvent.GetOutPoint()
+	ops, err := ccExportEvent.GetOutPoints()
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log("outpoint", "txid", op.Hash.String(), "idx", op.OutIndex, "fee", ccExportEvent.Opt.Fee, "sig", ccExportEvent.Opt.Sig)
+	t.Log("outpoint", "fee", ccExportEvent.Opt.Fee, "sig", ccExportEvent.Opt.Sig)
+	for i, op := range ops {
+		t.Log("outpoint", "i", i, "txid", op.Hash.String(), "idx", op.OutIndex)
+	}
 }
 
 func TestMeerChangeExportInput(t *testing.T) {
@@ -63,11 +67,14 @@ func TestMeerChangeExportInput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	op, err := ccExportEvent.GetOutPoint()
+	ops, err := ccExportEvent.GetOutPoints()
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log("outpoint", "txid", op.Hash.String(), "idx", op.OutIndex, "fee", ccExportEvent.Opt.Fee, "sig", ccExportEvent.Opt.Sig)
+	t.Log("outpoint", "fee", ccExportEvent.Opt.Fee, "sig", ccExportEvent.Opt.Sig)
+	for i, op := range ops {
+		t.Log("outpoint", "i", i, "txid", op.Hash.String(), "idx", op.OutIndex)
+	}
 }
 
 func TestMeerChangeImportLog(t *testing.T) {

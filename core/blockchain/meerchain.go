@@ -67,84 +67,85 @@ func (b *BlockChain) MeerVerifyTx(tx model.Tx, utxoView *utxo.UtxoViewpoint) (in
 			return 0, err
 		}
 
-		var op *types.TxOutPoint
+		var ops []*types.TxOutPoint
 		if vmtx.ExportData != nil {
-			op, err = vmtx.ExportData.GetOutPoint()
+			ops, err = vmtx.ExportData.GetOutPoints()
 			if err != nil {
 				return 0, err
 			}
 		} else {
 			return fee, err
 		}
-
-		utxoEntry := utxoView.LookupEntry(*op)
-		if utxoEntry == nil || utxoEntry.IsSpent() {
-			str := fmt.Sprintf("output %v referenced from "+
-				"meer transaction %s either does not exist or "+
-				"has already been spent", op, vmtx.ETx.Hash())
-			return 0, ruleError(ErrMissingTxOut, str)
-		}
-
-		// Ensure the coinId is known
-		err = types.CheckCoinID(utxoEntry.Amount().Id)
-		if err != nil {
-			return 0, err
-		}
-		if utxoEntry.Amount().Id != types.MEERA {
-			return 0, fmt.Errorf("meer tx %s has illegal inputs %s", vmtx.ETx.Hash(), utxoEntry.Amount().Id.Name())
-		}
-
-		originTxAtom := utxoEntry.Amount()
-
-		var ubhIB meerdag.IBlock
-		if utxoEntry.IsCoinBase() {
-			ubhIB = b.bd.GetBlock(utxoEntry.BlockHash())
-			if ubhIB == nil {
-				str := fmt.Sprintf("utxoEntry blockhash error:%s", utxoEntry.BlockHash())
-				return 0, ruleError(ErrNoViewpoint, str)
+		for _, op := range ops {
+			utxoEntry := utxoView.LookupEntry(*op)
+			if utxoEntry == nil || utxoEntry.IsSpent() {
+				str := fmt.Sprintf("output %v referenced from "+
+					"meer transaction %s either does not exist or "+
+					"has already been spent", op, vmtx.ETx.Hash())
+				return 0, ruleError(ErrMissingTxOut, str)
 			}
 
-			if !utxoEntry.BlockHash().IsEqual(b.params.GenesisHash) {
-				if originTxAtom.Id == types.MEERA {
-					if op.OutIndex == CoinbaseOutput_subsidy {
-						originTxAtom.Value += b.GetFeeByCoinID(utxoEntry.BlockHash(), originTxAtom.Id)
+			// Ensure the coinId is known
+			err = types.CheckCoinID(utxoEntry.Amount().Id)
+			if err != nil {
+				return 0, err
+			}
+			if utxoEntry.Amount().Id != types.MEERA {
+				return 0, fmt.Errorf("meer tx %s has illegal inputs %s", vmtx.ETx.Hash(), utxoEntry.Amount().Id.Name())
+			}
+
+			originTxAtom := utxoEntry.Amount()
+
+			var ubhIB meerdag.IBlock
+			if utxoEntry.IsCoinBase() {
+				ubhIB = b.bd.GetBlock(utxoEntry.BlockHash())
+				if ubhIB == nil {
+					str := fmt.Sprintf("utxoEntry blockhash error:%s", utxoEntry.BlockHash())
+					return 0, ruleError(ErrNoViewpoint, str)
+				}
+
+				if !utxoEntry.BlockHash().IsEqual(b.params.GenesisHash) {
+					if originTxAtom.Id == types.MEERA {
+						if op.OutIndex == CoinbaseOutput_subsidy {
+							originTxAtom.Value += b.GetFeeByCoinID(utxoEntry.BlockHash(), originTxAtom.Id)
+						}
 					}
 				}
 			}
-		}
-		if originTxAtom.Value < 0 {
-			str := fmt.Sprintf("meer transaction output has negative "+
-				"value of %v", originTxAtom)
-			return 0, ruleError(ErrInvalidTxOutValue, str)
-		}
-		if originTxAtom.Value == 0 {
-			str := fmt.Sprintf("meer transaction output is empty "+
-				"value of %v", originTxAtom)
-			return 0, ruleError(ErrInvalidTxOutValue, str)
-		}
-		if originTxAtom.Value > types.MaxAmount {
-			str := fmt.Sprintf("meer transaction output value of %v is "+
-				"higher than max allowed value of %v",
-				originTxAtom, types.MaxAmount)
-			return 0, ruleError(ErrInvalidTxOutValue, str)
-		}
+			if originTxAtom.Value < 0 {
+				str := fmt.Sprintf("meer transaction output has negative "+
+					"value of %v", originTxAtom)
+				return 0, ruleError(ErrInvalidTxOutValue, str)
+			}
+			if originTxAtom.Value == 0 {
+				str := fmt.Sprintf("meer transaction output is empty "+
+					"value of %v", originTxAtom)
+				return 0, ruleError(ErrInvalidTxOutValue, str)
+			}
+			if originTxAtom.Value > types.MaxAmount {
+				str := fmt.Sprintf("meer transaction output value of %v is "+
+					"higher than max allowed value of %v",
+					originTxAtom, types.MaxAmount)
+				return 0, ruleError(ErrInvalidTxOutValue, str)
+			}
 
-		if ubhIB != nil {
-			targets := []uint{ubhIB.GetID()}
-			viewpoints := []uint{}
-			for _, blockHash := range utxoView.Viewpoints() {
-				vIB := b.bd.GetBlock(blockHash)
-				if vIB != nil {
-					viewpoints = append(viewpoints, vIB.GetID())
+			if ubhIB != nil {
+				targets := []uint{ubhIB.GetID()}
+				viewpoints := []uint{}
+				for _, blockHash := range utxoView.Viewpoints() {
+					vIB := b.bd.GetBlock(blockHash)
+					if vIB != nil {
+						viewpoints = append(viewpoints, vIB.GetID())
+					}
 				}
-			}
-			if len(viewpoints) == 0 {
-				str := fmt.Sprintf("meer transaction %s has no viewpoints", vmtx.ETx.Hash())
-				return 0, ruleError(ErrNoViewpoint, str)
-			}
-			err := b.bd.CheckBlueAndMatureMT(targets, viewpoints, uint(b.params.CoinbaseMaturity))
-			if err != nil {
-				return 0, ruleError(ErrImmatureSpend, err.Error())
+				if len(viewpoints) == 0 {
+					str := fmt.Sprintf("meer transaction %s has no viewpoints", vmtx.ETx.Hash())
+					return 0, ruleError(ErrNoViewpoint, str)
+				}
+				err := b.bd.CheckBlueAndMatureMT(targets, viewpoints, uint(b.params.CoinbaseMaturity))
+				if err != nil {
+					return 0, ruleError(ErrImmatureSpend, err.Error())
+				}
 			}
 		}
 		return fee, err
@@ -185,45 +186,47 @@ func (b *BlockChain) VerifyMeerTx(tx model.Tx) error {
 
 func (bc *BlockChain) connectVMTransaction(tx *types.Tx, vmtx *mmeer.VMTx, stxos *[]utxo.SpentTxOut, view *utxo.UtxoViewpoint) error {
 	var err error
-	var op *types.TxOutPoint
+	var ops []*types.TxOutPoint
 	if vmtx.ExportData != nil {
-		op, err = vmtx.ExportData.GetOutPoint()
+		ops, err = vmtx.ExportData.GetOutPoints()
 		if err != nil {
 			return err
 		}
 	} else if vmtx.ImportData != nil {
 		view.AddTxOutForMeerChange(*vmtx.ImportData.OutPoint, vmtx.ImportData.Output)
+		return nil
 	} else {
 		return nil
 	}
-
-	entry := view.Entries()[*op]
-	if entry == nil {
-		return model.AssertError(fmt.Sprintf("view missing input %v", *op))
-	}
-	entry.Spend()
-
-	// Don't create the stxo details if not requested.
-	if stxos == nil {
-		return nil
-	}
-	var stxo = utxo.SpentTxOut{
-		Amount:     entry.Amount(),
-		Fees:       types.Amount{Value: 0, Id: entry.Amount().Id},
-		PkScript:   entry.PkScript(),
-		BlockHash:  *entry.BlockHash(),
-		IsCoinBase: entry.IsCoinBase(),
-		TxIndex:    uint32(tx.Index()),
-		TxInIndex:  uint32(0),
-	}
-	if stxo.IsCoinBase && !entry.BlockHash().IsEqual(bc.params.GenesisHash) {
-		if op.OutIndex == CoinbaseOutput_subsidy ||
-			entry.Amount().Id != types.MEERA {
-			stxo.Fees.Value = bc.GetFeeByCoinID(&stxo.BlockHash, stxo.Fees.Id)
+	for _, op := range ops {
+		entry := view.Entries()[*op]
+		if entry == nil {
+			return model.AssertError(fmt.Sprintf("view missing input %v", *op))
 		}
+		entry.Spend()
+
+		// Don't create the stxo details if not requested.
+		if stxos == nil {
+			return nil
+		}
+		var stxo = utxo.SpentTxOut{
+			Amount:     entry.Amount(),
+			Fees:       types.Amount{Value: 0, Id: entry.Amount().Id},
+			PkScript:   entry.PkScript(),
+			BlockHash:  *entry.BlockHash(),
+			IsCoinBase: entry.IsCoinBase(),
+			TxIndex:    uint32(tx.Index()),
+			TxInIndex:  uint32(0),
+		}
+		if stxo.IsCoinBase && !entry.BlockHash().IsEqual(bc.params.GenesisHash) {
+			if op.OutIndex == CoinbaseOutput_subsidy ||
+				entry.Amount().Id != types.MEERA {
+				stxo.Fees.Value = bc.GetFeeByCoinID(&stxo.BlockHash, stxo.Fees.Id)
+			}
+		}
+		// Append the entry to the provided spent txouts slice.
+		*stxos = append(*stxos, stxo)
+		log.Debug("meer tx spend utxo by crosschain contract", "txhash", tx.Hash().String(), "meertxhash", vmtx.ETx.Hash().String(), "utxoTxid", op.Hash.String(), "utxoIdx", op.OutIndex)
 	}
-	// Append the entry to the provided spent txouts slice.
-	*stxos = append(*stxos, stxo)
-	log.Debug("meer tx spend utxo by crosschain contract", "txhash", tx.Hash().String(), "meertxhash", vmtx.ETx.Hash().String(), "utxoTxid", op.Hash.String(), "utxoIdx", op.OutIndex)
 	return nil
 }

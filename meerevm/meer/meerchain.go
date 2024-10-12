@@ -353,9 +353,8 @@ func (b *MeerChain) OnStateChange(header *types.Header, state *state.StateDB, bo
 				state.AddBalance(proxy, uint256.MustFromBig(fee), tracing.BalanceChangeTransfer)
 			}
 
-			op, _ := vmtx.ExportData.GetOutPoint()
-			log.Debug("meer tx add balance from utxo", "txhash", tx.Hash().String(), "utxoTxid",
-				op.Hash.String(), "utxoIdx", op.OutIndex, "amout", vmtx.ExportData.Amount.Value, "add",
+			log.Debug("meer tx add balance from utxo", "txhash", tx.Hash().String(), "utxos",
+				vmtx.ExportData.Opt.Ops, "amout", vmtx.ExportData.Amount.Value, "add",
 				value.String(), "master", master.String(), "proxyFee", fee.String(), "proxy", proxy.String())
 		}
 

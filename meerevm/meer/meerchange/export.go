@@ -7,25 +7,21 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	qtypes "github.com/Qitmeer/qng/core/types"
-	mcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"strconv"
 	"strings"
 )
 
 var (
-	LogExportSigHash = crypto.Keccak256Hash([]byte("Export(bytes32,uint32,uint64,string)"))
+	LogExportSigHash = crypto.Keccak256Hash([]byte("Export(string,uint64,string)"))
 )
 
-func CalcExportHash(txid *hash.Hash, idx uint32, fee uint64) common.Hash {
-	data := txid.CloneBytes()
-
-	var sidx [4]byte
-	binary.BigEndian.PutUint32(sidx[:], idx)
-	data = append(data, sidx[:]...)
+func CalcExportHash(ops string, fee uint64) common.Hash {
+	data := []byte(ops)
 
 	var sfee [8]byte
 	binary.BigEndian.PutUint64(sfee[:], fee)
@@ -43,17 +39,16 @@ func CalcExportSig(hash common.Hash, privKeyHex string) ([]byte, error) {
 }
 
 type MeerchangeExportOptData struct {
-	Txid [32]byte
-	Idx  uint32
-	Fee  uint64 // Atoms per meer
-	Sig  string
+	Ops string
+	Fee uint64 // Atoms per meer
+	Sig string
 }
 
 type MeerchangeExportData struct {
 	Opt MeerchangeExportOptData
 	//
-	OutPoint *qtypes.TxOutPoint
-	Amount   qtypes.Amount
+	OutPoints []*qtypes.TxOutPoint
+	Amount    qtypes.Amount
 }
 
 func (e *MeerchangeExportData) GetFuncName() string {
@@ -64,17 +59,35 @@ func (e *MeerchangeExportData) GetLogName() string {
 	return "Export"
 }
 
-func (e *MeerchangeExportData) GetOutPoint() (*qtypes.TxOutPoint, error) {
-	if e.OutPoint != nil {
-		return e.OutPoint, nil
+func (e *MeerchangeExportData) GetOutPoints() ([]*qtypes.TxOutPoint, error) {
+	if e.OutPoints != nil {
+		return e.OutPoints, nil
 	}
-	txidBytes := e.Opt.Txid[:]
-	txid, err := hash.NewHash(*mcommon.ReverseBytes(&txidBytes))
-	if err != nil {
-		return nil, err
+	if len(e.Opt.Ops) <= 0 {
+		return nil, fmt.Errorf("No outpoint in meerchang export")
 	}
-	e.OutPoint = qtypes.NewOutPoint(txid, e.Opt.Idx)
-	return e.OutPoint, nil
+	opsArr := strings.Split(e.Opt.Ops, ",")
+	if len(opsArr) <= 0 {
+		return nil, fmt.Errorf("No outpoint in meerchang export")
+	}
+	e.OutPoints = []*qtypes.TxOutPoint{}
+	for _, opiStr := range opsArr {
+		opiArr := strings.Split(opiStr, ":")
+		if len(opiArr) != 2 {
+			return nil, fmt.Errorf("MeerChange export parmas error:%v", e.Opt.Ops)
+		}
+		txid, err := hash.NewHashFromStr(opiArr[0])
+		if err != nil {
+			return nil, err
+		}
+		idx, err := strconv.ParseInt(opiArr[1], 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		op := qtypes.NewOutPoint(txid, uint32(idx))
+		e.OutPoints = append(e.OutPoints, op)
+	}
+	return e.OutPoints, nil
 }
 
 func (e MeerchangeExportData) GetMaster() (common.Address, error) {
@@ -91,11 +104,7 @@ func (e MeerchangeExportData) GetMaster() (common.Address, error) {
 }
 
 func (e MeerchangeExportData) GetMasterPubkey() ([]byte, error) {
-	op, err := e.GetOutPoint()
-	if err != nil {
-		return nil, err
-	}
-	eHash := CalcExportHash(&op.Hash, op.OutIndex, e.Opt.Fee)
+	eHash := CalcExportHash(e.Opt.Ops, e.Opt.Fee)
 	sig, err := hex.DecodeString(e.Opt.Sig)
 	if err != nil {
 		return nil, err
@@ -109,9 +118,9 @@ func NewMeerchangeExportDataByLog(data []byte) (*MeerchangeExportData, error) {
 		return nil, err
 	}
 	ced := &MeerchangeExportData{
-		Opt:      MeerchangeExportOptData{},
-		OutPoint: nil,
-		Amount:   qtypes.Amount{Value: 0, Id: qtypes.MEERA},
+		Opt:       MeerchangeExportOptData{},
+		OutPoints: nil,
+		Amount:    qtypes.Amount{Value: 0, Id: qtypes.MEERA},
 	}
 	err = contractAbi.UnpackIntoInterface(&ced.Opt, ced.GetLogName(), data)
 	if err != nil {
@@ -129,9 +138,9 @@ func NewMeerchangeExportDataByInput(data []byte) (*MeerchangeExportData, error) 
 		return nil, err
 	}
 	ced := &MeerchangeExportData{
-		Opt:      MeerchangeExportOptData{},
-		OutPoint: nil,
-		Amount:   qtypes.Amount{Value: 0, Id: qtypes.MEERA},
+		Opt:       MeerchangeExportOptData{},
+		OutPoints: nil,
+		Amount:    qtypes.Amount{Value: 0, Id: qtypes.MEERA},
 	}
 	method, err := contractAbi.MethodById(data[:funcSigHashLen])
 	if err != nil {
