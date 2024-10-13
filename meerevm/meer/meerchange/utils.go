@@ -64,3 +64,8 @@ func GetChainID() *big.Int {
 func EnableContractAddr() {
 	ContractAddr = common.HexToAddress(CONTRACTADDRESS)
 }
+
+func DisableContractAddr() {
+	ContractAddr = common.Address{}
+	Bytecode = nil
+}

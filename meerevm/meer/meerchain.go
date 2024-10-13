@@ -110,6 +110,7 @@ func (b *MeerChain) Stop() error {
 	}
 
 	b.meerpool.Stop()
+	meerchange.DisableContractAddr()
 	return nil
 }
 
