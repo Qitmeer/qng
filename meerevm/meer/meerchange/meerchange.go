@@ -31,8 +31,8 @@ var (
 
 // MeerchangeMetaData contains all meta data concerning the Meerchange contract.
 var MeerchangeMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"txid\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"idx\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"fee\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"sig\",\"type\":\"string\"}],\"name\":\"Export\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"Import\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"TO_UTXO_PRECISION\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txid\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"idx\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"fee\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"sig\",\"type\":\"string\"}],\"name\":\"export\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getExportCount\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getImportCount\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getImportTotal\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"importToUtxo\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
-	Bin: "0x608060405234801561001057600080fd5b50610491806100206000396000f3fe6080604052600436106100655760003560e01c8063994b58f811610043578063994b58f8146100ee578063a8770e6914610107578063da2320261461010f57600080fd5b806347b2c7d71461006a5780635090ea051461008c57806387e9ff23146100cc575b600080fd5b34801561007657600080fd5b50475b6040519081526020015b60405180910390f35b34801561009857600080fd5b5060005468010000000000000000900467ffffffffffffffff165b60405167ffffffffffffffff9091168152602001610083565b3480156100d857600080fd5b506100ec6100e73660046102b1565b61012e565b005b3480156100fa57600080fd5b506100796402540be40081565b6100ec6101b4565b34801561011b57600080fd5b5060005467ffffffffffffffff166100b3565b6000805467ffffffffffffffff16908061014783610360565b91906101000a81548167ffffffffffffffff021916908367ffffffffffffffff160217905550507f8de70f4a2cc28f971578497609b5a7bcd97e40800d857fe09d6057bd382c658285858585856040516101a59594939291906103ae565b60405180910390a15050505050565b60006101c56402540be40034610420565b905060008111610235576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f546f205554584f20616d6f756e74206d757374206e6f7420626520656d707479604482015260640160405180910390fd5b6000805468010000000000000000900467ffffffffffffffff1690600861025b83610360565b91906101000a81548167ffffffffffffffff021916908367ffffffffffffffff160217905550507fb9ba2e23b17fbc3f0029c3a6600ef2dd4484bea87a99c7aab54caf84dedcf96b60405160405180910390a150565b6000806000806000608086880312156102c957600080fd5b85359450602086013563ffffffff811681146102e457600080fd5b9350604086013567ffffffffffffffff808216821461030257600080fd5b9093506060870135908082111561031857600080fd5b818801915088601f83011261032c57600080fd5b81358181111561033b57600080fd5b89602082850101111561034d57600080fd5b9699959850939650602001949392505050565b600067ffffffffffffffff8083168181036103a4577f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b6001019392505050565b85815263ffffffff8516602082015267ffffffffffffffff8416604082015260806060820152816080820152818360a0830137600081830160a090810191909152601f9092017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0160101949350505050565b600082610456577f4e487b7100000000000000000000000000000000000000000000000000000000600052601260045260246000fd5b50049056fea2646970667358221220d95f125db711bf76c22ef38e58c54fb5c15f6ebe6cd0bdd3062631a03ae6e95464736f6c634300080f0033",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ops\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"fee\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"sig\",\"type\":\"string\"}],\"name\":\"Export\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"Import\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"TO_UTXO_PRECISION\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ops\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"fee\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"sig\",\"type\":\"string\"}],\"name\":\"export\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getExportCount\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getImportCount\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getImportTotal\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"importToUtxo\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
+	Bin: "0x6080604052348015600f57600080fd5b506104e08061001f6000396000f3fe6080604052600436106100655760003560e01c8063994b58f811610043578063994b58f8146100ee578063a8770e6914610107578063da2320261461010f57600080fd5b8063381423651461006a57806347b2c7d71461008c5780635090ea05146100ae575b600080fd5b34801561007657600080fd5b5061008a6100853660046102fa565b61012e565b005b34801561009857600080fd5b50475b6040519081526020015b60405180910390f35b3480156100ba57600080fd5b5060005468010000000000000000900467ffffffffffffffff165b60405167ffffffffffffffff90911681526020016100a5565b3480156100fa57600080fd5b5061009b6402540be40081565b61008a6101b4565b34801561011b57600080fd5b5060005467ffffffffffffffff166100d5565b6000805467ffffffffffffffff1690806101478361038f565b91906101000a81548167ffffffffffffffff021916908367ffffffffffffffff160217905550507f027920314dd8117feba7bdcdd715c3a05af7ed0bfe51756a0440375b0c57c11c85858585856040516101a595949392919061042c565b60405180910390a15050505050565b60006101c56402540be4003461046f565b905060008111610235576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f546f205554584f20616d6f756e74206d757374206e6f7420626520656d707479604482015260640160405180910390fd5b6000805468010000000000000000900467ffffffffffffffff1690600861025b8361038f565b91906101000a81548167ffffffffffffffff021916908367ffffffffffffffff160217905550507fb9ba2e23b17fbc3f0029c3a6600ef2dd4484bea87a99c7aab54caf84dedcf96b60405160405180910390a150565b60008083601f8401126102c357600080fd5b50813567ffffffffffffffff8111156102db57600080fd5b6020830191508360208285010111156102f357600080fd5b9250929050565b60008060008060006060868803121561031257600080fd5b853567ffffffffffffffff81111561032957600080fd5b610335888289016102b1565b909650945050602086013567ffffffffffffffff8116811461035657600080fd5b9250604086013567ffffffffffffffff81111561037257600080fd5b61037e888289016102b1565b969995985093965092949392505050565b600067ffffffffffffffff821667ffffffffffffffff81036103da577f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b60010192915050565b8183528181602085013750600060208284010152600060207fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0601f840116840101905092915050565b6060815260006104406060830187896103e3565b67ffffffffffffffff8616602084015282810360408401526104638185876103e3565b98975050505050505050565b6000826104a5577f4e487b7100000000000000000000000000000000000000000000000000000000600052601260045260246000fd5b50049056fea264697066735822122096d4c5cd7781c87f24e1d4c0ad8fcfdc5b6d1618b27591cbd938ee25481e659f64736f6c634300081a0033",
 }
 
 // MeerchangeABI is the input ABI used to generate the binding from.
@@ -326,25 +326,25 @@ func (_Meerchange *MeerchangeCallerSession) GetImportTotal() (*big.Int, error) {
 	return _Meerchange.Contract.GetImportTotal(&_Meerchange.CallOpts)
 }
 
-// Export is a paid mutator transaction binding the contract method 0x87e9ff23.
+// Export is a paid mutator transaction binding the contract method 0x38142365.
 //
-// Solidity: function export(bytes32 txid, uint32 idx, uint64 fee, string sig) returns()
-func (_Meerchange *MeerchangeTransactor) Export(opts *bind.TransactOpts, txid [32]byte, idx uint32, fee uint64, sig string) (*types.Transaction, error) {
-	return _Meerchange.contract.Transact(opts, "export", txid, idx, fee, sig)
+// Solidity: function export(string ops, uint64 fee, string sig) returns()
+func (_Meerchange *MeerchangeTransactor) Export(opts *bind.TransactOpts, ops string, fee uint64, sig string) (*types.Transaction, error) {
+	return _Meerchange.contract.Transact(opts, "export", ops, fee, sig)
 }
 
-// Export is a paid mutator transaction binding the contract method 0x87e9ff23.
+// Export is a paid mutator transaction binding the contract method 0x38142365.
 //
-// Solidity: function export(bytes32 txid, uint32 idx, uint64 fee, string sig) returns()
-func (_Meerchange *MeerchangeSession) Export(txid [32]byte, idx uint32, fee uint64, sig string) (*types.Transaction, error) {
-	return _Meerchange.Contract.Export(&_Meerchange.TransactOpts, txid, idx, fee, sig)
+// Solidity: function export(string ops, uint64 fee, string sig) returns()
+func (_Meerchange *MeerchangeSession) Export(ops string, fee uint64, sig string) (*types.Transaction, error) {
+	return _Meerchange.Contract.Export(&_Meerchange.TransactOpts, ops, fee, sig)
 }
 
-// Export is a paid mutator transaction binding the contract method 0x87e9ff23.
+// Export is a paid mutator transaction binding the contract method 0x38142365.
 //
-// Solidity: function export(bytes32 txid, uint32 idx, uint64 fee, string sig) returns()
-func (_Meerchange *MeerchangeTransactorSession) Export(txid [32]byte, idx uint32, fee uint64, sig string) (*types.Transaction, error) {
-	return _Meerchange.Contract.Export(&_Meerchange.TransactOpts, txid, idx, fee, sig)
+// Solidity: function export(string ops, uint64 fee, string sig) returns()
+func (_Meerchange *MeerchangeTransactorSession) Export(ops string, fee uint64, sig string) (*types.Transaction, error) {
+	return _Meerchange.Contract.Export(&_Meerchange.TransactOpts, ops, fee, sig)
 }
 
 // ImportToUtxo is a paid mutator transaction binding the contract method 0xa8770e69.
@@ -437,16 +437,15 @@ func (it *MeerchangeExportIterator) Close() error {
 
 // MeerchangeExport represents a Export event raised by the Meerchange contract.
 type MeerchangeExport struct {
-	Txid [32]byte
-	Idx  uint32
-	Fee  uint64
-	Sig  string
-	Raw  types.Log // Blockchain specific contextual infos
+	Ops string
+	Fee uint64
+	Sig string
+	Raw types.Log // Blockchain specific contextual infos
 }
 
-// FilterExport is a free log retrieval operation binding the contract event 0x8de70f4a2cc28f971578497609b5a7bcd97e40800d857fe09d6057bd382c6582.
+// FilterExport is a free log retrieval operation binding the contract event 0x027920314dd8117feba7bdcdd715c3a05af7ed0bfe51756a0440375b0c57c11c.
 //
-// Solidity: event Export(bytes32 txid, uint32 idx, uint64 fee, string sig)
+// Solidity: event Export(string ops, uint64 fee, string sig)
 func (_Meerchange *MeerchangeFilterer) FilterExport(opts *bind.FilterOpts) (*MeerchangeExportIterator, error) {
 
 	logs, sub, err := _Meerchange.contract.FilterLogs(opts, "Export")
@@ -456,9 +455,9 @@ func (_Meerchange *MeerchangeFilterer) FilterExport(opts *bind.FilterOpts) (*Mee
 	return &MeerchangeExportIterator{contract: _Meerchange.contract, event: "Export", logs: logs, sub: sub}, nil
 }
 
-// WatchExport is a free log subscription operation binding the contract event 0x8de70f4a2cc28f971578497609b5a7bcd97e40800d857fe09d6057bd382c6582.
+// WatchExport is a free log subscription operation binding the contract event 0x027920314dd8117feba7bdcdd715c3a05af7ed0bfe51756a0440375b0c57c11c.
 //
-// Solidity: event Export(bytes32 txid, uint32 idx, uint64 fee, string sig)
+// Solidity: event Export(string ops, uint64 fee, string sig)
 func (_Meerchange *MeerchangeFilterer) WatchExport(opts *bind.WatchOpts, sink chan<- *MeerchangeExport) (event.Subscription, error) {
 
 	logs, sub, err := _Meerchange.contract.WatchLogs(opts, "Export")
@@ -493,9 +492,9 @@ func (_Meerchange *MeerchangeFilterer) WatchExport(opts *bind.WatchOpts, sink ch
 	}), nil
 }
 
-// ParseExport is a log parse operation binding the contract event 0x8de70f4a2cc28f971578497609b5a7bcd97e40800d857fe09d6057bd382c6582.
+// ParseExport is a log parse operation binding the contract event 0x027920314dd8117feba7bdcdd715c3a05af7ed0bfe51756a0440375b0c57c11c.
 //
-// Solidity: event Export(bytes32 txid, uint32 idx, uint64 fee, string sig)
+// Solidity: event Export(string ops, uint64 fee, string sig)
 func (_Meerchange *MeerchangeFilterer) ParseExport(log types.Log) (*MeerchangeExport, error) {
 	event := new(MeerchangeExport)
 	if err := _Meerchange.contract.UnpackLog(event, "Export", log); err != nil {

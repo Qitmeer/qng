@@ -50,6 +50,7 @@ type MeerChain struct {
 
 	block   *mmeer.Block
 	ddProxy *proxy.DeterministicDeploymentProxy
+	client  *ethclient.Client
 }
 
 func (b *MeerChain) Start() error {
@@ -64,9 +65,14 @@ func (b *MeerChain) Start() error {
 	}
 	//
 	rpcClient := b.chain.Node().Attach()
-	client := ethclient.NewClient(rpcClient)
+	b.client = ethclient.NewClient(rpcClient)
 
-	blockNum, err := client.BlockNumber(b.Context())
+	err = b.checkMeerChange()
+	if err != nil {
+		return err
+	}
+
+	blockNum, err := b.client.BlockNumber(b.Context())
 	if err != nil {
 		log.Error(err.Error())
 	} else {
@@ -104,6 +110,7 @@ func (b *MeerChain) Stop() error {
 	}
 
 	b.meerpool.Stop()
+	meerchange.DisableContractAddr()
 	return nil
 }
 
@@ -136,6 +143,10 @@ func (b *MeerChain) ConnectBlock(block *mmeer.Block) (uint64, error) {
 	mbh := qcommon.ToEVMHash(block.ID())
 	//
 	log.Debug(fmt.Sprintf("MeerEVM Block:number=%d hash=%s txs=%d  => blockHash(%s) txs=%d", mblock.Number().Uint64(), mblock.Hash().String(), len(mblock.Transactions()), mbh.String(), len(block.Transactions())))
+	err = b.checkMeerChange()
+	if err != nil {
+		return 0, err
+	}
 	return mblock.NumberU64(), b.finalized(mblock)
 }
 
@@ -348,9 +359,8 @@ func (b *MeerChain) OnStateChange(header *types.Header, state *state.StateDB, bo
 				state.AddBalance(proxy, uint256.MustFromBig(fee), tracing.BalanceChangeTransfer)
 			}
 
-			op, _ := vmtx.ExportData.GetOutPoint()
-			log.Debug("meer tx add balance from utxo", "txhash", tx.Hash().String(), "utxoTxid",
-				op.Hash.String(), "utxoIdx", op.OutIndex, "amout", vmtx.ExportData.Amount.Value, "add",
+			log.Debug("meer tx add balance from utxo", "txhash", tx.Hash().String(), "utxos",
+				vmtx.ExportData.Opt.Ops, "amout", vmtx.ExportData.Amount.Value, "add",
 				value.String(), "master", master.String(), "proxyFee", fee.String(), "proxy", proxy.String())
 		}
 
@@ -626,10 +636,23 @@ func (b *MeerChain) DeterministicDeploymentProxy() *proxy.DeterministicDeploymen
 	return b.ddProxy
 }
 
-func (b *MeerChain) initMeerChange() error {
-	var err error
-	meerchange.ContractAddr, err = b.ddProxy.GetContractAddress(common.Address{}, common.FromHex(meerchange.MeerchangeMetaData.Bin), 0)
-	return err
+func (b *MeerChain) checkMeerChange() error {
+	curBlockHeader := b.chain.Ether().BlockChain().CurrentBlock()
+	if curBlockHeader == nil {
+		return nil
+	}
+	if !forks.IsMeerChangeForkHeight(curBlockHeader.Number.Int64()) {
+		return nil
+	}
+	if meerchange.ContractAddr != (common.Address{}) {
+		return nil
+	}
+	if !b.IsMeerChangeDeployed() {
+		log.Warn("Please deploy contract MeerChange as soon as possible")
+		return nil
+	}
+	meerchange.EnableContractAddr()
+	return nil
 }
 
 func (b *MeerChain) APIs() []api.API {
@@ -676,9 +699,5 @@ func NewMeerChain(consensus model.Consensus) (*MeerChain, error) {
 	mchain.InitContext()
 	mchain.ddProxy = proxy.NewDeterministicDeploymentProxy(mchain.Context(), ethclient.NewClient(chain.Node().Attach()))
 	chain.Ether().Engine().(*mconsensus.MeerEngine).StateChange = mchain.OnStateChange
-	err = mchain.initMeerChange()
-	if err != nil {
-		log.Warn(err.Error())
-	}
 	return mchain, nil
 }

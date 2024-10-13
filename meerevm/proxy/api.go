@@ -28,10 +28,9 @@ func (ddp *DeterministicDeploymentProxy) APIs() []api.API {
 	}
 }
 
-func (api *PublicDeterministicDeploymentProxyAPI) GetContractAddress(owner string, bytecodeHex string, version int64) (interface{}, error) {
-	ownerAddr := common.HexToAddress(owner)
+func (api *PublicDeterministicDeploymentProxyAPI) GetContractAddress(bytecodeHex string, version int64) (interface{}, error) {
 	bytecode := common.FromHex(bytecodeHex)
-	addr, err := api.proxy.GetContractAddress(ownerAddr, bytecode, version)
+	addr, err := api.proxy.GetContractAddress(bytecode, version)
 	if err != nil {
 		return nil, err
 	}
@@ -57,4 +56,22 @@ func (api *PublicDeterministicDeploymentProxyAPI) GetContractDeployData(bytecode
 	bytecode := common.FromHex(bytecodeHex)
 	ret := api.proxy.GetContractDeployData(bytecode, version)
 	return common.Bytes2Hex(ret), nil
+}
+
+type proxyInfo struct {
+	Name string `json:"name"`
+	Addr string `json:"address"`
+	Code string `json:"code"`
+}
+
+func (api *PublicDeterministicDeploymentProxyAPI) ProxyInfo() (interface{}, error) {
+	return *api.proxy.Info(), nil
+}
+
+func (api *PublicDeterministicDeploymentProxyAPI) DeployProxy(owner string) (interface{}, error) {
+	err := api.proxy.Deploy(common.HexToAddress(owner))
+	if err != nil {
+		return nil, err
+	}
+	return api.proxy.GetAddress().String(), nil
 }

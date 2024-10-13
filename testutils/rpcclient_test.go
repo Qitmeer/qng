@@ -64,6 +64,7 @@ var (
 		RPCMaxWebsockets:     defaultMaxRPCWebsockets,
 		RPCMaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
 		Generate:             defaultGenerate,
+		GenerateOnTx:         defaultGenerate,
 		MaxPeers:             defaultMaxPeers,
 		MinTxFee:             mempool.DefaultMinRelayTxFee,
 		BlockMinSize:         defaultBlockMinSize,
