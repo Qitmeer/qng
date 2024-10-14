@@ -23,7 +23,6 @@ var (
 	defaultHomeDir = util.AppDataDir("qitmeerd", false)
 	defaultDataDir = filepath.Join(defaultHomeDir, defaultDataDirname)
 	defaultDbType  = "ffldb"
-	defaultDAGType = "phantom"
 )
 
 type Config struct {
@@ -33,7 +32,6 @@ type Config struct {
 	MixNet        bool   `long:"mixnet" description:"Use the test mix pow network"`
 	PrivNet       bool   `long:"privnet" description:"Use the private network"`
 	DbType        string `long:"dbtype" description:"Database backend to use for the Block Chain"`
-	DAGType       string `short:"G" long:"dagtype" description:"DAG type {phantom,conflux,spectre} "`
 	NumCandidates int    `short:"n" long:"numcandidates" description:"Max num of checkpoint candidates to show {1-20}"`
 	UseGoOutput   bool   `short:"g" long:"gooutput" description:"Display the candidates using Go syntax that is ready to insert into the qitmeer checkpoint list"`
 	IsCheckPoint  string `short:"I" long:"ischeckpoint" description:"Determine if it's a check point"`
@@ -43,7 +41,6 @@ func (cfg *Config) ToQNGConfig() *config.Config {
 	qcfg := common.DefaultConfig(cfg.HomeDir)
 	qcfg.DataDir = cfg.DataDir
 	qcfg.DbType = cfg.DbType
-	qcfg.DAGType = cfg.DAGType
 	qcfg.TestNet = cfg.TestNet
 	qcfg.MixNet = cfg.MixNet
 	qcfg.PrivNet = cfg.PrivNet
@@ -59,7 +56,6 @@ func LoadConfig() (*Config, []string, error) {
 		HomeDir:       defaultHomeDir,
 		DataDir:       defaultDataDir,
 		DbType:        defaultDbType,
-		DAGType:       defaultDAGType,
 		TestNet:       true,
 		NumCandidates: defaultNumCandidates,
 	}

@@ -30,7 +30,6 @@ const (
 	defaultMaxRPCWebsockets       = 25
 	defaultMaxRPCConcurrentReqs   = 20
 	defaultMaxPeers               = 30
-	defaultMiningStateSync        = false
 	defaultMaxInboundPeersPerHost = 10 // The default max total of inbound peer for host
 	defaultTrickleInterval        = 10 * time.Second
 	defaultInvalidTxIndex         = false
@@ -45,7 +44,6 @@ var (
 	defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
 	defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
 	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
-	defaultDAGType     = "phantom"
 )
 
 var (
@@ -70,8 +68,6 @@ var (
 		BlockMinSize:         defaultBlockMinSize,
 		BlockMaxSize:         defaultBlockMaxSize,
 		SigCacheMaxSize:      defaultSigCacheMaxSize,
-		MiningStateSync:      defaultMiningStateSync,
-		DAGType:              defaultDAGType,
 		Banning:              false,
 		MaxInbound:           defaultMaxInboundPeersPerHost,
 		InvalidTxIndex:       defaultInvalidTxIndex,

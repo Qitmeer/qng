@@ -29,7 +29,6 @@ const (
 	defaultMaxRPCWebsockets       = 25
 	defaultMaxRPCConcurrentReqs   = 20
 	defaultMaxPeers               = 50
-	defaultMiningStateSync        = false
 	defaultMaxInboundPeersPerHost = 25 // The default max total of inbound peer for host
 	defaultTrickleInterval        = 10 * time.Second
 	defaultInvalidTxIndex         = false
@@ -59,7 +58,6 @@ var (
 	defaultLogRotatorSize = int64(1024 * 10)
 	defaultRPCKeyFile     = filepath.Join(defaultHomeDir, "rpc.key")
 	defaultRPCCertFile    = filepath.Join(defaultHomeDir, "rpc.cert")
-	defaultDAGType        = "phantom"
 )
 
 var (
@@ -377,11 +375,6 @@ var (
 			Usage:       "Do not accept transactions from remote peers",
 			Destination: &cfg.BlocksOnly,
 		},
-		&cli.BoolFlag{
-			Name:        "miningstatesync",
-			Usage:       "Synchronizing the mining state with other nodes",
-			Destination: &cfg.MiningStateSync,
-		},
 		&cli.StringSliceFlag{
 			Name:        "addpeer",
 			Aliases:     []string{"a"},
@@ -404,13 +397,6 @@ var (
 			Usage:       "Enable banning of misbehaving peers",
 			Destination: &cfg.Banning,
 			Value:       true,
-		},
-		&cli.StringFlag{
-			Name:        "dagtype",
-			Aliases:     []string{"G"},
-			Usage:       "DAG type {phantom,spectre}",
-			Value:       defaultDAGType,
-			Destination: &cfg.DAGType,
 		},
 		&cli.BoolFlag{
 			Name:        "cleanup",
@@ -677,8 +663,6 @@ func DefaultConfig(homeDir string) *config.Config {
 		BlockMinSize:         defaultBlockMinSize,
 		BlockMaxSize:         defaultBlockMaxSize,
 		SigCacheMaxSize:      defaultSigCacheMaxSize,
-		MiningStateSync:      defaultMiningStateSync,
-		DAGType:              defaultDAGType,
 		Banning:              true,
 		MaxInbound:           defaultMaxInboundPeersPerHost,
 		InvalidTxIndex:       defaultInvalidTxIndex,
