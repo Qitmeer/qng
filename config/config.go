@@ -70,17 +70,15 @@ type Config struct {
 	RPCMaxWebsockets     int `long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
 	RPCMaxConcurrentReqs int `long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
 	//P2P
-	BlocksOnly      bool     `long:"blocksonly" description:"Do not accept transactions from remote peers."`
-	MiningStateSync bool     `long:"miningstatesync" description:"Synchronizing the mining state with other nodes"`
-	AddPeers        []string `short:"a" long:"addpeer" description:"Add a peer to connect with at startup"`
-	Upnp            bool     `long:"upnp" description:"Use UPnP to map our listening port outside of NAT"`
-	MaxInbound      int      `long:"maxinbound" description:"The max total of inbound peer for host"`
+	BlocksOnly bool     `long:"blocksonly" description:"Do not accept transactions from remote peers."`
+	AddPeers   []string `short:"a" long:"addpeer" description:"Add a peer to connect with at startup"`
+	Upnp       bool     `long:"upnp" description:"Use UPnP to map our listening port outside of NAT"`
+	MaxInbound int      `long:"maxinbound" description:"The max total of inbound peer for host"`
 	//P2P - server ban
 	Banning bool `long:"banning" description:"Enable banning of misbehaving peers"`
 
-	DAGType     string `short:"G" long:"dagtype" description:"DAG type {phantom,conflux,spectre} "`
-	Cleanup     bool   `short:"L" long:"cleanup" description:"Cleanup the block database "`
-	BuildLedger bool   `long:"buildledger" description:"Generate the genesis ledger for the next qitmeer version."`
+	Cleanup     bool `short:"L" long:"cleanup" description:"Cleanup the block database "`
+	BuildLedger bool `long:"buildledger" description:"Generate the genesis ledger for the next qitmeer version."`
 
 	Zmqpubhashblock string `long:"zmqpubhashblock" description:"Enable publish hash block  in <address>"`
 	Zmqpubrawblock  string `long:"zmqpubrawblock" description:"Enable publish raw block in <address>"`

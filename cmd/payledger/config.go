@@ -30,7 +30,6 @@ var (
 	defaultDataDir    = filepath.Join(defaultHomeDir, defaultDataDirname)
 	defaultSrcDataDir = filepath.Join(defaultHomeDir, defaultSrcDataDirname)
 	defaultDbType     = "ffldb"
-	defaultDAGType    = "phantom"
 )
 
 type Config struct {
@@ -40,7 +39,6 @@ type Config struct {
 	MixNet  bool   `long:"mixnet" description:"Use the test mix pow network"`
 	PrivNet bool   `long:"privnet" description:"Use the private network"`
 	DbType  string `long:"dbtype" description:"Database backend to use for the Block Chain"`
-	DAGType string `short:"G" long:"dagtype" description:"DAG type {phantom,conflux,spectre} "`
 
 	SrcDataDir      string `long:"srcdatadir" description:"Original directory to store data"`
 	EndPoint        string `long:"endpoint" description:"The end point block hash when building ledger"`
@@ -62,7 +60,6 @@ func (cfg *Config) ToQNGConfig() *config.Config {
 	qcfg := common.DefaultConfig(cfg.HomeDir)
 	qcfg.DataDir = cfg.DataDir
 	qcfg.DbType = cfg.DbType
-	qcfg.DAGType = cfg.DAGType
 	qcfg.TestNet = cfg.TestNet
 	qcfg.MixNet = cfg.MixNet
 	qcfg.PrivNet = cfg.PrivNet
@@ -75,7 +72,6 @@ func LoadConfig() (*Config, []string, error) {
 		HomeDir:          defaultHomeDir,
 		DataDir:          defaultDataDir,
 		DbType:           defaultDbType,
-		DAGType:          defaultDAGType,
 		SrcDataDir:       defaultSrcDataDir,
 		SavePayoutsFile:  false,
 		DisableBar:       false,
@@ -117,7 +113,6 @@ func LoadConfig() (*Config, []string, error) {
 	}
 
 	cfg.DbType = preCfg.DbType
-	cfg.DAGType = preCfg.DAGType
 	cfg.EndPoint = preCfg.EndPoint
 	cfg.ShowEndPoints = preCfg.ShowEndPoints
 	cfg.CheckEndPoint = preCfg.CheckEndPoint

@@ -1077,7 +1077,7 @@ func New(consensus model.Consensus) (*BlockChain, error) {
 
 	b.subsidyCache = NewSubsidyCache(0, b.params)
 
-	b.bd = meerdag.New(config.DAGType, 1.0/float64(par.TargetTimePerBlock/time.Second), b.DB(), b.getBlockData)
+	b.bd = meerdag.New(meerdag.PHANTOM, 1.0/float64(par.TargetTimePerBlock/time.Second), b.DB(), b.getBlockData)
 	b.bd.SetCacheSize(config.DAGCacheSize, config.BlockDataCacheSize)
 
 	b.InitServices()
