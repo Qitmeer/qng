@@ -94,8 +94,8 @@ func (api *PublicBlockChainAPI) GetNodeInfo() (interface{}, error) {
 	ret.ConsensusDeployment = make(map[string]*json.ConsensusDeploymentDesc)
 	ret.ConsensusDeployment["token"] = &json.ConsensusDeploymentDesc{Status: "active"}
 	if params.ActiveNetParams.Net == protocol.MainNet {
-		cdd := json.ConsensusDeploymentDesc{Status: "inactive", StartHeight: forks.MeerEVMForkMainHeight}
-		if forks.IsMeerEVMForkHeight(int64(best.GraphState.GetMainHeight())) {
+		cdd := json.ConsensusDeploymentDesc{Status: "inactive", StartHeight: params.ActiveNetParams.MeerEVMForkBlock.Int64()}
+		if params.ActiveNetParams.IsMeerEVMFork(int64(best.GraphState.GetMainHeight())) {
 			cdd.Status = "active"
 		}
 		ret.ConsensusDeployment["meerevm"] = &cdd
@@ -166,7 +166,7 @@ func (api *PublicBlockChainAPI) GetSubsidy() (interface{}, error) {
 
 	info := &json.SubsidyInfo{Mode: sc.GetMode(mainHeight), TotalSubsidy: best.TotalSubsidy, BaseSubsidy: params.ActiveNetParams.BaseSubsidy}
 
-	if forks.IsMeerEVMForkHeight(mainHeight) {
+	if params.ActiveNetParams.IsMeerEVMFork(mainHeight) {
 		info.TargetTotalSubsidy = forks.MeerEVMForkTotalSubsidy - binfo.GetWeight()
 		info.LeftTotalSubsidy = info.TargetTotalSubsidy - int64(info.TotalSubsidy)
 		if info.LeftTotalSubsidy < 0 {

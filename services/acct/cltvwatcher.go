@@ -2,8 +2,8 @@ package acct
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/params"
 )
 
 type CLTVWatcher struct {
@@ -21,7 +21,7 @@ func (cw *CLTVWatcher) Update(am *AccountManager) error {
 	if mainTip == nil {
 		return fmt.Errorf("No main tip")
 	}
-	if forks.IsMeerEVMUTXOHeight(int64(mainTip.GetHeight())) && cw.isForkGenUTXO {
+	if params.ActiveNetParams.IsMeerUTXOFork(int64(mainTip.GetHeight())) && cw.isForkGenUTXO {
 		cw.unlocked = true
 		return nil
 	}

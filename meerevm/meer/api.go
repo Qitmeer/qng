@@ -3,9 +3,10 @@ package meer
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
+	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/common"
+	"math"
 )
 
 type MeerChainInfo struct {
@@ -67,7 +68,11 @@ func (api *PublicMeerChainAPI) GetMeerChainInfo() (interface{}, error) {
 
 	header := api.mc.GetCurHeader()
 	if header != nil {
-		mci.Fork = fmt.Sprintf("%d/%d", header.Number.Uint64(), forks.GetMeerChangeForkHeight())
+		forkNumber := int64(math.MaxInt64)
+		if params.ActiveNetParams.MeerChangeForkBlock != nil {
+			forkNumber = params.ActiveNetParams.MeerChangeForkBlock.Int64()
+		}
+		mci.Fork = fmt.Sprintf("%d/%d", header.Number.Uint64(), forkNumber)
 	}
 	return mi, nil
 }

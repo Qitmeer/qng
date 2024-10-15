@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/consensus/forks"
 	qtypes "github.com/Qitmeer/qng/core/types"
 	qcommon "github.com/Qitmeer/qng/meerevm/common"
+	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
@@ -109,7 +110,7 @@ func (me *MeerEngine) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 		if header.BaseFee != nil {
 			return fmt.Errorf("invalid baseFee before fork: have %d, expected 'nil'", header.BaseFee)
 		}
-		if !forks.NeedFixedGasLimit(parent.Number.Int64(), chain.Config().ChainID.Int64()) {
+		if qparams.ActiveNetParams.IsGasLimitFork(parent.Number) {
 			if err := misc.VerifyGaslimit(parent.GasLimit, header.GasLimit); err != nil {
 				return err
 			}
@@ -158,7 +159,7 @@ func (me *MeerEngine) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 }
 
 func (me *MeerEngine) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
-	return forks.GetCancunForkDifficulty(parent.Number.Int64())
+	return forks.GetCancunForkDifficulty(parent.Number)
 }
 
 func (me *MeerEngine) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
@@ -166,7 +167,7 @@ func (me *MeerEngine) Prepare(chain consensus.ChainHeaderReader, header *types.H
 	if number > 0 {
 		number--
 	}
-	header.Difficulty = forks.GetCancunForkDifficulty(number)
+	header.Difficulty = forks.GetCancunForkDifficulty(big.NewInt(number))
 	return nil
 }
 

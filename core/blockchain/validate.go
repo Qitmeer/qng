@@ -1447,7 +1447,7 @@ func (b *BlockChain) IsValidTxType(tt types.TxType) bool {
 	}
 	ok := true
 	if params.ActiveNetParams.Net == protocol.MainNet {
-		if !forks.IsMeerEVMForkHeight(int64(b.BestSnapshot().GraphState.GetMainHeight())) {
+		if !params.ActiveNetParams.IsMeerEVMFork(int64(b.BestSnapshot().GraphState.GetMainHeight())) {
 			ok = false
 		}
 	}

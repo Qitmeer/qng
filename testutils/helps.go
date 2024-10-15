@@ -9,7 +9,6 @@ import (
 	"github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
-	"github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -315,7 +314,7 @@ func createLegacyTx(node *MockNode, fromPkByte []byte, to *common.Address, nonce
 		Data:     d,
 	}
 	tx := etype.NewTx(data)
-	signedTx, err := etype.SignTx(tx, etype.NewEIP155Signer(params.QngPrivnetChainConfig.ChainID), privateKey)
+	signedTx, err := etype.SignTx(tx, etype.NewEIP155Signer(qparams.ActiveNetParams.MeerConfig.ChainID), privateKey)
 	if err != nil {
 		return "", err
 	}
@@ -335,7 +334,7 @@ func MeerTransfer(node *MockNode, fromAccountIdx int, to common.Address, val *bi
 }
 func AuthTrans(privatekeybyte []byte) (*bind.TransactOpts, error) {
 	privateKey := crypto.ToECDSAUnsafe(privatekeybyte)
-	authCaller, err := bind.NewKeyedTransactorWithChainID(privateKey, params.QngPrivnetChainConfig.ChainID)
+	authCaller, err := bind.NewKeyedTransactorWithChainID(privateKey, qparams.ActiveNetParams.MeerConfig.ChainID)
 	if err != nil {
 		return nil, err
 	}

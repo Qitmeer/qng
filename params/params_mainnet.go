@@ -12,6 +12,7 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
+	eparams "github.com/ethereum/go-ethereum/params"
 	"math/big"
 	"time"
 )
@@ -128,4 +129,27 @@ var MainNetParams = Params{
 	GuardAddrPkScript: hexMustDecode("76a9143846e53e5e952b5cd6023e3ad3cfc75cb93fce0388ac"),
 	// MmQitmeerMainNetHonorAddressXY9JH2y
 	HonorAddrPkScript: hexMustDecode("76a9143846e53e5e952b5cd60240ad9c4cf6164dd5090988ac"),
+
+	MeerConfig: &eparams.ChainConfig{
+		ChainID:             eparams.QngMainnetChainConfig.ChainID,
+		HomesteadBlock:      big.NewInt(0),
+		DAOForkBlock:        big.NewInt(0),
+		DAOForkSupport:      false,
+		EIP150Block:         big.NewInt(0),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		MuirGlacierBlock:    big.NewInt(0),
+		BerlinBlock:         big.NewInt(0),
+		LondonBlock:         nil,
+		Ethash:              new(eparams.EthashConfig),
+	},
+	MeerEVMForkBlock:  big.NewInt(951100),
+	MeerUTXOForkBlock: big.NewInt(1200000),
+	GasLimitForkBlock: big.NewInt(606567),
+
+	AmanaConfig: amanaChainConfig,
 }

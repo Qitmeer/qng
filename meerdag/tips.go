@@ -7,8 +7,8 @@ package meerdag
 import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/core/merkle"
+	"github.com/Qitmeer/qng/params"
 	"math"
 )
 
@@ -48,7 +48,7 @@ func (bd *MeerDAG) GetValidTips(expectPriority int) []*hash.Hash {
 
 	result := []*hash.Hash{tips[0].GetHash()}
 	epNum := expectPriority
-	if forks.IsEmptyBlockForkHeight(int64(tips[0].GetHeight()) + 1) {
+	if params.ActiveNetParams.IsEmptyBlockFork(int64(tips[0].GetHeight()) + 1) {
 		epNum = MaxPriority
 	}
 	for k, v := range tips {

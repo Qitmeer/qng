@@ -7,6 +7,7 @@
 package params
 
 import (
+	eparams "github.com/ethereum/go-ethereum/params"
 	"math/big"
 	"time"
 
@@ -123,4 +124,26 @@ var TestNetParams = Params{
 	LegacyCoinType:       223,
 	OrganizationPkScript: hexMustDecode("76a91429209320e66d96839785dd07e643a7f1592edc5a88ac"),
 	TokenAdminPkScript:   hexMustDecode("00000000c96d6d76a914b8834294977b26a44094fe2216f8a7d59af1130888ac"),
+
+	MeerConfig: &eparams.ChainConfig{
+		ChainID:             eparams.QngTestnetChainConfig.ChainID,
+		HomesteadBlock:      big.NewInt(0),
+		DAOForkBlock:        big.NewInt(0),
+		DAOForkSupport:      false,
+		EIP150Block:         big.NewInt(0),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		MuirGlacierBlock:    big.NewInt(0),
+		BerlinBlock:         big.NewInt(0),
+		LondonBlock:         big.NewInt(22500),
+		Ethash:              new(eparams.EthashConfig),
+	},
+	EmptyBlockForkBlock: big.NewInt(0),
+	GasLimitForkBlock:   big.NewInt(0),
+
+	AmanaConfig: amanaChainConfig,
 }
