@@ -332,6 +332,40 @@ func (p *Params) IsMeerChangeFork(number *big.Int) bool {
 	return isBlockForked(p.MeerChangeForkBlock, number)
 }
 
+// Rules wraps Params and is merely syntactic sugar or can be used for functions
+// that do not have or require information about the block.
+//
+// Rules is a one time interface meaning that it shouldn't be used in between transition
+// phases.
+type Rules struct {
+	Net              protocol.Network
+	ChainID          *big.Int
+	IsMeerEVMFork    bool
+	IsMeerUTXOFork   bool
+	IsEmptyBlockFork bool
+	IsGasLimitFork   bool
+	IsCancunFork     bool
+	IsMeerChangeFork bool
+}
+
+// Rules ensures p's ChainID is not nil.
+func (p *Params) Rules(height int64, num *big.Int) Rules {
+	chainID := p.MeerConfig.ChainID
+	if chainID == nil {
+		chainID = new(big.Int)
+	}
+	return Rules{
+		Net:              p.Net,
+		ChainID:          new(big.Int).Set(chainID),
+		IsMeerEVMFork:    p.IsMeerEVMFork(height),
+		IsMeerUTXOFork:   p.IsMeerUTXOFork(height),
+		IsEmptyBlockFork: p.IsEmptyBlockFork(height),
+		IsGasLimitFork:   p.IsGasLimitFork(num),
+		IsCancunFork:     p.IsCancunFork(num),
+		IsMeerChangeFork: p.IsMeerChangeFork(num),
+	}
+}
+
 var (
 	// ErrDuplicateNet describes an error where the parameters for a network
 	// could not be set due to the network already being a standard
