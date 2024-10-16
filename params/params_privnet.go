@@ -12,6 +12,7 @@ import (
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/core/types/pow"
 	"github.com/Qitmeer/qng/ledger"
+	eparams "github.com/ethereum/go-ethereum/params"
 	"math/big"
 	"time"
 )
@@ -162,4 +163,33 @@ var PrivNetParams = Params{
 	TokenAdminPkScript: hexMustDecode("00000000c96d6d76a914785bfbf4ecad8b72f2582be83616c5d364a3244288ac"),
 
 	CoinbaseMaturity: 16,
+
+	MeerConfig: &eparams.ChainConfig{
+		ChainID:                       eparams.QngPrivnetChainConfig.ChainID,
+		HomesteadBlock:                big.NewInt(0),
+		DAOForkBlock:                  big.NewInt(0),
+		DAOForkSupport:                false,
+		EIP150Block:                   big.NewInt(0),
+		EIP155Block:                   big.NewInt(0),
+		EIP158Block:                   big.NewInt(0),
+		ByzantiumBlock:                big.NewInt(0),
+		ConstantinopleBlock:           big.NewInt(0),
+		PetersburgBlock:               big.NewInt(0),
+		IstanbulBlock:                 big.NewInt(0),
+		MuirGlacierBlock:              big.NewInt(0),
+		BerlinBlock:                   big.NewInt(0),
+		LondonBlock:                   big.NewInt(0),
+		ArrowGlacierBlock:             big.NewInt(0),
+		GrayGlacierBlock:              big.NewInt(0),
+		TerminalTotalDifficulty:       big.NewInt(0),
+		TerminalTotalDifficultyPassed: true,
+		ShanghaiTime:                  newUint64(0),
+		CancunTime:                    newUint64(0),
+	},
+	EmptyBlockForkBlock: big.NewInt(0),
+	GasLimitForkBlock:   big.NewInt(0),
+	CancunForkBlock:     big.NewInt(0),
+	MeerChangeForkBlock: big.NewInt(0),
+
+	AmanaConfig: amanaChainConfig,
 }

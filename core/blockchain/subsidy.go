@@ -66,7 +66,7 @@ func NewSubsidyCache(blocks int64, params *params.Params) *SubsidyCache {
 //
 // Safe for concurrent access.
 func (s *SubsidyCache) CalcBlockSubsidy(bi *meerdag.BlueInfo) int64 {
-	if forks.IsMeerEVMForkHeight(bi.GetHeight()) {
+	if params.ActiveNetParams.IsMeerEVMFork(bi.GetHeight()) {
 		return s.CalcBlockSubsidyByMeerEVMFork(bi)
 	}
 	if s.params.TargetTotalSubsidy > 0 {
@@ -91,7 +91,7 @@ func (s *SubsidyCache) CalcTotalControlBlockSubsidy(bi *meerdag.BlueInfo) int64 
 }
 
 func (s *SubsidyCache) GetMode(height int64) string {
-	if forks.IsMeerEVMForkHeight(height) {
+	if params.ActiveNetParams.IsMeerEVMFork(height) {
 		return "meerevmfork"
 	}
 	if s.params.TargetTotalSubsidy > 0 {
@@ -149,7 +149,7 @@ func (s *SubsidyCache) CalcBlockSubsidyByMeerEVMFork(bi *meerdag.BlueInfo) int64
 	if bi.GetWeight() >= targetTotalSubsidy {
 		return 0
 	}
-	realHeight := bi.GetHeight() - forks.MeerEVMForkMainHeight
+	realHeight := bi.GetHeight() - params.ActiveNetParams.MeerEVMForkBlock.Int64()
 	iteration := uint64(realHeight) / forks.SubsidyReductionInterval
 	blockSubsidy := s.estimateSupply(iteration, forks.MulSubsidy, forks.DivSubsidy)
 	if bi.GetWeight()+blockSubsidy > targetTotalSubsidy {

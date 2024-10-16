@@ -7,10 +7,10 @@ import (
 	mcommon "github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/meerevm/eth"
 	mconsensus "github.com/Qitmeer/qng/meerevm/meer/consensus"
-	mparams "github.com/Qitmeer/qng/meerevm/params"
 	"github.com/Qitmeer/qng/p2p/common"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
+	"math/big"
 	"path/filepath"
 	"time"
 )
@@ -118,36 +119,28 @@ func createConsensusEngine(config *params.ChainConfig, db ethdb.Database) (conse
 	return mconsensus.New(), nil
 }
 
-func ChainConfig() *params.ChainConfig {
-	switch qparams.ActiveNetParams.Net {
-	case protocol.MainNet:
-		return mparams.QngMainnetChainConfig
-	case protocol.TestNet:
-		return mparams.QngTestnetChainConfig
-	case protocol.MixNet:
-		return mparams.QngMixnetChainConfig
-	case protocol.PrivNet:
-		return mparams.QngPrivnetChainConfig
+func Genesis(net *qparams.Params, alloc types.GenesisAlloc) *core.Genesis {
+	if alloc == nil {
+		alloc = DecodeAlloc(net)
 	}
-	return nil
-}
-
-func Genesis(net protocol.Network, alloc types.GenesisAlloc) *core.Genesis {
-	switch net {
-	case protocol.MainNet:
-		return QngGenesis(alloc)
-	case protocol.TestNet:
-		return QngTestnetGenesis(alloc)
-	case protocol.MixNet:
-		return QngMixnetGenesis(alloc)
-	case protocol.PrivNet:
-		return QngPrivnetGenesis(alloc)
+	gen := &core.Genesis{
+		Config:     net.MeerConfig,
+		Nonce:      0,
+		Number:     0,
+		ExtraData:  hexutil.MustDecode("0x00"),
+		GasLimit:   100000000,
+		Difficulty: big.NewInt(0),
+		Alloc:      alloc,
+		Timestamp:  uint64(net.GenesisBlock.Block().Header.Timestamp.Unix()),
 	}
-	return nil
+	if net.Net == protocol.TestNet {
+		gen.GasLimit = 8000000
+	}
+	return gen
 }
 
 func CurrentGenesis() *core.Genesis {
-	return Genesis(qparams.ActiveNetParams.Net, nil)
+	return Genesis(qparams.ActiveNetParams.Params, nil)
 }
 
 func getBootstrapNodes(port int) []*enode.Node {

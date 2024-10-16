@@ -1,20 +1,12 @@
 package forks
 
 import (
-	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/params"
 )
 
 const (
-	// MeerEVM is enabled  and new subsidy calculation
-	MeerEVMForkMainHeight = 951100
-
-	// What main height can transfer the locked utxo in genesis to MeerEVM
-	// Must after MeerEVMForkMainHeight
-	MeerEVMUTXOUnlockMainHeight = 1200000
-
 	// 21024000000000000 (Total)-5051813000000000 (locked genesis)-1215912000000000 (meerevm genesis) = 14756275000000000
 	MeerEVMForkTotalSubsidy = 14756275000000000
 
@@ -32,13 +24,11 @@ const (
 )
 
 func IsVaildEVMUTXOUnlockTx(tx *types.Transaction, ip *types.TxInput, mainHeight int64) bool {
-	if params.ActiveNetParams.Net != protocol.MainNet {
+	if !params.ActiveNetParams.IsMeerEVMFork(mainHeight) ||
+		!params.ActiveNetParams.IsMeerUTXOFork(mainHeight) {
 		return false
 	}
-	if mainHeight < MeerEVMForkMainHeight ||
-		mainHeight < MeerEVMUTXOUnlockMainHeight {
-		return false
-	}
+
 	if !types.IsCrossChainExportTx(tx) {
 		return false
 	}
@@ -67,25 +57,4 @@ func IsMaxLockUTXOInGenesis(op *types.TxOutPoint) bool {
 		}
 	}
 	return false
-}
-
-func IsMeerEVMForkHeight(mainHeight int64) bool {
-	if params.ActiveNetParams.Net != protocol.MainNet {
-		return false
-	}
-	return mainHeight >= MeerEVMForkMainHeight
-}
-
-func IsMeerEVMUTXOHeight(mainHeight int64) bool {
-	if params.ActiveNetParams.Net != protocol.MainNet {
-		return false
-	}
-	return mainHeight >= MeerEVMUTXOUnlockMainHeight
-}
-
-func IsBeforeMeerEVMForkHeight(mainHeight int64) bool {
-	if params.ActiveNetParams.Net != protocol.MainNet {
-		return false
-	}
-	return mainHeight < MeerEVMForkMainHeight
 }

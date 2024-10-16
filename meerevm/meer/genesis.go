@@ -6,79 +6,13 @@ import (
 	"math/big"
 	"strings"
 
-	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/common"
 	qcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 )
-
-func QngGenesis(alloc types.GenesisAlloc) *core.Genesis {
-	if alloc == nil {
-		alloc = DecodeAlloc(qparams.MainNetParam.Params)
-	}
-	return &core.Genesis{
-		Config:     mparams.QngMainnetChainConfig,
-		Nonce:      0,
-		Number:     0,
-		ExtraData:  hexutil.MustDecode("0x00"),
-		GasLimit:   100000000,
-		Difficulty: big.NewInt(0),
-		Alloc:      alloc,
-		Timestamp:  uint64(qparams.MainNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
-	}
-}
-
-func QngTestnetGenesis(alloc types.GenesisAlloc) *core.Genesis {
-	if alloc == nil {
-		alloc = DecodeAlloc(qparams.TestNetParam.Params)
-	}
-	return &core.Genesis{
-		Config:     mparams.QngTestnetChainConfig,
-		Nonce:      0,
-		Number:     0,
-		ExtraData:  hexutil.MustDecode("0x00"),
-		GasLimit:   8000000,
-		Difficulty: big.NewInt(0),
-		Alloc:      alloc,
-		Timestamp:  uint64(qparams.TestNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
-	}
-}
-
-func QngMixnetGenesis(alloc types.GenesisAlloc) *core.Genesis {
-	if alloc == nil {
-		alloc = DecodeAlloc(qparams.MixNetParam.Params)
-	}
-	return &core.Genesis{
-		Config:     mparams.QngMixnetChainConfig,
-		Nonce:      0,
-		Number:     0,
-		ExtraData:  hexutil.MustDecode("0x00"),
-		GasLimit:   100000000,
-		Difficulty: big.NewInt(0),
-		Alloc:      alloc,
-		Timestamp:  uint64(qparams.MixNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
-	}
-}
-
-func QngPrivnetGenesis(alloc types.GenesisAlloc) *core.Genesis {
-	if alloc == nil {
-		alloc = DecodeAlloc(qparams.PrivNetParam.Params)
-	}
-	return &core.Genesis{
-		Config:     mparams.QngPrivnetChainConfig,
-		Nonce:      0,
-		Number:     0,
-		ExtraData:  hexutil.MustDecode("0x00"),
-		GasLimit:   100000000,
-		Difficulty: big.NewInt(0),
-		Alloc:      alloc,
-		Timestamp:  uint64(qparams.PrivNetParams.GenesisBlock.Block().Header.Timestamp.Unix()),
-	}
-}
 
 func DecodePrealloc(data string) types.GenesisAlloc {
 	if len(data) <= 0 {
@@ -164,7 +98,7 @@ func DoDecodeAlloc(network *qparams.Params, genesisStr string, burnStr string) t
 	}
 
 	burnList := BuildBurnBalance(burnStr)
-	genesis := Genesis(network.Net, types.GenesisAlloc{})
+	genesis := Genesis(network, types.GenesisAlloc{})
 	genesis.Alloc = ngd.Data.Genesis.Alloc
 	releaseConAddr := common.HexToAddress(RELEASE_CONTRACT_ADDR)
 	if releaseAccount, ok := genesis.Alloc[releaseConAddr]; ok {

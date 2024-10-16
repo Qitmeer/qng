@@ -1,11 +1,9 @@
 package meerchange
 
 import (
-	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	eparams "github.com/ethereum/go-ethereum/params"
 	"math/big"
 )
 
@@ -48,17 +46,7 @@ func IsMeerChangeTx(tx *types.Transaction) bool {
 }
 
 func GetChainID() *big.Int {
-	switch params.ActiveNetParams.Net {
-	case protocol.MainNet:
-		return eparams.QngMainnetChainConfig.ChainID
-	case protocol.TestNet:
-		return eparams.QngTestnetChainConfig.ChainID
-	case protocol.MixNet:
-		return eparams.QngMixnetChainConfig.ChainID
-	case protocol.PrivNet:
-		return eparams.QngPrivnetChainConfig.ChainID
-	}
-	return nil
+	return params.ActiveNetParams.MeerConfig.ChainID
 }
 
 func EnableContractAddr() {

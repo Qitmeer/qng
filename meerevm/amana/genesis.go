@@ -1,7 +1,6 @@
 package amana
 
 import (
-	mparams "github.com/Qitmeer/qng/meerevm/params"
 	qparams "github.com/Qitmeer/qng/params"
 	qcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -17,7 +16,7 @@ var (
 
 func AmanaGenesis() *core.Genesis {
 	return &core.Genesis{
-		Config:     mparams.AmanaChainConfig,
+		Config:     qparams.ActiveNetParams.AmanaConfig,
 		Nonce:      0,
 		Number:     0,
 		ExtraData:  hexutil.MustDecode("0x000000000000000000000000000000000000000000000000000000000000000071bc4403af41634cda7c32600a8024d54e7f64990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),

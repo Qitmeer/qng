@@ -14,7 +14,7 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 	params.ActiveNetParams = &params.MainNetParam
 	param := params.MainNetParam.Params
 	maxTestInterval := int64(28)
-	endBlockHeight := int64(forks.MeerEVMForkMainHeight + forks.SubsidyReductionInterval*maxTestInterval + 1)
+	endBlockHeight := int64(param.MeerEVMForkBlock.Int64() + forks.SubsidyReductionInterval*maxTestInterval + 1)
 	bis := map[int64]*meerdag.BlueInfo{}
 
 	subsidyCache := NewSubsidyCache(0, param)
@@ -52,7 +52,7 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 	blockTwoSubsidy := calcBlockSubsidy(2)
 
 	baseSubsidy := int64(1000000000)
-	forkSubsidy := int64(forks.MeerEVMForkMainHeight * baseSubsidy)
+	forkSubsidy := int64(param.MeerEVMForkBlock.Int64() * baseSubsidy)
 
 	type testData struct {
 		height             int64
@@ -68,7 +68,7 @@ func TestEstimateSupplyByMeerEVMFork(t *testing.T) {
 
 	firstIndex := len(tests)
 	for i := int64(0); i < maxTestInterval; i++ {
-		td := testData{height: forks.MeerEVMForkMainHeight + forks.SubsidyReductionInterval*i, expectSubsidy: subsidyCache.subsidyCache[uint64(i)], expectMode: "meerevmfork"}
+		td := testData{height: param.MeerEVMForkBlock.Int64() + forks.SubsidyReductionInterval*i, expectSubsidy: subsidyCache.subsidyCache[uint64(i)], expectMode: "meerevmfork"}
 		if i == 0 {
 			td.expectTotalSubsidy = forkSubsidy
 			td.expectSubsidy = baseSubsidy

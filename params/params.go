@@ -8,6 +8,8 @@ package params
 import (
 	"encoding/hex"
 	"errors"
+	eparams "github.com/ethereum/go-ethereum/params"
+	"math/big"
 	"strings"
 	"time"
 
@@ -239,6 +241,18 @@ type Params struct {
 	LedgerParams ledger.LedgerParams
 
 	CoinbaseConfig CoinbaseConfigs
+
+	// evm
+	MeerConfig *eparams.ChainConfig
+
+	AmanaConfig *eparams.ChainConfig
+
+	MeerEVMForkBlock    *big.Int // MeerEVM is enabled  and new subsidy calculation
+	MeerUTXOForkBlock   *big.Int // What main height can transfer the locked utxo in genesis to MeerEVM, Must after MeerEVMForkMainHeight
+	EmptyBlockForkBlock *big.Int // main height
+	GasLimitForkBlock   *big.Int // gaslimit fork meerevm block number
+	CancunForkBlock     *big.Int // use custom diff when cancun fork
+	MeerChangeForkBlock *big.Int // MeerChange system contract
 }
 
 type CoinbaseConfig struct {
@@ -292,6 +306,64 @@ func (p *Params) HasTax() bool {
 
 func (p *Params) IsDevelopDiff() bool {
 	return p.PowConfig.DifficultyMode == pow.DIFFICULTY_MODE_DEVELOP
+}
+
+func (p *Params) IsMeerEVMFork(height int64) bool {
+	return isBlockForked(p.MeerEVMForkBlock, big.NewInt(height))
+}
+
+func (p *Params) IsMeerUTXOFork(height int64) bool {
+	return isBlockForked(p.MeerUTXOForkBlock, big.NewInt(height))
+}
+
+func (p *Params) IsEmptyBlockFork(height int64) bool {
+	return isBlockForked(p.EmptyBlockForkBlock, big.NewInt(height))
+}
+
+func (p *Params) IsGasLimitFork(number *big.Int) bool {
+	return isBlockForked(p.GasLimitForkBlock, number)
+}
+
+func (p *Params) IsCancunFork(number *big.Int) bool {
+	return isBlockForked(p.CancunForkBlock, number)
+}
+
+func (p *Params) IsMeerChangeFork(number *big.Int) bool {
+	return isBlockForked(p.MeerChangeForkBlock, number)
+}
+
+// Rules wraps Params and is merely syntactic sugar or can be used for functions
+// that do not have or require information about the block.
+//
+// Rules is a one time interface meaning that it shouldn't be used in between transition
+// phases.
+type Rules struct {
+	Net              protocol.Network
+	ChainID          *big.Int
+	IsMeerEVMFork    bool
+	IsMeerUTXOFork   bool
+	IsEmptyBlockFork bool
+	IsGasLimitFork   bool
+	IsCancunFork     bool
+	IsMeerChangeFork bool
+}
+
+// Rules ensures p's ChainID is not nil.
+func (p *Params) Rules(height int64, num *big.Int) Rules {
+	chainID := p.MeerConfig.ChainID
+	if chainID == nil {
+		chainID = new(big.Int)
+	}
+	return Rules{
+		Net:              p.Net,
+		ChainID:          new(big.Int).Set(chainID),
+		IsMeerEVMFork:    p.IsMeerEVMFork(height),
+		IsMeerUTXOFork:   p.IsMeerUTXOFork(height),
+		IsEmptyBlockFork: p.IsEmptyBlockFork(height),
+		IsGasLimitFork:   p.IsGasLimitFork(num),
+		IsCancunFork:     p.IsCancunFork(num),
+		IsMeerChangeFork: p.IsMeerChangeFork(num),
+	}
 }
 
 var (
@@ -370,4 +442,41 @@ func IsBech32SegwitPrefix(prefix string) bool {
 	prefix = strings.ToLower(prefix)
 	_, ok := bech32SegwitPrefixes[prefix]
 	return ok
+}
+
+// isBlockForked returns whether a fork scheduled at block s is active at the
+// given head block.
+func isBlockForked(s, head *big.Int) bool {
+	if s == nil || head == nil {
+		return false
+	}
+	return s.Cmp(head) <= 0
+}
+
+func newUint64(val uint64) *uint64 { return &val }
+
+// Amana
+var amanaChainConfig = &eparams.ChainConfig{
+	ChainID:             eparams.AmanaChainConfig.ChainID,
+	HomesteadBlock:      big.NewInt(0),
+	DAOForkBlock:        big.NewInt(0),
+	DAOForkSupport:      false,
+	EIP150Block:         big.NewInt(0),
+	EIP155Block:         big.NewInt(0),
+	EIP158Block:         big.NewInt(0),
+	ByzantiumBlock:      big.NewInt(0),
+	ConstantinopleBlock: big.NewInt(0),
+	PetersburgBlock:     big.NewInt(0),
+	IstanbulBlock:       big.NewInt(0),
+	MuirGlacierBlock:    big.NewInt(0),
+	BerlinBlock:         big.NewInt(0),
+	LondonBlock:         big.NewInt(0),
+	ArrowGlacierBlock:   big.NewInt(0),
+	GrayGlacierBlock:    big.NewInt(0),
+	ShanghaiTime:        newUint64(0),
+	CancunTime:          newUint64(0),
+	Clique: &eparams.CliqueConfig{
+		Period: 3,
+		Epoch:  100,
+	},
 }

@@ -193,11 +193,11 @@ func (b *MeerChain) buildBlock(parent *types.Header, qtxs []model.Tx, timestamp 
 	}
 	gaslimit := core.CalcGasLimit(parentBlock.GasLimit(), b.chain.Config().Eth.Miner.GasCeil)
 
-	if forks.NeedFixedGasLimit(parent.Number.Int64(), config.ChainID.Int64()) {
+	if !params.ActiveNetParams.IsGasLimitFork(parent.Number) {
 		gaslimit = 0x10000000000000
 	}
 
-	header := makeHeader(&b.chain.Config().Eth, parentBlock, statedb, timestamp, gaslimit, forks.GetCancunForkDifficulty(parent.Number.Int64()))
+	header := makeHeader(&b.chain.Config().Eth, parentBlock, statedb, timestamp, gaslimit, forks.GetCancunForkDifficulty(parent.Number))
 
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(statedb)
@@ -641,7 +641,7 @@ func (b *MeerChain) checkMeerChange() error {
 	if curBlockHeader == nil {
 		return nil
 	}
-	if !forks.IsMeerChangeForkHeight(curBlockHeader.Number.Int64()) {
+	if !params.ActiveNetParams.IsMeerChangeFork(curBlockHeader.Number) {
 		return nil
 	}
 	if meerchange.ContractAddr != (common.Address{}) {

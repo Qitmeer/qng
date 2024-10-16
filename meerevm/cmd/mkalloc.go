@@ -32,7 +32,7 @@ func main() {
 	fileContent = fileHeader
 	for _, np := range params.AllNetParams {
 		alloc := meer.DoDecodeAlloc(np.Params, genesisJ, burnListJ)
-		genesis := meer.Genesis(np.Net, alloc)
+		genesis := meer.Genesis(np.Params, alloc)
 		genesisHash := genesis.ToBlock().Hash()
 		log.Printf("network = %s, genesisHash= %s\n", np.Name, genesisHash.String())
 		fileContent += fmt.Sprintf("\nconst %sGenesisHash = \"%s\"", np.Net.String(), genesisHash.String())
