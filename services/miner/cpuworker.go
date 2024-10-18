@@ -432,7 +432,7 @@ func (w *CPUWorker) solveBlock() *types.Block {
 		default:
 			// Non-blocking select to fall through
 		}
-		rand.Seed(time.Now().UnixNano())
+		rand.New(rand.NewSource(time.Now().UnixNano()))
 		i := rand.Uint64()
 		instance := pow.GetInstance(w.miner.powType, 0, []byte{})
 		instance.SetNonce(uint64(i))
