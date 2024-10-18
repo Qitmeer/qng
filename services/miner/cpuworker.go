@@ -433,9 +433,8 @@ func (w *CPUWorker) solveBlock() *types.Block {
 			// Non-blocking select to fall through
 		}
 		rand.New(rand.NewSource(time.Now().UnixNano()))
-		i := rand.Uint64()
 		instance := pow.GetInstance(w.miner.powType, 0, []byte{})
-		instance.SetNonce(uint64(i))
+		instance.SetNonce(rand.Uint64())
 		instance.SetMainHeight(pow.MainHeight(w.miner.template.Height))
 		instance.SetParams(params.ActiveNetParams.Params.PowConfig)
 		hashesCompleted += 2
