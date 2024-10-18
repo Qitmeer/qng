@@ -449,7 +449,6 @@ func (w *CPUWorker) solveBlock() *types.Block {
 		}
 		// Each hash is actually a double hash (tow hashes), so
 	}
-	return nil
 }
 
 func NewCPUWorker(miner *Miner) *CPUWorker {
