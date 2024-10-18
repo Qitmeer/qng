@@ -2,6 +2,7 @@ package miner
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/cmd/miner/common"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -412,7 +413,9 @@ func (w *CPUWorker) solveBlock() *types.Block {
 	// Search through the entire nonce range for a solution while
 	// periodically checking for early quit and stale block
 	// conditions along with updates to the speed monitor.
-	for i := uint64(0); i <= maxNonce; i++ {
+	// the block generate time might exceed gbtRegenerateSeconds, the calculation should start from a random number to enfore the template changes.
+	start := common.RandUint64() / 2
+	for i := start; i <= maxNonce; i++ {
 		select {
 		case <-w.quit:
 			return nil
