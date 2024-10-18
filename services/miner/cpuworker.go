@@ -2,6 +2,7 @@ package miner
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -412,7 +413,7 @@ func (w *CPUWorker) solveBlock() *types.Block {
 	// Search through the entire nonce range for a solution while
 	// periodically checking for early quit and stale block
 	// conditions along with updates to the speed monitor.
-	for i := uint64(0); i <= maxNonce; i++ {
+	for {
 		select {
 		case <-w.quit:
 			return nil
@@ -431,6 +432,8 @@ func (w *CPUWorker) solveBlock() *types.Block {
 		default:
 			// Non-blocking select to fall through
 		}
+		rand.Seed(time.Now().UnixNano())
+		i := rand.Uint64()
 		instance := pow.GetInstance(w.miner.powType, 0, []byte{})
 		instance.SetNonce(uint64(i))
 		instance.SetMainHeight(pow.MainHeight(w.miner.template.Height))
