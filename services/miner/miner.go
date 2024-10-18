@@ -485,6 +485,9 @@ cleanup:
 }
 
 func (m *Miner) updateBlockTemplate(force bool) error {
+	m.Lock()
+	defer m.Unlock()
+
 	reCreate := false
 	//
 	if force {
@@ -772,6 +775,20 @@ func (m *Miner) handleStallSample() {
 	}
 	if m.txpool.Dirty() {
 		go m.MempoolChange()
+	} else {
+		if m.template == nil || m.template.Block == nil {
+			return
+		}
+		timeout := params.ActiveNetParams.TargetTimePerBlock * 3
+		if timeout < time.Minute {
+			timeout = time.Minute
+		}
+		if roughtime.Now().After(m.template.Block.Header.Timestamp.Add(timeout)) {
+			if err := m.CanMining(); err != nil {
+				return
+			}
+			go m.updateBlockTemplate(false)
+		}
 	}
 }
 
