@@ -103,7 +103,6 @@ func (this *QitmeerRobot) Run(ctx context.Context) {
 	common.MinerLoger.Info(fmt.Sprintf("[%s miner] start", connectName))
 	this.Work = QitmeerWork{}
 	this.Work.Cfg = this.Cfg
-	this.Work.Rpc = this.Rpc
 	this.Work.stra = this.Stratu
 	this.Work.Quit = this.Quit
 	this.Work.WorkLock = sync.Mutex{}
@@ -223,7 +222,6 @@ func (this *QitmeerRobot) SubmitWork() {
 					this.SubmitLock.Unlock()
 					continue
 				}
-				this.Work.LastSubmit = time.Now()
 
 				var err error
 				var txID string
@@ -266,6 +264,7 @@ func (this *QitmeerRobot) SubmitWork() {
 					continue
 				} else {
 					if !this.Pool { // solo
+						this.Work.LastSubmit = time.Now()
 						this.PendingBlocks[txID] = PendingBlock{
 							CoinbaseHash: txID,
 							BlockHash:    blockHash,

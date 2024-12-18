@@ -5,20 +5,21 @@ package main
 
 import (
 	"context"
-	"github.com/Qitmeer/qng/cmd/miner/common"
-	"github.com/Qitmeer/qng/cmd/miner/core"
-	qitmeer "github.com/Qitmeer/qng/cmd/miner/symbols/lib"
 	"log"
 	"os"
 	"os/signal"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/Qitmeer/qng/cmd/miner/common"
+	"github.com/Qitmeer/qng/cmd/miner/core"
+	qitmeer "github.com/Qitmeer/qng/cmd/miner/symbols/lib"
 )
 
 var robotminer core.Robot
 
-//init the config file
+// init the config file
 func init() {
 	cfg, _, err := common.LoadConfig()
 	if err != nil {
@@ -50,7 +51,7 @@ func main() {
 	common.MinerLoger.Info("All services exited")
 }
 
-//get current coin miner
+// get current coin miner
 func GetRobot(cfg *common.GlobalConfig) core.Robot {
 	switch strings.ToUpper(cfg.NecessaryConfig.Symbol) {
 	case core.SYMBOL_PMEER:
@@ -58,7 +59,6 @@ func GetRobot(cfg *common.GlobalConfig) core.Robot {
 		r.Cfg = cfg
 		r.NeedGBT = make(chan struct{}, 1)
 		r.Started = uint32(time.Now().Unix())
-		r.Rpc = &common.RpcClient{Cfg: cfg}
 		r.SubmitStr = make(chan string)
 		r.PendingBlocks = map[string]qitmeer.PendingBlock{}
 		return r

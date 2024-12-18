@@ -5,9 +5,10 @@ package core
 
 import (
 	"context"
+	"sync"
+
 	"github.com/Qitmeer/qng/cmd/miner/common"
 	"github.com/Qitmeer/qng/core/types"
-	"sync"
 )
 
 const SYMBOL_PMEER = "MEER"
@@ -19,10 +20,9 @@ type BaseWork interface {
 	PoolSubmit(subm string) error
 }
 
-//standard work template
+// standard work template
 type Work struct {
 	Cfg   *common.GlobalConfig
-	Rpc   *common.RpcClient
 	Clean bool
 	sync.Mutex
 	Quit        context.Context
