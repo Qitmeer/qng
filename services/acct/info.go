@@ -117,6 +117,22 @@ func (ai *AcctInfo) Has(addr string) bool {
 
 func (ai *AcctInfo) Add(addr string) {
 	ai.addrs = append(ai.addrs, addr)
+	log.Info("Add address for AccountManager", "addr", addr, "total", ai.GetAddrTotal())
+}
+
+func (ai *AcctInfo) Del(addr string) {
+	if ai.GetAddrTotal() <= 0 {
+		return
+	}
+	ret := []string{}
+	for _, ad := range ai.addrs {
+		if ad == addr {
+			continue
+		}
+		ret = append(ret, ad)
+	}
+	ai.addrs = ret
+	log.Info("Delete address for AccountManager", "addr", addr, "total", ai.GetAddrTotal())
 }
 
 func NewAcctInfo() *AcctInfo {

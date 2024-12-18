@@ -6,5 +6,5 @@ import (
 
 type Acct interface {
 	Apply(add bool, op *types.TxOutPoint, entry interface{}) error
-	Commit() error
+	Commit(point Block) error
 }
