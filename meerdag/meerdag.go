@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/consensus/forks"
 	"github.com/Qitmeer/qng/consensus/model"
 	"github.com/Qitmeer/qng/database"
 	l "github.com/Qitmeer/qng/log"
@@ -948,6 +949,9 @@ func (bd *MeerDAG) checkLegality(parentsNode []IBlock) bool {
 
 // Checking the priority of block legitimacy
 func (bd *MeerDAG) checkPriority(parents []IBlock, b IBlockData) bool {
+	if forks.IsEmptyBlockForkHeight(int64(parents[0].GetHeight()) + 1) {
+		return true
+	}
 	if b.GetPriority() <= 0 {
 		return false
 	}
