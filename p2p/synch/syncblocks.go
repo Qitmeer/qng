@@ -64,7 +64,11 @@ func (ps *PeerSync) syncBlocks(pe *peers.Peer) int {
 		}
 		if ret != nil {
 			init = false
-			rsp := ret.(*pb.SyncBlocksRsp)
+			rsp, ok := ret.(*pb.SyncBlocksRsp)
+			if !ok {
+				log.Error("Response message type is not SyncBlocksRsp")
+				break
+			}
 			log.Debug("Receive blocks", "count", len(rsp.Blocks), "point", changePBHashToHash(rsp.SyncPoint).String())
 			if isZeroPBHash(rsp.SyncPoint) {
 				break
