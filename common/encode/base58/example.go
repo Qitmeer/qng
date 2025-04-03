@@ -4,19 +4,18 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package base58_test
+package base58
 
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/common/encode/base58"
 )
 
 // This example demonstrates how to decode modified base58 encoded data.
 func ExampleDecode() {
 	// Decode example modified base58 encoded data.
 	encoded := []byte("25JnwSn7XKfNQ")
-	decoded := base58.Decode(encoded)
+	decoded := Decode(encoded)
 
 	// Show the decoded data.
 	fmt.Println("Decoded Data:", string(decoded))
@@ -30,7 +29,7 @@ func ExampleDecode() {
 func ExampleEncode() {
 	// Encode example data with the modified base58 encoding scheme.
 	data := []byte("Test data")
-	encoded, _ := base58.Encode(data)
+	encoded, _ := Encode(data)
 
 	// Show the encoded data.
 	fmt.Printf("Encoded Data: %s\n", encoded)
@@ -43,7 +42,7 @@ func ExampleEncode() {
 func ExampleCheckDecodeBtc() {
 	// Decode an example Base58Check encoded data.
 	encoded := "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
-	decoded, version, err := base58.BtcCheckDecode(encoded)
+	decoded, version, err := BtcCheckDecode(encoded)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -61,7 +60,7 @@ func ExampleCheckDecodeBtc() {
 func ExampleCheckEncodeBtc1() {
 	// Encode example data with the Base58Check encoding scheme.
 	data, _ := hex.DecodeString("62e907b15cbf27d5425399ebf6f0fb50ebb88f18a")
-	encoded, _ := base58.BtcCheckEncode(data, 0x0)
+	encoded, _ := BtcCheckEncode(data, 0x0)
 
 	// Show the encoded data.
 	fmt.Printf("Encoded Data: %s", encoded)
@@ -75,7 +74,7 @@ func ExampleCheckEncodeBtc1() {
 func ExampleCheckEncodeBtc() {
 	// Encode example data with the Base58Check encoding scheme.
 	data := []byte("Test data")
-	encoded, _ := base58.BtcCheckEncode(data, 0x0)
+	encoded, _ := BtcCheckEncode(data, 0x0)
 
 	// Show the encoded data.
 	fmt.Printf("Encoded Data: %s", encoded)
@@ -89,7 +88,7 @@ func ExampleCheckEncodeDcr() {
 	data := []byte("Test data")
 	ver := [2]byte{0x44, 0x0}
 
-	encoded, _ := base58.DcrCheckEncode(data, ver)
+	encoded, _ := DcrCheckEncode(data, ver)
 
 	// Show the encoded data.
 	fmt.Printf("Encoded Data: %s", encoded)
@@ -100,7 +99,7 @@ func ExampleCheckEncodeDcr() {
 
 func ExampleCheckDecodeDcr() {
 	encoded := "2uLtqkeVgFqTUBnjicK8o"
-	decoded, version, err := base58.DcrCheckDecode(encoded)
+	decoded, version, err := DcrCheckDecode(encoded)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -116,7 +115,7 @@ func ExampleCheckDecodeDcr() {
 
 func ExampleCheckDecode_ds_addr() {
 	encoded := "DsaAKsMvZ6HrqhmbhLjV9qVbPkkzF7FnNFY"
-	decoded, version, err := base58.QitmeerCheckDecode(encoded)
+	decoded, version, err := QitmeerCheckDecode(encoded)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -134,10 +133,10 @@ func ExampleCheckEncode_addr() {
 
 	data, _ := hex.DecodeString("64e20eb6075561d30c23a517c5b73badbc120f05")
 	ver := [2]byte{0x0c, 0x40} //qitmeer main
-	encoded, _ := base58.QitmeerCheckEncode(data, ver[:])
+	encoded, _ := QitmeerCheckEncode(data, ver[:])
 	fmt.Println("Address (sha256) : Nm281BTkccPTDL1CfhAAR27GAzx2bqFLQx5")
 	fmt.Printf("Address (b2b)    : %s\n", encoded)
-	encoded, _ = base58.DcrCheckEncode(data, ver)
+	encoded, _ = DcrCheckEncode(data, ver)
 	fmt.Printf("Address (b256)   : %s", encoded)
 	// Output:
 	// Address (sha256) : Nm281BTkccPTDL1CfhAAR27GAzx2bqFLQx5
@@ -152,7 +151,7 @@ func ExampleCheckEncode() {
 	ver[0] = 0
 	ver[1] = 0
 
-	encoded, _ := base58.QitmeerCheckEncode(data, ver[:])
+	encoded, _ := QitmeerCheckEncode(data, ver[:])
 
 	// Show the encoded data.
 	fmt.Printf("Encoded Data: %s", encoded)
@@ -163,7 +162,7 @@ func ExampleCheckEncode() {
 
 func ExampleCheckDecode() {
 	encoded := "1182iP79GRURMp6Rsz9X"
-	decoded, version, err := base58.QitmeerCheckDecode(encoded)
+	decoded, version, err := QitmeerCheckDecode(encoded)
 	if err != nil {
 		fmt.Println(err)
 		return

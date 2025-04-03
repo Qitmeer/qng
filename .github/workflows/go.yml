@@ -2,9 +2,9 @@ name: GoTest
 
 on:
   push:
-    branches: [main, dev/2.0]
+    branches: [main, dev/2.0, dev/2.1, dev2.1-ollama]
   pull_request:
-    branches: [main, dev/2.0]
+    branches: [main, dev/2.0, dev/2.1, dev2.1-ollama]
 
   workflow_dispatch:
 
@@ -19,11 +19,11 @@ jobs:
         with:
           go-version: "stable"
 
-      - uses: golangci/golangci-lint-action@v6
+      - uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.60.1
+          version: v2.0
           skip-cache: true
-          args: --timeout=2m --disable-all --enable=govet --tests=false ./...
+          args: --enable-only=govet --tests=false ./...
 
       - name: npm
         uses: actions/setup-node@v4
