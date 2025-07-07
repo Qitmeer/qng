@@ -3,6 +3,7 @@ package blockchain
 
 import (
 	"fmt"
+	"math"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/engine/pow"
 	"github.com/Qitmeer/qng/consensus/forks"
@@ -57,6 +58,10 @@ func (b *BlockChain) GetDAGBlock(h *hash.Hash) meerdag.IBlock {
 }
 
 func (b *BlockChain) GetBlockByOrder(order uint64) model.Block {
+	if order > math.MaxUint {
+		log.Error(fmt.Sprintf("Order value %d exceeds maximum uint value %d", order, math.MaxUint))
+		return nil
+	}
 	return b.bd.GetBlockByOrder(uint(order))
 }
 
