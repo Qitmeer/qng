@@ -152,7 +152,14 @@ func (l *logger) New(ctx ...interface{}) Logger {
 
 func newContext(prefix []interface{}, suffix []interface{}) []interface{} {
 	normalizedSuffix := normalize(suffix)
-	newCtx := make([]interface{}, len(prefix)+len(normalizedSuffix))
+	maxSize := 64 * 1024 * 1024 // Maximum allowed size for the context
+	totalSize := len(prefix) + len(normalizedSuffix)
+	if totalSize > maxSize {
+		fmt.Fprintf(os.Stderr, "Context size exceeds maximum allowed size: %d > %d\n", totalSize, maxSize)
+		normalizedSuffix = normalizedSuffix[:maxSize-len(prefix)]
+		totalSize = maxSize
+	}
+	newCtx := make([]interface{}, totalSize)
 	n := copy(newCtx, prefix)
 	copy(newCtx[n:], normalizedSuffix)
 	return newCtx
