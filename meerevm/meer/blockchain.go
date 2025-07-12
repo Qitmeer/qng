@@ -54,6 +54,11 @@ import (
 const (
 	txSlotSize = 32 * 1024
 	txMaxSize  = 4 * txSlotSize
+
+	// GasCeil defines a constant block gas limit (30 million) to stabilize gas behavior in meer networks,
+	// ensuring deterministic execution and avoiding variability due to gas limit adjustments.
+	// See also : https://github.com/ethereum/go-ethereum/pull/31705 and https://github.com/ethereum/go-ethereum/pull/32087
+	GasCeil = 30_000_000
 )
 
 type BlockChain struct {
@@ -205,7 +210,7 @@ func (b *BlockChain) buildBlock(parent *types.Header, qtxs []mmeer.Tx, timestamp
 		return nil, nil, nil, err
 	}
 
-	gaslimit := core.CalcGasLimit(parentBlock.GasLimit(), b.chain.Config().Eth.Miner.GasCeil)
+	gaslimit := core.CalcGasLimit(parentBlock.GasLimit(), GasCeil)
 
 	if !params.ActiveNetParams.IsGasLimitFork(parent.Number) {
 		gaslimit = 0x10000000000000
