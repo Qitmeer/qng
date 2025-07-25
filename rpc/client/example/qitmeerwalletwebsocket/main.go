@@ -125,7 +125,7 @@ func main() {
 		}
 		for n := uint64(0); n < 0xffffffffffff; n++ {
 			h.PoW().(*pow.MeerXKeccakV1).SetNonce(n)
-			r := hash.HashMeerXKeccakV1(h.BlockData()[:117])
+			r := hash.HashMeerXKeccakV1(h.Digest()[:117])
 			target := "0000000000000000000000000000000000000000000000000000000000ffff7f"
 			b, _ := hex.DecodeString(target)
 			t := hash.Hash{}
