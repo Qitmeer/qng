@@ -8,8 +8,8 @@ ifeq ($(DEV),)
 	DEV := dev
 endif
 RELEASE=release
-LDFLAG_DEV = -X github.com/Qitmeer/qng/version.Build=$(DEV)-$(GITVERSION)
-LDFLAG_RELEASE = -X github.com/Qitmeer/qng/version.Build=$(RELEASE)-$(GITVERSION)
+LDFLAG_DEV = -X github.com/Qitmeer/qng/v2/version.Build=$(DEV)-$(GITVERSION)
+LDFLAG_RELEASE = -X github.com/Qitmeer/qng/v2/version.Build=$(RELEASE)-$(GITVERSION)
 GOFLAGS_DEV = -ldflags "$(LDFLAG_DEV)"
 GOFLAGS_RELEASE = -ldflags "$(LDFLAG_RELEASE)"
 GOFLAGS_RELEASE_QX = -ldflags "$(LDFLAG_RELEASE)"
