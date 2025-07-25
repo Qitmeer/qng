@@ -2,9 +2,9 @@ package bloom_test
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/bloom"
-	chainhash "github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/common/bloom"
+	chainhash "github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/types"
 	"math/rand"
 	"time"
 )

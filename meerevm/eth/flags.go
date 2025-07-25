@@ -1,7 +1,7 @@
 package eth
 
 import (
-	mcommon "github.com/Qitmeer/qng/meerevm/common"
+	mcommon "github.com/Qitmeer/qng/v2/meerevm/common"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/urfave/cli/v2"
 )

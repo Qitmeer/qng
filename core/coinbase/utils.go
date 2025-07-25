@@ -3,8 +3,8 @@ package coinbase
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
 )
 
 func ExtractCoinbaseHeight(coinbaseTx *types.Transaction) (uint64, error) {

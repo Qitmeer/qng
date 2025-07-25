@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/rpc/client/cmds"
 )
 
 func TestWsNotify(t *testing.T) {

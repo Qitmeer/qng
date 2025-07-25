@@ -15,9 +15,9 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/Qitmeer/qng/crypto"
-	"github.com/Qitmeer/qng/p2p/qnode"
-	"github.com/Qitmeer/qng/p2p/qnr"
+	"github.com/Qitmeer/qng/v2/crypto"
+	"github.com/Qitmeer/qng/v2/p2p/qnode"
+	"github.com/Qitmeer/qng/v2/p2p/qnr"
 )
 
 var nullNode *qnode.Node

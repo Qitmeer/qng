@@ -2,12 +2,12 @@ package acct
 
 import (
 	"fmt"
-	s "github.com/Qitmeer/qng/core/serialization"
+	s "github.com/Qitmeer/qng/v2/core/serialization"
 	"io"
 )
 
 type AcctBalance struct {
-	normal  uint64
+	normal     uint64
 	norUTXONum uint32
 	locked     uint64
 	locUTXONum uint32
@@ -60,12 +60,12 @@ func (ab *AcctBalance) String() string {
 }
 
 func (ab *AcctBalance) IsEmpty() bool {
-	return ab.norUTXONum ==0 && ab.locUTXONum == 0
+	return ab.norUTXONum == 0 && ab.locUTXONum == 0
 }
 
 func NewAcctBalance(normal uint64, norUTXONum uint32, locked uint64, locUTXONum uint32) *AcctBalance {
 	ab := AcctBalance{
-		normal:  normal,
+		normal:     normal,
 		norUTXONum: norUTXONum,
 		locked:     locked,
 		locUTXONum: locUTXONum,

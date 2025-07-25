@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Qitmeer/qng/common/system"
+	"github.com/Qitmeer/qng/v2/common/system"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 	"os"

@@ -6,7 +6,7 @@ package log
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/log/term"
+	"github.com/Qitmeer/qng/v2/log/term"
 	"github.com/jrick/logrotate/rotator"
 	"github.com/mattn/go-colorable"
 	"io"
@@ -76,7 +76,7 @@ func init() {
 
 	glogger.Verbosity(LvlInfo)
 
-	AddLocationPrefix("github.com/Qitmeer/qng/")
+	AddLocationPrefix("github.com/Qitmeer/qng/v2/")
 }
 
 // initLogRotator initializes the logging rotater to write logs to logFile and

@@ -9,11 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/cmd/miner/common"
-	"github.com/Qitmeer/qng/cmd/miner/core"
-	qitmeer "github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/engine/pow"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/cmd/miner/common"
+	"github.com/Qitmeer/qng/v2/cmd/miner/core"
+	qitmeer "github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/params"
 	"math/big"
 	"strconv"
 	"strings"
@@ -211,7 +211,7 @@ func (s *QitmeerStratum) handleStratumMsg(resp interface{}) {
 		msg := StratumMsg{
 			Method: nResp.Method,
 			ID:     nResp.ID,
-			Params: []string{"github.com/Qitmeer/qng/cmd/miner/v0.0.1"},
+			Params: []string{"github.com/Qitmeer/qng/v2/cmd/miner/v0.0.1"},
 		}
 		m, err := json.Marshal(msg)
 		if err != nil {

@@ -10,7 +10,7 @@ package rpc
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"github.com/Qitmeer/qng/v2/rpc/client/cmds"
 )
 
 // request is for an unknown service

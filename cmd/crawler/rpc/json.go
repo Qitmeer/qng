@@ -12,7 +12,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/v2/log"
 	"io"
 	"reflect"
 	"strconv"

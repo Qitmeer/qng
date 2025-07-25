@@ -6,7 +6,7 @@ package common
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/v2/core/address"
 	"net"
 	"os"
 	"path/filepath"
@@ -14,12 +14,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/common/util"
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/version"
+	"github.com/Qitmeer/qng/v2/common/roughtime"
+	"github.com/Qitmeer/qng/v2/common/util"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/log"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/version"
 	"github.com/jessevdk/go-flags"
 	"github.com/urfave/cli/v2"
 )

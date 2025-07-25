@@ -6,7 +6,7 @@ package eth
 
 import (
 	"fmt"
-	qcommon "github.com/Qitmeer/qng/services/common"
+	qcommon "github.com/Qitmeer/qng/v2/services/common"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/external"
 	"github.com/ethereum/go-ethereum/accounts/keystore"

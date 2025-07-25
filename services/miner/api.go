@@ -8,15 +8,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/engine/pow"
-	"github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/rpc"
-	"github.com/Qitmeer/qng/rpc/api"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
-	"github.com/Qitmeer/qng/services/mining"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/core/json"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/rpc"
+	"github.com/Qitmeer/qng/v2/rpc/api"
+	"github.com/Qitmeer/qng/v2/rpc/client/cmds"
+	"github.com/Qitmeer/qng/v2/services/mining"
 )
 
 const (

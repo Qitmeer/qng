@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Qitmeer/qng/cmd/miner/common"
+	"github.com/Qitmeer/qng/v2/cmd/miner/common"
 )
 
 //var devicesTypesForMining = cl.DeviceTypeAll

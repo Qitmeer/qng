@@ -7,9 +7,9 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/engine"
-	"github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/engine"
+	"github.com/Qitmeer/qng/v2/core/json"
 	"io"
 	"math/big"
 )

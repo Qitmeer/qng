@@ -1,7 +1,7 @@
 package common
 
 import (
-	v2 "github.com/Qitmeer/qng/p2p/proto/v2"
+	v2 "github.com/Qitmeer/qng/v2/p2p/proto/v2"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 

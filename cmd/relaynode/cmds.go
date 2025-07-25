@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/cmd/relaynode/config"
-	"github.com/Qitmeer/qng/p2p/common"
+	"github.com/Qitmeer/qng/v2/cmd/relaynode/config"
+	"github.com/Qitmeer/qng/v2/p2p/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/urfave/cli/v2"
 )

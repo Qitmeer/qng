@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/Qitmeer/qng/database/legacydb"
+	"github.com/Qitmeer/qng/v2/database/legacydb"
 	"github.com/pkg/errors"
 )
 

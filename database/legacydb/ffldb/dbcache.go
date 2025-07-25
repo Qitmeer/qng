@@ -9,8 +9,8 @@ package ffldb
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng/common/roughtime"
-	treap2 "github.com/Qitmeer/qng/database/legacydb/ffldb/treap"
+	"github.com/Qitmeer/qng/v2/common/roughtime"
+	treap2 "github.com/Qitmeer/qng/v2/database/legacydb/ffldb/treap"
 	"sync"
 	"time"
 

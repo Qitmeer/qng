@@ -2,7 +2,7 @@ package log
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/v2/common/roughtime"
 	"math"
 	"os"
 	"time"

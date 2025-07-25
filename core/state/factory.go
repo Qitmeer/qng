@@ -1,6 +1,6 @@
 package state
 
-import "github.com/Qitmeer/qng/consensus/model"
+import "github.com/Qitmeer/qng/v2/consensus/model"
 
 func CreateBlockState(id uint64) model.BlockState {
 	return NewBlockState(id)

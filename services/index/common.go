@@ -10,8 +10,8 @@ package index
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 var (

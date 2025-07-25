@@ -2,7 +2,7 @@ package rawdb
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/v2/meerdag"
 	"github.com/ethereum/go-ethereum/core/rawdb/eradb"
 	"github.com/ethereum/go-ethereum/params"
 	"sync"

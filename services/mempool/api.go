@@ -2,8 +2,8 @@ package mempool
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/rpc/api"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"github.com/Qitmeer/qng/v2/rpc/api"
+	"github.com/Qitmeer/qng/v2/rpc/client/cmds"
 	"sort"
 )
 

@@ -6,8 +6,8 @@ package test
 
 import (
 	"encoding/hex"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/testutils"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/testutils"
 	"testing"
 )
 

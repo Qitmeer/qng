@@ -2,10 +2,10 @@ package token
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
+	"github.com/Qitmeer/qng/v2/params"
 )
 
 type TypeUpdate struct {

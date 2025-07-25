@@ -2,12 +2,12 @@ package poa
 
 import (
 	"bytes"
-	"github.com/Qitmeer/qng/common/hash"
-	ptypes "github.com/Qitmeer/qng/consensus/engine/poa/types"
-	"github.com/Qitmeer/qng/core/coinbase"
-	s "github.com/Qitmeer/qng/core/serialization"
-	qtypes "github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	ptypes "github.com/Qitmeer/qng/v2/consensus/engine/poa/types"
+	"github.com/Qitmeer/qng/v2/core/coinbase"
+	s "github.com/Qitmeer/qng/v2/core/serialization"
+	qtypes "github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/params"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/crypto/sha3"

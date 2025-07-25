@@ -2,12 +2,12 @@ package meerchange
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/address"
-	qtypes "github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/crypto/ecc"
-	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/meerevm/common"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/core/address"
+	qtypes "github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/crypto/ecc"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
+	"github.com/Qitmeer/qng/v2/meerevm/common"
+	"github.com/Qitmeer/qng/v2/params"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"

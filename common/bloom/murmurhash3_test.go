@@ -1,7 +1,7 @@
 package bloom_test
 
 import (
-	"github.com/Qitmeer/qng/common/bloom"
+	"github.com/Qitmeer/qng/v2/common/bloom"
 	"testing"
 )
 

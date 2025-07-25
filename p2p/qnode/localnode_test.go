@@ -5,12 +5,12 @@
 package qnode
 
 import (
-	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/v2/crypto/ecc/secp256k1"
 	"math/rand"
 	"net"
 	"testing"
 
-	"github.com/Qitmeer/qng/p2p/qnr"
+	"github.com/Qitmeer/qng/v2/p2p/qnr"
 	"github.com/stretchr/testify/assert"
 )
 

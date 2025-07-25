@@ -122,7 +122,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/Qitmeer/qng/p2p/proto/v1/mempool.proto", fileDescriptor_42e4d8939aaa4521)
+	proto.RegisterFile("github.com/Qitmeer/qng/v2/p2p/proto/v1/mempool.proto", fileDescriptor_42e4d8939aaa4521)
 }
 
 var fileDescriptor_42e4d8939aaa4521 = []byte{

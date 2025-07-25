@@ -8,8 +8,8 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
-	chainhash "github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	chainhash "github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/crypto/ecc/secp256k1"
 	"math/big"
 )
 

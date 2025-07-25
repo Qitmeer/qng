@@ -1,6 +1,6 @@
 package model
 
-import "github.com/Qitmeer/qng/common/hash"
+import "github.com/Qitmeer/qng/v2/common/hash"
 
 type Block interface {
 	GetID() uint

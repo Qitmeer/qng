@@ -2,11 +2,11 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng/database/legacydb"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/core/dbnamespace"
+	"github.com/Qitmeer/qng/v2/database/legacydb"
+	"github.com/Qitmeer/qng/v2/meerdag"
 	"math/big"
 	"time"
 )

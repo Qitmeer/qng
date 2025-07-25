@@ -2,8 +2,8 @@ package client
 
 import (
 	"encoding/json"
-	j "github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
+	j "github.com/Qitmeer/qng/v2/core/json"
+	"github.com/Qitmeer/qng/v2/rpc/client/cmds"
 )
 
 type FutureGetNodeInfoResult chan *response

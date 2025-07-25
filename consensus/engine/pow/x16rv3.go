@@ -7,8 +7,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/json"
 	"math/big"
 )
 

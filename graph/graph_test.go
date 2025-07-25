@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/graph/llamago"
+	"github.com/Qitmeer/qng/v2/graph/llamago"
 	"os"
 	"testing"
 

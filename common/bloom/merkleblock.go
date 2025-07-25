@@ -1,9 +1,9 @@
 package bloom
 
 import (
-	chainhash "github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/merkle"
-	"github.com/Qitmeer/qng/core/types"
+	chainhash "github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/merkle"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 // merkleBlock is used to house intermediate information needed to generate a

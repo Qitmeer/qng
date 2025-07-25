@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package qitmeer.p2p.v1;
 
-import "github.com/Qitmeer/qng/p2p/proto/v1/gogo.proto";
-import "github.com/Qitmeer/qng/p2p/proto/v1/message.proto";
-import "github.com/Qitmeer/qng/p2p/proto/v1/graphstate.proto";
+import "github.com/Qitmeer/qng/v2/p2p/proto/v1/gogo.proto";
+import "github.com/Qitmeer/qng/v2/p2p/proto/v1/message.proto";
+import "github.com/Qitmeer/qng/v2/p2p/proto/v1/graphstate.proto";
 
 message SyncDAG {
   repeated Hash mainLocator =1 [(gogoproto.moretags) = "ssz-max:\"32\""];

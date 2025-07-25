@@ -2,7 +2,7 @@ package peers
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/p2p/common"
+	"github.com/Qitmeer/qng/v2/p2p/common"
 	"time"
 )
 

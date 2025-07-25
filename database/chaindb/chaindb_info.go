@@ -1,8 +1,8 @@
 package chaindb
 
 import (
-	"github.com/Qitmeer/qng/database/common"
-	"github.com/Qitmeer/qng/database/rawdb"
+	"github.com/Qitmeer/qng/v2/database/common"
+	"github.com/Qitmeer/qng/v2/database/rawdb"
 )
 
 func (cdb *ChainDB) GetInfo() (*common.DatabaseInfo, error) {

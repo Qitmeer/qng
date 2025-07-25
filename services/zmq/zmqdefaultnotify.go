@@ -1,10 +1,11 @@
+//go:build !zmq
 // +build !zmq
 
 package zmq
 
 import (
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 // This ZeroMQ notification is default for Qitmeer

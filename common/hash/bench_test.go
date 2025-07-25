@@ -3,7 +3,7 @@
 package hash
 
 import (
-	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/v2/common/util"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

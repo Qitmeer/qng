@@ -7,8 +7,8 @@ package meer
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/Qitmeer/qng/common/util"
-	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/v2/common/util"
+	"github.com/Qitmeer/qng/v2/config"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"os"

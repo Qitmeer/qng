@@ -2,8 +2,8 @@ package api
 
 import (
 	"fmt"
-	qcommon "github.com/Qitmeer/qng/common"
-	"github.com/Qitmeer/qng/common/hash"
+	qcommon "github.com/Qitmeer/qng/v2/common"
+	"github.com/Qitmeer/qng/v2/common/hash"
 	"github.com/ethereum/go-ethereum/common"
 	"strconv"
 )

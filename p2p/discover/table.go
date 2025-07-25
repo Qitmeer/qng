@@ -14,15 +14,15 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/v2/common/hash"
 	mrand "math/rand"
 	"net"
 	"sort"
 	"sync"
 	"time"
 
-	"github.com/Qitmeer/qng/p2p/netutil"
-	"github.com/Qitmeer/qng/p2p/qnode"
+	"github.com/Qitmeer/qng/v2/p2p/netutil"
+	"github.com/Qitmeer/qng/v2/p2p/qnode"
 )
 
 const (

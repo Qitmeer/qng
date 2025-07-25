@@ -10,9 +10,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/test/testcommon"
-	"github.com/Qitmeer/qng/testutils"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/test/testcommon"
+	"github.com/Qitmeer/qng/v2/testutils"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"

@@ -3,8 +3,8 @@ package shavite
 import (
 	"fmt"
 
-	"github.com/Qitmeer/qng/crypto/x16rv3/aesr"
-	"github.com/Qitmeer/qng/crypto/x16rv3/hash"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/aesr"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/hash"
 )
 
 // HashSize holds the size of a hash in bytes.

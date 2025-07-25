@@ -3,10 +3,10 @@ package bloom_test
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/Qitmeer/qng/common/bloom"
-	chainhash "github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/common/bloom"
+	chainhash "github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/protocol"
+	"github.com/Qitmeer/qng/v2/core/types"
 	"testing"
 )
 

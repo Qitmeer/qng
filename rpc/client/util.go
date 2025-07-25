@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/rpc/websocket"
+	"github.com/Qitmeer/qng/v2/rpc/websocket"
 	"net/http"
 	"os"
 	"strings"

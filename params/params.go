@@ -8,17 +8,17 @@ package params
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/Qitmeer/qng/consensus/engine/config"
+	"github.com/Qitmeer/qng/v2/consensus/engine/config"
 	eparams "github.com/ethereum/go-ethereum/params"
 	"math/big"
 	"strings"
 	"time"
 
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/engine/pow"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/ledger"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/core/protocol"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/ledger"
 )
 
 // CheckForDuplicateHashes checks for duplicate hashes when validating blocks.

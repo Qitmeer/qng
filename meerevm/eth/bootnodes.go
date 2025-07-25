@@ -1,8 +1,8 @@
 package eth
 
 import (
-	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/log"
+	"github.com/Qitmeer/qng/v2/params"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"net"

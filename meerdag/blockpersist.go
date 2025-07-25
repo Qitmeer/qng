@@ -3,10 +3,10 @@ package meerdag
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/model"
-	s "github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	s "github.com/Qitmeer/qng/v2/core/serialization"
+	"github.com/Qitmeer/qng/v2/params"
 	"io"
 	"time"
 )

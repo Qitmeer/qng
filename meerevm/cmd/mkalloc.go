@@ -6,8 +6,8 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/meer"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/meerevm/meer"
+	"github.com/Qitmeer/qng/v2/params"
 	"log"
 	"os"
 )

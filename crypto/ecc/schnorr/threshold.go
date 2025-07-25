@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"math/big"
 
-	chainhash "github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	chainhash "github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/crypto/ecc/secp256k1"
 )
 
 // Sha256VersionStringRFC6979 is the RFC6979 nonce version for a Schnorr signature

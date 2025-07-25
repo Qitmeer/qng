@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/Qitmeer/qng/crypto/x16rv3/nist"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/nist"
 )
 
 func TestApi(t *testing.T) {

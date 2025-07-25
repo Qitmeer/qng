@@ -1,11 +1,12 @@
+//go:build zmq
 // +build zmq
 
 package zmq
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 // The ZeroMQ public notifier  block hash

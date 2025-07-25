@@ -2,8 +2,8 @@ package meerchange
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/meer/entrypoint"
-	"github.com/Qitmeer/qng/meerevm/meer/qngaccount"
+	"github.com/Qitmeer/qng/v2/meerevm/meer/entrypoint"
+	"github.com/Qitmeer/qng/v2/meerevm/meer/qngaccount"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"

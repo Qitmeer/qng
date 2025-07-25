@@ -10,8 +10,8 @@ package trie
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/encode/rlp"
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/v2/common/encode/rlp"
+	"github.com/Qitmeer/qng/v2/common/hash"
 	"io"
 	"strings"
 )

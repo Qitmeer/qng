@@ -11,9 +11,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/Qitmeer/qng/common/encode/rlp"
-	"github.com/Qitmeer/qng/crypto"
-	"github.com/Qitmeer/qng/p2p/qnr"
+	"github.com/Qitmeer/qng/v2/common/encode/rlp"
+	"github.com/Qitmeer/qng/v2/crypto"
+	"github.com/Qitmeer/qng/v2/p2p/qnr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

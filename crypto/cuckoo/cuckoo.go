@@ -5,7 +5,7 @@ package cuckoo
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/Qitmeer/qng/crypto/cuckoo/siphash"
+	"github.com/Qitmeer/qng/v2/crypto/cuckoo/siphash"
 	"runtime"
 	"sort"
 	"sync"
@@ -39,7 +39,7 @@ const (
 	bigeps = nz + nz*3/64
 )
 
-//Cuckoo is struct for cuckoo miner.
+// Cuckoo is struct for cuckoo miner.
 type Cuckoo struct {
 	cuckoo []uint32
 	sip    *siphash.SipHash
@@ -59,7 +59,7 @@ type edges struct {
 }
 type bucket []uint64
 
-//NewCuckoo returns Cuckoo struct to do PoW.
+// NewCuckoo returns Cuckoo struct to do PoW.
 func NewCuckoo() *Cuckoo {
 	ncpu := runtime.NumCPU()
 	c := &Cuckoo{
@@ -100,7 +100,7 @@ func NewCuckoo() *Cuckoo {
 	return c
 }
 
-//PoW does PoW with hash, which is the key for siphash.
+// PoW does PoW with hash, which is the key for siphash.
 func (c *Cuckoo) PoW(siphashKey []byte) ([]uint32, bool) {
 	for i := 0; i < c.ncpu; i++ {
 		for x := 0; x < nx; x++ {

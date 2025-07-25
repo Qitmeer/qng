@@ -2,9 +2,9 @@ package utils
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/consensus/engine"
-	"github.com/Qitmeer/qng/consensus/engine/poa/types"
-	"github.com/Qitmeer/qng/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/consensus/engine"
+	"github.com/Qitmeer/qng/v2/consensus/engine/poa/types"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
 	"io"
 )
 

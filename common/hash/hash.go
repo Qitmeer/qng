@@ -9,7 +9,7 @@ import (
 	"encoding/hex"
 	ejson "encoding/json"
 	"fmt"
-	"github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/v2/core/json"
 	_ "golang.org/x/crypto/blake2b"
 	_ "golang.org/x/crypto/ripemd160"
 	"golang.org/x/crypto/sha3"

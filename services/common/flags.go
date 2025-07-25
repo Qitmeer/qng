@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Qitmeer/qng/common/profiling"
-	"github.com/Qitmeer/qng/common/util"
-	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/v2/common/profiling"
+	"github.com/Qitmeer/qng/v2/common/util"
+	"github.com/Qitmeer/qng/v2/config"
 	"github.com/urfave/cli/v2"
 )
 

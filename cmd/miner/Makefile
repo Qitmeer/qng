@@ -30,7 +30,7 @@ qitmeer-miner: miner-build
 	@echo "Run \"$(GOBIN)/qitmeer-miner\" to launch."
 
 miner-build:
-	@go build -o $(GOBIN)/qitmeer-miner  -tags $(TAGS) $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/miner"
+	@go build -o $(GOBIN)/qitmeer-miner  -tags $(TAGS) $(GOFLAGS_DEV) "github.com/Qitmeer/qng/v2/cmd/miner"
 checkversion: miner-build
 #	@echo version $(VERSION)
 
@@ -41,10 +41,10 @@ build/release/%: OS=$(word 3,$(subst /, ,$(@)))
 build/release/%: ARCH=$(word 4,$(subst /, ,$(@)))
 build/release/%/$(EXECUTABLE):
 	@echo Build $(@)
-	go build $(GOFLAGS_RELEASE) -o $(@) -tags $(TAGS) "github.com/Qitmeer/qng/cmd/miner"
+	go build $(GOFLAGS_RELEASE) -o $(@) -tags $(TAGS) "github.com/Qitmeer/qng/v2/cmd/miner"
 build/release/%/$(EXECUTABLE).exe:
 	@echo Build $(@)
-	go build $(GOFLAGS_RELEASE) -o $(@) -tags $(TAGS) "github.com/Qitmeer/qng/cmd/miner"
+	go build $(GOFLAGS_RELEASE) -o $(@) -tags $(TAGS) "github.com/Qitmeer/qng/v2/cmd/miner"
 %.zip: %.exe
 	@echo zip $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH)
 	@cp example.solo.conf solo.conf

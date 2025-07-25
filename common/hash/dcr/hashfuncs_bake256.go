@@ -1,7 +1,7 @@
 package dcr
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/v2/common/hash"
 	"github.com/dchest/blake256"
 )
 

@@ -2,8 +2,8 @@ package testutils
 
 import (
 	"encoding/hex"
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/testutils/testprivatekey"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/testutils/testprivatekey"
 	"github.com/ethereum/go-ethereum/common"
 	"testing"
 )

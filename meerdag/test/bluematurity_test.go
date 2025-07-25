@@ -1,7 +1,7 @@
 package test
 
 import (
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/v2/meerdag"
 	"testing"
 )
 

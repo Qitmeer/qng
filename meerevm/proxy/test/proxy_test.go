@@ -5,8 +5,8 @@
 package test
 
 import (
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/testutils"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/testutils"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"

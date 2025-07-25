@@ -4,10 +4,10 @@ package index
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/system"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/common/system"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 // Manager defines an index manager that manages multiple optional indexes and

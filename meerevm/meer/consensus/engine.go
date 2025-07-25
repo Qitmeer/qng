@@ -5,7 +5,7 @@
 package consensus
 
 import (
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/v2/log"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"

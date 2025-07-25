@@ -6,11 +6,11 @@ package test
 
 import (
 	"encoding/hex"
-	"github.com/Qitmeer/qng/config"
-	qcommon "github.com/Qitmeer/qng/meerevm/common"
-	"github.com/Qitmeer/qng/meerevm/meer"
-	"github.com/Qitmeer/qng/meerevm/meer/meerchange"
-	"github.com/Qitmeer/qng/testutils"
+	"github.com/Qitmeer/qng/v2/config"
+	qcommon "github.com/Qitmeer/qng/v2/meerevm/common"
+	"github.com/Qitmeer/qng/v2/meerevm/meer"
+	"github.com/Qitmeer/qng/v2/meerevm/meer/meerchange"
+	"github.com/Qitmeer/qng/v2/testutils"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"

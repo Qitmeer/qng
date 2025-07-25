@@ -2,10 +2,10 @@ package address
 
 import (
 	"errors"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/crypto/ecc"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/protocol"
+	"github.com/Qitmeer/qng/v2/crypto/ecc"
+	"github.com/Qitmeer/qng/v2/params"
 	"golang.org/x/crypto/ripemd160"
 )
 

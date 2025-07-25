@@ -3,8 +3,8 @@ package synch
 import (
 	"context"
 	"fmt"
-	"github.com/Qitmeer/qng/p2p/common"
-	"github.com/Qitmeer/qng/p2p/peers"
+	"github.com/Qitmeer/qng/v2/p2p/common"
+	"github.com/Qitmeer/qng/v2/p2p/peers"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 )

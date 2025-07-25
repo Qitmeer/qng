@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng/v2/rpc/api"
 	"reflect"
 )
 
@@ -96,16 +96,16 @@ func (s *ServiceRegistry) LowestPriority(service IService) bool {
 		return false
 	}
 
-	serviceTypes:=[]reflect.Type{}
+	serviceTypes := []reflect.Type{}
 
 	for _, k := range s.serviceTypes {
 		if kind == k {
 			continue
 		}
-		serviceTypes = append(serviceTypes,k)
+		serviceTypes = append(serviceTypes, k)
 	}
 
-	serviceTypes = append(serviceTypes,kind)
+	serviceTypes = append(serviceTypes, kind)
 
 	s.serviceTypes = serviceTypes
 	return true

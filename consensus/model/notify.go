@@ -5,7 +5,7 @@
 package model
 
 import (
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/core/types"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 

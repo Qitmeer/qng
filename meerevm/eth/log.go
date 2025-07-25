@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	qlog "github.com/Qitmeer/qng/log"
+	qlog "github.com/Qitmeer/qng/v2/log"
 	"github.com/ethereum/go-ethereum/log"
 	"io"
 	"log/slog"

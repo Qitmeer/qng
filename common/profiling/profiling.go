@@ -2,7 +2,7 @@ package profiling
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/v2/config"
 	"github.com/google/gops/agent"
 	"net"
 	"net/http"

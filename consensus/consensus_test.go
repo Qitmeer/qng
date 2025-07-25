@@ -1,12 +1,12 @@
 package consensus
 
 import (
-	"github.com/Qitmeer/qng/common/system"
-	"github.com/Qitmeer/qng/common/util"
-	"github.com/Qitmeer/qng/database"
-	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/common"
+	"github.com/Qitmeer/qng/v2/common/system"
+	"github.com/Qitmeer/qng/v2/common/util"
+	"github.com/Qitmeer/qng/v2/database"
+	_ "github.com/Qitmeer/qng/v2/database/legacydb/ffldb"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/services/common"
 	"os"
 	"path/filepath"
 	"testing"

@@ -8,12 +8,12 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
+	"github.com/Qitmeer/qng/v2/meerdag"
+	"github.com/Qitmeer/qng/v2/params"
 	"time"
 )
 
@@ -194,14 +194,14 @@ func isNonstandardTransaction(tx *types.Tx) bool {
 // checkpoint candidate.
 //
 // The factors used to determine a good checkpoint are:
-//  - The block must be in the main chain
-//  - The block must be at least 'CheckpointConfirmations' blocks prior to the
-//    current end of the main chain
-//  - The timestamps for the blocks before and after the checkpoint must have
-//    timestamps which are also before and after the checkpoint, respectively
-//    (due to the median time allowance this is not always the case)
-//  - The block must not contain any strange transaction such as those with
-//    nonstandard scripts
+//   - The block must be in the main chain
+//   - The block must be at least 'CheckpointConfirmations' blocks prior to the
+//     current end of the main chain
+//   - The timestamps for the blocks before and after the checkpoint must have
+//     timestamps which are also before and after the checkpoint, respectively
+//     (due to the median time allowance this is not always the case)
+//   - The block must not contain any strange transaction such as those with
+//     nonstandard scripts
 //
 // The intent is that candidates are reviewed by a developer to make the final
 // decision and then manually added to the list of checkpoints for a network.

@@ -16,13 +16,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Qitmeer/qng/cmd/miner/common"
-	"github.com/Qitmeer/qng/cmd/miner/core"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/rpc/client"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"github.com/Qitmeer/qng/v2/cmd/miner/common"
+	"github.com/Qitmeer/qng/v2/cmd/miner/core"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/json"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/rpc/client"
+	"github.com/Qitmeer/qng/v2/rpc/client/cmds"
 )
 
 const (

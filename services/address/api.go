@@ -4,14 +4,14 @@ package address
 
 import (
 	"encoding/hex"
-	"github.com/Qitmeer/qng/common/encode/base58"
-	"github.com/Qitmeer/qng/config"
-	qjson "github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/rpc"
-	"github.com/Qitmeer/qng/rpc/api"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
-	"github.com/Qitmeer/qng/services/common"
+	"github.com/Qitmeer/qng/v2/common/encode/base58"
+	"github.com/Qitmeer/qng/v2/config"
+	qjson "github.com/Qitmeer/qng/v2/core/json"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/rpc"
+	"github.com/Qitmeer/qng/v2/rpc/api"
+	"github.com/Qitmeer/qng/v2/rpc/client/cmds"
+	"github.com/Qitmeer/qng/v2/services/common"
 	"sync"
 )
 

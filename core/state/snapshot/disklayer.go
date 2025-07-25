@@ -1,7 +1,7 @@
 package snapshot
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/v2/common/hash"
 	"sync"
 
 	"github.com/VictoriaMetrics/fastcache"

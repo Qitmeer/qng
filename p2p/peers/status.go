@@ -2,9 +2,9 @@ package peers
 
 import (
 	"errors"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/p2p/common"
-	"github.com/Qitmeer/qng/p2p/qnr"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/p2p/common"
+	"github.com/Qitmeer/qng/v2/p2p/qnr"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"

@@ -5,7 +5,7 @@
 package node
 
 import (
-	"github.com/Qitmeer/qng/cmd/crawler/log"
+	"github.com/Qitmeer/qng/v2/cmd/crawler/log"
 	"os"
 	"os/signal"
 	"syscall"

@@ -7,11 +7,11 @@ package token
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/crypto/ecc/schnorr"
-	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/crypto/ecc/schnorr"
+	"github.com/Qitmeer/qng/v2/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
 	"math"
 )
 

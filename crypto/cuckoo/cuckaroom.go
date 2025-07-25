@@ -17,7 +17,7 @@ package cuckoo
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/Qitmeer/qng/crypto/cuckoo/siphash"
+	"github.com/Qitmeer/qng/v2/crypto/cuckoo/siphash"
 )
 
 func SipHashKey(sipkey []byte) [4]uint64 {

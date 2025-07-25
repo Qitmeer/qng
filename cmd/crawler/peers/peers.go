@@ -1,10 +1,10 @@
 package peers
 
 import (
-	"github.com/Qitmeer/qng/cmd/crawler/config"
-	"github.com/Qitmeer/qng/cmd/crawler/db"
-	"github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng/v2/cmd/crawler/config"
+	"github.com/Qitmeer/qng/v2/cmd/crawler/db"
+	"github.com/Qitmeer/qng/v2/core/json"
+	"github.com/Qitmeer/qng/v2/rpc/api"
 	"sync"
 	"time"
 )

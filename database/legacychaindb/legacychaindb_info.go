@@ -1,10 +1,10 @@
 package legacychaindb
 
 import (
-	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng/database/common"
-	"github.com/Qitmeer/qng/database/legacydb"
-	"github.com/Qitmeer/qng/database/rawdb"
+	"github.com/Qitmeer/qng/v2/core/dbnamespace"
+	"github.com/Qitmeer/qng/v2/database/common"
+	"github.com/Qitmeer/qng/v2/database/legacydb"
+	"github.com/Qitmeer/qng/v2/database/rawdb"
 	"time"
 )
 

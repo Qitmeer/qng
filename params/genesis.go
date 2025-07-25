@@ -7,15 +7,15 @@
 package params
 
 import (
-	ptypes "github.com/Qitmeer/qng/consensus/engine/poa/types"
+	ptypes "github.com/Qitmeer/qng/v2/consensus/engine/poa/types"
 	"time"
 
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/engine/pow"
-	"github.com/Qitmeer/qng/core/merkle"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/ledger"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/core/merkle"
+	"github.com/Qitmeer/qng/v2/core/protocol"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/ledger"
 )
 
 // MainNet ------------------------------------------------------------------------

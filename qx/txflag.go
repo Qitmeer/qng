@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
 	"math"
 	"strconv"
 	"strings"

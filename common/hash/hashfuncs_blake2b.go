@@ -2,8 +2,8 @@
 package hash
 
 import (
-	"github.com/Qitmeer/qng/crypto/x16rv3"
-	"github.com/Qitmeer/qng/crypto/x8r16"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3"
+	"github.com/Qitmeer/qng/v2/crypto/x8r16"
 	"golang.org/x/crypto/blake2b"
 )
 

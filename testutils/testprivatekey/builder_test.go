@@ -1,8 +1,8 @@
 package testprivatekey
 
 import (
-	"github.com/Qitmeer/qng/common/util/hexutil"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/common/util/hexutil"
+	"github.com/Qitmeer/qng/v2/params"
 	"testing"
 )
 

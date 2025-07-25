@@ -8,8 +8,8 @@ package txscript
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/crypto/ecc"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/crypto/ecc"
 	"math/big"
 )
 

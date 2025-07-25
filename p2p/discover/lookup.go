@@ -8,7 +8,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/Qitmeer/qng/p2p/qnode"
+	"github.com/Qitmeer/qng/v2/p2p/qnode"
 )
 
 const (

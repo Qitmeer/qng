@@ -1,6 +1,6 @@
 package model
 
-import "github.com/Qitmeer/qng/common/hash"
+import "github.com/Qitmeer/qng/v2/common/hash"
 
 // VirtualBlockHash is a marker hash for the virtual block
 var VirtualBlockHash = hash.MustBytesToHash([]byte{

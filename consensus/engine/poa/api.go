@@ -6,10 +6,10 @@ package poa
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	ptypes "github.com/Qitmeer/qng/consensus/engine/poa/types"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	ptypes "github.com/Qitmeer/qng/v2/consensus/engine/poa/types"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/rpc/api"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 )

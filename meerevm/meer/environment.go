@@ -1,7 +1,7 @@
 package meer
 
 import (
-	qcommon "github.com/Qitmeer/qng/meerevm/common"
+	qcommon "github.com/Qitmeer/qng/v2/meerevm/common"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"

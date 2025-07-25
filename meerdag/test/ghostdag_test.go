@@ -2,7 +2,7 @@ package test
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/v2/meerdag"
 	"testing"
 )
 

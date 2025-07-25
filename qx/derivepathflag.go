@@ -4,7 +4,7 @@
 package qx
 
 import (
-	"github.com/Qitmeer/qng/services/wallet/hd"
+	"github.com/Qitmeer/qng/v2/services/wallet/hd"
 )
 
 type DerivePathFlag struct {

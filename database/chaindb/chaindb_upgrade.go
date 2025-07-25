@@ -1,9 +1,9 @@
 package chaindb
 
 import (
-	"github.com/Qitmeer/qng/database/common"
-	"github.com/Qitmeer/qng/database/rawdb"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/database/common"
+	"github.com/Qitmeer/qng/v2/database/rawdb"
+	"github.com/Qitmeer/qng/v2/params"
 )
 
 func (cdb *ChainDB) TryUpgrade(di *common.DatabaseInfo, interrupt <-chan struct{}) error {

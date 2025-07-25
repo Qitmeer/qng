@@ -12,12 +12,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/address"
+	"github.com/Qitmeer/qng/v2/core/protocol"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
+	"github.com/Qitmeer/qng/v2/params"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -258,7 +258,7 @@ func savePayoutsFileBySliceShuffle(params *params.Params, genesisLedger []Genesi
 	}()
 
 	funName := fmt.Sprintf("%s%s", strings.ToUpper(string(netName[0])), netName[1:])
-	fileContent := fmt.Sprintf("// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2018 The qitmeer developers \n// This file is auto generate \npackage ledger\n\nimport (\n\t. \"github.com/Qitmeer/qng/core/types\"\n)\n\nfunc init%s() {\n", funName)
+	fileContent := fmt.Sprintf("// It is called by go generate and used to automatically generate pre-computed \n// Copyright 2017-2018 The qitmeer developers \n// This file is auto generate \npackage ledger\n\nimport (\n\t. \"github.com/Qitmeer/qng/v2/core/types\"\n)\n\nfunc init%s() {\n", funName)
 	oneDayRelease := yearReleaseAmount / YEAR_DAYS
 	fileContent += processLockingGenesisPayouts(genesisLedger, sortKeys, int64(oneDayRelease), oneDayHeight)
 

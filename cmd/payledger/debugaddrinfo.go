@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/dbnamespace"
+	"github.com/Qitmeer/qng/v2/core/dbnamespace"
 )
 
 type DebugAddrInfo struct {

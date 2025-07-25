@@ -1,7 +1,7 @@
 package state
 
 import (
-	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/v2/consensus/model"
 	"testing"
 )
 

@@ -8,7 +8,7 @@ package ffldb
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/database/legacydb"
+	"github.com/Qitmeer/qng/v2/database/legacydb"
 	"hash/crc32"
 )
 

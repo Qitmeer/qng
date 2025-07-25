@@ -6,11 +6,11 @@
 package utxo
 
 import (
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/core/serialization"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
 )
 
 // -----------------------------------------------------------------------------

@@ -13,10 +13,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Qitmeer/qng/cmd/miner/common/go-flags"
-	"github.com/Qitmeer/qng/core/address"
-	l "github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/cmd/miner/common/go-flags"
+	"github.com/Qitmeer/qng/v2/core/address"
+	l "github.com/Qitmeer/qng/v2/log"
+	"github.com/Qitmeer/qng/v2/params"
 )
 
 const (

@@ -2,7 +2,7 @@ package db
 
 import (
 	"encoding/json"
-	"github.com/Qitmeer/qng/cmd/crawler/db/base"
+	"github.com/Qitmeer/qng/v2/cmd/crawler/db/base"
 )
 
 const (

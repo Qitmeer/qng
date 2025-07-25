@@ -2,11 +2,11 @@
 package cuckoo
 
 import (
-	"github.com/Qitmeer/qng/crypto/cuckoo/siphash"
+	"github.com/Qitmeer/qng/v2/crypto/cuckoo/siphash"
 	"github.com/pkg/errors"
 )
 
-//Verify cuckaroo nonces.
+// Verify cuckaroo nonces.
 func VerifyCuckaroo(sipkey []byte, nonces []uint32, edgeBits uint) error {
 	nedge := (1 << edgeBits)             //number of edges：
 	nnode := 2 * nedge                   //

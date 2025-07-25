@@ -2,7 +2,7 @@ package rawdb
 
 import (
 	"encoding/binary"
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/v2/common/hash"
 
 	"github.com/ethereum/go-ethereum/ethdb"
 )

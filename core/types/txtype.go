@@ -6,7 +6,7 @@ package types
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/math"
+	"github.com/Qitmeer/qng/v2/common/math"
 )
 
 // TxType indicates the type of transactions
@@ -216,7 +216,6 @@ func IsCoinBaseTx(tx *Transaction) bool {
 //
 // 3.) NO changes are allowed for the tx && NO fee are allowed for this tx.
 // inputs amount == output amount
-//
 func CheckGenesisLock(tx *Transaction) error {
 	return fmt.Errorf("CheckGenesisLock is not supported yet")
 }

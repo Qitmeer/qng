@@ -9,7 +9,7 @@
 
 package main
 
-import "github.com/Qitmeer/qng/common/hash"
+import "github.com/Qitmeer/qng/v2/common/hash"
 
 type TradeRecord struct {
 	blockHash    *hash.Hash

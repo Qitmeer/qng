@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/Qitmeer/qng/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
 )
 
 // DifficultyManager provides a method to resolve the

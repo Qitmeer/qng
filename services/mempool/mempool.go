@@ -13,14 +13,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/roughtime"
-	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/blockchain/opreturn"
-	"github.com/Qitmeer/qng/core/blockchain/utxo"
-	"github.com/Qitmeer/qng/core/message"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/common/roughtime"
+	mmeer "github.com/Qitmeer/qng/v2/consensus/model/meer"
+	"github.com/Qitmeer/qng/v2/core/blockchain"
+	"github.com/Qitmeer/qng/v2/core/blockchain/opreturn"
+	"github.com/Qitmeer/qng/v2/core/blockchain/utxo"
+	"github.com/Qitmeer/qng/v2/core/message"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 // TxPool is used as a source of transactions that need to be mined into blocks

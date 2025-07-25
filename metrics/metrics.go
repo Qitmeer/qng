@@ -10,7 +10,7 @@
 package metrics
 
 import (
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/v2/log"
 	emetrics "github.com/ethereum/go-ethereum/metrics"
 	"os"
 	"strings"

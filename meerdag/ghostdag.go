@@ -3,13 +3,13 @@ package meerdag
 import (
 	"container/list"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	cmodel "github.com/Qitmeer/qng/consensus/model"
-	s "github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/meerdag/anticone"
-	"github.com/Qitmeer/qng/meerdag/ghostdag"
-	"github.com/Qitmeer/qng/meerdag/ghostdag/model"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	cmodel "github.com/Qitmeer/qng/v2/consensus/model"
+	s "github.com/Qitmeer/qng/v2/core/serialization"
+	"github.com/Qitmeer/qng/v2/meerdag/anticone"
+	"github.com/Qitmeer/qng/v2/meerdag/ghostdag"
+	"github.com/Qitmeer/qng/v2/meerdag/ghostdag/model"
+	"github.com/Qitmeer/qng/v2/params"
 	"io"
 )
 

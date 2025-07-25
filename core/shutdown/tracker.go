@@ -2,7 +2,7 @@ package shutdown
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/v2/common/util"
 	"os"
 	"path"
 )

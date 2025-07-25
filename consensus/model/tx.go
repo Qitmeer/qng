@@ -1,6 +1,6 @@
 package model
 
-import "github.com/Qitmeer/qng/core/types"
+import "github.com/Qitmeer/qng/v2/core/types"
 
 type Tx interface {
 	GetTxType() types.TxType

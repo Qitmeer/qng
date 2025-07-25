@@ -2,8 +2,8 @@ package test
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/meerdag"
 	"strconv"
 	"testing"
 )

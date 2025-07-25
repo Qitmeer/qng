@@ -6,7 +6,7 @@ package whirlpool_test
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/crypto/x16rv3/whirlpool"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/whirlpool"
 	"io"
 	"testing"
 )

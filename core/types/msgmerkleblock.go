@@ -2,7 +2,7 @@ package types
 
 import (
 	"fmt"
-	chainhash "github.com/Qitmeer/qng/common/hash"
+	chainhash "github.com/Qitmeer/qng/v2/common/hash"
 )
 
 // maxFlagsPerMerkleBlock is the maximum number of flag bytes that could

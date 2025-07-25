@@ -10,8 +10,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/Qitmeer/qng/consensus/engine/pow"
-	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/consensus/model"
 )
 
 // CalcEasiestDifficulty calculates the easiest possible difficulty that a block

@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Qitmeer/qng/cmd/miner/common"
-	"github.com/Qitmeer/qng/cmd/miner/core"
-	"github.com/Qitmeer/qng/cmd/miner/symbols/lib"
+	"github.com/Qitmeer/qng/v2/cmd/miner/common"
+	"github.com/Qitmeer/qng/v2/cmd/miner/core"
+	"github.com/Qitmeer/qng/v2/cmd/miner/symbols/lib"
 )
 
 var robotminer core.Robot

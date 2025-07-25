@@ -2,7 +2,7 @@ package meerdag
 
 import (
 	"container/list"
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/v2/common/hash"
 	"io"
 )
 

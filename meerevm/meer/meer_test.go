@@ -3,7 +3,7 @@ package meer
 import (
 	"testing"
 
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/params"
 	"github.com/stretchr/testify/assert"
 )
 

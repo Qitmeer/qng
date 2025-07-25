@@ -1,8 +1,8 @@
 package meer
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
-	qtypes "github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	qtypes "github.com/Qitmeer/qng/v2/core/types"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 

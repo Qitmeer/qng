@@ -14,7 +14,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/Qitmeer/qng/crypto/bip39/wordlists"
+	"github.com/Qitmeer/qng/v2/crypto/bip39/wordlists"
 	"golang.org/x/crypto/pbkdf2"
 )
 

@@ -1,6 +1,6 @@
 package config
 
-import "github.com/Qitmeer/qng/consensus/engine"
+import "github.com/Qitmeer/qng/v2/consensus/engine"
 
 type PoAConfig struct {
 	Period uint64 // Number of seconds between blocks to enforce

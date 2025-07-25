@@ -10,10 +10,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/util"
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/common"
+	"github.com/Qitmeer/qng/v2/common/util"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/services/common"
 	"github.com/jessevdk/go-flags"
 	"os"
 	"path/filepath"

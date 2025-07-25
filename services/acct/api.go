@@ -2,8 +2,8 @@ package acct
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/core/json"
+	"github.com/Qitmeer/qng/v2/core/types"
 	"math"
 )
 

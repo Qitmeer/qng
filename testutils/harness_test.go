@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/params"
-	. "github.com/Qitmeer/qng/testutils"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/params"
+	. "github.com/Qitmeer/qng/v2/testutils"
 )
 
 func TestHarness(t *testing.T) {

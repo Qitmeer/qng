@@ -2,8 +2,8 @@ package client
 
 import (
 	"errors"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/rpc/client/cmds"
 )
 
 var (

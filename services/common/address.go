@@ -3,10 +3,10 @@ package common
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/crypto/ecc"
-	"github.com/Qitmeer/qng/meerevm/common"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/core/address"
+	"github.com/Qitmeer/qng/v2/crypto/ecc"
+	"github.com/Qitmeer/qng/v2/meerevm/common"
+	"github.com/Qitmeer/qng/v2/params"
 	ecommon "github.com/ethereum/go-ethereum/common"
 )
 

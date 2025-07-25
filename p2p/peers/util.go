@@ -2,7 +2,7 @@ package peers
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/v2/core/protocol"
 	"github.com/prysmaticlabs/go-bitfield"
 	"strings"
 )

@@ -5,7 +5,7 @@ package qitmeer_p2p_v2
 
 import (
 	fmt "fmt"
-	v1 "github.com/Qitmeer/qng/p2p/proto/v1"
+	v1 "github.com/Qitmeer/qng/v2/p2p/proto/v1"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/golang/protobuf/proto"
 	io "io"
@@ -100,7 +100,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/Qitmeer/qng/p2p/proto/v2/meerevm.proto", fileDescriptor_d3d66759bb0db20d)
+	proto.RegisterFile("github.com/Qitmeer/qng/v2/p2p/proto/v2/meerevm.proto", fileDescriptor_d3d66759bb0db20d)
 }
 
 var fileDescriptor_d3d66759bb0db20d = []byte{

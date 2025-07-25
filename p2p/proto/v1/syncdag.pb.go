@@ -203,7 +203,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/Qitmeer/qng/p2p/proto/v1/syncdag.proto", fileDescriptor_b4e0a71b5e7a5c19)
+	proto.RegisterFile("github.com/Qitmeer/qng/v2/p2p/proto/v1/syncdag.proto", fileDescriptor_b4e0a71b5e7a5c19)
 }
 
 var fileDescriptor_b4e0a71b5e7a5c19 = []byte{

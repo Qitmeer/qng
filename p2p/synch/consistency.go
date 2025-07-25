@@ -2,12 +2,12 @@ package synch
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/p2p/peers"
-	pb "github.com/Qitmeer/qng/p2p/proto/v1"
-	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/protocol"
+	"github.com/Qitmeer/qng/v2/meerdag"
+	"github.com/Qitmeer/qng/v2/p2p/peers"
+	pb "github.com/Qitmeer/qng/v2/p2p/proto/v1"
+	"github.com/Qitmeer/qng/v2/rpc/api"
 	"math"
 	"sync"
 	"sync/atomic"

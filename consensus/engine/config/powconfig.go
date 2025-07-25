@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/Qitmeer/qng/consensus/engine"
-	"github.com/Qitmeer/qng/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/consensus/engine"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
 	"time"
 )
 

@@ -1,6 +1,6 @@
 package config
 
-import "github.com/Qitmeer/qng/consensus/engine"
+import "github.com/Qitmeer/qng/v2/consensus/engine"
 
 type Config interface {
 	Type() engine.EngineType

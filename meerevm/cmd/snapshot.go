@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/v2/config"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/node"
@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"time"
 
-	qcommon "github.com/Qitmeer/qng/meerevm/common"
+	qcommon "github.com/Qitmeer/qng/v2/meerevm/common"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"

@@ -6,9 +6,9 @@ package meerdag
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/merkle"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/merkle"
+	"github.com/Qitmeer/qng/v2/params"
 	"math"
 )
 

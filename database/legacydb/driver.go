@@ -7,7 +7,7 @@ package legacydb
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/v2/log"
 )
 
 // Driver defines a structure for backend drivers to use when they register

@@ -6,11 +6,11 @@ package token
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/math"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/v2/common/math"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/core/serialization"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/meerdag"
 )
 
 // tokenState specifies the token balance of the current block.

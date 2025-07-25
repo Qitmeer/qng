@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Qitmeer/qng/cmd/miner/common"
-	"github.com/Qitmeer/qng/cmd/miner/common/socks"
-	"github.com/Qitmeer/qng/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/cmd/miner/common"
+	"github.com/Qitmeer/qng/v2/cmd/miner/common/socks"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
 )
 
 // ErrJsonType is an error for json that we do not expect.
@@ -220,7 +220,7 @@ func (s *Stratum) Subscribe() error {
 	msg := StratumMsg{
 		Method: "mining.subscribe",
 		ID:     s.ID,
-		Params: []string{"github.com/Qitmeer/qng/cmd/miner/v0.0.1"},
+		Params: []string{"github.com/Qitmeer/qng/v2/cmd/miner/v0.0.1"},
 	}
 	s.SubID = msg.ID.(uint64)
 	s.ID++

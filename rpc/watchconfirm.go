@@ -2,10 +2,10 @@ package rpc
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
-	"github.com/Qitmeer/qng/services/index"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/rpc/client/cmds"
+	"github.com/Qitmeer/qng/v2/services/index"
 )
 
 type TxConfirm struct {

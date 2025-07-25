@@ -3,8 +3,8 @@ package meerdag
 import (
 	"container/list"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/common/util"
 	"github.com/golang-collections/collections/stack"
 	"io"
 	"strconv"

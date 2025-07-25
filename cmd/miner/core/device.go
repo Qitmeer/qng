@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Qitmeer/qng/cmd/miner/common"
+	"github.com/Qitmeer/qng/v2/cmd/miner/common"
 )
 
 type BaseDevice interface {

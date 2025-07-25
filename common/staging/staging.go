@@ -1,9 +1,9 @@
 package staging
 
 import (
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/database/legacydb"
-	l "github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/database/legacydb"
+	l "github.com/Qitmeer/qng/v2/log"
 	"sync/atomic"
 )
 

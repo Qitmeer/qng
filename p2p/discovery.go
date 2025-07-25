@@ -7,9 +7,9 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/Qitmeer/qng/p2p/discover"
-	"github.com/Qitmeer/qng/p2p/qnode"
-	"github.com/Qitmeer/qng/p2p/qnr"
+	"github.com/Qitmeer/qng/v2/p2p/discover"
+	"github.com/Qitmeer/qng/v2/p2p/qnode"
+	"github.com/Qitmeer/qng/v2/p2p/qnr"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"

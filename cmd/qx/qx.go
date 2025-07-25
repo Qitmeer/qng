@@ -6,17 +6,17 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/Qitmeer/qng/meerevm/common"
-	"github.com/Qitmeer/qng/services/wallet/hd"
+	"github.com/Qitmeer/qng/v2/meerevm/common"
+	"github.com/Qitmeer/qng/v2/services/wallet/hd"
 	"io/ioutil"
 	"os"
 	"strings"
 
-	"github.com/Qitmeer/qng/consensus/engine/pow"
-	"github.com/Qitmeer/qng/crypto/seed"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/qx"
-	ver "github.com/Qitmeer/qng/version"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/crypto/seed"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/qx"
+	ver "github.com/Qitmeer/qng/v2/version"
 )
 
 const (

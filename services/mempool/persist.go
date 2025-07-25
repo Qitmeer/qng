@@ -3,9 +3,9 @@ package mempool
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng/core/dbnamespace"
-	"github.com/Qitmeer/qng/core/types"
-	l "github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/v2/core/dbnamespace"
+	"github.com/Qitmeer/qng/v2/core/types"
+	l "github.com/Qitmeer/qng/v2/log"
 	"github.com/schollz/progressbar/v3"
 	"io"
 	"io/ioutil"

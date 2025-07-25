@@ -1,6 +1,6 @@
 package types
 
-import "github.com/Qitmeer/qng/common/hash"
+import "github.com/Qitmeer/qng/v2/common/hash"
 
 // BlockTemplate houses a block that has yet to be solved along with additional
 // details about the fees and the number of signature operations for each

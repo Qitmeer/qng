@@ -1,10 +1,10 @@
 package meerdag
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/v2/common/hash"
 )
 
-//A collection that tries to imitate "lazy" operations
+// A collection that tries to imitate "lazy" operations
 type LazySet struct {
 	sets            []*HashSet
 	positiveIndices map[int]Empty

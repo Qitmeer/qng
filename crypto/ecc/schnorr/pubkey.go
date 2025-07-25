@@ -8,7 +8,7 @@ package schnorr
 import (
 	"fmt"
 
-	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/v2/crypto/ecc/secp256k1"
 )
 
 // These constants define the lengths of serialized public keys.

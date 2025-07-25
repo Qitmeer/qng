@@ -4,7 +4,7 @@
 package qitmeer_p2p_v2
 
 import (
-	v1 "github.com/Qitmeer/qng/p2p/proto/v1"
+	v1 "github.com/Qitmeer/qng/v2/p2p/proto/v1"
 	ssz "github.com/ferranbt/fastssz"
 )
 

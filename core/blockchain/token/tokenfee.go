@@ -4,7 +4,7 @@
 
 package token
 
-import "github.com/Qitmeer/qng/core/types"
+import "github.com/Qitmeer/qng/v2/core/types"
 
 type TokenFeeConfig struct {
 	Type  types.FeeType

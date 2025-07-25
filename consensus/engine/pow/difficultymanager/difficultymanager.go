@@ -1,9 +1,9 @@
 package difficultymanager
 
 import (
-	"github.com/Qitmeer/qng/consensus/engine/pow"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/params"
 )
 
 func NewDiffManager(con model.Consensus, cfg *params.Params) model.DifficultyManager {

@@ -2,8 +2,8 @@ package acct
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
+	"github.com/Qitmeer/qng/v2/params"
 )
 
 type CLTVWatcher struct {

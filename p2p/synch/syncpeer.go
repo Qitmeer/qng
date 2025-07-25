@@ -1,7 +1,7 @@
 package synch
 
 import (
-	"github.com/Qitmeer/qng/p2p/peers"
+	"github.com/Qitmeer/qng/v2/p2p/peers"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"math/rand"
 )

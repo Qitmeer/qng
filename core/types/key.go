@@ -3,7 +3,7 @@
 package types
 
 import (
-	"github.com/Qitmeer/qng/crypto/ecc"
+	"github.com/Qitmeer/qng/v2/crypto/ecc"
 )
 
 type Key struct {

@@ -6,9 +6,9 @@ package synch
 
 import (
 	"context"
-	"github.com/Qitmeer/qng/p2p/common"
-	"github.com/Qitmeer/qng/p2p/peers"
-	pb "github.com/Qitmeer/qng/p2p/proto/v1"
+	"github.com/Qitmeer/qng/v2/p2p/common"
+	"github.com/Qitmeer/qng/v2/p2p/peers"
+	pb "github.com/Qitmeer/qng/v2/p2p/proto/v1"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
 )

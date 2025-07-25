@@ -9,8 +9,8 @@
 package statedb
 
 import (
-	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/v2/common/roughtime"
+	"github.com/Qitmeer/qng/v2/log"
 	"strconv"
 	"strings"
 	"sync"

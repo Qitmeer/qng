@@ -7,7 +7,7 @@
 package ffldb
 
 import (
-	"github.com/Qitmeer/qng/database/legacydb/ffldb/treap"
+	"github.com/Qitmeer/qng/v2/database/legacydb/ffldb/treap"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )

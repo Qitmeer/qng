@@ -3,11 +3,11 @@ package serialization
 
 import (
 	"encoding/binary"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/engine"
-	"github.com/Qitmeer/qng/consensus/engine/pow"
-	"github.com/Qitmeer/qng/consensus/engine/utils"
-	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/engine"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/consensus/engine/utils"
+	"github.com/Qitmeer/qng/v2/core/protocol"
 	"io"
 	"time"
 )

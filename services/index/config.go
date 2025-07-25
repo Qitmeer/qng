@@ -1,6 +1,6 @@
 package index
 
-import "github.com/Qitmeer/qng/config"
+import "github.com/Qitmeer/qng/v2/config"
 
 type Config struct {
 	AddrIndex      bool

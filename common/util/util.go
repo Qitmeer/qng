@@ -2,7 +2,7 @@ package util
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/v2/log"
 )
 
 // TODO, refactor to more general method for panic handling

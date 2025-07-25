@@ -3,12 +3,12 @@ package invalid_tx_index
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/staging"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database/legacydb"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/common/staging"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/core/serialization"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/database/legacydb"
 )
 
 var bucketName = []byte("invalid_tx_index")

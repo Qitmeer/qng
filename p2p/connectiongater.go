@@ -6,7 +6,7 @@ package p2p
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/p2p/common"
+	"github.com/Qitmeer/qng/v2/p2p/common"
 	"github.com/multiformats/go-multiaddr/net"
 	"net"
 
@@ -19,13 +19,13 @@ import (
 
 // InterceptPeerDial tests whether we're permitted to Dial the specified peer.
 func (s *Service) InterceptPeerDial(p peer.ID) (allow bool) {
-	return s.sy.ConnectionGater(&p,nil, network.DirOutbound)
+	return s.sy.ConnectionGater(&p, nil, network.DirOutbound)
 }
 
 // InterceptAddrDial tests whether we're permitted to dial the specified
 // multiaddr for the given peer.
 func (s *Service) InterceptAddrDial(p peer.ID, m multiaddr.Multiaddr) (allow bool) {
-	if !s.sy.ConnectionGater(&p,nil, network.DirOutbound) {
+	if !s.sy.ConnectionGater(&p, nil, network.DirOutbound) {
 		return false
 	}
 	return filterConnections(s.addrFilter, m)
@@ -37,7 +37,7 @@ func (s *Service) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
 		log.Trace(fmt.Sprintf("peer:%s reason:Not accepting inbound dial", n.RemoteMultiaddr()))
 		return false
 	}
-	if !s.sy.ConnectionGater(nil,n.RemoteMultiaddr(), network.DirInbound) {
+	if !s.sy.ConnectionGater(nil, n.RemoteMultiaddr(), network.DirInbound) {
 		return false
 	}
 	return filterConnections(s.addrFilter, n.RemoteMultiaddr())

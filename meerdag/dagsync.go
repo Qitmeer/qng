@@ -3,8 +3,8 @@ package meerdag
 import (
 	"container/list"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/rpc/api"
 	"github.com/ethereum/go-ethereum/core/state"
 	"sync"
 )

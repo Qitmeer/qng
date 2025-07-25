@@ -5,10 +5,10 @@
 package synch
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/p2p/peers"
-	pb "github.com/Qitmeer/qng/p2p/proto/v1"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/p2p/peers"
+	pb "github.com/Qitmeer/qng/v2/p2p/proto/v1"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 )

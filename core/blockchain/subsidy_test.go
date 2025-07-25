@@ -2,9 +2,9 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/consensus/forks"
-	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/consensus/forks"
+	"github.com/Qitmeer/qng/v2/meerdag"
+	"github.com/Qitmeer/qng/v2/params"
 	"testing"
 	"time"
 )

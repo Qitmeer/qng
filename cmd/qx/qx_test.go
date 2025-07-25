@@ -6,12 +6,12 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/common/encode/base58"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/crypto/bip32"
-	"github.com/Qitmeer/qng/crypto/bip39"
-	"github.com/Qitmeer/qng/qx"
+	"github.com/Qitmeer/qng/v2/common/encode/base58"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/crypto/bip32"
+	"github.com/Qitmeer/qng/v2/crypto/bip39"
+	"github.com/Qitmeer/qng/v2/qx"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

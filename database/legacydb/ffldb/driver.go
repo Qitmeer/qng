@@ -8,9 +8,9 @@ package ffldb
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/database/legacydb"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/v2/core/protocol"
+	"github.com/Qitmeer/qng/v2/database/legacydb"
+	"github.com/Qitmeer/qng/v2/log"
 )
 
 var dblog log.Logger

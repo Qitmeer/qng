@@ -7,11 +7,11 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/blockchain/utxo"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/blockchain/utxo"
 	"time"
 
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 // SequenceLock represents the minimum timestamp and minimum block height after
@@ -162,19 +162,24 @@ func (b *BlockChain) CalcSequenceLock(tx *types.Tx, view *utxo.UtxoViewpoint) (*
 // A sequence number is defined as follows:
 //
 //   - bit 31 is the disable bit
-//   - the next 8 bits are reserved
-//   - bit 22 is the relative lock type (unset = block height, set = seconds)
-//   - the next 6 bites are reserved
-//   - the least significant 16 bits represent the value
-//     - value has a granularity of 512 when interpreted as seconds (bit 22 set)
 //
-//   ---------------------------------------------------
-//   | Disable | Reserved |  Type | Reserved |  Value  |
-//   ---------------------------------------------------
-//   |  1 bit  |  8 bits  | 1 bit |  6 bits  | 16 bits |
-//   ---------------------------------------------------
-//   |   [31]  |  [30-23] |  [22] |  [21-16] | [15-0]  |
-//   ---------------------------------------------------
+//   - the next 8 bits are reserved
+//
+//   - bit 22 is the relative lock type (unset = block height, set = seconds)
+//
+//   - the next 6 bites are reserved
+//
+//   - the least significant 16 bits represent the value
+//
+//   - value has a granularity of 512 when interpreted as seconds (bit 22 set)
+//
+//     ---------------------------------------------------
+//     | Disable | Reserved |  Type | Reserved |  Value  |
+//     ---------------------------------------------------
+//     |  1 bit  |  8 bits  | 1 bit |  6 bits  | 16 bits |
+//     ---------------------------------------------------
+//     |   [31]  |  [30-23] |  [22] |  [21-16] | [15-0]  |
+//     ---------------------------------------------------
 //
 // The above implies that the maximum relative block height that can be encoded
 // is 65535 and the maximum relative number of seconds that can be encoded is

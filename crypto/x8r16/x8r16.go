@@ -1,22 +1,22 @@
 package x8r16
 
 import (
-	"github.com/Qitmeer/qng/crypto/x16rv3"
-	"github.com/Qitmeer/qng/crypto/x16rv3/aes"
-	"github.com/Qitmeer/qng/crypto/x16rv3/blake"
-	"github.com/Qitmeer/qng/crypto/x16rv3/bmw"
-	"github.com/Qitmeer/qng/crypto/x16rv3/cubehash"
-	"github.com/Qitmeer/qng/crypto/x16rv3/echo"
-	"github.com/Qitmeer/qng/crypto/x16rv3/groestl"
-	"github.com/Qitmeer/qng/crypto/x16rv3/hamsi"
-	"github.com/Qitmeer/qng/crypto/x16rv3/hash"
-	"github.com/Qitmeer/qng/crypto/x16rv3/jh"
-	"github.com/Qitmeer/qng/crypto/x16rv3/keccak"
-	"github.com/Qitmeer/qng/crypto/x16rv3/luffa"
-	"github.com/Qitmeer/qng/crypto/x16rv3/shabal"
-	"github.com/Qitmeer/qng/crypto/x16rv3/shavite"
-	"github.com/Qitmeer/qng/crypto/x16rv3/simd"
-	"github.com/Qitmeer/qng/crypto/x16rv3/skein"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/aes"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/blake"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/bmw"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/cubehash"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/echo"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/groestl"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/hamsi"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/hash"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/jh"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/keccak"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/luffa"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/shabal"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/shavite"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/simd"
+	"github.com/Qitmeer/qng/v2/crypto/x16rv3/skein"
 )
 
 const (

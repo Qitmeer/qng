@@ -3,7 +3,7 @@ package chaindb
 import (
 	"fmt"
 
-	"github.com/Qitmeer/qng/database/rawdb"
+	"github.com/Qitmeer/qng/v2/database/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/ethdb/leveldb"
 	"github.com/ethereum/go-ethereum/ethdb/pebble"

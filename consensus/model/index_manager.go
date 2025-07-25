@@ -1,8 +1,8 @@
 package model
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 // IndexManager provides a generic interface that the is called when blocks are

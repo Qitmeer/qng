@@ -2,7 +2,7 @@ package anticone
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/v2/log"
 	"math"
 )
 

@@ -2,9 +2,9 @@ package common
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/serialization"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 type UtxoOpt struct {

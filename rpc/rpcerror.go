@@ -2,7 +2,7 @@ package rpc
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/v2/common/hash"
 )
 
 // RpcNoTxInfoError is a convenience function for returning a nicely formatted
@@ -62,8 +62,8 @@ func RpcInternalError(err, context string) error {
 	return fmt.Errorf("%s : %s", context, err)
 }
 
-//LL(getblocktemplate RPC) 2018-10-28
-//client errors.
+// LL(getblocktemplate RPC) 2018-10-28
+// client errors.
 func RPCClientInInitialDownloadError(err, context string) error {
 	return fmt.Errorf("%s : %s", context, err)
 }

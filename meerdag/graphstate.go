@@ -2,8 +2,8 @@ package meerdag
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	s "github.com/Qitmeer/qng/core/serialization"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	s "github.com/Qitmeer/qng/v2/core/serialization"
 	"io"
 	"sync"
 )

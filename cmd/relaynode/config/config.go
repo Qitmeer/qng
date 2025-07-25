@@ -6,10 +6,10 @@ package config
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/util"
-	l "github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/common"
+	"github.com/Qitmeer/qng/v2/common/util"
+	l "github.com/Qitmeer/qng/v2/log"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/services/common"
 	"github.com/urfave/cli/v2"
 	"os"
 	"path/filepath"

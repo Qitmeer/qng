@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/p2p/encoder"
+	"github.com/Qitmeer/qng/v2/p2p/encoder"
 	"github.com/libp2p/go-libp2p/core/network"
 	"golang.org/x/crypto/sha3"
 	"hash"

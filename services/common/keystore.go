@@ -2,8 +2,8 @@ package common
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/core/address"
+	"github.com/Qitmeer/qng/v2/params"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"

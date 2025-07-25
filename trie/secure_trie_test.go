@@ -19,9 +19,9 @@ package trie
 
 import (
 	"bytes"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/util"
-	"github.com/Qitmeer/qng/database/statedb"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/common/util"
+	"github.com/Qitmeer/qng/v2/database/statedb"
 	"runtime"
 	"sync"
 	"testing"

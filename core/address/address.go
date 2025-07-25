@@ -4,11 +4,11 @@ package address
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/encode/base58"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/crypto/ecc"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/common/encode/base58"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/crypto/ecc"
+	"github.com/Qitmeer/qng/v2/params"
 	"golang.org/x/crypto/ripemd160"
 	"strings"
 )

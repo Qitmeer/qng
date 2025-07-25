@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"strings"
 
-	qparams "github.com/Qitmeer/qng/params"
+	qparams "github.com/Qitmeer/qng/v2/params"
 	"github.com/ethereum/go-ethereum/common"
 	qcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"

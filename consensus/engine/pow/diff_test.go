@@ -3,9 +3,9 @@ package pow
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/common"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/v2/common"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/common/util"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
@@ -78,7 +78,7 @@ func TestDiffCompare(t *testing.T) {
 }
 
 // scale * 2^ 64 / diff is target
-//edge bits 24 scale is 48
+// edge bits 24 scale is 48
 func TestBigToCompact(t *testing.T) {
 	diff := 48
 	diffBig := &big.Int{}
@@ -87,7 +87,7 @@ func TestBigToCompact(t *testing.T) {
 }
 
 // scale * 2^ 64 / diff is target
-//edge bits 24 scale is 48
+// edge bits 24 scale is 48
 func TestCalcBlake2bdNextDiff(t *testing.T) {
 	p := &PowConfig{
 		Blake2bdPowLimit:     new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 232), common.Big1),
@@ -127,7 +127,7 @@ func TestCalcBlake2bdNextDiff(t *testing.T) {
 }
 
 // scale * 2^ 64 / diff is target
-//edge bits 24 scale is 48
+// edge bits 24 scale is 48
 func TestCalcCuckarooNextDiff(t *testing.T) {
 	p := &PowConfig{
 		Blake2bdPowLimit:     new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 232), common.Big1),
@@ -168,7 +168,7 @@ func TestCalcCuckarooNextDiff(t *testing.T) {
 }
 
 // scale * 2^ 64 / diff is target
-//edge bits 24 scale is 48
+// edge bits 24 scale is 48
 func TestCalcCuckatooNextDiff(t *testing.T) {
 	p := &PowConfig{
 		Blake2bdPowLimit:     new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 232), common.Big1),
@@ -208,7 +208,7 @@ func TestCalcCuckatooNextDiff(t *testing.T) {
 }
 
 // scale * 2^ 64 / diff is target
-//edge bits 24 scale is 48
+// edge bits 24 scale is 48
 func TestCalcCuckaroomNextDiff(t *testing.T) {
 	p := &PowConfig{
 		QitmeerKeccak256PowLimit:     new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 232), common.Big1),
@@ -247,7 +247,7 @@ func TestCalcCuckaroomNextDiff(t *testing.T) {
 }
 
 // scale * 2^ 64 / diff is target
-//edge bits 24 scale is 48
+// edge bits 24 scale is 48
 func TestCalcQitmeerKeccak256NextDiff(t *testing.T) {
 	p := &PowConfig{
 		QitmeerKeccak256PowLimit:     new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 232), common.Big1),

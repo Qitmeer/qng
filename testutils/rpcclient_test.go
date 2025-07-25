@@ -5,10 +5,10 @@
 package testutils_test
 
 import (
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/rpc"
-	"github.com/Qitmeer/qng/services/mempool"
-	"github.com/Qitmeer/qng/testutils"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/rpc"
+	"github.com/Qitmeer/qng/v2/services/mempool"
+	"github.com/Qitmeer/qng/v2/testutils"
 	"io/ioutil"
 	"path/filepath"
 	"reflect"

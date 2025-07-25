@@ -2,8 +2,8 @@ package config
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/util"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/common/util"
+	"github.com/Qitmeer/qng/v2/params"
 	"github.com/urfave/cli/v2"
 	"net"
 	"os"

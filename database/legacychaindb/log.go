@@ -3,7 +3,7 @@
 package legacychaindb
 
 import (
-	l "github.com/Qitmeer/qng/log"
+	l "github.com/Qitmeer/qng/v2/log"
 )
 
 // log is a logger that is initialized with no output filters.  This

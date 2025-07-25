@@ -6,10 +6,10 @@ package synch
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/roughtime"
-	"github.com/Qitmeer/qng/p2p/common"
-	"github.com/Qitmeer/qng/p2p/peers"
-	"github.com/Qitmeer/qng/p2p/runutil"
+	"github.com/Qitmeer/qng/v2/common/roughtime"
+	"github.com/Qitmeer/qng/v2/p2p/common"
+	"github.com/Qitmeer/qng/v2/p2p/peers"
+	"github.com/Qitmeer/qng/v2/p2p/runutil"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"time"

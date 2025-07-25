@@ -2,11 +2,11 @@ package p2p
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/marshal"
-	"github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/rpc/api"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
+	"github.com/Qitmeer/qng/v2/common/marshal"
+	"github.com/Qitmeer/qng/v2/core/json"
+	"github.com/Qitmeer/qng/v2/core/protocol"
+	"github.com/Qitmeer/qng/v2/rpc/api"
+	"github.com/Qitmeer/qng/v2/rpc/client/cmds"
 	golog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"math"

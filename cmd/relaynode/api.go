@@ -5,14 +5,14 @@
 package main
 
 import (
-	"github.com/Qitmeer/qng/common/marshal"
-	"github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/rpc/api"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
-	"github.com/Qitmeer/qng/version"
+	"github.com/Qitmeer/qng/v2/common/marshal"
+	"github.com/Qitmeer/qng/v2/core/json"
+	"github.com/Qitmeer/qng/v2/core/protocol"
+	"github.com/Qitmeer/qng/v2/meerdag"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/rpc/api"
+	"github.com/Qitmeer/qng/v2/rpc/client/cmds"
+	"github.com/Qitmeer/qng/v2/version"
 	"time"
 )
 

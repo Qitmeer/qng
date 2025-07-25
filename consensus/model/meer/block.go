@@ -5,7 +5,7 @@
 package meer
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/v2/common/hash"
 	"github.com/ethereum/go-ethereum/core/types"
 	"time"
 )

@@ -6,9 +6,9 @@ package synch
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	s "github.com/Qitmeer/qng/core/serialization"
-	pb "github.com/Qitmeer/qng/p2p/proto/v1"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	s "github.com/Qitmeer/qng/v2/core/serialization"
+	pb "github.com/Qitmeer/qng/v2/p2p/proto/v1"
 	"io"
 )
 

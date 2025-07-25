@@ -72,17 +72,17 @@ qng: qng-build
 qng-build:
     ifeq ($(ZMQ),TRUE)
 		@echo "Enalbe ZMQ"
-		@go build -o $(GOBIN)/qng$(OUTPUT_SUFFIX) $(GOFLAGS_DEV) -tags=zmq "github.com/Qitmeer/qng/cmd/qng"
+		@go build -o $(GOBIN)/qng$(OUTPUT_SUFFIX) $(GOFLAGS_DEV) -tags=zmq "github.com/Qitmeer/qng/v2/cmd/qng"
     else ifeq ($(DEBUG),ON)
 		@echo "Enable DEBUG"
-		@go build -o $(GOBIN)/qng$(OUTPUT_SUFFIX) $(GOFLAGS_DEV) -gcflags="all=-N -l" "github.com/Qitmeer/qng/cmd/qng"
+		@go build -o $(GOBIN)/qng$(OUTPUT_SUFFIX) $(GOFLAGS_DEV) -gcflags="all=-N -l" "github.com/Qitmeer/qng/v2/cmd/qng"
     else
-		@go build -o $(GOBIN)/qng$(OUTPUT_SUFFIX) $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qng"
+		@go build -o $(GOBIN)/qng$(OUTPUT_SUFFIX) $(GOFLAGS_DEV) "github.com/Qitmeer/qng/v2/cmd/qng"
     endif
 qx:
-	@go build -o $(GOBIN)/qx $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/qx"
+	@go build -o $(GOBIN)/qx $(GOFLAGS_DEV) "github.com/Qitmeer/qng/v2/cmd/qx"
 relay:
-	@go build -o $(GOBIN)/relaynode $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/relaynode"
+	@go build -o $(GOBIN)/relaynode $(GOFLAGS_DEV) "github.com/Qitmeer/qng/v2/cmd/relaynode"
 
 generate-contracts-pkg:
 	@git submodule update --init --recursive
@@ -112,16 +112,16 @@ all: qng-build qx relay
 # amd64 release
 build/release/%/$(EXECUTABLE):
 	@echo Build $(@)
-	go build $(GOFLAGS_RELEASE) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
+	go build $(GOFLAGS_RELEASE) -o $(@) "github.com/Qitmeer/qng/v2/cmd/qng"
 build/release/%/$(EXECUTABLE).exe:
 	@echo Build $(@)
-	go build $(GOFLAGS_RELEASE) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
+	go build $(GOFLAGS_RELEASE) -o $(@) "github.com/Qitmeer/qng/v2/cmd/qng"
 build/release/%/$(EXECUTABLE_QX):
 	@echo Build $(@)
-	go build $(GOFLAGS_RELEASE_QX) -o $(@) "github.com/Qitmeer/qng/cmd/qx"
+	go build $(GOFLAGS_RELEASE_QX) -o $(@) "github.com/Qitmeer/qng/v2/cmd/qx"
 build/release/%/$(EXECUTABLE_QX).exe:
 	@echo Build $(@)
-	go build $(GOFLAGS_RELEASE_QX) -o $(@) "github.com/Qitmeer/qng/cmd/qx"
+	go build $(GOFLAGS_RELEASE_QX) -o $(@) "github.com/Qitmeer/qng/v2/cmd/qx"
 
 
 # amd64 dev
@@ -129,10 +129,10 @@ build/dev/%: OS=$(word 3,$(subst /, ,$(@)))
 build/dev/%: ARCH=$(word 4,$(subst /, ,$(@)))
 build/dev/%/$(EXECUTABLE):
 	@echo Build $(@)
-	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_DEV) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
+	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_DEV) -o $(@) "github.com/Qitmeer/qng/v2/cmd/qng"
 build/dev/%/$(EXECUTABLE).exe:
 	@echo Build $(@)
-	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_DEV) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
+	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_DEV) -o $(@) "github.com/Qitmeer/qng/v2/cmd/qng"
 
 
 %.qng.zip: %.exe

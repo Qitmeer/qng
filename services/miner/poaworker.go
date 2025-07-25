@@ -2,14 +2,14 @@ package miner
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/params"
 	"github.com/ethereum/go-ethereum/common"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 type PoAWorker struct {

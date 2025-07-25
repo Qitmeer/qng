@@ -5,8 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
-	"github.com/Qitmeer/qng/common/encode/base58"
-	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/v2/common/encode/base58"
+	"github.com/Qitmeer/qng/v2/crypto/ecc/secp256k1"
 	"golang.org/x/crypto/ripemd160"
 	"io"
 	"math/big"
@@ -187,9 +187,7 @@ func validateChildPublicKey(key []byte) error {
 	return nil
 }
 
-//
 // Numerical
-//
 func uint32Bytes(i uint32) []byte {
 	bytes := make([]byte, 4)
 	binary.BigEndian.PutUint32(bytes, i)

@@ -4,7 +4,7 @@ package cuckoo
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/v2/common/hash"
 	"log"
 	"math/big"
 	"os"

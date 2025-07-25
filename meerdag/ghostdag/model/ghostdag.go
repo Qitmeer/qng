@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/v2/common/hash"
 	"math/big"
 )
 

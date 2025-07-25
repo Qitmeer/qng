@@ -7,12 +7,12 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/blockchain"
-	ser "github.com/Qitmeer/qng/node/service"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/rpc/websocket"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/core/blockchain"
+	ser "github.com/Qitmeer/qng/v2/node/service"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/rpc/websocket"
 	"github.com/deckarep/golang-set"
 	"golang.org/x/net/context"
 	"io"
@@ -52,7 +52,7 @@ type RpcServer struct {
 	BC          *blockchain.BlockChain
 	ChainParams *params.Params
 	listeners   []net.Listener
-	consensus model.Consensus
+	consensus   model.Consensus
 }
 
 // service represents a registered object
@@ -106,8 +106,8 @@ type serverRequest struct {
 // newRPCServer returns a new instance of the rpcServer struct.
 func NewRPCServer(cfg *config.Config, consensus model.Consensus) (*RpcServer, error) {
 	rpc := RpcServer{
-		consensus: consensus,
-		config: cfg,
+		consensus:      consensus,
+		config:         cfg,
 		rpcSvcRegistry: make(serviceRegistry),
 		codecs:         mapset.NewSet(),
 

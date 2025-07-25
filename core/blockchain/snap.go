@@ -2,12 +2,12 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	mmeer "github.com/Qitmeer/qng/consensus/model/meer"
-	"github.com/Qitmeer/qng/core/blockchain/token"
-	"github.com/Qitmeer/qng/core/blockchain/utxo"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	mmeer "github.com/Qitmeer/qng/v2/consensus/model/meer"
+	"github.com/Qitmeer/qng/v2/core/blockchain/token"
+	"github.com/Qitmeer/qng/v2/core/blockchain/utxo"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/meerdag"
 	"time"
 )
 

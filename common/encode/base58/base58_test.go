@@ -10,7 +10,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/Qitmeer/qng/common/encode/base58"
+	"github.com/Qitmeer/qng/v2/common/encode/base58"
 )
 
 var stringTests = []struct {

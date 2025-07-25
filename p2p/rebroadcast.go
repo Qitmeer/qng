@@ -1,13 +1,13 @@
 package p2p
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/p2p/peers"
-	pb "github.com/Qitmeer/qng/p2p/proto/v1"
-	"github.com/Qitmeer/qng/p2p/synch"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/notifymgr/notify"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/p2p/peers"
+	pb "github.com/Qitmeer/qng/v2/p2p/proto/v1"
+	"github.com/Qitmeer/qng/v2/p2p/synch"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/services/notifymgr/notify"
 	"math/rand"
 	"sync"
 	"sync/atomic"

@@ -3,7 +3,7 @@
 package types
 
 import (
-	"github.com/Qitmeer/qng/common/util"
+	"github.com/Qitmeer/qng/v2/common/util"
 	"math/big"
 	//"fmt"
 	"fmt"

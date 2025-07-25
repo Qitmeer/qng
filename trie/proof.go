@@ -11,10 +11,10 @@ package trie
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng/common/encode/rlp"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/database/statedb"
-	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/v2/common/encode/rlp"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/database/statedb"
+	"github.com/Qitmeer/qng/v2/log"
 )
 
 // Prove constructs a merkle proof for key. The result contains all encoded nodes

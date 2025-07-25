@@ -16,7 +16,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/common/roughtime"
+	"github.com/Qitmeer/qng/v2/common/roughtime"
 	"math/big"
 	"net"
 	"os"

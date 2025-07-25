@@ -7,9 +7,9 @@ package poa
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/engine/config"
-	"github.com/Qitmeer/qng/consensus/model"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/engine/config"
+	"github.com/Qitmeer/qng/v2/consensus/model"
 	"sort"
 	"time"
 

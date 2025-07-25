@@ -7,8 +7,8 @@
 package mempool
 
 import (
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/message"
+	"github.com/Qitmeer/qng/v2/core/blockchain"
+	"github.com/Qitmeer/qng/v2/core/message"
 )
 
 // RuleError identifies a rule violation.  It is used to indicate that

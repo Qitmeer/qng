@@ -2,9 +2,9 @@
 package node
 
 import (
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/node/service"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/node/service"
 )
 
 // QitmeerLight implements the qitmeer light node service.

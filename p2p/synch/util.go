@@ -2,8 +2,8 @@ package synch
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/p2p/common"
-	"github.com/Qitmeer/qng/p2p/peers"
+	"github.com/Qitmeer/qng/v2/p2p/common"
+	"github.com/Qitmeer/qng/v2/p2p/peers"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	ma "github.com/multiformats/go-multiaddr"

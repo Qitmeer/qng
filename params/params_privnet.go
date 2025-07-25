@@ -7,15 +7,15 @@
 package params
 
 import (
-	"github.com/Qitmeer/qng/consensus/engine/config"
-	"github.com/Qitmeer/qng/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/consensus/engine/config"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
 	"math/big"
 	"time"
 
-	"github.com/Qitmeer/qng/common"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/ledger"
+	"github.com/Qitmeer/qng/v2/common"
+	"github.com/Qitmeer/qng/v2/core/protocol"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/ledger"
 	eparams "github.com/ethereum/go-ethereum/params"
 )
 

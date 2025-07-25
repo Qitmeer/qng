@@ -6,14 +6,14 @@ package rpc
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/event"
-	"github.com/Qitmeer/qng/core/json"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
-	"github.com/Qitmeer/qng/rpc/websocket"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/blockchain"
+	"github.com/Qitmeer/qng/v2/core/event"
+	"github.com/Qitmeer/qng/v2/core/json"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/meerdag"
+	"github.com/Qitmeer/qng/v2/rpc/client/cmds"
+	"github.com/Qitmeer/qng/v2/rpc/websocket"
 	"time"
 )
 

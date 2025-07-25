@@ -7,8 +7,8 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/Qitmeer/qng/core/address"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/core/address"
+	"github.com/Qitmeer/qng/v2/core/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )

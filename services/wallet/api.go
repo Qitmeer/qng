@@ -3,8 +3,8 @@ package wallet
 import (
 	ejson "encoding/json"
 	"fmt"
-	"github.com/Qitmeer/qng/core/json"
-	qcommon "github.com/Qitmeer/qng/services/common"
+	"github.com/Qitmeer/qng/v2/core/json"
+	qcommon "github.com/Qitmeer/qng/v2/services/common"
 	"github.com/ethereum/go-ethereum/common"
 	"time"
 )

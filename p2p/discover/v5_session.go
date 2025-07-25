@@ -7,8 +7,8 @@ package discover
 import (
 	crand "crypto/rand"
 
-	"github.com/Qitmeer/qng/common/mclock"
-	"github.com/Qitmeer/qng/p2p/qnode"
+	"github.com/Qitmeer/qng/v2/common/mclock"
+	"github.com/Qitmeer/qng/v2/p2p/qnode"
 	"github.com/hashicorp/golang-lru/simplelru"
 )
 

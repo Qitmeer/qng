@@ -4,7 +4,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/v2/config"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
 	"github.com/olekukonko/tablewriter"
 	"os"
@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	qcommon "github.com/Qitmeer/qng/meerevm/common"
+	qcommon "github.com/Qitmeer/qng/v2/meerevm/common"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"

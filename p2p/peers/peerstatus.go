@@ -1,10 +1,10 @@
 package peers
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
-	pb "github.com/Qitmeer/qng/p2p/proto/v1"
-	v2 "github.com/Qitmeer/qng/p2p/proto/v2"
-	"github.com/Qitmeer/qng/p2p/qnr"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	pb "github.com/Qitmeer/qng/v2/p2p/proto/v1"
+	v2 "github.com/Qitmeer/qng/v2/p2p/proto/v2"
+	"github.com/Qitmeer/qng/v2/p2p/qnr"
 	"github.com/libp2p/go-libp2p/core/network"
 	ma "github.com/multiformats/go-multiaddr"
 	"time"

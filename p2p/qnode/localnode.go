@@ -14,9 +14,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/p2p/netutil"
-	"github.com/Qitmeer/qng/p2p/qnr"
+	"github.com/Qitmeer/qng/v2/log"
+	"github.com/Qitmeer/qng/v2/p2p/netutil"
+	"github.com/Qitmeer/qng/v2/p2p/qnr"
 )
 
 const (

@@ -5,14 +5,14 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	qcommon "github.com/Qitmeer/qng/services/common"
+	qcommon "github.com/Qitmeer/qng/v2/services/common"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"os"
 	"strings"
 
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/meerevm/eth"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/meerevm/eth"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"

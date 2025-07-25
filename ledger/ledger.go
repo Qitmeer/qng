@@ -3,8 +3,8 @@ package ledger
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/core/protocol"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 type LedgerParams struct {

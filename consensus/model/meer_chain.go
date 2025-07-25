@@ -1,10 +1,10 @@
 package model
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/model/meer"
-	"github.com/Qitmeer/qng/node/service"
-	"github.com/Qitmeer/qng/rpc/api"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/model/meer"
+	"github.com/Qitmeer/qng/v2/node/service"
+	"github.com/Qitmeer/qng/v2/rpc/api"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"

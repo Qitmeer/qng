@@ -3,7 +3,7 @@ package x8r16_test
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/crypto/x8r16"
+	"github.com/Qitmeer/qng/v2/crypto/x8r16"
 )
 
 func ExampleNew() {

@@ -1,8 +1,8 @@
 package ghostdag
 
 import (
-	"github.com/Qitmeer/qng/consensus/engine/pow"
-	"github.com/Qitmeer/qng/meerdag/ghostdag/model"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/meerdag/ghostdag/model"
 )
 
 // blockHeader

@@ -30,7 +30,7 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/Qitmeer/qng/crypto/ecc/ed25519/internal/edwards25519"
+	"github.com/Qitmeer/qng/v2/crypto/ecc/ed25519/internal/edwards25519"
 )
 
 const (

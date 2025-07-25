@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/Qitmeer/qng/cmd/crawler/config"
-	"github.com/Qitmeer/qng/cmd/crawler/log"
-	"github.com/Qitmeer/qng/cmd/crawler/node"
-	"github.com/Qitmeer/qng/common/roughtime"
-	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
-	_ "github.com/Qitmeer/qng/services/common"
+	"github.com/Qitmeer/qng/v2/cmd/crawler/config"
+	"github.com/Qitmeer/qng/v2/cmd/crawler/log"
+	"github.com/Qitmeer/qng/v2/cmd/crawler/node"
+	"github.com/Qitmeer/qng/v2/common/roughtime"
+	_ "github.com/Qitmeer/qng/v2/database/legacydb/ffldb"
+	_ "github.com/Qitmeer/qng/v2/services/common"
 	"github.com/urfave/cli/v2"
 	"os"
 )

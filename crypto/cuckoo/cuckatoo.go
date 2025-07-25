@@ -4,7 +4,7 @@ package cuckoo
 import (
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/crypto/cuckoo/siphash"
+	"github.com/Qitmeer/qng/v2/crypto/cuckoo/siphash"
 	"log"
 )
 
@@ -18,7 +18,7 @@ func Sipnode(h *siphash.SipHash, edge, uorv uint64, shift bool, edgemask uint64)
 	return masked
 }
 
-//Verify cuckoo nonces.
+// Verify cuckoo nonces.
 func VerifyCuckatoo(sipkey []byte, nonces []uint32, edgeBits uint) error {
 	nedge := (1 << edgeBits)             //number of edges：
 	nnode := 2 * nedge                   //

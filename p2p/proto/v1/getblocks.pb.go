@@ -123,7 +123,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/Qitmeer/qng/p2p/proto/v1/getblocks.proto", fileDescriptor_12b400ce6655f4b2)
+	proto.RegisterFile("github.com/Qitmeer/qng/v2/p2p/proto/v1/getblocks.proto", fileDescriptor_12b400ce6655f4b2)
 }
 
 var fileDescriptor_12b400ce6655f4b2 = []byte{

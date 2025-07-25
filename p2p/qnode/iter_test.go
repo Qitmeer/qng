@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Qitmeer/qng/p2p/qnr"
+	"github.com/Qitmeer/qng/v2/p2p/qnr"
 )
 
 func TestReadNodes(t *testing.T) {

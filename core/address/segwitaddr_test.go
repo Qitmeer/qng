@@ -3,8 +3,8 @@ package address
 import (
 	"bytes"
 	"fmt"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/params"
 	"reflect"
 	"strings"
 	"testing"

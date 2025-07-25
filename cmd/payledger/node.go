@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/system"
-	"github.com/Qitmeer/qng/consensus"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/database"
-	"github.com/Qitmeer/qng/database/legacychaindb"
-	"github.com/Qitmeer/qng/database/legacydb"
-	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/meerdag"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/common/system"
+	"github.com/Qitmeer/qng/v2/consensus"
+	"github.com/Qitmeer/qng/v2/core/blockchain"
+	"github.com/Qitmeer/qng/v2/database"
+	"github.com/Qitmeer/qng/v2/database/legacychaindb"
+	"github.com/Qitmeer/qng/v2/database/legacydb"
+	"github.com/Qitmeer/qng/v2/log"
+	"github.com/Qitmeer/qng/v2/meerdag"
+	"github.com/Qitmeer/qng/v2/params"
 	"path"
 )
 

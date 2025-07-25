@@ -3,8 +3,8 @@
 package cmd
 
 import (
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/meerevm/meer"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/meerevm/meer"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/console"
 	"github.com/ethereum/go-ethereum/node"

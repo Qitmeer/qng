@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
 )
 
 // GenerateBlock will generate a number of blocks by the input number for

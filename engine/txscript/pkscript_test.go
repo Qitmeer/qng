@@ -2,7 +2,7 @@ package txscript
 
 import (
 	"bytes"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/core/types"
 	"testing"
 )
 

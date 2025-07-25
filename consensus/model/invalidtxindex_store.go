@@ -1,8 +1,8 @@
 package model
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 type InvalidTxIndexStore interface {
@@ -11,8 +11,8 @@ type InvalidTxIndexStore interface {
 	StageTip(stagingArea *StagingArea, bhash *hash.Hash, order uint64)
 	IsStaged(stagingArea *StagingArea) bool
 	Get(stagingArea *StagingArea, txid *hash.Hash) (*types.Transaction, error)
-	GetIdByHash(stagingArea *StagingArea,h *hash.Hash) (*hash.Hash, error)
-	Delete(stagingArea *StagingArea, bid uint64,block *types.SerializedBlock)
+	GetIdByHash(stagingArea *StagingArea, h *hash.Hash) (*hash.Hash, error)
+	Delete(stagingArea *StagingArea, bid uint64, block *types.SerializedBlock)
 	Tip(stagingArea *StagingArea) (uint64, *hash.Hash, error)
 	IsEmpty() bool
 	Clean() error

@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/Qitmeer/qng/common/encode/bech32"
+	"github.com/Qitmeer/qng/v2/common/encode/bech32"
 )
 
 // This example demonstrates how to decode a bech32 encoded string.

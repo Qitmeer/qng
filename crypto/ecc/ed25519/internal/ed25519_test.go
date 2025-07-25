@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Qitmeer/qng/crypto/ecc/ed25519/internal/edwards25519"
+	"github.com/Qitmeer/qng/v2/crypto/ecc/ed25519/internal/edwards25519"
 )
 
 type zeroReader struct{}

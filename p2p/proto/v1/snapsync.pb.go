@@ -355,7 +355,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/Qitmeer/qng/p2p/proto/v1/snapsync.proto", fileDescriptor_55d540c020d195f7)
+	proto.RegisterFile("github.com/Qitmeer/qng/v2/p2p/proto/v1/snapsync.proto", fileDescriptor_55d540c020d195f7)
 }
 
 var fileDescriptor_55d540c020d195f7 = []byte{

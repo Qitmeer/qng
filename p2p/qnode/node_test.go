@@ -12,8 +12,8 @@ import (
 	"testing"
 	"testing/quick"
 
-	"github.com/Qitmeer/qng/common/encode/rlp"
-	"github.com/Qitmeer/qng/p2p/qnr"
+	"github.com/Qitmeer/qng/v2/common/encode/rlp"
+	"github.com/Qitmeer/qng/v2/p2p/qnr"
 	"github.com/stretchr/testify/assert"
 )
 

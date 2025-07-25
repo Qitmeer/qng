@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/database/chaindb"
-	"github.com/Qitmeer/qng/database/rawdb"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/database/chaindb"
+	"github.com/Qitmeer/qng/v2/database/rawdb"
 	"github.com/urfave/cli/v2"
 )
 

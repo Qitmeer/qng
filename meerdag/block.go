@@ -2,9 +2,9 @@ package meerdag
 
 import (
 	"bytes"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/model"
-	s "github.com/Qitmeer/qng/core/serialization"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	s "github.com/Qitmeer/qng/v2/core/serialization"
 	"io"
 )
 

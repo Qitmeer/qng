@@ -3,15 +3,15 @@ package consensus
 import (
 	"sync"
 
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/core/event"
-	"github.com/Qitmeer/qng/engine/txscript"
-	"github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/index"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/core/blockchain"
+	"github.com/Qitmeer/qng/v2/core/event"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
+	"github.com/Qitmeer/qng/v2/log"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/services/index"
 )
 
 type consensus struct {

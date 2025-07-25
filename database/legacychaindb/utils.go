@@ -2,9 +2,9 @@ package legacychaindb
 
 import (
 	"encoding/binary"
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/database/legacydb"
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/database/legacydb"
+	"github.com/Qitmeer/qng/v2/params"
 	"os"
 	"path/filepath"
 )

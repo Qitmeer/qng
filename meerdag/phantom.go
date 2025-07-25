@@ -3,11 +3,11 @@ package meerdag
 import (
 	"container/list"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/common/math"
-	s "github.com/Qitmeer/qng/core/serialization"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/meerdag/anticone"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/common/math"
+	s "github.com/Qitmeer/qng/v2/core/serialization"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/meerdag/anticone"
 	"io"
 )
 

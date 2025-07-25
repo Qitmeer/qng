@@ -1,7 +1,7 @@
 package meerchange
 
 import (
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/params"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"

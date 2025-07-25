@@ -6,8 +6,8 @@ package qx
 import (
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
 	"math/big"
 	"strconv"
 	"strings"

@@ -2,14 +2,14 @@ package database
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/common/util"
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/shutdown"
-	"github.com/Qitmeer/qng/database/chaindb"
-	"github.com/Qitmeer/qng/database/legacychaindb"
-	_ "github.com/Qitmeer/qng/database/legacydb/ffldb"
-	"github.com/Qitmeer/qng/meerevm/meer"
+	"github.com/Qitmeer/qng/v2/common/util"
+	"github.com/Qitmeer/qng/v2/config"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/core/shutdown"
+	"github.com/Qitmeer/qng/v2/database/chaindb"
+	"github.com/Qitmeer/qng/v2/database/legacychaindb"
+	_ "github.com/Qitmeer/qng/v2/database/legacydb/ffldb"
+	"github.com/Qitmeer/qng/v2/meerevm/meer"
 	"os"
 )
 

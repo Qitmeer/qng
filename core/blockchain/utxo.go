@@ -2,12 +2,12 @@
 package blockchain
 
 import (
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/core/blockchain/utxo"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/database/common"
-	"github.com/Qitmeer/qng/database/legacydb"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/core/blockchain/utxo"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/database/common"
+	"github.com/Qitmeer/qng/v2/database/legacydb"
+	"github.com/Qitmeer/qng/v2/meerdag"
 )
 
 func (bc *BlockChain) IsInvalidOut(entry *utxo.UtxoEntry) bool {

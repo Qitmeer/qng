@@ -6,9 +6,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/Qitmeer/qng/params"
-	ver "github.com/Qitmeer/qng/version"
-	"github.com/Qitmeer/qng/common/encode/base58"
+	"github.com/Qitmeer/qng/v2/common/encode/base58"
+	"github.com/Qitmeer/qng/v2/params"
+	ver "github.com/Qitmeer/qng/v2/version"
 	"math/rand"
 	"os"
 	"strings"
@@ -25,7 +25,6 @@ const defaultNetwork string = "testnet"
 // Note: The template need to be long enough to remain the strong security.
 // (recommend at least 16 words)
 // See https://en.bitcoin.it/wiki/Vanitygen for the details
-//
 func main() {
 	var template string
 	var network string

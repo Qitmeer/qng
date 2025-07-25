@@ -2,9 +2,9 @@ package address
 
 import (
 	"encoding/hex"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/services/common"
-	"github.com/Qitmeer/qng/testutils/testprivatekey"
+	"github.com/Qitmeer/qng/v2/params"
+	"github.com/Qitmeer/qng/v2/services/common"
+	"github.com/Qitmeer/qng/v2/testutils/testprivatekey"
 	"testing"
 )
 

@@ -7,9 +7,9 @@ package synch
 import (
 	"bufio"
 	"fmt"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/p2p/common"
-	"github.com/Qitmeer/qng/p2p/peers"
+	"github.com/Qitmeer/qng/v2/core/protocol"
+	"github.com/Qitmeer/qng/v2/p2p/common"
+	"github.com/Qitmeer/qng/v2/p2p/peers"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/multiformats/go-multistream"
 	"net"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Qitmeer/qng/graph/llamago/internal/llamagoclient"
+	"github.com/Qitmeer/qng/v2/graph/llamago/internal/llamagoclient"
 	"github.com/tmc/langchaingo/callbacks"
 	"github.com/tmc/langchaingo/llms"
 )

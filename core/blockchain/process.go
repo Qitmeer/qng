@@ -11,15 +11,15 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"time"
 
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/consensus/engine/pow"
-	"github.com/Qitmeer/qng/consensus/model"
-	"github.com/Qitmeer/qng/core/blockchain/utxo"
-	"github.com/Qitmeer/qng/core/state"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/engine/txscript"
-	l "github.com/Qitmeer/qng/log"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/consensus/engine/pow"
+	"github.com/Qitmeer/qng/v2/consensus/model"
+	"github.com/Qitmeer/qng/v2/core/blockchain/utxo"
+	"github.com/Qitmeer/qng/v2/core/state"
+	"github.com/Qitmeer/qng/v2/core/types"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
+	l "github.com/Qitmeer/qng/v2/log"
+	"github.com/Qitmeer/qng/v2/meerdag"
 )
 
 // ProcessBlock is the main workhorse for handling insertion of new blocks into

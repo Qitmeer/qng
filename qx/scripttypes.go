@@ -3,7 +3,7 @@ package qx
 import (
 	"encoding/hex"
 	"encoding/json"
-	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/v2/engine/txscript"
 )
 
 const (

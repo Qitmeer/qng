@@ -12,9 +12,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/Qitmeer/qng/common/math"
-	"github.com/Qitmeer/qng/crypto"
-	"github.com/Qitmeer/qng/p2p/qnode"
+	"github.com/Qitmeer/qng/v2/common/math"
+	"github.com/Qitmeer/qng/v2/crypto"
+	"github.com/Qitmeer/qng/v2/p2p/qnode"
 )
 
 // node represents a host on the network.

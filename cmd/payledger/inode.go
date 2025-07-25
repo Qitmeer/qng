@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/Qitmeer/qng/core/blockchain"
-	"github.com/Qitmeer/qng/database/legacydb"
+	"github.com/Qitmeer/qng/v2/core/blockchain"
+	"github.com/Qitmeer/qng/v2/database/legacydb"
 )
 
 type INode interface {

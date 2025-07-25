@@ -7,8 +7,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/Qitmeer/qng/cmd/miner/common"
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/cmd/miner/common"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 const SYMBOL_PMEER = "MEER"

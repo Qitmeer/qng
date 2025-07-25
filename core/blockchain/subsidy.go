@@ -9,11 +9,11 @@
 package blockchain
 
 import (
-	"github.com/Qitmeer/qng/consensus/forks"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/v2/consensus/forks"
+	"github.com/Qitmeer/qng/v2/meerdag"
 	"sync"
 
-	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/v2/params"
 )
 
 // The number of values to precalculate on initialization of the subsidy

@@ -2,11 +2,11 @@ package rawdb
 
 import (
 	"bytes"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/meerdag"
+	"github.com/Qitmeer/qng/v2/common/hash"
+	"github.com/Qitmeer/qng/v2/meerdag"
 	"github.com/ethereum/go-ethereum/ethdb"
 
-	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/v2/core/types"
 )
 
 func ReadBodyRaw(db ethdb.Reader, hash *hash.Hash) []byte {

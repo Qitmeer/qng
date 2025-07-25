@@ -2,7 +2,7 @@ package meerdag
 
 import (
 	"bytes"
-	s "github.com/Qitmeer/qng/core/serialization"
+	s "github.com/Qitmeer/qng/v2/core/serialization"
 	"io"
 )
 
