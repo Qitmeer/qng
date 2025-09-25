@@ -196,5 +196,12 @@ or
 #### How to be compatible with below 2.0.1 versions of testnet amana blockchain ?
 
 ```
-~ ./build/bin/qng --amana --amanagen="./meerevm/amana/testnet_2.0.1.json"
+~ ./qng --amana --amanagen="./meerevm/amana/testnet_2.0.1.json"
 ```
+
+#### How to enable MCP service
+
+```
+~ ./qng --mcp
+```
+* Default MCP server URL: <QNG-RPC-URL>/mcp/sse

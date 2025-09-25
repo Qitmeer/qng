@@ -3,6 +3,7 @@ package node
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qng/services/mcp"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -152,6 +153,18 @@ func (qm *QitmeerFull) RegisterWalletService(cfg *config.Config) error {
 		return err
 	}
 	qm.Services().RegisterService(walletmgr)
+	return nil
+}
+
+func (qm *QitmeerFull) RegisterMCPService(cfg *config.Config) error {
+	if !cfg.MCP {
+		return nil
+	}
+	mcps, err := mcp.New(cfg, qm.GetRpcServer())
+	if err != nil {
+		return err
+	}
+	qm.Services().RegisterService(mcps)
 	return nil
 }
 
@@ -317,6 +330,10 @@ func newQitmeerFullNode(node *Node) (*QitmeerFull, error) {
 
 		qm.nfManager.(*notifymgr.NotifyMgr).RpcServer = qm.GetRpcServer()
 		qm.GetMiner().RpcSer = qm.GetRpcServer()
+	}
+
+	if err := qm.RegisterMCPService(cfg); err != nil {
+		return nil, err
 	}
 
 	qm.Services().LowestPriority(qm.GetBlockChain())

@@ -43,6 +43,7 @@ const (
 	defaultGBTTimeout             = 800 // default gbt timeout 800 ms
 	defaultSnapTimeout            = 300
 	defaultPowDiffMode            = -1
+	defaultMCP                    = false
 )
 const (
 	defaultSigCacheMaxSize = 100000
@@ -664,6 +665,12 @@ var (
 			Usage:       "Hash of the block to full sync to (dev testing feature)",
 			Destination: &cfg.SyncTarget,
 		},
+		&cli.BoolFlag{
+			Name:        "mcp",
+			Usage:       "Enable MCP service",
+			Value:       defaultMCP,
+			Destination: &cfg.MCP,
+		},
 	}
 )
 
@@ -703,6 +710,7 @@ func DefaultConfig(homeDir string) *config.Config {
 		NoSnapSyncPeerTimeout: defaultSnapTimeout,
 		PowDiffMode:           defaultPowDiffMode,
 		TranferTxLegacyMode:   true,
+		MCP:                   defaultMCP,
 	}
 	if len(homeDir) > 0 {
 		hd, err := filepath.Abs(homeDir)

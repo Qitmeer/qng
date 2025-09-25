@@ -52,7 +52,9 @@ type RpcServer struct {
 	BC          *blockchain.BlockChain
 	ChainParams *params.Params
 	listeners   []net.Listener
-	consensus model.Consensus
+	consensus   model.Consensus
+
+	expandHandlers map[string]http.Handler
 }
 
 // service represents a registered object
@@ -106,8 +108,8 @@ type serverRequest struct {
 // newRPCServer returns a new instance of the rpcServer struct.
 func NewRPCServer(cfg *config.Config, consensus model.Consensus) (*RpcServer, error) {
 	rpc := RpcServer{
-		consensus: consensus,
-		config: cfg,
+		consensus:      consensus,
+		config:         cfg,
 		rpcSvcRegistry: make(serviceRegistry),
 		codecs:         mapset.NewSet(),
 
@@ -115,6 +117,7 @@ func NewRPCServer(cfg *config.Config, consensus model.Consensus) (*RpcServer, er
 		requestProcessShutdown: make(chan struct{}),
 		quit:                   make(chan int),
 		ReqStatus:              map[string]*RequestStatus{},
+		expandHandlers:         map[string]http.Handler{},
 	}
 
 	if cfg.RPCUser != "" && cfg.RPCPass != "" {
@@ -232,6 +235,14 @@ func (s *RpcServer) startHTTP(listenAddrs []string) error {
 		}
 		s.WebsocketHandler(ws, r.RemoteAddr, isAdmin)
 	})
+
+	// Expand handlers
+	if len(s.expandHandlers) > 0 {
+		for pattern, handler := range s.expandHandlers {
+			hd := handler
+			rpcServeMux.Handle(pattern, hd)
+		}
+	}
 
 	listeners, err := parseListeners(s.config, listenAddrs)
 	if err != nil {
@@ -744,4 +755,11 @@ func (s *RpcServer) RemoveRequstStatus(sReq *serverRequest) {
 	} else {
 		rs.RemoveRequst(sReq)
 	}
+}
+
+func (s *RpcServer) RegisterHandler(pattern string, handler http.Handler) {
+	if _, ok := s.expandHandlers[pattern]; ok {
+		return
+	}
+	s.expandHandlers[pattern] = handler
 }

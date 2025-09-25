@@ -152,6 +152,9 @@ type Config struct {
 	TranferTxLegacyMode bool `long:"tranfertxlegacymode" description:"Support transaction transmission mode compatible with older versions before the snapsync P2P"`
 
 	miningAddr types.Address
+
+	// MCP Service
+	MCP bool `long:"mcp" description:"Enable MCP service"`
 }
 
 func (c *Config) GetMinningAddr() types.Address {
