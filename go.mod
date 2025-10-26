@@ -5,21 +5,21 @@ go 1.24.0
 require (
 	github.com/Qitmeer/crypto v0.0.0-20201028030128-6ed4040ca34a
 	github.com/Qitmeer/crypto/cryptonight v0.0.0-20201028030128-6ed4040ca34a
-	github.com/VictoriaMetrics/fastcache v1.12.2
+	github.com/VictoriaMetrics/fastcache v1.13.0
 	github.com/aristanetworks/goarista v0.0.0-20220314170124-2797d9e951fe
 	github.com/cockroachdb/pebble v1.1.5
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dchest/blake256 v1.1.0
 	github.com/deckarep/golang-set v1.8.0
 	github.com/dgraph-io/ristretto v0.0.2
-	github.com/ethereum/go-ethereum v1.16.3
+	github.com/ethereum/go-ethereum v1.16.5
 	github.com/ferranbt/fastssz v0.1.4
 	github.com/go-stack/stack v1.8.1
 	github.com/gofrs/flock v0.12.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
 	github.com/golang/protobuf v1.5.4
-	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
+	github.com/golang/snappy v1.0.0
 	github.com/google/gops v0.3.25
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/golang-lru v1.0.2
@@ -55,7 +55,7 @@ require (
 	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa
 	golang.org/x/net v0.38.0
 	golang.org/x/sync v0.12.0
-	golang.org/x/sys v0.31.0
+	golang.org/x/sys v0.36.0
 	golang.org/x/tools v0.30.0
 	gonum.org/v1/gonum v0.15.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -82,7 +82,7 @@ require (
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
-	github.com/crate-crypto/go-eth-kzg v1.3.0 // indirect
+	github.com/crate-crypto/go-eth-kzg v1.4.0 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240724233137-53bbb0ceb27a // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/dchest/siphash v1.2.3 // indirect
@@ -94,7 +94,8 @@ require (
 	github.com/dop251/goja v0.0.0-20230806174421-c933cf95e127 // indirect
 	github.com/elastic/gosigar v0.14.3 // indirect
 	github.com/emicklei/dot v1.6.2 // indirect
-	github.com/ethereum/c-kzg-4844/v2 v2.1.0 // indirect
+	github.com/ethereum/c-kzg-4844/v2 v2.1.3 // indirect
+	github.com/ethereum/go-bigmodexpfix v0.0.0-20250911101455-f9e208c548ab // indirect
 	github.com/ethereum/go-verkle v0.2.2 // indirect
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/flynn/noise v1.1.0 // indirect
@@ -119,7 +120,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.7 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/holiman/billy v0.0.0-20240216141850-2abb0c79d3c4 // indirect
+	github.com/holiman/billy v0.0.0-20250707135307-f2f9b9aae7db // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/influxdata/influxdb-client-go/v2 v2.4.0 // indirect
@@ -215,7 +216,7 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/status-im/keycard-go v0.2.0 // indirect
-	github.com/supranational/blst v0.3.14 // indirect
+	github.com/supranational/blst v0.3.16-0.20250831170142-f48500c1fdbe // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
@@ -241,7 +242,7 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/ethereum/go-ethereum v1.16.3 => github.com/Qitmeer/go-ethereum v1.16.3-q.0
+replace github.com/ethereum/go-ethereum v1.16.5 => github.com/Qitmeer/go-ethereum v1.16.5-q.1
 
 replace github.com/karalabe/usb v0.0.2 => github.com/dindinw/karalabe-usb v0.0.0-20230613095851-cd69a62c9c30
 

@@ -194,7 +194,7 @@ func MakePreState(db ethdb.Database, accounts types.GenesisAlloc) *state.StateDB
 	sdb := state.NewDatabase(tdb, nil)
 	statedb, _ := state.New(types.EmptyRootHash, sdb)
 	for addr, a := range accounts {
-		statedb.SetCode(addr, a.Code)
+		statedb.SetCode(addr, a.Code, tracing.CodeChangeGenesis)
 		statedb.SetNonce(addr, a.Nonce, tracing.NonceChangeGenesis)
 		statedb.SetBalance(addr, uint256.MustFromBig(a.Balance), tracing.BalanceIncreaseGenesisBalance)
 		for k, v := range a.Storage {
@@ -309,7 +309,7 @@ func TransactionToMessage(tx *types.Transaction, from common.Address, baseFee *b
 		AccessList:            tx.AccessList(),
 		SetCodeAuthorizations: tx.SetCodeAuthorizations(),
 		SkipNonceChecks:       false,
-		SkipFromEOACheck:      false,
+		SkipTransactionChecks: false,
 		BlobHashes:            tx.BlobHashes(),
 		BlobGasFeeCap:         tx.BlobGasFeeCap(),
 	}
