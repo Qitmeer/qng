@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/cockroachdb/pebble"
-	"golang.org/x/sync/errgroup"
 	"maps"
 	"os"
 	"path/filepath"
@@ -15,6 +13,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/Qitmeer/qng/common/util"
+	"github.com/cockroachdb/pebble"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -158,7 +160,7 @@ func resolveChainFreezerDir(ancient string) string {
 	// - chain freezer exists in legacy location (root ancient folder)
 	freezer := filepath.Join(ancient, ChainFreezerName)
 	if !common.FileExist(freezer) {
-		if !common.FileExist(ancient) {
+		if !common.FileExist(ancient) || !util.IsNonEmptyDir(ancient) {
 			// The entire ancient store is not initialized, still use the sub
 			// folder for initialization.
 		} else {

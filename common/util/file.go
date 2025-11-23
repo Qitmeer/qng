@@ -43,3 +43,14 @@ func GetPathByBrother(name string, brother string) (string, error) {
 	}
 	return filepath.Join(retPathAbs, name), nil
 }
+
+// IsNonEmptyDir checks if a directory exists and is non-empty.
+func IsNonEmptyDir(dir string) bool {
+	f, err := os.Open(dir)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	names, _ := f.Readdirnames(1)
+	return len(names) > 0
+}
