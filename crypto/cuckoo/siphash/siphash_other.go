@@ -1,4 +1,4 @@
-//+build !amd64
+//go:build !amd64
 
 // Copyright (c) 2019 Aidos Developer
 

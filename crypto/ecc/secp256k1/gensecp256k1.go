@@ -5,7 +5,7 @@
 
 // This file is ignored during the regular build due to the following build tag.
 // This build tag is set during go generate.
-// +build gensecp256k1
+//go:build gensecp256k1
 
 package secp256k1
 

@@ -1,4 +1,4 @@
-// +build !darwin,!freebsd,!netbsd,!openbsd,!linux
+//go:build !darwin && !freebsd && !netbsd && !openbsd && !linux
 
 package flags
 

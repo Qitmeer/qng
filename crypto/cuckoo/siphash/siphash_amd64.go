@@ -1,4 +1,4 @@
-//+build amd64  !noasm !appengine
+//go:build amd64 || !noasm || !appengine
 
 // Copyright (c) 2019 Aidos Developer
 
