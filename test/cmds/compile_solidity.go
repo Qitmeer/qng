@@ -1,5 +1,4 @@
 //go:build none
-// +build none
 
 // Copyright (c) 2020 The qitmeer developers
 // Use of this source code is governed by an ISC

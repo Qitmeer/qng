@@ -1,4 +1,4 @@
-// +build zmq
+//go:build zmq
 
 package zmq
 

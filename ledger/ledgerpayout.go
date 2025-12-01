@@ -2,7 +2,6 @@
 // It is called by go generate and used to automatically generate pre-computed
 // tables used to accelerate operations.
 //go:build ignore
-// +build ignore
 
 package main
 

@@ -17,7 +17,6 @@
 // TODO: naive stub implementation for tablewriter
 
 //go:build tinygo
-// +build tinygo
 
 package rawdb
 
