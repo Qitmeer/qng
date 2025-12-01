@@ -20,6 +20,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"strconv"
 	"time"
 )
 
@@ -111,7 +112,7 @@ func metaDataFromConfig(cfg *common.Config) (*pb.MetaData, error) {
 // Attempt to dial an address to verify its connectivity
 func verifyConnectivity(addr string, port uint, protocol string) (interface{}, error) {
 	if addr != "" && len(protocol) > 0 {
-		a := fmt.Sprintf("%s:%d", addr, port)
+		a := net.JoinHostPort(addr, strconv.FormatUint(uint64(port), 10))
 		conn, err := net.DialTimeout(protocol, a, dialTimeout)
 		if err != nil {
 			log.Warn(fmt.Sprintf("IP address is not accessible:protocol=%s address=%s error=%s", protocol, a, err))
