@@ -127,6 +127,10 @@ func (mn *MockNode) Start(cfg *config.Config) error {
 }
 
 func (mn *MockNode) Stop() {
+	// Close EVM client first
+	if mn.evmClient != nil {
+		mn.evmClient.Close()
+	}
 	if log.LogWrite() != nil {
 		log.LogWrite().Close()
 	}
@@ -135,12 +139,28 @@ func (mn *MockNode) Stop() {
 		if err != nil {
 			log.Error(err.Error())
 		}
+		time.Sleep(200 * time.Millisecond)
 	}
-	// remove temp dir
-	log.Info("Try remove home dir", "path", mn.n.Config.HomeDir)
-	err := os.RemoveAll(mn.n.Config.HomeDir)
-	if err != nil {
-		log.Error(err.Error())
+	homeDir := ""
+	if mn.n != nil && mn.n.Config != nil {
+		homeDir = mn.n.Config.HomeDir
+	}
+	if homeDir != "" {
+		log.Info("Try remove home dir", "path", homeDir)
+		var lastErr error
+		for i := 0; i < 3; i++ {
+			if err := os.RemoveAll(homeDir); err == nil {
+				lastErr = nil
+				break
+			} else {
+				lastErr = err
+				log.Error("remove home dir failed, retrying", "err", err, "attempt", i)
+				time.Sleep(100 * time.Millisecond)
+			}
+		}
+		if lastErr != nil {
+			log.Error("failed to remove home dir after retries", "err", lastErr)
+		}
 	}
 }
 
