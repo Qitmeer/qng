@@ -28,13 +28,17 @@ import (
 func TestSwap(t *testing.T) {
 	h, err := testutils.StartMockNode(nil)
 	if err != nil {
-		t.Error(err)
-	}
-	defer h.Stop()
-
-	if err != nil {
 		t.Fatalf("setup harness failed:%v", err)
 	}
+	// ensure EVM client is closed before stopping the node so RPC goroutines
+	// are not racing with node shutdown and directory removal.
+	defer func() {
+		if ec := h.GetEvmClient(); ec != nil {
+			ec.Close()
+		}
+		h.Stop()
+	}()
+
 	testutils.GenerateBlocks(t, h, 1)
 	testutils.AssertBlockOrderHeightTotal(t, h, 2, 2, 1)
 
