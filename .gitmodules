@@ -4,3 +4,6 @@
 [submodule "meerevm/contracts/meerchange"]
 	path = meerevm/contracts/meerchange
 	url = https://github.com/Qitmeer/meerchange.git
+[submodule "cmd/llamago"]
+	path = cmd/llamago
+	url = https://github.com/Qitmeer/llama.go.git
