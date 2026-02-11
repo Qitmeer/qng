@@ -85,7 +85,7 @@ relay:
 	@go build -o $(GOBIN)/relaynode $(GOFLAGS_DEV) "github.com/Qitmeer/qng/cmd/relaynode"
 
 llamago:
-	@if [ ! -d "cmd/llamago" ]; then \
+	@if [ ! -e "cmd/llamago/Makefile" ]; then \
 		echo "cmd/llamago directory not found, initializing git submodules..."; \
 		git submodule update --init --recursive; \
 	fi
