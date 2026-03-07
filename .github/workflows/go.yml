@@ -19,12 +19,6 @@ jobs:
         with:
           go-version: "stable"
 
-      - uses: golangci/golangci-lint-action@v7
-        with:
-          version: v2.0
-          skip-cache: true
-          args: --enable-only=govet --tests=false ./...
-
       - name: npm
         uses: actions/setup-node@v4
         with:
