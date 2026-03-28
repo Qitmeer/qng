@@ -191,12 +191,12 @@ or
 #### How to configure a custom amana blockchain
 
 ```
-~ ./qng --amana --amanagen="./custom_amana.json"
+~ ./qng --amana --evmgen="./custom_amana.json"
 ```
 #### How to be compatible with below 2.0.1 versions of testnet amana blockchain ?
 
 ```
-~ ./qng --amana --amanagen="./meerevm/amana/testnet_2.0.1.json"
+~ ./qng --amana --evmgen="./meerevm/amana/testnet_2.0.1.json"
 ```
 
 #### How to enable MCP service
