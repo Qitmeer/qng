@@ -671,6 +671,11 @@ var (
 			Value:       defaultMCP,
 			Destination: &cfg.MCP,
 		},
+		&cli.StringFlag{
+			Name:        "genesis",
+			Usage:       "Dynamic params configuration by custom genesis json file",
+			Destination: &cfg.Genesis,
+		},
 	}
 )
 

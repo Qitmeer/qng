@@ -2,6 +2,12 @@ package meer
 
 import (
 	"encoding/json"
+	"errors"
+	"math/big"
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/protocol"
@@ -20,10 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
-	"math/big"
-	"os"
-	"path/filepath"
-	"time"
 )
 
 var (
@@ -36,7 +38,9 @@ var (
 func MakeConfig(cfg *config.Config) (*eth.Config, error) {
 	datadir := cfg.DataDir
 	genesis := CurrentGenesis(cfg.EVMGenesis)
-
+	if genesis == nil {
+		return nil, errors.New("no genesis config")
+	}
 	econfig := ethconfig.Defaults
 
 	econfig.NetworkId = genesis.Config.ChainID.Uint64()
@@ -177,5 +181,5 @@ func CurrentGenesis(filePath string) *core.Genesis {
 		}
 		return genesis
 	}
-	return Genesis(qparams.ActiveNetParams.Params, nil)
+	return Genesis(qparams.ActiveNetParams.Params, qparams.ActiveNetParams.Params.MeerAlloc)
 }

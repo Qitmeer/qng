@@ -8,11 +8,13 @@ package params
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/Qitmeer/qng/consensus/engine/config"
-	eparams "github.com/ethereum/go-ethereum/params"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/Qitmeer/qng/consensus/engine/config"
+	etypes "github.com/ethereum/go-ethereum/core/types"
+	eparams "github.com/ethereum/go-ethereum/params"
 
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/consensus/engine/pow"
@@ -213,6 +215,7 @@ type Params struct {
 
 	// evm
 	MeerConfig *eparams.ChainConfig
+	MeerAlloc  etypes.GenesisAlloc
 
 	MeerEVMForkBlock    *big.Int // MeerEVM is enabled  and new subsidy calculation
 	MeerUTXOForkBlock   *big.Int // What main height can transfer the locked utxo in genesis to MeerEVM, Must after MeerEVMForkMainHeight
