@@ -188,6 +188,15 @@ or
 ~ ./qng --testnet blockchain upgrade --aidmode
 ```
 
+### How to enable MCP service
+
+```
+~ ./qng --mcp
+```
+* Default MCP server URL: <QNG-RPC-URL>/mcp/sse
+
+### Amana (PoA) network
+
 #### How to configure a custom amana blockchain
 
 ```
@@ -252,9 +261,4 @@ echo "<your_keystore_password>" > ./password.txt
 ```
 
 
-#### How to enable MCP service
 
-```
-~ ./qng --mcp
-```
-* Default MCP server URL: <QNG-RPC-URL>/mcp/sse
