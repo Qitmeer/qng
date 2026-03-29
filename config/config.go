@@ -115,8 +115,7 @@ type Config struct {
 	Consistency    bool     `long:"consistency" description:"Detect data consistency through P2P"`
 
 	// evm environment
-	EVMEnv     string `long:"evmenv" description:"meer EVM environment"`
-	EVMGenesis string `long:"evmgen" description:"EVM custom genesis file"`
+	EVMEnv string `long:"evmenv" description:"meer EVM environment"`
 
 	Estimatefee bool `long:"estimatefee" description:"Enable estimate fee"`
 

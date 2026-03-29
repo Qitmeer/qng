@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/Qitmeer/qng/consensus/engine/config"
-	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core"
 	eparams "github.com/ethereum/go-ethereum/params"
 
 	"github.com/Qitmeer/qng/common/hash"
@@ -214,8 +214,8 @@ type Params struct {
 	CoinbaseConfig CoinbaseConfigs
 
 	// evm
-	MeerConfig *eparams.ChainConfig
-	MeerAlloc  etypes.GenesisAlloc
+	MeerConfig  *eparams.ChainConfig
+	MeerGenesis *core.Genesis
 
 	MeerEVMForkBlock    *big.Int // MeerEVM is enabled  and new subsidy calculation
 	MeerUTXOForkBlock   *big.Int // What main height can transfer the locked utxo in genesis to MeerEVM, Must after MeerEVMForkMainHeight

@@ -549,11 +549,6 @@ var (
 			Value:       defaultMinBlockDataCache,
 			Destination: &cfg.BlockDataCacheSize,
 		},
-		&cli.StringFlag{
-			Name:        "evmgen",
-			Usage:       "Custom EVM genesis",
-			Destination: &cfg.EVMGenesis,
-		},
 		&cli.BoolFlag{
 			Name:        "consistency",
 			Usage:       "Detect data consistency through P2P",
