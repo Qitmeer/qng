@@ -221,11 +221,12 @@ Note:
 
 ##### 2. create the keystore file using the prv.key
 
+```
 % ethkey generate --privatekey=prv.key
 Password:
 Repeat password:
 Address: 0xb8676De65f496FE79306b917ba475c9989F318C0
-
+```
 
 ##### 3. verify the keyfile.json is matched
 
