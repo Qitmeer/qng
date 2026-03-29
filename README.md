@@ -194,6 +194,64 @@ or
 ~ ./qng --amananet --genesis="./custom_amana.json"
 ```
 
+#### How to run a custom amana (POA) network signer node
+
+Note:
+
+1. The guide requires the command-line utilities `qx` and `ethkey` (from the Go Ethereum project).
+2. In the <poa> consensus section (in the `custom_amana.json` file), make sure to replace the signer with the Ethereum address you created (e.g., `0xb86...0`).
+2.  The address you create must be different from `0xb86...0` and `AkAGe...9i`. Always use your own address.
+3.  You need to obtain the mining address in the QNG (Amana network) format. here we use the `qx` tool with your private key as pain-text input to generate it.  Warning: You are fully responsible for keeping your private key secure. Handle it with extreme care. This guide is intended for demonstration purposes only, not for production use. The way private keys are handled here is not secure by design.
+4.  A functional PoA network requires at least three nodes. This guide only provides a basic starting point.
+
+
+##### 1. create a new private key
+```
+% qx entropy|qx ec-new > prv.key
+```
+
+##### 2. create the keystore file using the prv.key
+
+% ethkey generate --privatekey=prv.key
+Password:
+Repeat password:
+Address: 0xb8676De65f496FE79306b917ba475c9989F318C0
+
+
+##### 3. verify the keyfile.json is matched
+
+```
+% ethkey inspect keyfile.json
+Password:
+Address:        0xb8676De65f496FE79306b917ba475c9989F318C0
+Public key:     04122db12f9d52d3df8cfc195b1bfd0ff49d737f30f1f1423270f451f8d957857a34613369b25a90d5b28d8145f5f0d4fa26888771de29b602c82ec7c184b21481
+
+% cat prv.key|qx ec-to-public|qx ec-to-ethaddr
+0xb8676De65f496FE79306b917ba475c9989F318C0
+
+% cat prv.key|qx ec-to-public -u
+04122db12f9d52d3df8cfc195b1bfd0ff49d737f30f1f1423270f451f8d957857a34613369b25a90d5b28d8145f5f0d4fa26888771de29b602c82ec7c184b21481
+
+```
+
+##### 4. get qng miningaddr
+
+```
+%cat prv.key|qx ec-to-public|qx ec-to-pkaddr -v amananet
+AkAGeNRBPBVQJ9Q2mtYVMcGBK9Fki9eGYFHu2XNoVbH7GydrsYC9i
+```
+
+##### 5. start qng
+
+```
+echo "<your_keystore_password>" > ./password.txt
+```
+
+```
+./qng --amananet -A . --generate --miner --miningaddr AkAGeNRBPBVQJ9Q2mtYVMcGBK9Fki9eGYFHu2XNoVbH7GydrsYC9i --genesis ./custom_amana.json --evmenv="--keystore . --unlock=0xb8676De65f496FE79306b917ba475c9989F318C0 --password=./password.txt"
+```
+
+
 #### How to enable MCP service
 
 ```
