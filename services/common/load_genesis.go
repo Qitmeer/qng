@@ -105,7 +105,7 @@ func applyCustomGenesis(cfg *config.Config) error {
 
 	// Consensus
 	// poa
-	if f.Consensus == nil {
+	if f.Consensus != nil {
 		poaCfg, ok := params.AmanaNetParams.ConsensusConfig.(*cfgengine.PoAConfig)
 		if !ok {
 			return fmt.Errorf("applyCustomGenesis: Amana consensus is not PoA")
