@@ -1,7 +1,11 @@
 package meer
 
 import (
-	"encoding/json"
+	"errors"
+	"math/big"
+	"path/filepath"
+	"time"
+
 	"github.com/Qitmeer/qng/config"
 	"github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/protocol"
@@ -20,10 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
-	"math/big"
-	"os"
-	"path/filepath"
-	"time"
 )
 
 var (
@@ -35,7 +35,10 @@ var (
 
 func MakeConfig(cfg *config.Config) (*eth.Config, error) {
 	datadir := cfg.DataDir
-	genesis := CurrentGenesis(cfg.EVMGenesis)
+	genesis := CurrentGenesis()
+	if genesis == nil {
+		return nil, errors.New("no genesis config")
+	}
 
 	econfig := ethconfig.Defaults
 
@@ -153,29 +156,19 @@ func Genesis(net *qparams.Params, alloc types.GenesisAlloc) *core.Genesis {
 	return gen
 }
 
-func CurrentGenesis(filePath string) *core.Genesis {
-	if len(filePath) > 0 {
-		file, err := os.Open(filePath)
-		if err != nil {
-			log.Error(err.Error())
-			return nil
+func CurrentGenesis() *core.Genesis {
+	if qparams.ActiveNetParams.MeerGenesis != nil {
+		gen := Genesis(qparams.ActiveNetParams.Params, types.GenesisAlloc{})
+		if len(qparams.ActiveNetParams.MeerGenesis.ExtraData) > 0 {
+			gen.ExtraData = qparams.ActiveNetParams.MeerGenesis.ExtraData
 		}
-		defer file.Close()
-
-		genesis := new(core.Genesis)
-		if err := json.NewDecoder(file).Decode(genesis); err != nil {
-			log.Error(err.Error())
-			return nil
+		if len(qparams.ActiveNetParams.MeerGenesis.Alloc) > 0 {
+			gen.Alloc = qparams.ActiveNetParams.MeerGenesis.Alloc
 		}
-		fileName := filepath.Base(filePath)
-		extension := filepath.Ext(filePath)
-		fileName = fileName[:len(fileName)-len(extension)]
-		err = params.AddMeerChainConfig(&params.MeerChainConfig{ChainID: genesis.Config.ChainID, Name: fileName, Type: params.Amana})
-		if err != nil {
-			log.Error(err.Error())
-			return nil
+		if qparams.ActiveNetParams.MeerGenesis.Config != nil {
+			gen.Config = qparams.ActiveNetParams.MeerGenesis.Config
 		}
-		return genesis
+		return gen
 	}
 	return Genesis(qparams.ActiveNetParams.Params, nil)
 }

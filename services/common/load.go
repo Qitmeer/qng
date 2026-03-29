@@ -6,13 +6,14 @@ package common
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/address"
 	"net"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/Qitmeer/qng/core/address"
 
 	"github.com/Qitmeer/qng/common/roughtime"
 	"github.com/Qitmeer/qng/common/util"
@@ -216,6 +217,11 @@ func SetupConfig(cfg *config.Config) error {
 	if cfg.AmanaNet {
 		numNets++
 		params.ActiveNetParams = &params.AmanaNetParam
+		if len(cfg.Genesis) > 0 {
+			if err := applyCustomGenesis(cfg); err != nil {
+				return err
+			}
+		}
 	}
 	// Multiple networks can't be selected simultaneously.
 	if numNets > 1 {

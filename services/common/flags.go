@@ -549,11 +549,6 @@ var (
 			Value:       defaultMinBlockDataCache,
 			Destination: &cfg.BlockDataCacheSize,
 		},
-		&cli.StringFlag{
-			Name:        "evmgen",
-			Usage:       "Custom EVM genesis",
-			Destination: &cfg.EVMGenesis,
-		},
 		&cli.BoolFlag{
 			Name:        "consistency",
 			Usage:       "Detect data consistency through P2P",
@@ -670,6 +665,11 @@ var (
 			Usage:       "Enable MCP service",
 			Value:       defaultMCP,
 			Destination: &cfg.MCP,
+		},
+		&cli.StringFlag{
+			Name:        "genesis",
+			Usage:       "Dynamic params configuration by custom genesis json file",
+			Destination: &cfg.Genesis,
 		},
 	}
 )

@@ -41,6 +41,7 @@ type Config struct {
 	TrackHeapLimit     int      `long:"trackheaplimit" description:"track heap when limit in gigabytes (default:7G)"`
 	DebugLevel         string   `short:"d" long:"debuglevel" description:"Logging level {trace, debug, info, warn, error, critical} "`
 	DebugPrintOrigins  bool     `long:"printorigin" description:"Print log debug location (file:line) "`
+	Genesis            string   `long:"genesis" description:"Dynamic params configuration by custom genesis json file"`
 
 	// MemPool Config
 	NoRelayPriority  bool    `long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
@@ -114,8 +115,7 @@ type Config struct {
 	Consistency    bool     `long:"consistency" description:"Detect data consistency through P2P"`
 
 	// evm environment
-	EVMEnv     string `long:"evmenv" description:"meer EVM environment"`
-	EVMGenesis string `long:"evmgen" description:"EVM custom genesis file"`
+	EVMEnv string `long:"evmenv" description:"meer EVM environment"`
 
 	Estimatefee bool `long:"estimatefee" description:"Enable estimate fee"`
 

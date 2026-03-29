@@ -1,0 +1,46 @@
+{
+  "name": "MyAmana",
+  "params": {
+    "target_time_per_block": 10,
+    "base_subsidy": 50000000000,
+    "coinbase_maturity": 16,
+    "timestamp": 1739265196
+  },
+  "consensus": {
+    "poa": {
+      "period": 10,
+      "epoch": 100,
+      "signers": [
+        "0x1111111111111111111111111111111111111111",
+        "0x2222222222222222222222222222222222222222"
+      ]
+    }
+  },
+  "evm": {
+    "config": {
+      "chainId": 81341,
+      "homesteadBlock": 0,
+      "daoForkBlock": 0,
+      "daoForkSupport": false,
+      "eip150Block": 0,
+      "eip155Block": 0,
+      "eip158Block": 0,
+      "byzantiumBlock": 0,
+      "constantinopleBlock": 0,
+      "petersburgBlock": 0,
+      "istanbulBlock": 0,
+      "muirGlacierBlock": 0,
+      "berlinBlock": 0,
+      "londonBlock": 0,
+      "arrowGlacierBlock": 0,
+      "grayGlacierBlock": 0,
+      "mergeNetsplitBlock": 0
+    },
+    "extraData": "",
+    "alloc": {
+      "0x1111111111111111111111111111111111111111": {
+        "balance": "0x204fce5e3e25026110000000"
+      }
+    }
+  }
+}
