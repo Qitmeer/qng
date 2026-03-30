@@ -301,6 +301,44 @@ func WifToEcPubkey(uncompressed bool, wif string) {
 	fmt.Printf("%x\n", key[:])
 }
 
-func EcPrivateKeyToKeyfile(privateKeyHex string, nonJsonFormat bool, lightKDF bool, keyfile string) error {
-	return common.GenerateKeyfile(privateKeyHex, keyfile, nonJsonFormat, lightKDF)
+func EcPrivateKeyToKeyfile(privateKeyHex string, jsonFormat bool, lightKDF bool, keyfile string, showAddr bool, network string) error {
+	if err := common.GenerateKeyfile(privateKeyHex, keyfile, jsonFormat, lightKDF); err != nil {
+		return err
+	}
+	if showAddr {
+		err := showAddressDetails(privateKeyHex, network)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func InspectKeyFile(keyfilepath string, jsonFormat bool, showPrivate bool, showAddr bool, network string) error {
+	fmt.Printf("keyfile: %s\n", keyfilepath)
+	if privkey, err := common.InspectKeyFile(keyfilepath, jsonFormat, showPrivate); err != nil {
+		return err
+	} else {
+		if showAddr {
+			return showAddressDetails(privkey, network)
+		}
+	}
+	return nil
+}
+
+func showAddressDetails(privateKeyHex string, network string) error {
+	if pkStr, err := EcPrivateKeyToEcPublicKey(false, privateKeyHex); err != nil {
+		return err
+	} else {
+		fmt.Printf("PubKey:\n%s\n", pkStr)
+	}
+	if pkStr, err := EcPrivateKeyToEcPublicKey(true, privateKeyHex); err != nil {
+		return err
+	} else {
+		fmt.Printf("PubKey (uncompressed):\n%s\n", pkStr)
+		fmt.Printf("PkAddr (network %v):\n", network)
+		EcPubKeyToPKAddressSTDO(network, pkStr)
+		fmt.Printf("EthAddr:\n")
+		EcPubKeyToETHAddressSTDO(pkStr)
+	}
+	return nil
 }
