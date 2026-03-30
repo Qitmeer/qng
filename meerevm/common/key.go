@@ -6,6 +6,7 @@ package common
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -43,7 +44,7 @@ func NewKey(rand io.Reader) (*Key, error) {
 	return NewKeyFromECDSA(privateKeyECDSA), nil
 }
 
-func GenerateKeyfile(privateKeyHex string, keyfilepath string, nonJsonFormat bool, lightKDF bool) error {
+func GenerateKeyfile(privateKeyHex string, keyfilepath string, jsonFormat bool, lightKDF bool) error {
 	// Check if keyfile path given and make sure it doesn't already exist.
 	if keyfilepath == "" {
 		keyfilepath = DefaultKeyfileName
@@ -98,14 +99,62 @@ func GenerateKeyfile(privateKeyHex string, keyfilepath string, nonJsonFormat boo
 	out := outputGenerate{
 		Address: key.Address.Hex(),
 	}
-	if !nonJsonFormat {
-		str, err := json.MarshalIndent(out, "", "  ")
-		if err != nil {
-			return fmt.Errorf("Failed to marshal JSON object: %v", err)
-		}
-		fmt.Println(string(str))
+	if jsonFormat {
+		mustPrintJSON(out)
 	} else {
 		fmt.Println("Address:", out.Address)
 	}
 	return nil
+}
+
+func InspectKeyFile(keyfilepath string, jsonFormat bool, showPrivate bool) (string, error) {
+	// Read key from file.
+	keyjson, err := os.ReadFile(keyfilepath)
+	if err != nil {
+		utils.Fatalf("Failed to read the keyfile at '%s': %v", keyfilepath, err)
+	}
+
+	// Decrypt key with passphrase.
+	passphrase := utils.GetPassPhrase("", false)
+	key, err := keystore.DecryptKey(keyjson, passphrase)
+	if err != nil {
+		utils.Fatalf("Error decrypting key: %v", err)
+	}
+
+	// Output all relevant information we can retrieve.
+	type outputInspect struct {
+		Address    string
+		PublicKey  string
+		PrivateKey string
+	}
+	out := outputInspect{
+		Address: key.Address.Hex(),
+		PublicKey: hex.EncodeToString(
+			crypto.FromECDSAPub(&key.PrivateKey.PublicKey)),
+	}
+	prvkey := hex.EncodeToString(crypto.FromECDSA(key.PrivateKey))
+	if showPrivate {
+		out.PrivateKey = prvkey
+	}
+
+	if jsonFormat {
+		mustPrintJSON(out)
+	} else {
+		fmt.Println("Address:       ", out.Address)
+		fmt.Println("Public key:    ", out.PublicKey)
+		if showPrivate {
+			fmt.Println("Private key:   ", out.PrivateKey)
+		}
+	}
+	return prvkey, nil
+}
+
+// mustPrintJSON prints the JSON encoding of the given object and
+// exits the program with an error message when the marshaling fails.
+func mustPrintJSON(jsonObject interface{}) {
+	str, err := json.MarshalIndent(jsonObject, "", "  ")
+	if err != nil {
+		utils.Fatalf("Failed to marshal JSON object: %v", err)
+	}
+	fmt.Println(string(str))
 }

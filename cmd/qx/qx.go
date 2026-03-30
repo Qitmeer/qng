@@ -70,10 +70,13 @@ entropy (seed) & mnemoic & hd & ec :
     mnemonic-to-seed      convert a mnemonic world-list (BIP39) to its 512 bits seed 
     ec-new                create a new EC private key from an entropy (seed).
     ec-to-public          derive the EC public key from an EC private key (the compressed format by default )
-    ec-to-keyfile         convert an EC private key to a ethereum keystore file
     ec-to-wif             convert an EC private key to a WIF, associates with the compressed public key by default.
     wif-to-ec             convert a WIF private key to an EC private key.
     wif-to-public         derive the EC public key from a WIF private key. 
+
+keyfile (Ethereum-compatible keystore file):
+    ec-to-keyfile         convert an EC private key to a ethereum keystore file
+    inspect-keyfile       inspect a ethereum keystore file
 
 addr & tx & sign :
     ec-to-addr            convert an EC public key to a payment address. default is qx address
@@ -137,9 +140,11 @@ var txVersion qx.TxVersionFlag
 var txLockTime qx.TxLockTimeFlag
 var privateKeys qx.TxPrivateKey
 var msgSignatureMode string
-var nonJsonFormat bool
+var jsonFormat bool
 var lightKDF bool
 var keyfile string
+var showAddr bool
+var showPrivateKey bool
 
 func main() {
 
@@ -419,13 +424,26 @@ func main() {
 		cmdUsage(pkaddrToETHAddrCmd, "Usage: qx pkaddr-to-ethaddr [pk address] \n")
 	}
 
+	// KeyStore
 	ecToKeyfileCmd := flag.NewFlagSet("ec-to-keyfile", flag.ExitOnError)
 	ecToKeyfileCmd.Usage = func() {
-		cmdUsage(ecToKeyfileCmd, "Usage: qx ec-to-keyfile [ec_private_key] \n")
+		cmdUsage(ecToKeyfileCmd, "Usage: qx ec-to-keyfile <options> [ec_private_key] \n")
 	}
-	ecToKeyfileCmd.BoolVar(&nonJsonFormat, "j", false, "output JSON instead of human-readable format")
+	ecToKeyfileCmd.BoolVar(&jsonFormat, "j", false, "output JSON instead of human-readable format")
 	ecToKeyfileCmd.BoolVar(&lightKDF, "l", false, "use less secure scrypt parameters")
 	ecToKeyfileCmd.StringVar(&keyfile, "k", common.DefaultKeyfileName, "Output keystore file path")
+	ecToKeyfileCmd.StringVar(&network, "n", "mainnet", "the target network. (mainnet, testnet, privnet,mixnet,amananet)")
+	ecToKeyfileCmd.BoolVar(&showAddr, "a", false, "show detailed public key and address related information when generating keyfile")
+
+	inspectKeyfileCmd := flag.NewFlagSet("inspect-keyfile", flag.ExitOnError)
+	inspectKeyfileCmd.Usage = func() {
+		cmdUsage(inspectKeyfileCmd, "Usage: qx inspect-keyfile [options] [keyfilepath] \n")
+	}
+	inspectKeyfileCmd.BoolVar(&jsonFormat, "j", false, "output JSON instead of human-readable format")
+	inspectKeyfileCmd.StringVar(&keyfile, "k", common.DefaultKeyfileName, "Input keystore file path")
+	inspectKeyfileCmd.BoolVar(&showPrivateKey, "p", false, "include the private key in the output")
+	inspectKeyfileCmd.BoolVar(&showAddr, "a", false, "show detailed public key and address related information")
+	inspectKeyfileCmd.StringVar(&network, "n", "mainnet", "the target network. (mainnet, testnet, privnet,mixnet,amananet)")
 
 	// Transaction
 	txDecodeCmd := flag.NewFlagSet("tx-decode", flag.ExitOnError)
@@ -542,6 +560,7 @@ example:
 		pkaddrToPubCmd,
 		pkaddrToETHAddrCmd,
 		ecToKeyfileCmd,
+		inspectKeyfileCmd,
 		txEncodeCmd,
 		txDecodeCmd,
 		txSignCmd,
@@ -1413,23 +1432,35 @@ example:
 		stat, _ := os.Stdin.Stat()
 		if (stat.Mode() & os.ModeNamedPipe) == 0 {
 			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
-				ecToPubCmd.Usage()
+				ecToKeyfileCmd.Usage()
 			} else {
-				err := qx.EcPrivateKeyToKeyfile(os.Args[len(os.Args)-1], nonJsonFormat, lightKDF, keyfile)
+				err := qx.EcPrivateKeyToKeyfile(os.Args[len(os.Args)-1], jsonFormat, lightKDF, keyfile, showAddr, network)
 				if err != nil {
 					qx.ErrExit(err)
 				}
 			}
 		} else { //try from STDIN
-			src, err := ioutil.ReadAll(os.Stdin)
-			if err != nil {
-				errExit(err)
+			ecToKeyfileCmd.Usage()
+		}
+	}
+
+	if inspectKeyfileCmd.Parsed() {
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeNamedPipe) == 0 {
+			if len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "--help" {
+				inspectKeyfileCmd.Usage()
+			} else {
+				kFile := os.Args[len(os.Args)-1]
+				if keyfile != common.DefaultKeyfileName {
+					kFile = keyfile
+				}
+				err := qx.InspectKeyFile(kFile, jsonFormat, showPrivateKey, showAddr, network)
+				if err != nil {
+					qx.ErrExit(err)
+				}
 			}
-			str := strings.TrimSpace(string(src))
-			err = qx.EcPrivateKeyToKeyfile(str, nonJsonFormat, lightKDF, keyfile)
-			if err != nil {
-				qx.ErrExit(err)
-			}
+		} else {
+			inspectKeyfileCmd.Usage()
 		}
 	}
 
