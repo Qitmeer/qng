@@ -425,6 +425,15 @@ func main() {
 	}
 
 	// KeyStore
+	validateNetwork := func(n string) error {
+		switch n {
+		case "mainnet", "testnet", "privnet", "mixnet", "amananet":
+			network = n
+			return nil
+		default:
+			return fmt.Errorf("invalid network: %s", n)
+		}
+	}
 	ecToKeyfileCmd := flag.NewFlagSet("ec-to-keyfile", flag.ExitOnError)
 	ecToKeyfileCmd.Usage = func() {
 		cmdUsage(ecToKeyfileCmd, "Usage: qx ec-to-keyfile <options> [ec_private_key] \n")
@@ -432,8 +441,8 @@ func main() {
 	ecToKeyfileCmd.BoolVar(&jsonFormat, "j", false, "output JSON instead of human-readable format")
 	ecToKeyfileCmd.BoolVar(&lightKDF, "l", false, "use less secure scrypt parameters")
 	ecToKeyfileCmd.StringVar(&keyfile, "k", common.DefaultKeyfileName, "Output keystore file path")
-	ecToKeyfileCmd.StringVar(&network, "n", "mainnet", "the target network. (mainnet, testnet, privnet,mixnet,amananet)")
 	ecToKeyfileCmd.BoolVar(&showAddr, "a", false, "show detailed public key and address related information when generating keyfile")
+	ecToKeyfileCmd.Func("n", "the target network. (mainnet|testnet|privnet|mixnet|amananet)", validateNetwork)
 
 	inspectKeyfileCmd := flag.NewFlagSet("inspect-keyfile", flag.ExitOnError)
 	inspectKeyfileCmd.Usage = func() {
@@ -443,7 +452,7 @@ func main() {
 	inspectKeyfileCmd.StringVar(&keyfile, "k", common.DefaultKeyfileName, "Input keystore file path")
 	inspectKeyfileCmd.BoolVar(&showPrivateKey, "p", false, "include the private key in the output")
 	inspectKeyfileCmd.BoolVar(&showAddr, "a", false, "show detailed public key and address related information")
-	inspectKeyfileCmd.StringVar(&network, "n", "mainnet", "the target network. (mainnet, testnet, privnet,mixnet,amananet)")
+	inspectKeyfileCmd.Func("n", "the target network. (mainnet|testnet|privnet|mixnet|amananet)", validateNetwork)
 
 	// Transaction
 	txDecodeCmd := flag.NewFlagSet("tx-decode", flag.ExitOnError)
