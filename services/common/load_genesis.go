@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/Qitmeer/qng/common/util"
-	"github.com/Qitmeer/qng/config"
 	cfgengine "github.com/Qitmeer/qng/consensus/engine/config"
 	ptypes "github.com/Qitmeer/qng/consensus/engine/poa/types"
 	"github.com/Qitmeer/qng/core/types"
@@ -69,10 +68,10 @@ type CustomGenesis struct {
 	} `json:"evm"`
 }
 
-func applyCustomGenesis(cfg *config.Config) error {
-	path := util.CleanAndExpandPath(cfg.Genesis)
+func ApplyCustomGenesis(homeDir string, genesis string) error {
+	path := util.CleanAndExpandPath(genesis)
 	if !filepath.IsAbs(path) {
-		path = filepath.Join(cfg.HomeDir, path)
+		path = filepath.Join(homeDir, path)
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {

@@ -6,13 +6,14 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/Qitmeer/qng/common/util"
 	l "github.com/Qitmeer/qng/log"
 	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/services/common"
 	"github.com/urfave/cli/v2"
-	"os"
-	"path/filepath"
 )
 
 const (
@@ -215,6 +216,12 @@ var (
 		Destination: &Conf.MaxPeers,
 	}
 
+	Genesis = &cli.StringFlag{
+		Name:        "genesis",
+		Usage:       "Dynamic params configuration by custom genesis json file",
+		Destination: &Conf.Genesis,
+	}
+
 	AppFlags = []cli.Flag{
 		HomeDir,
 		DataDir,
@@ -239,6 +246,7 @@ var (
 		DisableTLS,
 		EnableRelay,
 		MaxPeers,
+		Genesis,
 	}
 )
 
@@ -267,6 +275,7 @@ type Config struct {
 	DisableTLS    bool
 	EnableRelay   bool
 	MaxPeers      int
+	Genesis       string
 }
 
 func (c *Config) Load() error {
@@ -306,6 +315,11 @@ func (c *Config) Load() error {
 	if c.Network == params.AmanaNetParam.Name {
 		numNets++
 		params.ActiveNetParams = &params.AmanaNetParam
+		if len(c.Genesis) > 0 {
+			if err := common.ApplyCustomGenesis(c.HomeDir, c.Genesis); err != nil {
+				return err
+			}
+		}
 	}
 
 	if numNets == 0 {
