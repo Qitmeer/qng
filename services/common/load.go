@@ -218,7 +218,7 @@ func SetupConfig(cfg *config.Config) error {
 		numNets++
 		params.ActiveNetParams = &params.AmanaNetParam
 		if len(cfg.Genesis) > 0 {
-			if err := applyCustomGenesis(cfg); err != nil {
+			if err := ApplyCustomGenesis(cfg.HomeDir, cfg.Genesis); err != nil {
 				return err
 			}
 		}
