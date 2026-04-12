@@ -166,7 +166,7 @@ func (ps *PeerSync) meerSync(target chan ecommon.Hash, quit chan struct{}) {
 			if tar == (ecommon.Hash{}) {
 				continue
 			}
-			err := ps.sy.p2p.BlockChain().MeerChain().Downloader().SyncQngWaitPeers(ps.sy.p2p.BlockChain().MeerChain().SyncMode(), tar, ps.quit, time.Minute*5)
+			err := ps.sy.p2p.BlockChain().MeerChain().Downloader().SyncQngWaitPeers(tar, ps.quit, time.Minute*5)
 			if err != nil {
 				log.Info("Failed to trigger beacon sync", "err", err)
 				continue
