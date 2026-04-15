@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -43,7 +44,21 @@ func LoadConfig(ctx *cli.Context, parsefile bool) (*config.Config, error) {
 	appName := filepath.Base(os.Args[0])
 	appName = strings.TrimSuffix(appName, filepath.Ext(appName))
 	if cfg.ShowVersion {
-		fmt.Printf("%s version %s (Go version %s)\n", appName, version.String(), runtime.Version())
+		info, ok := debug.ReadBuildInfo()
+		if !ok {
+			panic("no build info")
+		}
+		eVersion := "unknown"
+		for _, dep := range info.Deps {
+			if dep.Path == "github.com/ethereum/go-ethereum" {
+				eVersion = fmt.Sprintf("%v", dep.Version)
+				if dep.Replace != nil {
+					eVersion = fmt.Sprintf("%v", dep.Replace.Version)
+				}
+				break
+			}
+		}
+		fmt.Printf("%s version %s (MeerEVM %s) (Go version %s)\n", appName, version.String(), eVersion, runtime.Version())
 		os.Exit(0)
 	}
 
