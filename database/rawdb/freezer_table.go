@@ -693,7 +693,7 @@ func (t *freezerTable) truncateTail(items uint64) error {
 		return nil
 	}
 	if t.items.Load() < items {
-		return errors.New("truncation above head")
+		return t.resetTo(items)
 	}
 	// Load the new tail index by the given new tail position
 	var (
@@ -814,6 +814,56 @@ func (t *freezerTable) truncateTail(items uint64) error {
 		return err
 	}
 	t.sizeGauge.Dec(int64(oldSize - newSize))
+	return nil
+}
+
+// resetTo resets the table by discarding all existing data and setting both
+// the head and tail to the given value. It is called when TruncateTail is
+// invoked with a target that exceeds the current head. The caller must hold
+// t.lock.
+func (t *freezerTable) resetTo(tail uint64) error {
+	if err := t.doSync(); err != nil {
+		return err
+	}
+	if err := t.index.Close(); err != nil {
+		return err
+	}
+	entry := &indexEntry{
+		filenum: t.headId + 1,
+		offset:  uint32(tail),
+	}
+	if err := reset(t.index.Name(), entry.append(nil)); err != nil {
+		return err
+	}
+	if err := t.metadata.setVirtualTail(tail, true); err != nil {
+		return err
+	}
+	if err := t.metadata.setFlushOffset(indexEntrySize, true); err != nil {
+		return err
+	}
+	var err error
+	t.index, err = openFreezerFileForAppend(t.index.Name())
+	if err != nil {
+		return err
+	}
+	if err := t.head.Close(); err != nil {
+		return err
+	}
+	t.headId = t.headId + 1
+	t.tailId = t.headId
+	t.headBytes = 0
+
+	t.head, err = t.openFile(t.headId, openFreezerFileTruncated)
+	if err != nil {
+		return err
+	}
+	t.releaseFilesBefore(t.headId, true)
+
+	t.items.Store(tail)
+	t.itemOffset.Store(tail)
+	t.itemHidden.Store(tail)
+	t.sizeGauge.Update(0)
+
 	return nil
 }
 

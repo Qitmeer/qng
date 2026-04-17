@@ -228,6 +228,9 @@ func (b *BlockChain) buildBlock(parent *types.Header, qtxs []mmeer.Tx, timestamp
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	if len(receipts) > 0 {
+		header.GasUsed = receipts[len(receipts)-1].CumulativeGasUsed
+	}
 	var withdrawals types.Withdrawals
 	if b.Config().IsShanghai(header.Number, header.Time) {
 		withdrawals = []*types.Withdrawal{}
