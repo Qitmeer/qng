@@ -6,6 +6,43 @@ import (
 	"path/filepath"
 )
 
+func atomicRename(src, dest string) error {
+	if err := os.Rename(src, dest); err != nil {
+		return err
+	}
+	return syncDir(filepath.Dir(src))
+}
+
+// reset atomically replaces the file at the given path with the provided content.
+func reset(path string, content []byte) error {
+	f, err := os.CreateTemp(filepath.Dir(path), "*")
+	if err != nil {
+		return err
+	}
+	fname := f.Name()
+
+	defer func() {
+		if f != nil {
+			f.Close()
+		}
+		os.Remove(fname)
+	}()
+
+	_, err = f.Write(content)
+	if err != nil {
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	f = nil
+
+	return atomicRename(fname, path)
+}
+
 // copyFrom copies data from 'srcPath' at offset 'offset' into 'destPath'.
 // The 'destPath' is created if it doesn't exist, otherwise it is overwritten.
 // Before the copy is executed, there is a callback can be registered to

@@ -218,15 +218,18 @@ func (b *BlockChain) buildBlock(parent *types.Header, qtxs []mmeer.Tx, timestamp
 
 	header := makeHeader(&b.chain.Config().Eth, parentBlock, statedb, timestamp, gaslimit, forks.GetCancunForkDifficulty(parent.Number))
 	if witness {
-		bundle, err := stateless.NewWitness(header, b.Ether().BlockChain())
+		bundle, err := stateless.NewWitness(header, b.Ether().BlockChain(), false)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		statedb.StartPrefetcher("meer", bundle, nil)
+		statedb.StartPrefetcher("meer", bundle)
 	}
 	txs, receipts, evm, err := b.fillBlock(qtxs, header, statedb)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+	if len(receipts) > 0 {
+		header.GasUsed = receipts[len(receipts)-1].CumulativeGasUsed
 	}
 	var withdrawals types.Withdrawals
 	if b.Config().IsShanghai(header.Number, header.Time) {
@@ -255,7 +258,7 @@ func (b *BlockChain) buildBlock(parent *types.Header, qtxs []mmeer.Tx, timestamp
 		reqHash := types.CalcRequestsHash(requests)
 		header.RequestsHash = &reqHash
 	}
-	block, err := engine.FinalizeAndAssemble(b, header, statedb, body, receipts)
+	block, err := engine.FinalizeAndAssemble(b.Context(), b, header, statedb, body, receipts)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -283,7 +286,7 @@ func (b *BlockChain) fillBlock(qtxs []mmeer.Tx, header *types.Header, statedb *s
 		}
 	}
 
-	gasPool := new(core.GasPool).AddGas(header.GasLimit)
+	gasPool := core.NewGasPool(header.GasLimit)
 
 	for _, tx := range qtxs {
 		if tx.GetTxType() == qtypes.TxTypeCrossChainExport {
@@ -389,12 +392,12 @@ func (b *BlockChain) addTx(vmtx *mmeer.VMTx, header *types.Header, statedb *stat
 	}
 	statedb.SetTxContext(tx.Hash(), len(*txs))
 	snap := statedb.Snapshot()
-	gp := gasPool.Gas()
+	gpSnap := gasPool.Snapshot()
 
-	receipt, err := core.ApplyTransaction(evm, gasPool, statedb, header, tx, &header.GasUsed)
+	receipt, err := core.ApplyTransaction(evm, gasPool, statedb, header, tx)
 	if err != nil {
 		statedb.RevertToSnapshot(snap)
-		gasPool.SetGas(gp)
+		gasPool.Set(gpSnap)
 		return err
 	}
 	*txs = append(*txs, tx)

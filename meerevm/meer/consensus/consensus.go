@@ -5,6 +5,7 @@
 package consensus
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qng/consensus/forks"
@@ -179,7 +180,7 @@ func (me *MeerEngine) Finalize(chain consensus.ChainHeaderReader, header *types.
 	}
 }
 
-func (me *MeerEngine) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, body *types.Body, receipts []*types.Receipt) (*types.Block, error) {
+func (me *MeerEngine) FinalizeAndAssemble(ctx context.Context, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, body *types.Body, receipts []*types.Receipt) (*types.Block, error) {
 	shanghai := chain.Config().IsShanghai(header.Number, header.Time)
 	if shanghai {
 		// All blocks after Shanghai must include a withdrawals root.

@@ -65,7 +65,7 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 	}
 	var (
 		statedb     = MakePreState(rawdb.NewMemoryDatabase(), genesis.Alloc)
-		gaspool     = new(core.GasPool)
+		gaspool     = core.NewGasPool(genesis.GasLimit)
 		blockHash   = common.Hash{0x13, 0x37}
 		includedTxs types.Transactions
 		gasUsed     = uint64(0)
@@ -74,7 +74,6 @@ func Apply(genesis *core.Genesis, txs []*GenTransaction) (Alloc, error) {
 		//signer      = types.MakeSigner(chainConfig, new(big.Int).SetUint64(0), 0)
 	)
 
-	gaspool.AddGas(genesis.GasLimit)
 	vmContext := vm.BlockContext{
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,

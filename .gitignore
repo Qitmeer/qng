@@ -32,3 +32,5 @@ cmd/relaynode/relaynode
 *_checksum.txt
 rpc/client/example/qitmeerwalletwebsocket/qitmeerwalletwebsocket
 testutils/build
+
+.claude

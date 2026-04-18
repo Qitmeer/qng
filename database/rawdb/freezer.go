@@ -301,6 +301,9 @@ func (f *Freezer) TruncateTail(tail uint64) (uint64, error) {
 		}
 	}
 	f.tail.Store(tail)
+	if f.frozen.Load() < tail {
+		f.frozen.Store(tail)
+	}
 	return old, nil
 }
 

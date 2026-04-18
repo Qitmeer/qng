@@ -231,7 +231,7 @@ func (ps *PeerSync) startSnapSync() bool {
 				if ebc.GetBlockByHash(curEVMTarget) != nil {
 					ps.snapStatus.CompleteEVM()
 				} else {
-					err := mc.Downloader().SyncQngWaitPeers(mc.SyncMode(), curEVMTarget, ps.quit, timeout)
+					err := mc.Downloader().SyncQngWaitPeers(curEVMTarget, ps.quit, timeout)
 					if err != nil {
 						log.Warn("Failed to trigger beacon sync", "err", err)
 					}
