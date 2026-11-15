@@ -487,7 +487,7 @@ func (vm *Engine) checkSignatureEncoding(sig []byte) error {
 	rLen := int(sig[3])
 
 	// Make sure S is inside the signature.
-	if rLen+5 > len(sig) {
+	if rLen+5 >= len(sig) {
 		return fmt.Errorf("malformed signature: S out of bounds")
 	}
 
