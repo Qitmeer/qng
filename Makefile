@@ -1,9 +1,16 @@
 
 EXECUTABLE := qng
 EXECUTABLE_QX := qx
-GITVER := $(shell git rev-parse --short=7 HEAD )
-GITDIRTY := $(shell git diff --quiet || echo '-dirty')
-GITVERSION = "$(GITVER)$(GITDIRTY)"
+
+GIT_OK := $(shell command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree 2>/dev/null)
+ifeq ($(GIT_OK),true)
+    GITVER := $(shell git rev-parse --short=7 HEAD )
+    GITDIRTY := $(shell git diff --quiet HEAD || echo '-dirty')
+    GITVERSION = "$(GITVER)$(GITDIRTY)"
+else
+    GITVERSION = "unknown"
+endif
+
 ifeq ($(DEV),)
 	DEV := dev
 endif
