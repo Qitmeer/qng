@@ -131,13 +131,14 @@ var scriptClassToName = []string{
 	StakeSubChangeTy:  "sstxchange",
 	CLTVPubKeyHashTy:  "cltvpubkeyhash",
 	TokenPubKeyHashTy: "tokenpubkeyhash",
+	WitnessTaprootTy:  "witness_v1_taproot",
 }
 
 // String implements the Stringer interface by returning the name of
 // the enum script class. If the enum is invalid then "Invalid" will be
 // returned.
 func (t ScriptClass) String() string {
-	if int(t) > len(scriptClassToName) || int(t) < 0 {
+	if int(t) >= len(scriptClassToName) || int(t) < 0 {
 		return "Invalid"
 	}
 	return scriptClassToName[t]
