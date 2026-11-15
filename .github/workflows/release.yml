@@ -13,7 +13,7 @@ jobs:
           # macOS
           - platform: darwin
             arch: arm64
-            runs-on: macos-14
+            runs-on: macos-15
             package_type: tar.gz
           # Windows
           - platform: windows
@@ -30,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Dependencies
         shell: bash
@@ -48,7 +48,7 @@ jobs:
           make --version
           
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "stable"
 
@@ -62,7 +62,7 @@ jobs:
           make release
 
       - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.platform }}-${{ matrix.arch }}
           path: |
@@ -78,7 +78,7 @@ jobs:
 
     steps:
       - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: ./build/release
 
@@ -86,7 +86,7 @@ jobs:
         run: ls -R ./build/release
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ github.ref_name }}
