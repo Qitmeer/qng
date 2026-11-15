@@ -13,7 +13,7 @@ jobs:
           # macOS
           - platform: darwin
             arch: arm64
-            runs-on: macos-14
+            runs-on: macos-15
             package_type: tar.gz
           # Windows
           - platform: windows
