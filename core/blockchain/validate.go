@@ -359,6 +359,10 @@ func CheckTransactionSanity(tx *types.Tx, params *params.Params, coinbase *types
 	totalAtom := make(map[types.CoinID]int64)
 	for _, txOut := range tx.Tx.TxOut {
 		atom := txOut.Amount
+		if atom.Value < 0 {
+			str := fmt.Sprintf("transaction output has negative value of %v", atom)
+			return ruleError(ErrInvalidTxOutValue, str)
+		}
 		if atom.Value > types.MaxAmount {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v", atom,
