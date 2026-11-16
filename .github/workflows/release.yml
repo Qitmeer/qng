@@ -65,13 +65,14 @@ jobs:
           GOOS: ${{ matrix.platform }}
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: 1
+          VARIANT: ${{ matrix.variant }}
         run: |
           make release
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          name: ${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.variant || 'default' }}
           path: |
             ./build/release/*.tar.gz
             ./build/release/*.zip
