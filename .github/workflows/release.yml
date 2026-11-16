@@ -25,6 +25,13 @@ jobs:
             arch: amd64
             runs-on: ubuntu-24.04
             package_type: tar.gz
+            variant: glibc239
+          - platform: linux
+            arch: amd64
+            runs-on: ubuntu-22.04
+            package_type: tar.gz
+            variant: glibc235
+
 
     if: startsWith(github.ref_name, 'v') && !contains(github.ref_name, '-')
     runs-on: ${{ matrix.runs-on }}
