@@ -173,12 +173,12 @@ release: clean checkversion
 
 	@if [ "$(GOOS)" = "windows" ]; then \
 		openssl sha512 $(EXECUTABLES) > $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V)_checksum.txt; \
-		openssl sha512 $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)_checksum.txt; \
-		openssl sha512 $(RELEASE_DIR)/$(EXECUTABLE_QX)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)_checksum.txt; \
+		openssl sha512 $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V)_checksum.txt; \
+		openssl sha512 $(RELEASE_DIR)/$(EXECUTABLE_QX)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V)_checksum.txt; \
 	else \
 		shasum -a 512 $(EXECUTABLES) > $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V)_checksum.txt; \
-		shasum -a 512 $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)_checksum.txt; \
-		shasum -a 512 $(RELEASE_DIR)/$(EXECUTABLE_QX)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)_checksum.txt; \
+		shasum -a 512 $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V)_checksum.txt; \
+		shasum -a 512 $(RELEASE_DIR)/$(EXECUTABLE_QX)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V)_checksum.txt; \
 	fi
 
 dev: clean checkversion
