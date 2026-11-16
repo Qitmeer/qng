@@ -143,38 +143,41 @@ build/dev/%/$(EXECUTABLE).exe:
 	@GOOS=$(OS) GOARCH=$(ARCH) go build $(GOFLAGS_DEV) -o $(@) "github.com/Qitmeer/qng/cmd/qng"
 
 
+# for github matrix.variant
+EXTRA_V := $(if $(VARIANT),-$(VARIANT),)
+
 %.qng.zip: %.exe
 	@echo zip $(EXECUTABLE)-$(VERSION)-$(GOOS)-$(ARCH)
-	@zip $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-$(GOOS)-$(GOARCH).zip "$<"
+	@zip $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V).zip "$<"
 
 %.qng.cn.zip: %.exe
 	@echo zip $(EXECUTABLE)-$(VERSION)-$(GOOS)-$(ARCH)
-	@zip -j $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-$(GOOS)-$(GOARCH).cn.zip "$<" script/win/start.bat
+	@zip -j $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V).cn.zip "$<" script/win/start.bat
 
 %.qng.tar.gz : %
 	@echo tar $(EXECUTABLE)-$(VERSION)-$(GOOS)-$(ARCH)
-	@tar -zcvf $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-$(GOOS)-$(GOARCH).tar.gz "$<"
+	@tar -zcvf $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V).tar.gz "$<"
 
 %.qx.tar.gz : %
 	@echo qx.tar.gz: $(@)
-	@tar -zcvf $(RELEASE_DIR)/$(EXECUTABLE_QX)-$(VERSION)-$(GOOS)-$(GOARCH).tar.gz "$<"
+	@tar -zcvf $(RELEASE_DIR)/$(EXECUTABLE_QX)-$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V).tar.gz "$<"
 %.qx.zip: %.exe
 	@echo qx.zip: $(@)
 	@echo zip $(EXECUTABLE_QX)-$(VERSION)-$(GOOS)-$(GOARCH)
-	@zip $(RELEASE_DIR)/$(EXECUTABLE_QX)-$(VERSION)-$(GOOS)-$(GOARCH).zip "$<"
+	@zip $(RELEASE_DIR)/$(EXECUTABLE_QX)-$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V).zip "$<"
 
 release: clean checkversion
 	@echo "Build release version : $(VERSION)"
 	@$(MAKE) $(RELEASE_TARGETS)
 
 	@if [ "$(GOOS)" = "windows" ]; then \
-		openssl sha512 $(EXECUTABLES) > $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)_checksum.txt; \
-		openssl sha512 $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)_checksum.txt; \
-		openssl sha512 $(RELEASE_DIR)/$(EXECUTABLE_QX)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)_checksum.txt; \
+		openssl sha512 $(EXECUTABLES) > $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V)_checksum.txt; \
+		openssl sha512 $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V)_checksum.txt; \
+		openssl sha512 $(RELEASE_DIR)/$(EXECUTABLE_QX)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V)_checksum.txt; \
 	else \
-		shasum -a 512 $(EXECUTABLES) > $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)_checksum.txt; \
-		shasum -a 512 $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)_checksum.txt; \
-		shasum -a 512 $(RELEASE_DIR)/$(EXECUTABLE_QX)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)_checksum.txt; \
+		shasum -a 512 $(EXECUTABLES) > $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V)_checksum.txt; \
+		shasum -a 512 $(RELEASE_DIR)/$(EXECUTABLE)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V)_checksum.txt; \
+		shasum -a 512 $(RELEASE_DIR)/$(EXECUTABLE_QX)-$(VERSION)-* >> $(RELEASE_DIR)/$(VERSION)-$(GOOS)-$(GOARCH)$(EXTRA_V)_checksum.txt; \
 	fi
 
 dev: clean checkversion

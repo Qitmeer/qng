@@ -25,19 +25,35 @@ jobs:
             arch: amd64
             runs-on: ubuntu-24.04
             package_type: tar.gz
+            variant: glibc239
+          - platform: linux
+            arch: amd64
+            runs-on: ubuntu-22.04
+            package_type: tar.gz
+            variant: glibc235
+          - platform: linux
+            arch: amd64
+            runs-on: ubuntu-24.04
+            container: ubuntu:20.04
+            package_type: tar.gz
+            variant: glibc231
+
 
     if: startsWith(github.ref_name, 'v') && !contains(github.ref_name, '-')
     runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container || null }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
       - name: Install Dependencies
         shell: bash
         run: |
           if [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get update
-            sudo apt-get install -y gcc libc6-dev
+            if [[ -f /.dockerenv ]]; then
+              apt-get update
+              apt-get install -y gcc libc6-dev make git ca-certificates
+            else
+              sudo apt-get update
+              sudo apt-get install -y gcc libc6-dev
+            fi
           elif [[ "$RUNNER_OS" == "Windows" ]]; then
             choco install mingw -y
             choco install make -y
@@ -47,10 +63,24 @@ jobs:
           git --version
           make --version
           
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
           go-version: "stable"
+
+      - name: Diagnose Git
+        shell: bash
+        run: |
+          echo "PWD=$PWD"
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          ls -ld .git || true
+          env | grep '^GIT_' || true
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git rev-parse --show-toplevel || true
+          git -C "$GITHUB_WORKSPACE" rev-parse --show-toplevel || true
 
       - name: Build
         shell: bash
@@ -58,13 +88,14 @@ jobs:
           GOOS: ${{ matrix.platform }}
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: 1
+          VARIANT: ${{ matrix.variant }}
         run: |
           make release
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          name: ${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.variant || 'default' }}
           path: |
             ./build/release/*.tar.gz
             ./build/release/*.zip
@@ -90,7 +121,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
           files: ./build/release/**
