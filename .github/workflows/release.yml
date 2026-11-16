@@ -71,6 +71,16 @@ jobs:
         with:
           go-version: "stable"
 
+      - name: Diagnose Git
+        shell: bash
+        run: |
+          echo "PWD=$PWD"
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          ls -ld .git || true
+          env | grep '^GIT_' || true
+          git rev-parse --show-toplevel || true
+          git -C "$GITHUB_WORKSPACE" rev-parse --show-toplevel || true
+
       - name: Build
         shell: bash
         env:
